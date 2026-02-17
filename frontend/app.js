@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.5.0';
+const APP_VERSION = '2.5.1';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -187,6 +187,7 @@ const $ = id => document.getElementById(id);
 const esc = s => s?.replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]) || '';
 const safeUrl = u => u && /^https?:\/\//i.test(u) ? u : '';
 const CITY_COORDS = { zurich: [47.3769, 8.5417], basel: [47.5596, 7.5886], bern: [46.948, 7.4474], geneva: [46.2044, 6.1432], lausanne: [46.5197, 6.6323], luzern: [47.0502, 8.3093], winterthur: [47.4984, 8.7235] };
+const afterRender = fn => requestAnimationFrame(() => requestAnimationFrame(fn));
 
 const cache = {
   get(key, maxAge = 7200000) {
@@ -880,7 +881,7 @@ async function loadActivities(force = false) {
       activitiesData = cached.activities || [];
       cityEventsData = cached.cityEvents || [];
       renderCurrentView();
-      setTimeout(() => initActivityMap(), 100);
+      afterRender(initActivityMap);
     }
   }
 
@@ -891,7 +892,7 @@ async function loadActivities(force = false) {
     cityEventsData = data.cityEvents || [];
     cache.set(cacheKey, data);
     renderCurrentView();
-    setTimeout(() => initActivityMap(), 100);
+    afterRender(initActivityMap);
   } catch (e) {
     console.error('Activities error:', e);
     if (!activitiesData.length) showToast('toastNetworkError', 'error');
@@ -944,7 +945,7 @@ async function loadLunchSpots(force = false) {
     const data = await res.json();
     lunchData = data.spots || [];
     renderCurrentView();
-    setTimeout(() => initLunchMap(), 100);
+    afterRender(initLunchMap);
   } catch (e) { console.error('Lunch error:', e); showToast('toastNetworkError', 'error'); }
 }
 
@@ -1100,15 +1101,15 @@ function filterActivities(f) {
   activityFilter = f;
   if (f === 'near' && !userLat) { requestLocation(); return; }
   renderCurrentView();
-  setTimeout(() => initActivityMap(), 100);
+  afterRender(initActivityMap);
 }
 
-function setAgeFilter(f) { ageFilter = f; renderCurrentView(); setTimeout(() => initActivityMap(), 100); }
+function setAgeFilter(f) { ageFilter = f; renderCurrentView(); afterRender(initActivityMap); }
 function filterEvents(f) { eventFilter = f; renderCurrentView(); }
 function filterLunch(f) {
   lunchFilter = f;
   renderCurrentView();
-  setTimeout(() => initLunchMap(), 100);
+  afterRender(initLunchMap);
 }
 
 function toggleSave(id) {
@@ -1118,7 +1119,7 @@ function toggleSave(id) {
   localStorage.setItem('savedActivities', JSON.stringify(savedActivities));
   showToast(removing ? 'toastRemoved' : 'toastSaved', removing ? 'info' : 'success');
   renderCurrentView();
-  setTimeout(() => initActivityMap(), 100);
+  afterRender(initActivityMap);
 }
 
 function toggleSaveLunch(id) {
@@ -1128,14 +1129,14 @@ function toggleSaveLunch(id) {
   localStorage.setItem('savedLunch', JSON.stringify(savedLunch));
   showToast(removing ? 'toastRemoved' : 'toastSaved', removing ? 'info' : 'success');
   renderCurrentView();
-  setTimeout(() => initLunchMap(), 100);
+  afterRender(initLunchMap);
 }
 
 function rateLunch(id, stars) {
   lunchRatings[id] = stars;
   localStorage.setItem('lunchRatings', JSON.stringify(lunchRatings));
   renderCurrentView();
-  setTimeout(() => initLunchMap(), 100);
+  afterRender(initLunchMap);
 }
 
 function showAddForm(type) { $(`add-${type}-form`)?.classList.add('active'); }
@@ -1154,7 +1155,7 @@ function saveCustomActivity() {
   hideAddForm('activity');
   showToast('toastActivitySaved', 'success');
   renderCurrentView();
-  setTimeout(() => initActivityMap(), 100);
+  afterRender(initActivityMap);
 }
 
 function deleteCustomActivity(id) {
@@ -1162,7 +1163,7 @@ function deleteCustomActivity(id) {
   localStorage.setItem('customActivities', JSON.stringify(customActivities));
   showToast('toastActivityDeleted', 'info');
   renderCurrentView();
-  setTimeout(() => initActivityMap(), 100);
+  afterRender(initActivityMap);
 }
 
 function saveCustomLunch() {
@@ -1176,7 +1177,7 @@ function saveCustomLunch() {
   hideAddForm('lunch');
   showToast('toastLunchSaved', 'success');
   renderCurrentView();
-  setTimeout(() => initLunchMap(), 100);
+  afterRender(initLunchMap);
 }
 
 function deleteCustomLunch(id) {
@@ -1184,7 +1185,7 @@ function deleteCustomLunch(id) {
   localStorage.setItem('customLunch', JSON.stringify(customLunch));
   showToast('toastLunchDeleted', 'info');
   renderCurrentView();
-  setTimeout(() => initLunchMap(), 100);
+  afterRender(initLunchMap);
 }
 
 function requestLocation() {
@@ -1193,7 +1194,7 @@ function requestLocation() {
     userLat = pos.coords.latitude;
     userLon = pos.coords.longitude;
     renderCurrentView();
-    setTimeout(() => initActivityMap(), 100);
+    afterRender(initActivityMap);
   }, () => {}, { enableHighAccuracy: true });
 }
 
@@ -1235,7 +1236,7 @@ function toggleLunchMap() {
   el.classList.toggle('compact', !lunchMapExpanded);
   el.classList.toggle('expanded', lunchMapExpanded);
   el.style.pointerEvents = lunchMapExpanded ? 'auto' : 'none';
-  if (lunchMap) setTimeout(() => lunchMap.invalidateSize(), 100);
+  if (lunchMap) afterRender(() => lunchMap.invalidateSize());
 }
 
 // ═══ SURPRISE ME ═══
@@ -1874,7 +1875,7 @@ async function loadSunshine(force = false) {
   const cacheKey = 'sunshineCache-v2';
   if (!force) {
     const cached = cache.get(cacheKey, 1800000);
-    if (cached && cached.destinations?.length > 0) { sunshineData = cached; renderCurrentView(); setTimeout(() => initSunshineMap(), 150); return; }
+    if (cached && cached.destinations?.length > 0) { sunshineData = cached; renderCurrentView(); afterRender(initSunshineMap); return; }
   }
 
   try {
@@ -1886,7 +1887,7 @@ async function loadSunshine(force = false) {
       sunshineData = data;
       cache.set(cacheKey, data);
       renderCurrentView();
-      setTimeout(() => initSunshineMap(), 150);
+      afterRender(initSunshineMap);
       return;
     }
   } catch (e) { console.error('Worker sunshine error:', e); }
@@ -1898,7 +1899,7 @@ async function loadSunshine(force = false) {
       sunshineData = data;
       cache.set(cacheKey, data);
       renderCurrentView();
-      setTimeout(() => initSunshineMap(), 150);
+      afterRender(initSunshineMap);
       return;
     }
   } catch (e) { console.error('Client sunshine error:', e); showToast('toastNetworkError', 'error'); }
@@ -2012,7 +2013,7 @@ function setSunshineFilter(f) {
   sunshineFilter = f;
   sunshineExpanded = false;
   renderCurrentView();
-  setTimeout(() => initSunshineMap(), 150);
+  afterRender(initSunshineMap);
 }
 
 function setSunshineSort(s) {
@@ -2022,19 +2023,19 @@ function setSunshineSort(s) {
       userLon = pos.coords.longitude;
       sunshineSort = 'distance';
       renderCurrentView();
-      setTimeout(() => initSunshineMap(), 150);
+      afterRender(initSunshineMap);
     }, () => {}, { enableHighAccuracy: true });
     return;
   }
   sunshineSort = s;
   renderCurrentView();
-  setTimeout(() => initSunshineMap(), 150);
+  afterRender(initSunshineMap);
 }
 
 function expandSunshineList() {
   sunshineExpanded = true;
   renderCurrentView();
-  setTimeout(() => initSunshineMap(), 150);
+  afterRender(initSunshineMap);
 }
 
 // ═══ WHAT'S ON VIEW ═══
