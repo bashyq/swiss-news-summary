@@ -117,6 +117,8 @@ const T = {
   cloudyLabel: { en:'Cloudy', de:'Bewölkt' },
   sortBySun: { en:'By sunshine', de:'Nach Sonne' },
   sortByDist: { en:'By distance', de:'Nach Distanz' },
+  yourCity: { en:'Your city', de:'Deine Stadt' },
+  nearestEscape: { en:'Nearest with more sun', de:'Nächstes Ziel mit mehr Sonne' },
   rain: { en:'rain', de:'Regen' },
   about: { en:'About', de:'Info' },
   version: { en:'Version', de:'Version' },
@@ -1184,8 +1186,12 @@ function getSunshineEmoji(totalHours) {
   return '☁️';
 }
 
+function getBaselineDest() {
+  return (sunshineData?.destinations || []).find(d => d.isBaseline) || null;
+}
+
 function getFilteredSunshineDests() {
-  let dests = [...(sunshineData?.destinations || [])];
+  let dests = (sunshineData?.destinations || []).filter(d => !d.isBaseline);
 
   // Filter
   if (sunshineFilter === 'sunny') dests = dests.filter(d => d.sunshineHoursTotal > 6);
@@ -1234,17 +1240,39 @@ function renderSunshineView() {
 
   // Legend
   html += `<div class="sunshine-legend">
+    <div class="legend-item"><span class="legend-dot dot-baseline"></span>${t('yourCity')}</div>
     <div class="legend-item"><span class="legend-dot dot-sunny"></span>&gt;6h</div>
     <div class="legend-item"><span class="legend-dot dot-partly"></span>3-6h</div>
     <div class="legend-item"><span class="legend-dot dot-cloudy"></span>&lt;3h</div>
     <div class="legend-item"><span class="legend-bar-sample"></span>${lang === 'de' ? 'Sonnenstunden' : 'Sunny hours'}</div>
   </div>`;
 
+  // Baseline card (Zürich) — always shown first
+  const baseline = getBaselineDest();
+  html += '<div class="sunshine-list">';
+  if (baseline) html += renderSunshineCard(baseline, null);
+
+  // "Nearest sunny escape" nudge — only when Zürich has < 6h sunshine
+  if (baseline && baseline.sunshineHoursTotal < 6) {
+    const allNonBaseline = (sunshineData?.destinations || []).filter(d => !d.isBaseline && d.sunshineHoursTotal > baseline.sunshineHoursTotal);
+    allNonBaseline.sort((a, b) => a.driveMinutes - b.driveMinutes);
+    const escape = allNonBaseline[0];
+    if (escape) {
+      const eName = lang === 'de' ? (escape.nameDE || escape.name) : escape.name;
+      const eDrive = escape.driveMinutes >= 60
+        ? `${Math.floor(escape.driveMinutes / 60)}h${escape.driveMinutes % 60 ? (escape.driveMinutes % 60 + 'min') : ''}`
+        : `${escape.driveMinutes}min`;
+      html += `<div class="sunshine-escape" onclick="sunshineCardClick('${escape.id}')">
+        <span class="sunshine-escape-label">🚀 ${t('nearestEscape')}</span>
+        <span class="sunshine-escape-dest"><b>${esc(eName)}</b> — ${escape.sunshineHoursTotal}${t('sunshineHours')} · 🚗 ${eDrive}</span>
+      </div>`;
+    }
+  }
+
   // Ranked cards — show top 10 unless expanded
   const dests = getFilteredSunshineDests();
   const showCount = sunshineExpanded ? dests.length : Math.min(10, dests.length);
-  html += '<div class="sunshine-list">';
-  if (dests.length === 0) {
+  if (dests.length === 0 && !baseline) {
     html += `<div class="loading-msg">${t('noResults')}</div>`;
   } else {
     for (let i = 0; i < showCount; i++) html += renderSunshineCard(dests[i], i + 1);
@@ -1271,9 +1299,10 @@ function renderSunshineTimeline(sunnyHours) {
 }
 
 function renderSunshineCard(d, rank) {
+  const isBaseline = d.isBaseline;
   const name = lang === 'de' ? (d.nameDE || d.name) : d.name;
   const region = lang === 'de' ? (d.regionDE || d.region) : d.region;
-  const cls = getSunshineClass(d.sunshineHoursTotal);
+  const cls = isBaseline ? 'baseline' : getSunshineClass(d.sunshineHoursTotal);
   const emoji = getSunshineEmoji(d.sunshineHoursTotal);
   const driveLabel = d.driveMinutes >= 60
     ? `${Math.floor(d.driveMinutes / 60)}h${d.driveMinutes % 60 ? (d.driveMinutes % 60 + 'min') : ''}`
@@ -1300,12 +1329,19 @@ function renderSunshineCard(d, rank) {
     forecastHtml += '</div>';
   }
 
-  let badges = `<span class="sunshine-drive-badge">🚗 ${driveLabel} ${t('driveFrom')}</span>`;
-  if (dist !== null) badges += `<span class="sunshine-dist-badge">📍 ${formatDist(dist)}</span>`;
+  let badges;
+  if (isBaseline) {
+    badges = `<span class="sunshine-baseline-badge">📍 ${t('yourCity')}</span>`;
+  } else {
+    badges = `<span class="sunshine-drive-badge">🚗 ${driveLabel} ${t('driveFrom')}</span>`;
+  }
+  if (dist !== null && !isBaseline) badges += `<span class="sunshine-dist-badge">📍 ${formatDist(dist)}</span>`;
+
+  const rankHtml = isBaseline ? '<div class="sunshine-rank sunshine-rank-baseline">📍</div>' : `<div class="sunshine-rank">${rank}</div>`;
 
   return `<div class="sunshine-card sunshine-${cls}" onclick="sunshineCardClick('${d.id}')" data-id="${d.id}">
     <div class="sunshine-card-header">
-      <div class="sunshine-rank">${rank}</div>
+      ${rankHtml}
       <div class="sunshine-card-info">
         <div class="sunshine-card-name">${emoji} ${esc(name)}</div>
         <div class="sunshine-card-region">${esc(region)}</div>
@@ -1323,6 +1359,7 @@ function renderSunshineCard(d, rank) {
 }
 
 const SUNSHINE_DESTS = [
+  { id:'zurich',name:'Zürich',nameDE:'Zürich',lat:47.3769,lon:8.5417,region:'Zürich',regionDE:'Zürich',driveMinutes:0,isBaseline:true },
   { id:'lugano',name:'Lugano',nameDE:'Lugano',lat:46.0037,lon:8.9511,region:'Ticino',regionDE:'Tessin',driveMinutes:150 },
   { id:'locarno',name:'Locarno',nameDE:'Locarno',lat:46.1711,lon:8.7953,region:'Ticino',regionDE:'Tessin',driveMinutes:160 },
   { id:'bellinzona',name:'Bellinzona',nameDE:'Bellinzona',lat:46.1955,lon:9.0234,region:'Ticino',regionDE:'Tessin',driveMinutes:140 },
@@ -1412,7 +1449,11 @@ async function fetchSunshineClientSide() {
     const sunshineHoursTotal = Math.round(forecast.reduce((s, d) => s + d.sunshineHours, 0) * 10) / 10;
     results.push({ ...SUNSHINE_DESTS[i], forecast, sunshineHoursTotal });
   }
-  results.sort((a, b) => b.sunshineHoursTotal - a.sunshineHoursTotal);
+  results.sort((a, b) => {
+    if (a.isBaseline) return -1;
+    if (b.isBaseline) return 1;
+    return b.sunshineHoursTotal - a.sunshineHoursTotal;
+  });
   return { destinations: results, weekendDates: wd, timestamp: new Date().toISOString() };
 }
 
@@ -1466,18 +1507,29 @@ async function initSunshineMap() {
   if (!sunshineData?.destinations) return;
 
   for (const d of sunshineData.destinations) {
-    const cls = getSunshineClass(d.sunshineHoursTotal);
-    const color = cls === 'sunny' ? '#f59e0b' : cls === 'partly' ? '#60a5fa' : '#6b7280';
-    const radius = Math.max(8, Math.min(18, 8 + d.sunshineHoursTotal));
     const name = lang === 'de' ? (d.nameDE || d.name) : d.name;
 
-    L.circleMarker([d.lat, d.lon], {
-      radius,
-      fillColor: color,
-      fillOpacity: 0.85,
-      weight: 2,
-      color: '#fff',
-    }).addTo(sunshineMap).bindPopup(`<b>${esc(name)}</b><br>${d.sunshineHoursTotal}${t('sunshineHours')}<br>${getSunshineEmoji(d.sunshineHoursTotal)}`);
+    if (d.isBaseline) {
+      L.circleMarker([d.lat, d.lon], {
+        radius: 12,
+        fillColor: '#a855f7',
+        fillOpacity: 0.9,
+        weight: 3,
+        color: '#fff',
+      }).addTo(sunshineMap).bindPopup(`<b>${esc(name)}</b> (${t('yourCity')})<br>${d.sunshineHoursTotal}${t('sunshineHours')}<br>${getSunshineEmoji(d.sunshineHoursTotal)}`);
+    } else {
+      const cls = getSunshineClass(d.sunshineHoursTotal);
+      const color = cls === 'sunny' ? '#f59e0b' : cls === 'partly' ? '#60a5fa' : '#6b7280';
+      const radius = Math.max(8, Math.min(18, 8 + d.sunshineHoursTotal));
+
+      L.circleMarker([d.lat, d.lon], {
+        radius,
+        fillColor: color,
+        fillOpacity: 0.85,
+        weight: 2,
+        color: '#fff',
+      }).addTo(sunshineMap).bindPopup(`<b>${esc(name)}</b><br>${d.sunshineHoursTotal}${t('sunshineHours')}<br>${getSunshineEmoji(d.sunshineHoursTotal)}`);
+    }
   }
 }
 

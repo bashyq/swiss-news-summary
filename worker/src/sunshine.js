@@ -8,6 +8,9 @@ export const VERSION = '1.1.0';
 import { getWeatherDescription } from './weather.js';
 
 const DESTINATIONS = [
+  // Baseline (Zürich — always pinned first)
+  { id: 'zurich', name: 'Zürich', nameDE: 'Zürich', lat: 47.3769, lon: 8.5417, region: 'Zürich', regionDE: 'Zürich', driveMinutes: 0, isBaseline: true },
+
   // Ticino
   { id: 'lugano', name: 'Lugano', nameDE: 'Lugano', lat: 46.0037, lon: 8.9511, region: 'Ticino', regionDE: 'Tessin', driveMinutes: 150 },
   { id: 'locarno', name: 'Locarno', nameDE: 'Locarno', lat: 46.1711, lon: 8.7953, region: 'Ticino', regionDE: 'Tessin', driveMinutes: 160 },
@@ -141,13 +144,17 @@ async function fetchAllDestinations(weekendDates) {
     });
   }
 
-  results.sort((a, b) => b.sunshineHoursTotal - a.sunshineHoursTotal);
+  results.sort((a, b) => {
+    if (a.isBaseline) return -1;
+    if (b.isBaseline) return 1;
+    return b.sunshineHoursTotal - a.sunshineHoursTotal;
+  });
   return results;
 }
 
 export async function handleSunshine(url, env) {
   const lang = url.searchParams.get('lang') || 'en';
-  const cacheKey = `sunshine-v2-${lang}`;
+  const cacheKey = `sunshine-v3-${lang}`;
 
   // Check CF cache
   const cacheUrl = new URL(url.href);

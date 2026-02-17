@@ -72,7 +72,7 @@ swiss-news-summary/
 │   │   ├── events.js     # City events/festivals data
 │   │   ├── weekend.js    # Weekend planner logic
 │   │   ├── lunch.js      # Overpass API + lunch handler
-│   │   └── sunshine.js   # Weekend sunshine forecast (28 destinations)
+│   │   └── sunshine.js   # Weekend sunshine forecast (29 destinations, Zürich baseline)
 │   └── wrangler.toml   # Worker config (main = "src/index.js")
 ├── CLAUDE.md
 └── README.md
@@ -129,9 +129,11 @@ swiss-news-summary/
 - **Holidays display**: Upcoming Swiss holidays
 
 ### Sunshine Page ("Where is Sun?")
-- Weekend sunshine forecast for 28 destinations within driving distance of Zürich
+- Weekend sunshine forecast for 29 destinations (28 + Zürich baseline) within driving distance of Zürich
+- **Zürich baseline**: Pinned first card with purple styling, always visible regardless of filter/sort
+- **"Nearest sunny escape"**: When Zürich has <6h sunshine, shows closest destination with more sun (drive-time sorted)
 - **Regions**: Ticino, Graubünden, Valais, Central Switzerland, Lake Geneva, Basel/Jura, Lake Constance, Lake Como
-- **Interactive Leaflet map**: Circle markers colored/sized by sunshine level (gold/blue/gray)
+- **Interactive Leaflet map**: Circle markers colored/sized by sunshine level (gold/blue/gray), purple for Zürich
 - **Ranked card list**: Sorted by total sunshine hours, collapsible (top 10 default)
 - **Sort**: By sunshine hours or by distance from current location (geolocation)
 - **Filter**: All / Sunny (>6h) / Partly (3-6h) / Cloudy (<3h)
@@ -325,6 +327,7 @@ Each city has:
 | `initSunshineMap()` | Init Leaflet map with sunshine markers |
 | `setSunshineSort(sort)` | Sort by 'sunshine' or 'distance' |
 | `setSunshineFilter(filter)` | Filter by 'all'/'sunny'/'partly'/'cloudy' |
+| `getBaselineDest()` | Get Zürich baseline entry from sunshine data |
 | `fetchSunshineClientSide()` | Client-side Open-Meteo fallback |
 
 ## Storage
