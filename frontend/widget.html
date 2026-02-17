@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Today CH Widget</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .widget {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .weather {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .weather-icon { font-size: 2.5rem; }
+        .weather-temp {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        .weather-info {
+            flex: 1;
+        }
+        .weather-desc {
+            font-size: 0.85rem;
+            opacity: 0.7;
+        }
+        .weather-city {
+            font-size: 0.75rem;
+            opacity: 0.5;
+        }
+        .headline {
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+        .headline-source {
+            font-size: 0.7rem;
+            opacity: 0.5;
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .transport {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+        }
+        .transport-icon { font-size: 1.2rem; }
+        .transport-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .transport-status.ok { background: rgba(34,197,94,0.2); color: #22c55e; }
+        .transport-status.delayed { background: rgba(245,158,11,0.2); color: #f59e0b; }
+        .loading {
+            opacity: 0.5;
+            text-align: center;
+            padding: 20px;
+        }
+        .open-app {
+            display: block;
+            text-align: center;
+            padding: 12px;
+            background: #dc2626;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="widget" id="weather-widget">
+        <div class="loading">Loading...</div>
+    </div>
+    <div class="widget" id="headline-widget">
+        <div class="loading">Loading news...</div>
+    </div>
+    <div class="widget" id="transport-widget">
+        <div class="loading">Loading transport...</div>
+    </div>
+    <a href="/" class="open-app">Open Full App</a>
+
+    <script>
+        const WORKER_URL = 'https://swiss-news-worker.swissnews.workers.dev';
+        const city = localStorage.getItem('city') || 'zurich';
+        const lang = localStorage.getItem('lang') || 'en';
+
+        const weatherIcons = {
+            0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
+            45: '🌫️', 48: '🌫️',
+            51: '🌧️', 53: '🌧️', 55: '🌧️',
+            61: '🌧️', 63: '🌧️', 65: '🌧️',
+            71: '🌨️', 73: '🌨️', 75: '🌨️',
+            80: '🌦️', 81: '🌦️', 82: '🌦️',
+            95: '⛈️', 96: '⛈️', 99: '⛈️'
+        };
+
+        async function loadWidget() {
+            try {
+                const response = await fetch(`${WORKER_URL}?city=${city}&lang=${lang}`);
+                const data = await response.json();
+
+                // Weather
+                if (data.weather) {
+                    document.getElementById('weather-widget').innerHTML = `
+                        <div class="weather">
+                            <span class="weather-icon">${weatherIcons[data.weather.weatherCode] || '🌡️'}</span>
+                            <div class="weather-info">
+                                <div class="weather-temp">${data.weather.temperature}°</div>
+                                <div class="weather-desc">${data.weather.description}</div>
+                                <div class="weather-city">${data.city?.name || 'Zürich'}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Top headline
+                const cats = data.categories || {};
+                const allNews = [...(cats.politics || []), ...(cats.disruptions || []), ...(cats.local || [])];
+                if (allNews.length > 0) {
+                    const top = allNews[0];
+                    document.getElementById('headline-widget').innerHTML = `
+                        <div class="headline">${top.headline}</div>
+                        <div class="headline-source">${top.source}</div>
+                    `;
+                }
+
+                // Transport
+                if (data.transport) {
+                    const t = data.transport;
+                    const hasDelays = t.summary && t.summary.totalDelayed > 0;
+                    document.getElementById('transport-widget').innerHTML = `
+                        <div class="transport">
+                            <span class="transport-icon">🚇</span>
+                            <span>${lang === 'de' ? 'Verkehr' : 'Transport'}</span>
+                            <span class="transport-status ${hasDelays ? 'delayed' : 'ok'}">
+                                ${hasDelays
+                                    ? `${t.summary.totalDelayed} ${lang === 'de' ? 'Verspätungen' : 'delays'}`
+                                    : (lang === 'de' ? 'Pünktlich' : 'On time')}
+                            </span>
+                        </div>
+                    `;
+                }
+            } catch (err) {
+                console.error('Widget error:', err);
+            }
+        }
+
+        loadWidget();
+        // Refresh every 5 minutes
+        setInterval(loadWidget, 5 * 60 * 1000);
+    </script>
+</body>
+</html>

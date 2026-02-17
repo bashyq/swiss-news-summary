@@ -1,0 +1,62 @@
+{
+  "name": "Today in Switzerland",
+  "short_name": "Today CH",
+  "description": "Daily news, weather, activities for families in Switzerland",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Today's News",
+      "short_name": "News",
+      "description": "View today's news",
+      "url": "/?view=news",
+      "icons": [{ "src": "icon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "What to do?",
+      "short_name": "Activities",
+      "description": "Find family activities",
+      "url": "/?view=activities",
+      "icons": [{ "src": "icon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Events Calendar",
+      "short_name": "Events",
+      "description": "Holidays and events calendar",
+      "url": "/?view=events",
+      "icons": [{ "src": "icon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Weekend Planner",
+      "short_name": "Weekend",
+      "description": "Plan your weekend activities",
+      "url": "/?view=weekend",
+      "icons": [{ "src": "icon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Lunch Spots",
+      "short_name": "Lunch",
+      "description": "Find lunch spots nearby",
+      "url": "/?view=lunch",
+      "icons": [{ "src": "icon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Quick Widget",
+      "short_name": "Widget",
+      "description": "Compact weather & headlines",
+      "url": "/widget.html",
+      "icons": [{ "src": "icon.svg", "sizes": "96x96" }]
+    }
+  ]
+}

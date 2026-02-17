@@ -1,0 +1,19 @@
+name = "swiss-news-worker"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# Your Cloudflare account ID (find in dashboard URL or run `wrangler whoami`)
+# account_id = "your-account-id"
+
+[vars]
+ALLOWED_ORIGIN = "*"
+
+# KV Namespace for storing curated activities
+# First run: wrangler kv:namespace create "ACTIVITIES_KV"
+# Then paste the id below
+[[kv_namespaces]]
+binding = "ACTIVITIES_KV"
+id = "5ed6acfc2de944a38ee9a767080b4290"
+
+# IMPORTANT: Add your Claude API key as a secret, NOT here!
+# Run: wrangler secret put CLAUDE_API_KEY
