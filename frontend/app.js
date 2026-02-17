@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.3.1';
+const APP_VERSION = '2.3.2';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -478,8 +478,11 @@ function renderActivitiesView() {
     <button class="age-btn${ageFilter === '4-5' ? ' active' : ''}" onclick="setAgeFilter('4-5')">${t('age45')}</button>
   </div>`;
 
-  // Surprise button
-  html += `<button class="surprise-btn" onclick="surpriseMe()" id="surprise-btn">🎲 ${t('surpriseMe')}</button>`;
+  // Surprise + playgrounds buttons
+  html += `<div class="activities-actions">
+    <button class="surprise-btn" onclick="surpriseMe()" id="surprise-btn">🎲 ${t('surpriseMe')}</button>
+    <button class="surprise-btn playground-btn" onclick="openPlaygroundsMap()">🛝 ${t('findPlaygrounds')}</button>
+  </div>`;
 
   // Map
   html += '<div class="map-container" id="activity-map"></div>';
@@ -1225,6 +1228,12 @@ function surpriseMe() {
   if (candidates.length === 0) return;
   const pick = candidates[Math.floor(Math.random() * candidates.length)];
   showSurpriseModal(pick, 'activity');
+}
+
+function openPlaygroundsMap() {
+  const cityCoords = { zurich: [47.3769, 8.5417], basel: [47.5596, 7.5886], bern: [46.948, 7.4474], geneva: [46.2044, 6.1432], lausanne: [46.5197, 6.6323], luzern: [47.0502, 8.3093], winterthur: [47.4984, 8.7235] };
+  const [lat, lon] = userLat ? [userLat, userLon] : (cityCoords[city] || cityCoords.zurich);
+  window.open(`https://www.google.com/maps/search/playground/@${lat},${lon},14z`, '_blank');
 }
 
 function surpriseLunch() {

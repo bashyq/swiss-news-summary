@@ -184,7 +184,9 @@ nav { margin: 16px 0; }
 .age-btn:hover { border-color: var(--text2); }
 .age-btn.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
 
-/* Surprise button */
+/* Surprise + playground buttons */
+.activities-actions { display: flex; gap: 8px; margin-bottom: 16px; }
+.activities-actions .surprise-btn { margin-bottom: 0; }
 .surprise-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; border: none; border-radius: var(--radius); background: linear-gradient(135deg, var(--accent-dim) 0%, rgba(168,85,247,.12) 100%); color: var(--accent); font-family: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; margin-bottom: 16px; transition: all .25s; }
 .surprise-btn:hover { background: linear-gradient(135deg, var(--accent) 0%, #a855f7 100%); color: #fff; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(255,0,0,.2); }
 .surprise-btn:active { transform: translateY(0); }
