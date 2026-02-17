@@ -336,13 +336,14 @@ Each city has:
 - `lang` - Language preference (en/de)
 - `city` - Selected city
 - `theme` - Theme preference (light/dark)
+- `view` - Active view (news/activities/lunch/events/weekend/sunshine), persisted across refresh
 - `savedActivities` - Array of saved activity IDs
 - `customActivities` - Array of user-created activities
 - `installDismissed` - PWA install prompt dismissed
 - `notificationsEnabled` - Push notifications enabled
 - `newsCache-{city}-{lang}` - Cached news data per city/language (2hr TTL)
 - `activitiesCache-{city}` - Cached activities data per city
-- `sunshineCache` - Cached sunshine data (30min TTL)
+- `sunshineCache-v2` - Cached sunshine data with Zürich baseline (30min TTL)
 
 **Cloudflare KV:**
 - Key format: `activities-{cityId}`
@@ -351,7 +352,7 @@ Each city has:
 ## Notes
 
 - Open-Meteo rate limits: Worker IP can hit daily quota. Client-side fallback in app.js handles this.
-- Sunshine uses multi-location API (single request for all 28 destinations) to avoid rate limits.
+- Sunshine uses multi-location API (single request for all 29 destinations incl. Zürich baseline) to avoid rate limits.
 - Sunshine is always Zürich-based — `setCity()` doesn't affect it.
 
 ## Troubleshooting
