@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.2.1';
+const APP_VERSION = '2.2.2';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -1857,7 +1857,7 @@ function assembleWhatsOn() {
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
   const weather = newsData?.weather || null;
-  const isBadWeather = weather && (RAINY_CODES.includes(weather.weatherCode) || weather.temperature < 5);
+  const isBadWeather = !weather || RAINY_CODES.includes(weather.weatherCode) || weather.temperature < 5;
 
   // Find today's holiday
   const holiday = newsData?.holidays?.find(h => h.isToday) || null;
@@ -1940,7 +1940,7 @@ function renderWhatsOnView() {
   // Weather picks
   if (d.weatherPicks.length) {
     const picksTitle = d.isBadWeather ? 'indoorPicksToday' : 'outdoorPicksToday';
-    html += renderWhatsOnSection('weatherPicks', d.isBadWeather ? '🏠' : '☀️',
+    html += renderWhatsOnSection(picksTitle, d.isBadWeather ? '🏠' : '☀️',
       d.weatherPicks.map(a => renderWhatsOnActivityCard(a)).join(''));
   }
 
