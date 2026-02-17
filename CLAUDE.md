@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 cd C:\Users\bashy\Documents\swiss-news-summary\worker && npx wrangler deploy
 
 # Deploy frontend (Cloudflare Pages)
-cd C:\Users\bashy\Documents\swiss-news-summary && npx wrangler pages deploy frontend --project-name=swiss-news
+cd C:\Users\bashy\Documents\swiss-news-summary && npx wrangler pages deploy frontend --project-name=swiss-news --branch=main
 ```
 
 **URLs:**
@@ -403,5 +403,5 @@ cd worker
 wrangler secret put CLAUDE_API_KEY  # Enter your Claude API key
 wrangler deploy
 cd ..
-npx wrangler pages deploy frontend --project-name=swiss-news
+npx wrangler pages deploy frontend --project-name=swiss-news --branch=main
 ```
