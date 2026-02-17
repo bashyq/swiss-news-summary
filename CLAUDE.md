@@ -155,6 +155,10 @@ swiss-news-summary/
 - **Drive time badges**: Minutes from Zürich
 - **Client-side fallback**: If worker is rate-limited, fetches directly from Open-Meteo
 - Always Zürich-based (not affected by city selector)
+- **Expandable cards**: Tap to expand with "Things to do" section (accordion, one at a time)
+- **Destination highlights**: `DEST_HIGHLIGHTS` in app.js — 2-3 curated toddler-friendly attractions per destination (57 total)
+- **Overlap cities** (Basel, Lausanne, Luzern): Show "See all activities →" link to Activities view
+- **Google Maps links**: "Find playgrounds" / "Find restaurants" near destination coordinates
 
 ### Widget Page (`/widget.html`)
 - Compact view: weather, top headline, transport status
@@ -347,6 +351,8 @@ Each city has:
 | `assembleWhatsOn()` | Build digest from news + activities data |
 | `renderWhatsOnView()` | Render What's On sections |
 | `isAvailableOnDate(activity, date)` | Check if recurring/seasonal activity is available on date |
+| `renderSunshineHighlights(dest)` | Render expandable highlights section for sunshine card |
+| `renderHighlightItem(highlight)` | Render single destination highlight with directions link |
 
 ## Storage
 

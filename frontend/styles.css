@@ -391,6 +391,20 @@ nav { margin: 16px 0; }
 .sunshine-expand-btn { display: block; width: 100%; padding: 12px; border: 1px dashed var(--border); border-radius: var(--radius); background: none; color: var(--text2); font-family: inherit; font-size: .85rem; cursor: pointer; margin-top: 8px; transition: all .2s; }
 .sunshine-expand-btn:hover { border-color: var(--accent); color: var(--accent); }
 
+.sunshine-highlights { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.sunshine-card.expanded .sunshine-highlights { display: block; }
+.sunshine-highlights-title { font-family: var(--serif); font-size: .85rem; font-weight: 600; margin-bottom: 10px; }
+.sunshine-highlight { padding: 8px 0; border-bottom: 1px solid var(--border2); }
+.sunshine-highlight:last-child { border-bottom: none; }
+.sunshine-highlight-name { font-size: .85rem; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.sunshine-highlight-desc { font-size: .75rem; color: var(--text2); margin-top: 2px; line-height: 1.4; }
+.sunshine-highlight-actions { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.sunshine-highlight-actions a { font-size: .7rem; color: var(--accent); }
+.sunshine-links { display: flex; gap: 16px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border2); }
+.sunshine-links a { font-size: .78rem; color: var(--accent); }
+.sunshine-link { font-size: .78rem; color: var(--accent); cursor: pointer; margin-top: 8px; font-weight: 500; }
+.sunshine-link:hover { text-decoration: underline; }
+
 /* ═══ DONATE ═══ */
 .donate-amounts { display: flex; gap: 8px; justify-content: center; margin-bottom: 16px; }
 .donate-amount-btn { padding: 8px 16px; border: 1px solid var(--border); border-radius: 8px; background: none; color: var(--text2); font-family: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; transition: all .2s; min-width: 64px; }
