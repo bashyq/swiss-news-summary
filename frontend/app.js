@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.3.0';
+const APP_VERSION = '2.3.1';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -856,14 +856,29 @@ async function fetchNews(force = false) {
 }
 
 async function loadActivities(force = false) {
+  const cacheKey = `activitiesCache-${city}`;
+  if (!force) {
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      activitiesData = cached.activities || [];
+      cityEventsData = cached.cityEvents || [];
+      renderMain();
+      setTimeout(() => initActivityMap(), 100);
+    }
+  }
+
   try {
     const res = await fetch(`${API}/activities?city=${city}&lang=${lang}${force ? '&refresh=true' : ''}`);
     const data = await res.json();
     activitiesData = data.activities || [];
     cityEventsData = data.cityEvents || [];
+    cache.set(cacheKey, data);
     renderMain();
     setTimeout(() => initActivityMap(), 100);
-  } catch (e) { console.error('Activities error:', e); showToast('toastNetworkError', 'error'); }
+  } catch (e) {
+    console.error('Activities error:', e);
+    if (!activitiesData.length) showToast('toastNetworkError', 'error');
+  }
 }
 
 async function loadEventsCalendar() {

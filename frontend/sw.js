@@ -1,4 +1,4 @@
-const CACHE_NAME = 'today-switzerland-v27';
+const CACHE_NAME = 'today-switzerland-v28';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -50,22 +50,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // For static assets, try cache first, then network
+  // For static assets, try network first, fallback to cache
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetched = fetch(event.request).then((response) => {
-        // Cache successful responses
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, clone);
-          });
-        }
-        return response;
-      }).catch(() => cached);
-
-      return cached || fetched;
-    })
+    fetch(event.request).then((response) => {
+      if (response.ok) {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, clone);
+        });
+      }
+      return response;
+    }).catch(() => caches.match(event.request))
   );
 });
 
