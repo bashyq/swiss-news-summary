@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.5.1';
+const APP_VERSION = '2.6.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -15,6 +15,7 @@ let lang = localStorage.getItem('lang') || 'en';
 let city = localStorage.getItem('city') || 'zurich';
 let theme = localStorage.getItem('theme') || 'dark';
 let view = localStorage.getItem('view') || 'news';
+if (view === 'whatson') view = 'events'; // merged into events
 let newsData = null;
 let activitiesData = [];
 let cityEventsData = [];
@@ -32,7 +33,7 @@ let savedLunch = JSON.parse(localStorage.getItem('savedLunch') || '[]');
 let customLunch = JSON.parse(localStorage.getItem('customLunch') || '[]');
 let lunchRatings = JSON.parse(localStorage.getItem('lunchRatings') || '{}');
 let sunshineData = null;
-let whatsOnData = null;
+// whatsOnData removed — merged into Events view
 let sunshineSort = 'sunshine';
 let sunshineFilter = 'all';
 let sunshineExpanded = false;
@@ -156,20 +157,19 @@ const T = {
   emptyEventsHint: { en:'Try selecting a different day or filter', de:'Wähle einen anderen Tag oder Filter' },
   emptySunshine: { en:'No destinations match this filter', de:'Keine Ziele für diesen Filter' },
   emptySunshineHint: { en:'Try "All" to see every destination', de:'Wähle "Alle" um alle Ziele zu sehen' },
-  whatsOn: { en:"What's On", de:'Was läuft' },
-  whatsOnTitle: { en:"What's on", de:'Was läuft' },
-  whatsOnToday: { en:'today?', de:'heute?' },
   happeningToday: { en:'Happening Today', de:'Heute los' },
+  happeningOn: { en:'Happening on', de:'Los am' },
   availableToday: { en:'Available Today', de:'Heute verfügbar' },
+  activitiesAvailable: { en:'Activities Available', de:'Verfügbare Aktivitäten' },
   indoorPicksToday: { en:'Indoor picks for today', de:'Indoor-Tipps für heute' },
   outdoorPicksToday: { en:'Outdoor picks for today', de:'Outdoor-Tipps für heute' },
+  indoorPicks: { en:'Indoor picks', de:'Indoor-Tipps' },
+  outdoorPicks: { en:'Outdoor picks', de:'Outdoor-Tipps' },
   holidayToday: { en:'Holiday today', de:'Feiertag heute' },
   stayIndoorRec: { en:'Stay cosy indoors', de:'Gemütlich drinnen bleiben' },
   goOutdoorRec: { en:'Great day to be outside', de:'Perfekter Tag für draussen' },
   trendingToday: { en:'Trending Today', de:'Trending heute' },
   weatherPicks: { en:'Weather Picks', de:'Wetter-Tipps' },
-  emptyWhatsOn: { en:'Nothing special today', de:'Heute nichts Besonderes' },
-  emptyWhatsOnHint: { en:'Check back tomorrow for new highlights', de:'Morgen gibt es neue Highlights' },
   thingsToDo: { en:'Things to do', de:'Was unternehmen' },
   findPlaygrounds: { en:'Find playgrounds', de:'Spielplätze finden' },
   findRestaurants: { en:'Find restaurants', de:'Restaurants finden' },
@@ -328,10 +328,9 @@ function getPageTitle() {
   if (view === 'news') return `${t('todayInSwitzerland')}<br><span class="accent">${t('switzerland')}</span>`;
   if (view === 'activities') return `${t('whatToDo')}<br><span class="accent">${t('todayQ')}</span>`;
   if (view === 'lunch') return `${t('whereToEat')}<br><span class="accent">${t('eat')}</span>`;
-  if (view === 'events') return `${t('events')}<br><span class="accent">${t('eventsCalendar')}</span>`;
+  if (view === 'events') return `${lang === 'de' ? 'Was läuft' : "What's on"}<br><span class="accent">${lang === 'de' ? 'heute?' : 'today?'}</span>`;
   if (view === 'weekend') return `${t('weekend')}<br><span class="accent">${t('weekendPlanner')}</span>`;
   if (view === 'sunshine') return `${t('whereSun')}<br><span class="accent">${t('sunTitle')}</span>`;
-  if (view === 'whatson') return `${t('whatsOnTitle')}<br><span class="accent">${t('whatsOnToday')}</span>`;
   return '';
 }
 
@@ -345,10 +344,10 @@ function renderNav() {
   }).join('')}</div>`;
 }
 
-const VIEW_RENDERERS = { news: renderNewsView, activities: renderActivitiesView, lunch: renderLunchView, events: renderEventsView, weekend: renderWeekendView, sunshine: renderSunshineView, whatson: renderWhatsOnView };
+const VIEW_RENDERERS = { news: renderNewsView, activities: renderActivitiesView, lunch: renderLunchView, events: renderEventsView, weekend: renderWeekendView, sunshine: renderSunshineView };
 
 function renderMain() {
-  const views = ['news', 'activities', 'lunch', 'events', 'weekend', 'sunshine', 'whatson'];
+  const views = ['news', 'activities', 'lunch', 'events', 'weekend', 'sunshine'];
   $('main').innerHTML = views.map(v => `<div class="app-view${view === v ? ' active' : ''}" id="view-${v}"></div>`).join('');
   renderCurrentView();
 }
@@ -363,7 +362,6 @@ function renderMenu() {
   $('menu').innerHTML = `
     <button class="menu-close" onclick="closeMenu()">&times;</button>
     <div class="menu-title">${t('settings')}</div>
-    <div class="menu-item${view === 'whatson' ? ' active' : ''}" onclick="switchView('whatson')"><span class="menu-item-icon">📆</span>${t('whatsOn')}</div>
     <div class="menu-item${view === 'news' ? ' active' : ''}" onclick="switchView('news')"><span class="menu-item-icon">📰</span>${t('news')}</div>
     <div class="menu-item${view === 'activities' ? ' active' : ''}" onclick="switchView('activities')"><span class="menu-item-icon">🎈</span>${t('activities')}</div>
     <div class="menu-item${view === 'lunch' ? ' active' : ''}" onclick="switchView('lunch')"><span class="menu-item-icon">🍽️</span>${t('lunch')}</div>
@@ -585,12 +583,24 @@ function getFilteredActivities() {
 
 function renderEventsView() {
   let html = '';
-  // Filter bar
-  const filters = [['all', t('all')], ['holidays', t('holidaysFilter')], ['events', t('eventsTab')], ['recurring', t('recurringFilter')], ['seasonal', t('seasonal')], ['festivals', t('festivalsFilter')]];
-  html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${eventFilter === k ? ' active' : ''}" onclick="filterEvents('${k}')">${v}</button>`).join('')}</div>`;
+
+  // Auto-select today if nothing selected
+  if (!selectedCalendarDay) {
+    selectedCalendarDay = new Date().toISOString().split('T')[0];
+  }
 
   // Calendar
   html += renderCalendarGrid();
+
+  // Day detail panel (always shown for selected day)
+  html += '<div id="day-detail" class="day-detail-panel">';
+  html += renderDayDetail(selectedCalendarDay);
+  html += '</div>';
+
+  // Filter bar for events list below
+  const filters = [['all', t('all')], ['holidays', t('holidaysFilter')], ['events', t('eventsTab')], ['recurring', t('recurringFilter')], ['seasonal', t('seasonal')], ['festivals', t('festivalsFilter')]];
+  html += `<div class="events-list-header" style="margin-top:20px;font-family:var(--serif);font-size:1.05rem;font-weight:600;margin-bottom:8px">${lang === 'de' ? 'Alle Events' : 'All Events'}</div>`;
+  html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${eventFilter === k ? ' active' : ''}" onclick="filterEvents('${k}')">${v}</button>`).join('')}</div>`;
 
   // Events list
   html += '<div id="events-list">';
@@ -903,6 +913,19 @@ async function loadEventsCalendar() {
   // Build calendar data from multiple sources
   eventsCalendarData = [];
 
+  // Fetch news (for weather, trending, holidays) if not loaded
+  if (!newsData) {
+    try {
+      const cacheKey = `newsCache-${city}-${lang}`;
+      const cached = cache.get(cacheKey);
+      if (cached) newsData = cached;
+      else {
+        const res = await fetch(`${API}/?city=${city}&lang=${lang}`);
+        if (res.ok) { newsData = await res.json(); cache.set(cacheKey, newsData); }
+      }
+    } catch {}
+  }
+
   // Holidays from news data
   if (newsData?.holidays) {
     for (const h of newsData.holidays) {
@@ -910,13 +933,15 @@ async function loadEventsCalendar() {
     }
   }
 
-  // City events
+  // City events + activities
   if (cityEventsData.length === 0) {
     try {
       const res = await fetch(`${API}/activities?city=${city}&lang=${lang}`);
-      const data = await res.json();
-      cityEventsData = data.cityEvents || [];
-      if (!activitiesData.length) activitiesData = data.activities || [];
+      if (res.ok) {
+        const data = await res.json();
+        cityEventsData = data.cityEvents || [];
+        if (!activitiesData.length) activitiesData = data.activities || [];
+      }
     } catch {}
   }
 
@@ -1020,8 +1045,7 @@ function switchView(v) {
   renderNav();
   renderMenu();
   closeMenu();
-  if (v === 'whatson') loadWhatsOn();
-  else if (v === 'activities') loadActivities();
+  if (v === 'activities') loadActivities();
   else if (v === 'lunch') loadLunchSpots();
   else if (v === 'events') loadEventsCalendar();
   else if (v === 'weekend') loadWeekendPlanner();
@@ -1037,11 +1061,10 @@ function setTab(tab) {
 
 function setCity(id) {
   city = id; localStorage.setItem('city', id);
-  newsData = null; activitiesData = []; lunchData = []; weekendData = null; cityEventsData = []; whatsOnData = null;
+  newsData = null; activitiesData = []; lunchData = []; weekendData = null; cityEventsData = [];
   renderAll();
   toggleCityDropdown();
-  if (view === 'whatson') loadWhatsOn();
-  else if (view === 'news') fetchNews();
+  if (view === 'news') fetchNews();
   else if (view === 'activities') loadActivities();
   else if (view === 'lunch') loadLunchSpots();
   else if (view === 'events') loadEventsCalendar();
@@ -1053,7 +1076,6 @@ function setLanguage(l) {
   lang = l; localStorage.setItem('lang', l);
   renderAll();
   if (view === 'news') fetchNews();
-  else if (view === 'whatson') loadWhatsOn();
 }
 
 function toggleTheme() {
@@ -1212,8 +1234,7 @@ function calendarNext() { calendarMonth++; if (calendarMonth > 11) { calendarMon
 function selectCalendarDay(dateStr) { selectedCalendarDay = selectedCalendarDay === dateStr ? null : dateStr; renderCurrentView(); }
 
 function refreshCurrentView() {
-  if (view === 'whatson') loadWhatsOn(true);
-  else if (view === 'news') fetchNews(true);
+  if (view === 'news') fetchNews(true);
   else if (view === 'activities') loadActivities(true);
   else if (view === 'lunch') loadLunchSpots(true);
   else if (view === 'events') loadEventsCalendar();
@@ -2038,150 +2059,19 @@ function expandSunshineList() {
   afterRender(initSunshineMap);
 }
 
-// ═══ WHAT'S ON VIEW ═══
+// ═══ DAY DETAIL (integrated into Events view) ═══
 
-async function loadWhatsOn(force = false) {
-  const el = $('view-whatson');
-  if (!el) return;
-
-  const needsNews = !newsData || force;
-  const needsActivities = !activitiesData.length || force;
-
-  if (needsNews || needsActivities) {
-    el.innerHTML = renderWhatsOnSkeleton();
-    const fetches = [];
-    if (needsNews) fetches.push(fetchNews(force));
-    if (needsActivities) fetches.push(loadActivities(force));
-    await Promise.all(fetches);
-  }
-
-  whatsOnData = assembleWhatsOn();
-  renderCurrentView();
-}
-
-function assembleWhatsOn() {
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
-  const weather = newsData?.weather || null;
-  const isBadWeather = !weather || RAINY_CODES.includes(weather.weatherCode) || weather.temperature < 5;
-
-  // Find today's holiday
-  const holiday = newsData?.holidays?.find(h => h.isToday) || null;
-
-  // Festivals happening today
-  const festivals = (cityEventsData || []).filter(e => {
-    if (!e.startDate) return false;
-    const start = e.startDate;
-    const end = e.endDate || e.startDate;
-    return start <= todayStr && todayStr <= end;
-  });
-
-  // Recurring activities available today
-  const recurring = (activitiesData || []).filter(a =>
-    a.recurring && a.category !== 'stayhome' && isAvailableOnDate(a, today)
-  ).slice(0, 5);
-
-  // Weather-appropriate picks — 3 random non-recurring activities
-  let pickPool = (activitiesData || []).filter(a => !a.recurring && a.category !== 'stayhome' && isAvailableOnDate(a, today));
-  if (isBadWeather) {
-    const indoor = pickPool.filter(a => a.indoor);
-    if (indoor.length >= 3) pickPool = indoor;
-  } else {
-    pickPool.sort((a, b) => (a.indoor ? 1 : 0) - (b.indoor ? 1 : 0));
-  }
-  // Shuffle
-  for (let i = pickPool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pickPool[i], pickPool[j]] = [pickPool[j], pickPool[i]];
-  }
-  const weatherPicks = pickPool.slice(0, 3);
-
-  // Trending
-  const trending = newsData?.trending || null;
-
-  return { weather, isBadWeather, holiday, festivals, recurring, weatherPicks, trending, date: today };
-}
-
-function renderWhatsOnView() {
-  if (!whatsOnData) return renderWhatsOnSkeleton();
-  const d = whatsOnData;
-  const dateStr = d.date.toLocaleDateString(lang === 'de' ? 'de-CH' : 'en-CH', { weekday: 'long', day: 'numeric', month: 'long' });
-  const hasContent = d.holiday || d.festivals.length || d.recurring.length || d.weatherPicks.length || d.trending;
-
-  let html = `<div class="whatson-date-label">${dateStr} — ${CITIES[city]}</div>`;
-
-  // Holiday banner
-  if (d.holiday) {
-    const name = lang === 'de' ? (d.holiday.nameDE || d.holiday.name) : d.holiday.name;
-    html += `<div class="whatson-holiday-banner">🎉 <span>${t('holidayToday')}: ${esc(name)}</span></div>`;
-  }
-
-  // Weather card
-  if (d.weather) {
-    const icon = WEATHER_ICONS[d.weather.weatherCode] || '🌡️';
-    const rec = d.isBadWeather ? t('stayIndoorRec') : t('goOutdoorRec');
-    const recIcon = d.isBadWeather ? '🏠' : '🌳';
-    html += `<div class="whatson-weather-card" onclick="toggleWeatherDropdown()">
-      <div class="whatson-weather-main">
-        <span class="whatson-weather-icon">${icon}</span>
-        <span class="whatson-weather-temp">${Math.round(d.weather.temperature)}°</span>
-        <span class="whatson-weather-desc">${esc(d.weather.description || '')}</span>
-      </div>
-      <div class="whatson-weather-rec">${recIcon} ${rec}</div>
-    </div>`;
-  }
-
-  // Festivals
-  if (d.festivals.length) {
-    html += renderWhatsOnSection('happeningToday', '🎪',
-      d.festivals.map(f => renderWhatsOnFestivalCard(f)).join(''));
-  }
-
-  // Recurring
-  if (d.recurring.length) {
-    html += renderWhatsOnSection('availableToday', '🔄',
-      d.recurring.map(a => renderWhatsOnActivityCard(a)).join(''));
-  }
-
-  // Weather picks
-  if (d.weatherPicks.length) {
-    const picksTitle = d.isBadWeather ? 'indoorPicksToday' : 'outdoorPicksToday';
-    html += renderWhatsOnSection(picksTitle, d.isBadWeather ? '🏠' : '☀️',
-      d.weatherPicks.map(a => renderWhatsOnActivityCard(a)).join(''));
-  }
-
-  // Trending
-  if (d.trending) {
-    const topic = lang === 'de' ? (d.trending.topicDE || d.trending.topic) : d.trending.topic;
-    html += renderWhatsOnSection('trendingToday', '🔥',
-      `<div class="whatson-trending" onclick="${safeUrl(d.trending.url) ? `window.open('${esc(d.trending.url)}','_blank')` : ''}">
-        <div class="trending-label">🔥 Trending</div>
-        <div class="trending-topic">${esc(topic)}</div>
-      </div>`);
-  }
-
-  // Empty state
-  if (!hasContent) {
-    html += renderEmptyState('📆', 'emptyWhatsOn', 'emptyWhatsOnHint');
-  }
-
-  // Refresh button
-  html += `<button class="surprise-btn" onclick="loadWhatsOn(true)" style="margin-top:20px">🔄 ${t('refresh')}</button>`;
-
-  return html;
-}
-
-function renderWhatsOnSection(titleKey, icon, content) {
-  return `<div class="whatson-section">
-    <div class="whatson-section-header">
-      <span class="whatson-section-icon">${icon}</span>
-      <span class="whatson-section-title">${t(titleKey)}</span>
+function renderDayDetailSection(titleKey, icon, content) {
+  return `<div class="day-detail-section">
+    <div class="day-detail-section-header">
+      <span class="day-detail-section-icon">${icon}</span>
+      <span class="day-detail-section-title">${t(titleKey)}</span>
     </div>
     ${content}
   </div>`;
 }
 
-function renderWhatsOnFestivalCard(f) {
+function renderDayFestivalCard(f) {
   const name = lang === 'de' ? (f.nameDE || f.name) : f.name;
   const desc = lang === 'de' ? (f.descriptionDE || f.description || '') : (f.description || '');
   const dateRange = f.startDate === f.endDate || !f.endDate
@@ -2190,17 +2080,17 @@ function renderWhatsOnFestivalCard(f) {
   let badges = '';
   if (f.toddlerFriendly) badges += '<span class="badge badge-indoor">👶 Toddler-friendly</span>';
   if (f.free) badges += '<span class="badge badge-outdoor">🆓 Free</span>';
-  return `<div class="whatson-festival-card" onclick="${safeUrl(f.url) ? `window.open('${esc(f.url)}','_blank')` : ''}">
-    <div class="whatson-festival-name">${esc(name)}</div>
-    <div class="whatson-festival-desc">${esc(desc)}</div>
-    <div class="whatson-festival-meta">
-      <span class="whatson-festival-date">📅 ${dateRange}</span>
+  return `<div class="day-detail-festival" onclick="${safeUrl(f.url) ? `window.open('${esc(f.url)}','_blank')` : ''}">
+    <div class="day-detail-festival-name">${esc(name)}</div>
+    <div class="day-detail-festival-desc">${esc(desc)}</div>
+    <div class="day-detail-festival-meta">
+      <span class="day-detail-festival-date">📅 ${dateRange}</span>
       ${badges}
     </div>
   </div>`;
 }
 
-function renderWhatsOnActivityCard(a) {
+function renderDayActivityCard(a) {
   const name = lang === 'de' ? (a.nameDE || a.name) : a.name;
   const emoji = ACTIVITY_EMOJIS[a.category] || '📍';
   let badges = '';
@@ -2208,15 +2098,116 @@ function renderWhatsOnActivityCard(a) {
   else badges += `<span class="badge badge-outdoor">${t('outdoor')}</span>`;
   if (a.recurring) badges += `<span class="badge-recurring">${esc(a.recurring)}</span>`;
   if (a.duration) badges += `<span class="badge badge-duration">${esc(a.duration)}</span>`;
-  return `<div class="whatson-activity-card" onclick="switchView('activities')">
-    <div class="whatson-activity-name"><span class="activity-emoji">${emoji}</span> ${esc(name)}</div>
-    <div class="whatson-activity-badges">${badges}</div>
+  return `<div class="day-detail-activity" onclick="switchView('activities')">
+    <div class="day-detail-activity-name"><span class="activity-emoji">${emoji}</span> ${esc(name)}</div>
+    <div class="day-detail-activity-badges">${badges}</div>
   </div>`;
 }
 
-function renderWhatsOnSkeleton() {
-  return `<div class="whatson-date-label skeleton skeleton-line" style="width:60%;height:16px"></div>
-    ${renderSkeleton(4)}`;
+function renderDayDetail(dateStr) {
+  const selDate = new Date(dateStr + 'T00:00:00');
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isToday = dateStr === todayStr;
+  const dow = selDate.getDay();
+
+  // Date label
+  const dateLabel = selDate.toLocaleDateString(lang === 'de' ? 'de-CH' : 'en-CH', { weekday: 'long', day: 'numeric', month: 'long' });
+  let html = `<div class="day-detail-date">${dateLabel}</div>`;
+
+  // Weather (today only)
+  if (isToday && newsData?.weather) {
+    const w = newsData.weather;
+    const isBad = RAINY_CODES.includes(w.weatherCode) || w.temperature < 5;
+    const rec = isBad ? t('stayIndoorRec') : t('goOutdoorRec');
+    html += `<div class="day-detail-weather" onclick="switchView('news')">
+      <div class="day-detail-weather-main">
+        <span class="day-detail-weather-icon">${WEATHER_ICONS[w.weatherCode] || '🌡️'}</span>
+        <span class="day-detail-weather-temp">${w.temperature}°</span>
+        <span class="day-detail-weather-desc">${esc(w.description || '')}</span>
+      </div>
+      <span class="day-detail-weather-rec">${rec}</span>
+    </div>`;
+  }
+
+  let sections = '';
+
+  // Holidays on this date
+  if (newsData?.holidays) {
+    const dayHolidays = newsData.holidays.filter(h => h.date === dateStr);
+    if (dayHolidays.length) {
+      const holidayHtml = dayHolidays.map(h => {
+        const name = lang === 'de' ? (h.nameDE || h.name) : h.name;
+        return `<div class="day-detail-holiday">🎉 ${esc(name)}</div>`;
+      }).join('');
+      sections += renderDayDetailSection('holidayToday', '🏳️', holidayHtml);
+    }
+  }
+
+  // Festivals overlapping this date
+  const festivals = cityEventsData.filter(f => {
+    const start = new Date(f.startDate);
+    const end = f.endDate ? new Date(f.endDate) : start;
+    return selDate >= start && selDate <= end;
+  });
+  if (festivals.length) {
+    sections += renderDayDetailSection(
+      isToday ? 'happeningToday' : 'happeningOn',
+      '🎪',
+      festivals.map(f => renderDayFestivalCard(f)).join('')
+    );
+  }
+
+  // Recurring activities available on this day-of-week
+  const recurring = activitiesData.filter(a => {
+    if (!a.recurring) return false;
+    const r = a.recurring.toLowerCase();
+    if (r === 'weekends' || r.includes('weekend')) return dow === 0 || dow === 6;
+    if (r.includes('various')) return true;
+    const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    if (r.includes(days[dow])) return true;
+    if (days.some(d => r.includes(d))) return false;
+    return false;
+  });
+  if (recurring.length) {
+    sections += renderDayDetailSection(
+      isToday ? 'availableToday' : 'activitiesAvailable',
+      '📋',
+      recurring.map(a => renderDayActivityCard(a)).join('')
+    );
+  }
+
+  // Weather-based picks (today only)
+  if (isToday && activitiesData.length) {
+    const w = newsData?.weather;
+    const isBad = w && (RAINY_CODES.includes(w.weatherCode) || w.temperature < 5);
+    const picks = activitiesData.filter(a => a.category !== 'stayhome' && !a.recurring && (isBad ? a.indoor : !a.indoor));
+    if (picks.length) {
+      const shuffled = [...picks].sort(() => Math.random() - 0.5).slice(0, 4);
+      sections += renderDayDetailSection(
+        isBad ? 'indoorPicksToday' : 'outdoorPicksToday',
+        isBad ? '🏠' : '☀️',
+        shuffled.map(a => renderDayActivityCard(a)).join('')
+      );
+    }
+  }
+
+  // Trending news (today only)
+  if (isToday && newsData?.trending?.length) {
+    const trendingHtml = newsData.trending.slice(0, 3).map(t => {
+      return `<div class="day-detail-trending" onclick="${safeUrl(t.url) ? `window.open('${esc(t.url)}','_blank')` : ''}">
+        <div class="day-detail-trending-headline">${esc(lang === 'de' ? (t.headlineDE || t.headline) : t.headline)}</div>
+        <div class="day-detail-trending-source">${esc(t.source || '')}</div>
+      </div>`;
+    }).join('');
+    sections += renderDayDetailSection('trendingToday', '📈', trendingHtml);
+  }
+
+  if (!sections) {
+    sections = `<div style="text-align:center;color:var(--muted);padding:24px 0;font-size:.85rem">${lang === 'de' ? 'Keine besonderen Events an diesem Tag' : 'No special events on this day'}</div>`;
+  }
+
+  html += sections;
+  return html;
 }
 
 // ═══ SWIPE NAVIGATION ═══
@@ -2292,7 +2283,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Check URL params (override persisted view if present)
   const params = new URLSearchParams(window.location.search);
   const viewParam = params.get('view');
-  if (viewParam && ['whatson', 'activities', 'lunch', 'events', 'weekend', 'sunshine'].includes(viewParam)) {
+  if (viewParam && ['activities', 'lunch', 'events', 'weekend', 'sunshine'].includes(viewParam)) {
     switchView(viewParam);
   } else if (view === 'news') {
     fetchNews();

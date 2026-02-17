@@ -443,41 +443,45 @@ nav { margin: 16px 0; }
 [data-theme="light"] .card-highlight { animation: cardPulseLight .8s ease; }
 @keyframes cardPulseLight { 0% { box-shadow: 0 0 0 0 rgba(220,38,38,.3); } 50% { box-shadow: 0 0 0 6px rgba(220,38,38,.15); } 100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); } }
 
-/* ═══ WHAT'S ON VIEW ═══ */
-.whatson-date-label { font-size: .75rem; text-transform: uppercase; letter-spacing: .15em; color: var(--muted); font-weight: 500; margin-bottom: 16px; }
+/* ═══ DAY DETAIL (Events view) ═══ */
+.day-detail-panel { margin-top: 16px; margin-bottom: 8px; }
+.day-detail-date { font-size: .75rem; text-transform: uppercase; letter-spacing: .15em; color: var(--muted); font-weight: 500; margin-bottom: 16px; }
 
-.whatson-holiday-banner { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: linear-gradient(135deg, rgba(168,85,247,.15) 0%, rgba(168,85,247,.05) 100%); border: 1px solid rgba(168,85,247,.25); border-radius: var(--radius); margin-bottom: 16px; font-weight: 600; font-size: .9rem; color: #a855f7; }
+.day-detail-holiday { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: linear-gradient(135deg, rgba(168,85,247,.15) 0%, rgba(168,85,247,.05) 100%); border: 1px solid rgba(168,85,247,.25); border-radius: var(--radius); margin-bottom: 16px; font-weight: 600; font-size: .9rem; color: #a855f7; }
 
-.whatson-weather-card { display: flex; align-items: center; justify-content: space-between; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; cursor: pointer; transition: border-color .2s; }
-.whatson-weather-card:hover { border-color: rgba(255,255,255,.15); }
-.whatson-weather-main { display: flex; align-items: center; gap: 12px; }
-.whatson-weather-icon { font-size: 2rem; line-height: 1; }
-.whatson-weather-temp { font-size: 1.5rem; font-weight: 700; }
-.whatson-weather-desc { font-size: .85rem; color: var(--text2); }
-.whatson-weather-rec { font-size: .8rem; color: var(--text2); background: var(--bg2); padding: 6px 12px; border-radius: 16px; white-space: nowrap; }
+.day-detail-weather { display: flex; align-items: center; justify-content: space-between; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; cursor: pointer; transition: border-color .2s; }
+.day-detail-weather:hover { border-color: rgba(255,255,255,.15); }
+.day-detail-weather-main { display: flex; align-items: center; gap: 12px; }
+.day-detail-weather-icon { font-size: 2rem; line-height: 1; }
+.day-detail-weather-temp { font-size: 1.5rem; font-weight: 700; }
+.day-detail-weather-desc { font-size: .85rem; color: var(--text2); }
+.day-detail-weather-rec { font-size: .8rem; color: var(--text2); background: var(--bg2); padding: 6px 12px; border-radius: 16px; white-space: nowrap; }
 
-.whatson-section { margin-bottom: 20px; }
-.whatson-section-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-.whatson-section-icon { font-size: 1.1rem; line-height: 1; }
-.whatson-section-title { font-family: var(--serif); font-size: 1.05rem; font-weight: 600; }
+.day-detail-section { margin-bottom: 20px; }
+.day-detail-section-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.day-detail-section-icon { font-size: 1.1rem; line-height: 1; }
+.day-detail-section-title { font-family: var(--serif); font-size: 1.05rem; font-weight: 600; }
 
-.whatson-festival-card { background: var(--card); border: 1px solid var(--border); border-left: 4px solid #a855f7; border-radius: var(--radius); padding: 14px; margin-bottom: 10px; cursor: pointer; transition: border-color .2s, transform .2s; }
-.whatson-festival-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.12); }
-.whatson-festival-name { font-family: var(--serif); font-size: .95rem; font-weight: 600; margin-bottom: 4px; }
-.whatson-festival-desc { font-size: .82rem; color: var(--text2); margin-bottom: 8px; line-height: 1.5; }
-.whatson-festival-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.whatson-festival-date { font-size: .7rem; color: var(--muted); }
+.day-detail-festival { background: var(--card); border: 1px solid var(--border); border-left: 4px solid #a855f7; border-radius: var(--radius); padding: 14px; margin-bottom: 10px; cursor: pointer; transition: border-color .2s, transform .2s; }
+.day-detail-festival:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.12); }
+.day-detail-festival-name { font-family: var(--serif); font-size: .95rem; font-weight: 600; margin-bottom: 4px; }
+.day-detail-festival-desc { font-size: .82rem; color: var(--text2); margin-bottom: 8px; line-height: 1.5; }
+.day-detail-festival-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.day-detail-festival-date { font-size: .7rem; color: var(--muted); }
 
-.whatson-activity-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; cursor: pointer; transition: border-color .2s, transform .2s; }
-.whatson-activity-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.12); }
-.whatson-activity-name { font-size: .9rem; font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-.whatson-activity-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.day-detail-activity { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; cursor: pointer; transition: border-color .2s, transform .2s; }
+.day-detail-activity:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.12); }
+.day-detail-activity-name { font-size: .9rem; font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.day-detail-activity-badges { display: flex; gap: 6px; flex-wrap: wrap; }
 
-.whatson-trending { background: linear-gradient(135deg, var(--accent-dim), transparent); border: 1px solid rgba(255,0,0,.2); border-radius: var(--radius); padding: 14px 16px; cursor: pointer; }
-.whatson-trending:hover { border-color: var(--accent); }
+.day-detail-trending { background: linear-gradient(135deg, var(--accent-dim), transparent); border: 1px solid rgba(255,0,0,.2); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 8px; cursor: pointer; }
+.day-detail-trending:hover { border-color: var(--accent); }
+.day-detail-trending-headline { font-size: .9rem; font-weight: 600; margin-bottom: 4px; }
+.day-detail-trending-source { font-size: .7rem; color: var(--muted); }
 
-[data-theme="light"] .whatson-festival-card:hover,
-[data-theme="light"] .whatson-activity-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+[data-theme="light"] .day-detail-festival:hover,
+[data-theme="light"] .day-detail-activity:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+[data-theme="light"] .day-detail-weather:hover { border-color: rgba(0,0,0,.15); }
 
 /* ═══ RESPONSIVE ═══ */
 @media (max-width: 480px) {
