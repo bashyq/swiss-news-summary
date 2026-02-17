@@ -128,6 +128,20 @@ swiss-news-summary/
 - **Theme toggle**: Light / Dark mode
 - **Holidays display**: Upcoming Swiss holidays
 
+### What's On View ("What's On")
+- Daily digest aggregating today's highlights from news + activities data
+- **No new worker endpoint** — reuses `/` (news) and `/activities` data, fetched in parallel
+- **Holiday banner**: Purple gradient strip when today is a holiday
+- **Weather card**: Large icon + temp + indoor/outdoor recommendation badge
+- **"Happening Today"**: Festivals whose date range spans today, purple left-border cards
+- **"Available Today"**: Recurring activities matching today's day-of-week (max 5)
+- **"Weather Picks"**: 3 random weather-appropriate activities (indoor when rainy/<5°C, outdoor otherwise)
+- **Trending**: News trending topic card
+- **Empty state**: When no content is available for today
+- Activity cards tap → switches to Activities view
+- Refresh button reshuffles weather picks
+- First item in hamburger menu
+
 ### Sunshine Page ("Where is Sun?")
 - Weekend sunshine forecast for 29 destinations (28 + Zürich baseline) within driving distance of Zürich
 - **Zürich baseline**: Pinned first card with purple styling, always visible regardless of filter/sort
@@ -329,6 +343,10 @@ Each city has:
 | `setSunshineFilter(filter)` | Filter by 'all'/'sunny'/'partly'/'cloudy' |
 | `getBaselineDest()` | Get Zürich baseline entry from sunshine data |
 | `fetchSunshineClientSide()` | Client-side Open-Meteo fallback |
+| `loadWhatsOn(forceRefresh)` | Load What's On daily digest |
+| `assembleWhatsOn()` | Build digest from news + activities data |
+| `renderWhatsOnView()` | Render What's On sections |
+| `isAvailableOnDate(activity, date)` | Check if recurring/seasonal activity is available on date |
 
 ## Storage
 
@@ -336,7 +354,7 @@ Each city has:
 - `lang` - Language preference (en/de)
 - `city` - Selected city
 - `theme` - Theme preference (light/dark)
-- `view` - Active view (news/activities/lunch/events/weekend/sunshine), persisted across refresh
+- `view` - Active view (news/activities/lunch/events/weekend/sunshine/whatson), persisted across refresh
 - `savedActivities` - Array of saved activity IDs
 - `customActivities` - Array of user-created activities
 - `installDismissed` - PWA install prompt dismissed
