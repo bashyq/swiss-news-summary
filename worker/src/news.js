@@ -187,6 +187,8 @@ function recoverPartialJSON(str) {
 /* ── Main handler ── */
 
 export async function handleNews(url, env) {
+  if (!env.CLAUDE_API_KEY) throw new Error('Service unavailable — API key not configured');
+
   const lang = url.searchParams.get('lang') || 'en';
   const cityId = url.searchParams.get('city') || 'zurich';
   const forceRefresh = url.searchParams.get('refresh') === 'true';

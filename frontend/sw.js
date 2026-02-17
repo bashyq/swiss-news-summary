@@ -1,11 +1,12 @@
-const CACHE_NAME = 'today-switzerland-v29';
+const CACHE_NAME = 'today-switzerland-v30';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/styles.css',
   '/app.js',
   '/widget.html',
-  '/manifest.json'
+  '/manifest.json',
+  '/icon.svg'
 ];
 
 // Install - cache static assets

@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.3.2';
+const APP_VERSION = '2.4.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -185,6 +185,8 @@ function getSubcategoryLabel(sub) {
 // ═══ UTILS ═══
 const $ = id => document.getElementById(id);
 const esc = s => s?.replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]) || '';
+const safeUrl = u => u && /^https?:\/\//i.test(u) ? u : '';
+const CITY_COORDS = { zurich: [47.3769, 8.5417], basel: [47.5596, 7.5886], bern: [46.948, 7.4474], geneva: [46.2044, 6.1432], lausanne: [46.5197, 6.6323], luzern: [47.0502, 8.3093], winterthur: [47.4984, 8.7235] };
 
 const cache = {
   get(key, maxAge = 7200000) {
@@ -427,7 +429,7 @@ function renderNewsView() {
   if (newsData.trending) {
     const tr = newsData.trending;
     const topic = lang === 'de' ? (tr.topicDE || tr.topic) : tr.topic;
-    html += `<div class="trending-banner" onclick="${tr.url ? `window.open('${esc(tr.url)}','_blank')` : ''}">
+    html += `<div class="trending-banner" onclick="${safeUrl(tr.url) ? `window.open('${esc(tr.url)}','_blank')` : ''}">
       <div class="trending-label">🔥 ${lang === 'de' ? 'Trending' : 'Trending'}</div>
       <div class="trending-topic">${esc(topic)}</div>
     </div>`;
@@ -687,7 +689,8 @@ function renderEventsList() {
     if (e.toddlerFriendly) badges += '<span class="badge badge-toddler">👶 Toddler-friendly</span>';
     if (e.free) badges += '<span class="badge badge-free">🆓 Free</span>';
 
-    return `<div class="event-card${e.url ? ' style="cursor:pointer" onclick="window.open(\'' + esc(e.url) + '\',\'_blank\')"' : ''}">
+    const clickAttr = safeUrl(e.url) ? ` style="cursor:pointer" onclick="window.open('${esc(e.url)}','_blank')"` : '';
+    return `<div class="event-card"${clickAttr}>
       <div class="event-date">${dateLabel}</div>
       <div class="event-name">${esc(name)}</div>
       <div class="event-desc">${esc(desc)}</div>
@@ -1231,8 +1234,7 @@ function surpriseMe() {
 }
 
 function openPlaygroundsMap() {
-  const cityCoords = { zurich: [47.3769, 8.5417], basel: [47.5596, 7.5886], bern: [46.948, 7.4474], geneva: [46.2044, 6.1432], lausanne: [46.5197, 6.6323], luzern: [47.0502, 8.3093], winterthur: [47.4984, 8.7235] };
-  const [lat, lon] = userLat ? [userLat, userLon] : (cityCoords[city] || cityCoords.zurich);
+  const [lat, lon] = userLat ? [userLat, userLon] : (CITY_COORDS[city] || CITY_COORDS.zurich);
   window.open(`https://www.google.com/maps/search/playground/@${lat},${lon},14z`, '_blank');
 }
 
@@ -1287,6 +1289,7 @@ function loadStripe() {
     const js = document.createElement('script');
     js.src = 'https://js.stripe.com/v3/';
     js.onload = resolve;
+    js.onerror = () => resolve();
     document.head.appendChild(js);
   });
 }
@@ -1400,6 +1403,7 @@ function loadLeaflet() {
     const js = document.createElement('script');
     js.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
     js.onload = resolve;
+    js.onerror = () => resolve();
     document.head.appendChild(js);
   });
 }
@@ -1408,9 +1412,9 @@ async function initActivityMap() {
   const el = $('activity-map');
   if (!el || !el.offsetParent) return;
   await loadLeaflet();
+  if (!window.L) return;
 
-  const cityData = { zurich: [47.3769, 8.5417], basel: [47.5596, 7.5886], bern: [46.948, 7.4474], geneva: [46.2044, 6.1432], lausanne: [46.5197, 6.6323], luzern: [47.0502, 8.3093], winterthur: [47.4984, 8.7235] };
-  const center = cityData[city] || [47.3769, 8.5417];
+  const center = CITY_COORDS[city] || CITY_COORDS.zurich;
 
   if (activityMap) activityMap.remove();
   activityMap = L.map(el).setView(center, 12);
@@ -1431,9 +1435,9 @@ async function initLunchMap() {
   const el = $('lunch-map');
   if (!el || !el.offsetParent) return;
   await loadLeaflet();
+  if (!window.L) return;
 
-  const cityData = { zurich: [47.3769, 8.5417], basel: [47.5596, 7.5886], bern: [46.948, 7.4474], geneva: [46.2044, 6.1432], lausanne: [46.5197, 6.6323], luzern: [47.0502, 8.3093], winterthur: [47.4984, 8.7235] };
-  const center = cityData[city] || [47.3769, 8.5417];
+  const center = CITY_COORDS[city] || CITY_COORDS.zurich;
 
   if (lunchMap) lunchMap.remove();
   lunchMap = L.map(el, { zoomControl: lunchMapExpanded, dragging: lunchMapExpanded, scrollWheelZoom: lunchMapExpanded }).setView(center, 14);
@@ -1892,6 +1896,7 @@ async function initSunshineMap() {
   const el = $('sunshine-map');
   if (!el || !el.offsetParent) return;
   await loadLeaflet();
+  if (!window.L) return;
 
   if (sunshineMap) sunshineMap.remove();
   sunshineMap = L.map(el).setView([46.8, 8.2], 7);
@@ -2131,7 +2136,7 @@ function renderWhatsOnView() {
   if (d.trending) {
     const topic = lang === 'de' ? (d.trending.topicDE || d.trending.topic) : d.trending.topic;
     html += renderWhatsOnSection('trendingToday', '🔥',
-      `<div class="whatson-trending" onclick="${d.trending.url ? `window.open('${esc(d.trending.url)}','_blank')` : ''}">
+      `<div class="whatson-trending" onclick="${safeUrl(d.trending.url) ? `window.open('${esc(d.trending.url)}','_blank')` : ''}">
         <div class="trending-label">🔥 Trending</div>
         <div class="trending-topic">${esc(topic)}</div>
       </div>`);
@@ -2167,7 +2172,7 @@ function renderWhatsOnFestivalCard(f) {
   let badges = '';
   if (f.toddlerFriendly) badges += '<span class="badge badge-indoor">👶 Toddler-friendly</span>';
   if (f.free) badges += '<span class="badge badge-outdoor">🆓 Free</span>';
-  return `<div class="whatson-festival-card" onclick="${f.url ? `window.open('${esc(f.url)}','_blank')` : ''}">
+  return `<div class="whatson-festival-card" onclick="${safeUrl(f.url) ? `window.open('${esc(f.url)}','_blank')` : ''}">
     <div class="whatson-festival-name">${esc(name)}</div>
     <div class="whatson-festival-desc">${esc(desc)}</div>
     <div class="whatson-festival-meta">

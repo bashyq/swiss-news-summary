@@ -12,7 +12,20 @@ export async function handleDonate(url, env, request) {
     });
   }
 
-  const body = await request.json();
+  if (!env.STRIPE_SECRET_KEY) {
+    return new Response(JSON.stringify({ error: 'Payment not configured' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*' }
+    });
+  }
+
+  let body;
+  try { body = await request.json(); } catch {
+    return new Response(JSON.stringify({ error: 'Invalid request body' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*' }
+    });
+  }
   const amount = body.amount;
 
   if (!Number.isInteger(amount) || amount < 100 || amount > 500) {

@@ -162,7 +162,7 @@ export async function handleSunshine(url, env) {
   const cacheReq = new Request(cacheUrl.toString());
   const cfCache = caches.default;
   let cached = await cfCache.match(cacheReq);
-  if (cached && !url.searchParams.has('refresh')) return cached;
+  if (cached && url.searchParams.get('refresh') !== 'true') return cached;
 
   const weekendDates = getWeekendDates();
   const destinations = await fetchAllDestinations(weekendDates);
