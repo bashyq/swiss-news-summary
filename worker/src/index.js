@@ -10,6 +10,7 @@ import { handleActivities, VERSION as ACTIVITIES_V } from './activities.js';
 import { handleWeekend, VERSION as WEEKEND_V } from './weekend.js';
 import { handleLunch, VERSION as LUNCH_V } from './lunch.js';
 import { handleSunshine, VERSION as SUNSHINE_V } from './sunshine.js';
+import { handleDonate, VERSION as DONATE_V } from './donate.js';
 import { VERSION as DATA_V } from './data.js';
 import { VERSION as WEATHER_V } from './weather.js';
 import { VERSION as TRANSPORT_V } from './transport.js';
@@ -19,7 +20,7 @@ function cors(env) {
   return new Response(null, {
     headers: {
       'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Accept',
       'Access-Control-Max-Age': '86400'
     }
@@ -53,6 +54,7 @@ function handleVersion(url, env) {
       weekend: WEEKEND_V,
       lunch: LUNCH_V,
       sunshine: SUNSHINE_V,
+      donate: DONATE_V,
     },
     deployedAt: new Date().toISOString(),
   }, env);
@@ -64,6 +66,7 @@ const ROUTES = {
   '/weekend': handleWeekend,
   '/lunch': handleLunch,
   '/sunshine': handleSunshine,
+  '/donate': handleDonate,
   '/version': handleVersion,
 };
 
@@ -76,7 +79,7 @@ export default {
     if (!handler) return error('Not found', 404, env);
 
     try {
-      return await handler(url, env);
+      return await handler(url, env, request);
     } catch (e) {
       console.error(`[${url.pathname}] Error:`, e);
       return error(e.message || 'Internal error', 500, env);
