@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.4.0';
+const APP_VERSION = '2.5.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -344,16 +344,18 @@ function renderNav() {
   }).join('')}</div>`;
 }
 
+const VIEW_RENDERERS = { news: renderNewsView, activities: renderActivitiesView, lunch: renderLunchView, events: renderEventsView, weekend: renderWeekendView, sunshine: renderSunshineView, whatson: renderWhatsOnView };
+
 function renderMain() {
-  let html = '';
-  html += `<div class="app-view${view === 'news' ? ' active' : ''}" id="view-news">${renderNewsView()}</div>`;
-  html += `<div class="app-view${view === 'activities' ? ' active' : ''}" id="view-activities">${renderActivitiesView()}</div>`;
-  html += `<div class="app-view${view === 'lunch' ? ' active' : ''}" id="view-lunch">${renderLunchView()}</div>`;
-  html += `<div class="app-view${view === 'events' ? ' active' : ''}" id="view-events">${renderEventsView()}</div>`;
-  html += `<div class="app-view${view === 'weekend' ? ' active' : ''}" id="view-weekend">${renderWeekendView()}</div>`;
-  html += `<div class="app-view${view === 'sunshine' ? ' active' : ''}" id="view-sunshine">${renderSunshineView()}</div>`;
-  html += `<div class="app-view${view === 'whatson' ? ' active' : ''}" id="view-whatson">${renderWhatsOnView()}</div>`;
-  $('main').innerHTML = html;
+  const views = ['news', 'activities', 'lunch', 'events', 'weekend', 'sunshine', 'whatson'];
+  $('main').innerHTML = views.map(v => `<div class="app-view${view === v ? ' active' : ''}" id="view-${v}"></div>`).join('');
+  renderCurrentView();
+}
+
+function renderCurrentView() {
+  const el = $(`view-${view}`);
+  if (!el) return;
+  if (VIEW_RENDERERS[view]) el.innerHTML = VIEW_RENDERERS[view]();
 }
 
 function renderMenu() {
@@ -440,8 +442,9 @@ function renderNewsView() {
   for (const cat of cats) {
     const items = newsData.categories?.[cat] || [];
     html += `<div class="section${currentTab === cat ? ' active' : ''}" id="section-${cat}">`;
-    for (const item of items) {
-      const cardId = `card-${cat}-${Math.random().toString(36).substr(2, 6)}`;
+    for (let ci = 0; ci < items.length; ci++) {
+      const item = items[ci];
+      const cardId = `card-${cat}-${ci}`;
       html += `<div class="card" onclick="toggleDetail('${cardId}')">
         <div class="card-headline"><a href="${esc(item.url)}" target="_blank" onclick="event.stopPropagation()">${esc(item.headline)}</a></div>
         <div class="card-summary">${esc(item.summary)}</div>
@@ -839,6 +842,7 @@ function getFilteredLunchSpots() {
 
 async function fetchNews(force = false) {
   const cacheKey = `newsCache-${city}-${lang}`;
+  const hadData = !!newsData;
   if (!force) {
     const cached = cache.get(cacheKey);
     if (cached) { newsData = cached; renderAll(); }
@@ -849,7 +853,13 @@ async function fetchNews(force = false) {
     const data = await res.json();
     newsData = data;
     cache.set(cacheKey, data);
-    renderAll();
+    if (hadData) {
+      // Targeted update — avoid full DOM rebuild on second render
+      if (view === 'news') renderCurrentView();
+      renderNav();
+    } else {
+      renderAll();
+    }
     if (data.holidays) renderHolidays(data.holidays);
     if (data.weather) renderWeather(data.weather);
     if (data.history) renderHistory(data.history);
@@ -857,7 +867,8 @@ async function fetchNews(force = false) {
   } catch (e) {
     console.error('Fetch news error:', e);
     showToast('toastNetworkError', 'error');
-    if (!newsData) $('main').querySelector('#view-news').innerHTML = '<div class="loading-msg">Failed to load. Check your connection.</div>';
+    const newsEl = $('view-news');
+    if (!newsData && newsEl) newsEl.innerHTML = '<div class="loading-msg">Failed to load. Check your connection.</div>';
   }
 }
 
@@ -868,7 +879,7 @@ async function loadActivities(force = false) {
     if (cached) {
       activitiesData = cached.activities || [];
       cityEventsData = cached.cityEvents || [];
-      renderMain();
+      renderCurrentView();
       setTimeout(() => initActivityMap(), 100);
     }
   }
@@ -879,7 +890,7 @@ async function loadActivities(force = false) {
     activitiesData = data.activities || [];
     cityEventsData = data.cityEvents || [];
     cache.set(cacheKey, data);
-    renderMain();
+    renderCurrentView();
     setTimeout(() => initActivityMap(), 100);
   } catch (e) {
     console.error('Activities error:', e);
@@ -916,14 +927,14 @@ async function loadEventsCalendar() {
     if (a.category === 'seasonal') eventsCalendarData.push({ name: a.name, nameDE: a.nameDE, description: a.description, descriptionDE: a.descriptionDE, startDate: new Date().toISOString().split('T')[0], type: 'seasonal' });
   }
 
-  renderMain();
+  renderCurrentView();
 }
 
 async function loadWeekendPlanner(force = false) {
   try {
     const res = await fetch(`${API}/weekend?city=${city}&lang=${lang}${force ? '&refresh=true' : ''}`);
     weekendData = await res.json();
-    renderMain();
+    renderCurrentView();
   } catch (e) { console.error('Weekend error:', e); showToast('toastNetworkError', 'error'); }
 }
 
@@ -932,7 +943,7 @@ async function loadLunchSpots(force = false) {
     const res = await fetch(`${API}/lunch?city=${city}${force ? '&refresh=true' : ''}`);
     const data = await res.json();
     lunchData = data.spots || [];
-    renderMain();
+    renderCurrentView();
     setTimeout(() => initLunchMap(), 100);
   } catch (e) { console.error('Lunch error:', e); showToast('toastNetworkError', 'error'); }
 }
@@ -1002,7 +1013,11 @@ function renderHolidays(holidays) {
 function switchView(v) {
   view = v;
   localStorage.setItem('view', v);
-  renderAll();
+  document.querySelectorAll('.app-view').forEach(el => el.classList.toggle('active', el.id === `view-${v}`));
+  renderCurrentView();
+  renderHeader();
+  renderNav();
+  renderMenu();
   closeMenu();
   if (v === 'whatson') loadWhatsOn();
   else if (v === 'activities') loadActivities();
@@ -1084,15 +1099,15 @@ function toggleDetail(id) { $(id)?.classList.toggle('active'); }
 function filterActivities(f) {
   activityFilter = f;
   if (f === 'near' && !userLat) { requestLocation(); return; }
-  renderMain();
+  renderCurrentView();
   setTimeout(() => initActivityMap(), 100);
 }
 
-function setAgeFilter(f) { ageFilter = f; renderMain(); setTimeout(() => initActivityMap(), 100); }
-function filterEvents(f) { eventFilter = f; renderMain(); }
+function setAgeFilter(f) { ageFilter = f; renderCurrentView(); setTimeout(() => initActivityMap(), 100); }
+function filterEvents(f) { eventFilter = f; renderCurrentView(); }
 function filterLunch(f) {
   lunchFilter = f;
-  renderMain();
+  renderCurrentView();
   setTimeout(() => initLunchMap(), 100);
 }
 
@@ -1102,7 +1117,7 @@ function toggleSave(id) {
   if (removing) savedActivities.splice(idx, 1); else savedActivities.push(id);
   localStorage.setItem('savedActivities', JSON.stringify(savedActivities));
   showToast(removing ? 'toastRemoved' : 'toastSaved', removing ? 'info' : 'success');
-  renderMain();
+  renderCurrentView();
   setTimeout(() => initActivityMap(), 100);
 }
 
@@ -1112,14 +1127,14 @@ function toggleSaveLunch(id) {
   if (removing) savedLunch.splice(idx, 1); else savedLunch.push(id);
   localStorage.setItem('savedLunch', JSON.stringify(savedLunch));
   showToast(removing ? 'toastRemoved' : 'toastSaved', removing ? 'info' : 'success');
-  renderMain();
+  renderCurrentView();
   setTimeout(() => initLunchMap(), 100);
 }
 
 function rateLunch(id, stars) {
   lunchRatings[id] = stars;
   localStorage.setItem('lunchRatings', JSON.stringify(lunchRatings));
-  renderMain();
+  renderCurrentView();
   setTimeout(() => initLunchMap(), 100);
 }
 
@@ -1138,7 +1153,7 @@ function saveCustomActivity() {
   localStorage.setItem('customActivities', JSON.stringify(customActivities));
   hideAddForm('activity');
   showToast('toastActivitySaved', 'success');
-  renderMain();
+  renderCurrentView();
   setTimeout(() => initActivityMap(), 100);
 }
 
@@ -1146,7 +1161,7 @@ function deleteCustomActivity(id) {
   customActivities = customActivities.filter(a => a.id !== id);
   localStorage.setItem('customActivities', JSON.stringify(customActivities));
   showToast('toastActivityDeleted', 'info');
-  renderMain();
+  renderCurrentView();
   setTimeout(() => initActivityMap(), 100);
 }
 
@@ -1160,7 +1175,7 @@ function saveCustomLunch() {
   localStorage.setItem('customLunch', JSON.stringify(customLunch));
   hideAddForm('lunch');
   showToast('toastLunchSaved', 'success');
-  renderMain();
+  renderCurrentView();
   setTimeout(() => initLunchMap(), 100);
 }
 
@@ -1168,7 +1183,7 @@ function deleteCustomLunch(id) {
   customLunch = customLunch.filter(s => s.id !== id);
   localStorage.setItem('customLunch', JSON.stringify(customLunch));
   showToast('toastLunchDeleted', 'info');
-  renderMain();
+  renderCurrentView();
   setTimeout(() => initLunchMap(), 100);
 }
 
@@ -1177,7 +1192,7 @@ function requestLocation() {
   navigator.geolocation.getCurrentPosition(pos => {
     userLat = pos.coords.latitude;
     userLon = pos.coords.longitude;
-    renderMain();
+    renderCurrentView();
     setTimeout(() => initActivityMap(), 100);
   }, () => {}, { enableHighAccuracy: true });
 }
@@ -1191,9 +1206,9 @@ function openBriefingStory() {
   if (newsData?.briefing?.topStory?.url) window.open(newsData.briefing.topStory.url, '_blank');
 }
 
-function calendarPrev() { calendarMonth--; if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; } renderMain(); }
-function calendarNext() { calendarMonth++; if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; } renderMain(); }
-function selectCalendarDay(dateStr) { selectedCalendarDay = selectedCalendarDay === dateStr ? null : dateStr; renderMain(); }
+function calendarPrev() { calendarMonth--; if (calendarMonth < 0) { calendarMonth = 11; calendarYear--; } renderCurrentView(); }
+function calendarNext() { calendarMonth++; if (calendarMonth > 11) { calendarMonth = 0; calendarYear++; } renderCurrentView(); }
+function selectCalendarDay(dateStr) { selectedCalendarDay = selectedCalendarDay === dateStr ? null : dateStr; renderCurrentView(); }
 
 function refreshCurrentView() {
   if (view === 'whatson') loadWhatsOn(true);
@@ -1787,6 +1802,7 @@ const DEST_HIGHLIGHTS = {
   ],
 };
 
+// Mirrors getWeekendDates() in worker/src/sunshine.js — keep in sync
 function getSunshineWeekendDates() {
   const now = new Date();
   const day = now.getDay();
@@ -1858,17 +1874,18 @@ async function loadSunshine(force = false) {
   const cacheKey = 'sunshineCache-v2';
   if (!force) {
     const cached = cache.get(cacheKey, 1800000);
-    if (cached && cached.destinations?.length > 0) { sunshineData = cached; renderMain(); setTimeout(() => initSunshineMap(), 150); return; }
+    if (cached && cached.destinations?.length > 0) { sunshineData = cached; renderCurrentView(); setTimeout(() => initSunshineMap(), 150); return; }
   }
 
   try {
     // Try worker first
     const res = await fetch(`${API}/sunshine?lang=${lang}${force ? '&refresh=true' : ''}`);
+    if (!res.ok) throw new Error(`Worker returned ${res.status}`);
     const data = await res.json();
     if (data.destinations?.length > 0) {
       sunshineData = data;
       cache.set(cacheKey, data);
-      renderMain();
+      renderCurrentView();
       setTimeout(() => initSunshineMap(), 150);
       return;
     }
@@ -1880,7 +1897,7 @@ async function loadSunshine(force = false) {
     if (data) {
       sunshineData = data;
       cache.set(cacheKey, data);
-      renderMain();
+      renderCurrentView();
       setTimeout(() => initSunshineMap(), 150);
       return;
     }
@@ -1994,7 +2011,7 @@ function lunchCardClick(id, event) {
 function setSunshineFilter(f) {
   sunshineFilter = f;
   sunshineExpanded = false;
-  renderMain();
+  renderCurrentView();
   setTimeout(() => initSunshineMap(), 150);
 }
 
@@ -2004,19 +2021,19 @@ function setSunshineSort(s) {
       userLat = pos.coords.latitude;
       userLon = pos.coords.longitude;
       sunshineSort = 'distance';
-      renderMain();
+      renderCurrentView();
       setTimeout(() => initSunshineMap(), 150);
     }, () => {}, { enableHighAccuracy: true });
     return;
   }
   sunshineSort = s;
-  renderMain();
+  renderCurrentView();
   setTimeout(() => initSunshineMap(), 150);
 }
 
 function expandSunshineList() {
   sunshineExpanded = true;
-  renderMain();
+  renderCurrentView();
   setTimeout(() => initSunshineMap(), 150);
 }
 
@@ -2038,7 +2055,7 @@ async function loadWhatsOn(force = false) {
   }
 
   whatsOnData = assembleWhatsOn();
-  renderMain();
+  renderCurrentView();
 }
 
 function assembleWhatsOn() {

@@ -12,7 +12,7 @@ function isAvailableOnDate(activity, date) {
   if (activity.recurring) {
     const r = activity.recurring.toLowerCase();
     const dow = date.getDay();
-    if (r === 'weekends' || r.includes('weekend')) return true;
+    if (r === 'weekends' || r.includes('weekend')) return dow === 0 || dow === 6;
     if (r.includes('various')) return true;
     const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
     if (r.includes(days[dow])) return true;

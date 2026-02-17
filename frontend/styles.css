@@ -485,3 +485,12 @@ nav { margin: 16px 0; }
   .page-title { font-size: 1.6rem; }
   .card-headline { font-size: .95rem; }
 }
+@media (max-width: 360px) {
+  .container { padding: 0 12px; }
+  .page-title { font-size: 1.4rem; }
+  .calendar-grid { gap: 1px; font-size: .7rem; }
+  .sunshine-days { flex-direction: column; gap: 4px; }
+  .filter-bar { flex-wrap: wrap; gap: 4px; }
+  .filter-btn { font-size: .7rem; padding: 6px 8px; }
+  .activities-actions { flex-direction: column; }
+}
