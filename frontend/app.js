@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.2.0';
+const APP_VERSION = '2.2.1';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -375,8 +375,8 @@ function renderMenu() {
       <div id="menu-holidays-list"></div>
     </div>
     <div class="menu-section" style="margin-top:20px;">
-      <div class="menu-item" onclick="shareSummary()"><span class="menu-item-icon">📤</span>${t('share')}</div>
-      <div class="menu-item" onclick="refreshCurrentView()"><span class="menu-item-icon">🔄</span>${t('refresh')}</div>
+      <div class="menu-item" onclick="closeMenu();shareSummary()"><span class="menu-item-icon">📤</span>${t('share')}</div>
+      <div class="menu-item" onclick="closeMenu();refreshCurrentView()"><span class="menu-item-icon">🔄</span>${t('refresh')}</div>
     </div>
     <div class="menu-section">
       <div class="menu-section-title" onclick="toggleAbout()" style="cursor:pointer">${t('about')} ▾</div>
