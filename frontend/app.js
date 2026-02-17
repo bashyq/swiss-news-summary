@@ -13,7 +13,7 @@ const ACTIVITY_EMOJIS = { animals:'🦁', museum:'🏛️', playground:'🛝', o
 let lang = localStorage.getItem('lang') || 'en';
 let city = localStorage.getItem('city') || 'zurich';
 let theme = localStorage.getItem('theme') || 'dark';
-let view = 'news';
+let view = localStorage.getItem('view') || 'news';
 let newsData = null;
 let activitiesData = [];
 let cityEventsData = [];
@@ -40,6 +40,8 @@ let lunchMapExpanded = false;
 let calendarMonth = new Date().getMonth();
 let calendarYear = new Date().getFullYear();
 let selectedCalendarDay = null;
+let canDonate = false;
+const STRIPE_PK = 'pk_live_YOUR_STRIPE_PUBLISHABLE_KEY';
 
 // ═══ I18N ═══
 const T = {
@@ -120,6 +122,12 @@ const T = {
   yourCity: { en:'Your city', de:'Deine Stadt' },
   nearestEscape: { en:'Nearest with more sun', de:'Nächstes Ziel mit mehr Sonne' },
   rain: { en:'rain', de:'Regen' },
+  donate: { en:'Support us', de:'Unterstützen' },
+  donateTitle: { en:'Buy us a coffee', de:'Kauf uns einen Kaffee' },
+  donateDesc: { en:'Help keep this app running', de:'Hilf, diese App am Laufen zu halten' },
+  donateThankYou: { en:'Thank you for your support!', de:'Vielen Dank für deine Unterstützung!' },
+  donateError: { en:'Payment failed. Please try again.', de:'Zahlung fehlgeschlagen. Bitte erneut versuchen.' },
+  donateProcessing: { en:'Processing...', de:'Wird verarbeitet...' },
   about: { en:'About', de:'Info' },
   version: { en:'Version', de:'Version' },
   frontend: { en:'Frontend', de:'Frontend' },
@@ -259,6 +267,7 @@ function renderMenu() {
     <div class="menu-item${view === 'events' ? ' active' : ''}" onclick="switchView('events')"><span class="menu-item-icon">📅</span>${t('events')}</div>
     <div class="menu-item${view === 'weekend' ? ' active' : ''}" onclick="switchView('weekend')"><span class="menu-item-icon">🌤️</span>${t('weekend')}</div>
     <div class="menu-item${view === 'sunshine' ? ' active' : ''}" onclick="switchView('sunshine')"><span class="menu-item-icon">☀️</span>${t('sunshine')}</div>
+    ${canDonate ? `<div class="menu-item" onclick="openDonateModal()"><span class="menu-item-icon">☕</span>${t('donate')}</div>` : ''}
     <div class="menu-section">
       <div class="menu-section-title">${t('language')}</div>
       <div class="lang-toggle">
@@ -860,6 +869,7 @@ function renderHolidays(holidays) {
 
 function switchView(v) {
   view = v;
+  localStorage.setItem('view', v);
   renderAll();
   closeMenu();
   if (v === 'activities') loadActivities();
@@ -1118,6 +1128,118 @@ function showSurpriseModal(item, type) {
 }
 
 function closeModal() { $('modal').classList.remove('active'); }
+
+// ═══ DONATE (Apple Pay) ═══
+
+let stripeInstance = null;
+
+function loadStripe() {
+  return new Promise((resolve) => {
+    if (window.Stripe) { resolve(); return; }
+    const js = document.createElement('script');
+    js.src = 'https://js.stripe.com/v3/';
+    js.onload = resolve;
+    document.head.appendChild(js);
+  });
+}
+
+async function getStripe() {
+  await loadStripe();
+  if (!stripeInstance) stripeInstance = Stripe(STRIPE_PK);
+  return stripeInstance;
+}
+
+async function checkDonateAvailability() {
+  try {
+    const stripe = await getStripe();
+    const pr = stripe.paymentRequest({
+      country: 'CH', currency: 'chf',
+      total: { label: 'Donation', amount: 200 },
+      requestPayerName: false, requestPayerEmail: false,
+    });
+    const result = await pr.canMakePayment();
+    canDonate = !!(result && result.applePay);
+    if (canDonate) renderMenu();
+  } catch { canDonate = false; }
+}
+
+function openDonateModal() {
+  closeMenu();
+  let selectedAmount = 200;
+  const modal = $('modal');
+  modal.innerHTML = `<div class="modal-content">
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <div class="modal-emoji">☕</div>
+    <div class="modal-title">${t('donateTitle')}</div>
+    <div class="modal-desc">${t('donateDesc')}</div>
+    <div class="donate-amounts">
+      <button class="donate-amount-btn" data-amount="100" onclick="selectDonateAmount(100)">CHF 1</button>
+      <button class="donate-amount-btn active" data-amount="200" onclick="selectDonateAmount(200)">CHF 2</button>
+      <button class="donate-amount-btn" data-amount="300" onclick="selectDonateAmount(300)">CHF 3</button>
+      <button class="donate-amount-btn" data-amount="500" onclick="selectDonateAmount(500)">CHF 5</button>
+    </div>
+    <div class="donate-apple-pay-container" id="donate-apple-pay"></div>
+    <div class="donate-status" id="donate-status"></div>
+  </div>`;
+  modal.classList.add('active');
+  mountApplePayButton(selectedAmount);
+}
+
+function selectDonateAmount(amount) {
+  document.querySelectorAll('.donate-amount-btn').forEach(b => {
+    b.classList.toggle('active', Number(b.dataset.amount) === amount);
+  });
+  mountApplePayButton(amount);
+}
+
+async function mountApplePayButton(amount) {
+  const container = $('donate-apple-pay');
+  if (!container) return;
+  container.innerHTML = '';
+  $('donate-status').textContent = '';
+
+  const stripe = await getStripe();
+  const pr = stripe.paymentRequest({
+    country: 'CH', currency: 'chf',
+    total: { label: 'Today in Switzerland', amount },
+    requestPayerName: false, requestPayerEmail: false,
+  });
+
+  pr.on('paymentmethod', async (ev) => {
+    $('donate-status').textContent = t('donateProcessing');
+    try {
+      const res = await fetch(`${API}/donate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount }),
+      });
+      const { clientSecret, error: apiErr } = await res.json();
+      if (apiErr || !clientSecret) { ev.complete('fail'); $('donate-status').textContent = t('donateError'); return; }
+
+      const { error } = await stripe.confirmCardPayment(clientSecret, { payment_method: ev.paymentMethod.id }, { handleActions: false });
+      if (error) { ev.complete('fail'); $('donate-status').textContent = t('donateError'); }
+      else {
+        ev.complete('success');
+        $('modal').innerHTML = `<div class="modal-content">
+          <button class="modal-close" onclick="closeModal()">&times;</button>
+          <div class="modal-emoji">❤️</div>
+          <div class="modal-title">${t('donateThankYou')}</div>
+          <div class="modal-actions"><button class="btn-primary" onclick="closeModal()">${t('close')}</button></div>
+        </div>`;
+      }
+    } catch { ev.complete('fail'); $('donate-status').textContent = t('donateError'); }
+  });
+
+  const result = await pr.canMakePayment();
+  if (result && result.applePay) {
+    const elements = stripe.elements();
+    const prButton = elements.create('paymentRequestButton', {
+      paymentRequest: pr,
+      style: { paymentRequestButton: { type: 'donate', theme: 'dark', height: '48px' } },
+    });
+    prButton.mount(container);
+  }
+}
 
 // ═══ MAPS ═══
 
@@ -1458,7 +1580,7 @@ async function fetchSunshineClientSide() {
 }
 
 async function loadSunshine(force = false) {
-  const cacheKey = 'sunshineCache';
+  const cacheKey = 'sunshineCache-v2';
   if (!force) {
     const cached = cache.get(cacheKey, 1800000);
     if (cached && cached.destinations?.length > 0) { sunshineData = cached; renderMain(); setTimeout(() => initSunshineMap(), 150); return; }
@@ -1647,17 +1769,23 @@ document.addEventListener('DOMContentLoaded', () => {
   // Freshness timer
   setInterval(updateFreshnessTimes, 60000);
 
-  // Check URL params
+  // Check URL params (override persisted view if present)
   const params = new URLSearchParams(window.location.search);
   const viewParam = params.get('view');
   if (viewParam && ['activities', 'lunch', 'events', 'weekend', 'sunshine'].includes(viewParam)) {
     switchView(viewParam);
-  } else {
+  } else if (view === 'news') {
     fetchNews();
+  } else {
+    // Restore persisted view and load its data
+    switchView(view);
   }
 
   // Service worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   }
+
+  // Check Apple Pay donate availability
+  checkDonateAvailability();
 });
