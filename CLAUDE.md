@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-"Today in Switzerland" is a PWA that aggregates Swiss news, weather, transport disruptions, holidays, historical facts, and family activities for toddlers (ages 2-5). It uses Claude AI for news categorization and consists of a modular Cloudflare Worker backend (9 modules) and a 3-file frontend (HTML shell + CSS + JS).
+"Today in Switzerland" is a PWA that aggregates Swiss news, weather, transport disruptions, holidays, historical facts, family activities for toddlers (ages 2-5), and weekend sunshine forecasts. It uses Claude AI for news categorization and consists of a modular Cloudflare Worker backend (10 modules) and a 3-file frontend (HTML shell + CSS + JS).
+
+**GitHub:** https://github.com/bashyq/swiss-news-summary
 
 ## Deployment
 
@@ -40,6 +42,11 @@ Cloudflare Worker (worker/src/)
     ↓ HTTP GET /weekend?lang={en|de}&city={cityId}
 1. Fetch weather for weekend activity filtering
 2. Return weekend-appropriate activities
+
+    ↓ HTTP GET /sunshine?lang={en|de}
+1. Fetch weekend (Fri/Sat/Sun) sunshine forecasts for 28 destinations
+2. Single multi-location Open-Meteo API call (all destinations in one request)
+3. Return destinations ranked by total sunshine hours
 ```
 
 ## File Structure
@@ -64,7 +71,8 @@ swiss-news-summary/
 │   │   ├── activities.js # All activities data + handler
 │   │   ├── events.js     # City events/festivals data
 │   │   ├── weekend.js    # Weekend planner logic
-│   │   └── lunch.js      # Overpass API + lunch handler
+│   │   ├── lunch.js      # Overpass API + lunch handler
+│   │   └── sunshine.js   # Weekend sunshine forecast (28 destinations)
 │   └── wrangler.toml   # Worker config (main = "src/index.js")
 ├── CLAUDE.md
 └── README.md
@@ -119,6 +127,18 @@ swiss-news-summary/
 - **Language toggle**: English / German
 - **Theme toggle**: Light / Dark mode
 - **Holidays display**: Upcoming Swiss holidays
+
+### Sunshine Page ("Where is Sun?")
+- Weekend sunshine forecast for 28 destinations within driving distance of Zürich
+- **Regions**: Ticino, Graubünden, Valais, Central Switzerland, Lake Geneva, Basel/Jura, Lake Constance, Lake Como
+- **Interactive Leaflet map**: Circle markers colored/sized by sunshine level (gold/blue/gray)
+- **Ranked card list**: Sorted by total sunshine hours, collapsible (top 10 default)
+- **Sort**: By sunshine hours or by distance from current location (geolocation)
+- **Filter**: All / Sunny (>6h) / Partly (3-6h) / Cloudy (<3h)
+- **Hourly timeline**: Shows which hours (6-20) have predicted sunshine per day
+- **Drive time badges**: Minutes from Zürich
+- **Client-side fallback**: If worker is rate-limited, fetches directly from Open-Meteo
+- Always Zürich-based (not affected by city selector)
 
 ### Widget Page (`/widget.html`)
 - Compact view: weather, top headline, transport status
@@ -192,6 +212,32 @@ swiss-news-summary/
   ],
   "weather": { ... },
   "city": { "id": "zurich", "name": "Zürich" }
+}
+```
+
+### Sunshine Endpoint
+`GET /sunshine?lang={en|de}&refresh={true}`
+
+```json
+{
+  "destinations": [
+    {
+      "id": "lugano", "name": "Lugano", "nameDE": "Lugano",
+      "lat": 46.0037, "lon": 8.9511,
+      "region": "Ticino", "regionDE": "Tessin", "driveMinutes": 150,
+      "forecast": [
+        {
+          "date": "2026-02-20", "weatherCode": 1, "tempMax": 12, "tempMin": 3,
+          "sunshineHours": 7.2, "precipMm": 0,
+          "sunnyHours": [8,9,10,11,12,13,14,15,16],
+          "description": { "en": "Mainly sunny", "de": "Überwiegend sonnig" }
+        }
+      ],
+      "sunshineHoursTotal": 18.5
+    }
+  ],
+  "weekendDates": { "friday": "2026-02-20", "saturday": "2026-02-21", "sunday": "2026-02-22" },
+  "timestamp": "2026-..."
 }
 ```
 
@@ -274,6 +320,12 @@ Each city has:
 | `renderEventsList()` | Render filtered events list |
 | `filterEvents(filter)` | Filter events by type |
 | `loadWeekendPlanner()` | Load weekend planner |
+| `loadSunshine(forceRefresh)` | Load sunshine data (worker + client fallback) |
+| `renderSunshineView()` | Render sunshine map + card list |
+| `initSunshineMap()` | Init Leaflet map with sunshine markers |
+| `setSunshineSort(sort)` | Sort by 'sunshine' or 'distance' |
+| `setSunshineFilter(filter)` | Filter by 'all'/'sunny'/'partly'/'cloudy' |
+| `fetchSunshineClientSide()` | Client-side Open-Meteo fallback |
 
 ## Storage
 
@@ -287,42 +339,17 @@ Each city has:
 - `notificationsEnabled` - Push notifications enabled
 - `newsCache-{city}-{lang}` - Cached news data per city/language (2hr TTL)
 - `activitiesCache-{city}` - Cached activities data per city
+- `sunshineCache` - Cached sunshine data (30min TTL)
 
 **Cloudflare KV:**
 - Key format: `activities-{cityId}`
 - Value: JSON array of activity objects
 
-## Recent Changes (Session)
+## Notes
 
-1. Redesigned layout - weather compact in header, history under title, holidays in menu
-2. Added transport disruptions from Swiss Transport API
-3. Added "Near me" geolocation filter for activities
-4. Added coordinates to all activities
-5. Added recurring events (farmers market, story time, etc.)
-6. Added activities for Basel, Bern, Geneva, Lausanne
-7. Created widget.html for compact view
-8. Added manifest shortcuts
-9. Added custom activity entry form
-10. Removed wttr.in (was returning wrong temperature data)
-11. Added **seasonal activities** (winter: Christmas markets, ice skating; summer: swimming pools, water playgrounds; autumn: pumpkin farms; spring: tulip gardens, Sechseläuten)
-12. Added **"Surprise me!" button** - picks random weather-appropriate activity with fun modal
-13. Added **age filter** - toggle between "All ages", "2-3 years", and "4-5 years"
-14. Added seasonal badge display with season-specific colors
-15. Added "Seasonal" filter button to show only seasonal activities
-16. Added **Luzern** city with sources (Luzerner Zeitung RSS, Google News) and 8 activities (Verkehrshaus, Gletschergarten, Pilatus, etc.)
-17. Added **Winterthur** city with sources (Tagesanzeiger, Google News) and 8 activities (Technorama, Wildpark Bruderhaus, Piratolino, etc.)
-18. Added seasonal activities for Luzern (Fasnacht, Christmas market, lake swimming) and Winterthur (Christmas market, ice skating, Technorama outdoor)
-19. **Performance: Parallel fetching** - Weather, transport, and RSS feeds now fetch in parallel (saves ~1-2s)
-20. **Performance: Cache-first loading** - Shows cached data instantly on load, fetches fresh in background (instant perceived load for repeat visitors)
-21. Added **swipe navigation** between category tabs
-22. Added **sentiment badges** (positive/neutral/negative) and freshness indicators
-23. Added **trending topics banner** (clickable with URLs)
-24. Added **morning briefing card** (top story + suggested activity, dismissible per-day)
-25. Added **Events Calendar page** (aggregates holidays, events, recurring, seasonal activities)
-26. Added **Weekend Planner page** (smart activity filtering with `/weekend` endpoint)
-27. Added **Lunch page** with "Surprise me!" random restaurant picker and compact map
-28. Added **"Stay home" filter tab** with 40 at-home toddler activities (sensory/art/active/pretend/kitchen)
-29. Added **City events/festivals** — ~70 hardcoded 2026 events across 7 cities via `getCityEvents()`, integrated into Events Calendar with purple dots, date-range awareness, and Festivals filter
+- Open-Meteo rate limits: Worker IP can hit daily quota. Client-side fallback in app.js handles this.
+- Sunshine uses multi-location API (single request for all 28 destinations) to avoid rate limits.
+- Sunshine is always Zürich-based — `setCity()` doesn't affect it.
 
 ## Troubleshooting
 
@@ -338,6 +365,12 @@ Each city has:
 **Activities not loading:**
 - Check `/activities` endpoint is deployed
 - Verify city parameter is valid
+
+**Sunshine showing "no data":**
+- Worker may be rate-limited by Open-Meteo (daily quota on CF Worker IP)
+- Client-side fallback should kick in automatically
+- Add `?refresh=true` to bypass CF edge cache
+- Check browser console for client-side fetch errors
 
 ## First-time Setup
 
