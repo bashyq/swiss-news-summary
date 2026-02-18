@@ -162,6 +162,44 @@ nav { margin: 16px 0; }
 .activity-actions button.saved { color: var(--accent); border-color: var(--accent); }
 .materials-info { font-size: .75rem; color: var(--muted); margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border2); }
 
+/* Expand buttons (route + food) */
+.activity-expand-btns { display: flex; gap: 6px; margin-top: 8px; }
+.expand-btn { flex: 1; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg2); color: var(--text2); font-family: inherit; font-size: .72rem; cursor: pointer; transition: all .2s; text-align: center; }
+.expand-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+/* Route panel */
+.route-panel, .food-panel { display: none; margin-top: 8px; padding: 10px 12px; border-radius: 8px; background: var(--bg2); border: 1px solid var(--border); }
+.route-panel.active, .food-panel.active { display: block; }
+.panel-loading, .panel-error, .panel-empty { font-size: .75rem; color: var(--muted); text-align: center; padding: 8px 0; }
+.route-stop { font-size: .7rem; color: var(--muted); margin-bottom: 8px; font-weight: 600; }
+.route-connection { padding: 8px 0; border-bottom: 1px solid var(--border2); }
+.route-connection:last-of-type { border-bottom: none; }
+.route-times { font-size: .85rem; font-weight: 600; }
+.route-dep { color: var(--text); }
+.route-arr { color: var(--accent); }
+.route-details { display: flex; gap: 8px; margin-top: 3px; font-size: .72rem; color: var(--text2); }
+.route-duration { font-weight: 600; }
+.route-transfers { color: var(--muted); }
+.route-transfers.route-direct { color: #22c55e; }
+.route-products { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+.route-product { display: inline-block; padding: 1px 6px; border-radius: 4px; background: var(--accent-dim); color: var(--accent); font-size: .65rem; font-weight: 600; }
+.route-walk { font-size: .7rem; color: var(--muted); margin-top: 3px; }
+.route-tip { font-size: .68rem; color: var(--muted); margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--border2); font-style: italic; }
+.route-sbb-link { display: block; font-size: .72rem; color: var(--accent); margin-top: 6px; text-decoration: none; }
+.route-sbb-link:hover { text-decoration: underline; }
+
+/* Food panel */
+.food-spots { display: flex; flex-direction: column; gap: 6px; }
+.food-spot-mini { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; transition: background .2s; }
+.food-spot-mini:hover { background: var(--card-hover); }
+.food-mini-emoji { font-size: 1.2rem; flex-shrink: 0; }
+.food-mini-info { min-width: 0; }
+.food-mini-name { font-size: .78rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.food-mini-meta { font-size: .68rem; color: var(--muted); }
+
+/* Picnic tip */
+.picnic-tip { font-size: .72rem; color: var(--muted); margin-top: 8px; padding: 6px 10px; border-radius: 6px; background: rgba(34,197,94,.06); border: 1px solid rgba(34,197,94,.15); line-height: 1.5; }
+
 /* Age filter */
 .age-filter { display: flex; gap: 6px; margin-bottom: 12px; }
 .age-btn { padding: 4px 10px; border: 1px solid var(--border); border-radius: 12px; background: none; color: var(--text2); font-family: inherit; font-size: .7rem; cursor: pointer; }

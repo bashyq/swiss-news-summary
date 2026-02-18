@@ -125,6 +125,19 @@ const T = {
   module: { en:'Module', de:'Modul' },
   checkingVersion: { en:'Checking...', de:'Prüfe...' },
   versionError: { en:'Could not reach API', de:'API nicht erreichbar' },
+  getThereBtn: { en:'How to get there', de:'So kommst du hin' },
+  nearbyFoodBtn: { en:'Nearby food', de:'Essen in der Nähe' },
+  transfers: { en:'transfer', de:'Umstieg' },
+  transfersPlural: { en:'transfers', de:'Umstiege' },
+  walkMin: { en:'walk', de:'Fussweg' },
+  strollerTip: { en:'+10 min with stroller', de:'+10 min mit Kinderwagen' },
+  fullTimetable: { en:'Full SBB timetable', de:'SBB Fahrplan' },
+  packPicnic: { en:'Pack a picnic!', de:'Picknick einpacken!' },
+  picnicTip: { en:'Snack ideas: fruit slices, crackers, cheese, water bottle', de:'Snack-Ideen: Obststücke, Cracker, Käse, Wasserflasche' },
+  loadingRoute: { en:'Loading connections...', de:'Verbindungen laden...' },
+  loadingFood: { en:'Finding restaurants...', de:'Restaurants suchen...' },
+  noConnections: { en:'No connections found', de:'Keine Verbindungen gefunden' },
+  noNearbyFood: { en:'No restaurants nearby', de:'Keine Restaurants in der Nähe' },
 };
 const t = k => T[k]?.[lang] || k;
 
@@ -424,11 +437,30 @@ function renderActivityCard(a) {
     extra = `<div class="materials-info">📦 ${t('materials')}: ${esc(mat)}</div>`;
   }
 
+  // Expandable sections for transport & food (only for non-stayhome activities with coords)
+  let expandables = '';
+  if (a.lat && a.category !== 'stayhome') {
+    expandables += `<div class="activity-expand-btns">
+      <button class="expand-btn" onclick="event.stopPropagation();toggleRoutePanel('${a.id}',${a.lat},${a.lon})">🚆 ${t('getThereBtn')}</button>
+      <button class="expand-btn" onclick="event.stopPropagation();toggleFoodPanel('${a.id}',${a.lat},${a.lon})">🍽️ ${t('nearbyFoodBtn')}</button>
+    </div>`;
+    expandables += `<div class="route-panel" id="route-${a.id}"></div>`;
+    expandables += `<div class="food-panel" id="food-${a.id}"></div>`;
+  }
+
+  // Picnic suggestion for outdoor non-stayhome activities
+  let picnicHtml = '';
+  if (!a.indoor && a.category !== 'stayhome' && a.lat) {
+    picnicHtml = `<div class="picnic-tip" id="picnic-${a.id}">🧺 <strong>${t('packPicnic')}</strong> ${t('picnicTip')}</div>`;
+  }
+
   return `<div class="activity-card" id="activity-${a.id}" data-lat="${a.lat || ''}" data-lon="${a.lon || ''}">
     <div class="activity-name">${ACTIVITY_EMOJIS[a.category] || '📍'} ${esc(name)}</div>
     <div class="activity-desc">${esc(desc)}</div>
     <div class="activity-badges">${badges}</div>
     ${extra}
+    ${expandables}
+    ${picnicHtml}
     <div class="activity-actions">
       <button class="${isSaved ? 'saved' : ''}" onclick="toggleSave('${a.id}')">${isSaved ? '❤️' : '🤍'} ${t('save')}</button>
       ${a.url ? `<button onclick="window.open('${esc(a.url)}','_blank')">${t('website')}</button>` : ''}
@@ -1064,6 +1096,106 @@ function toggleLunchMap() {
   el.classList.toggle('expanded', lunchMapExpanded);
   el.style.pointerEvents = lunchMapExpanded ? 'auto' : 'none';
   if (lunchMap) setTimeout(() => lunchMap.invalidateSize(), 100);
+}
+
+// ═══ TRANSPORT ROUTING ═══
+
+const routeCache = {};
+async function toggleRoutePanel(activityId, lat, lon) {
+  const panel = $(`route-${activityId}`);
+  if (!panel) return;
+  if (panel.classList.contains('active')) { panel.classList.remove('active'); return; }
+
+  // Close any open food panel on same card
+  $(`food-${activityId}`)?.classList.remove('active');
+
+  panel.classList.add('active');
+  const cacheKey = `${city}-${lat}-${lon}`;
+  if (routeCache[cacheKey]) { renderRoutePanel(panel, routeCache[cacheKey]); return; }
+
+  panel.innerHTML = `<div class="panel-loading">${t('loadingRoute')}</div>`;
+  try {
+    const res = await fetch(`${API}/route?city=${city}&toLat=${lat}&toLon=${lon}`);
+    const data = await res.json();
+    routeCache[cacheKey] = data;
+    renderRoutePanel(panel, data);
+  } catch {
+    panel.innerHTML = `<div class="panel-error">${t('noConnections')}</div>`;
+  }
+}
+
+function renderRoutePanel(panel, data) {
+  if (!data.connections?.length) {
+    panel.innerHTML = `<div class="panel-empty">${t('noConnections')}</div>`;
+    return;
+  }
+  let html = '<div class="route-connections">';
+  if (data.nearestStop) html += `<div class="route-stop">→ ${esc(data.nearestStop)}</div>`;
+  for (const c of data.connections) {
+    const transferLabel = c.transfers === 1 ? t('transfers') : (c.transfers === 0 ? '' : t('transfersPlural'));
+    html += `<div class="route-connection">
+      <div class="route-times"><span class="route-dep">${c.departure}</span> → <span class="route-arr">${c.arrival}</span></div>
+      <div class="route-details">
+        <span class="route-duration">${c.duration}</span>
+        ${c.transfers > 0 ? `<span class="route-transfers">${c.transfers} ${transferLabel}</span>` : '<span class="route-transfers route-direct">direct</span>'}
+      </div>
+      <div class="route-products">${c.products.map(p => `<span class="route-product">${esc(p)}</span>`).join('')}</div>
+      ${c.walkTime ? `<div class="route-walk">🚶 ${c.walkTime} ${t('walkMin')}</div>` : ''}
+    </div>`;
+  }
+  html += `<div class="route-tip">🍼 ${t('strollerTip')}</div>`;
+  if (data.sbbUrl) html += `<a class="route-sbb-link" href="${esc(data.sbbUrl)}" target="_blank">🔗 ${t('fullTimetable')}</a>`;
+  html += '</div>';
+  panel.innerHTML = html;
+}
+
+// ═══ NEARBY FOOD ═══
+
+const foodCache = {};
+async function toggleFoodPanel(activityId, lat, lon) {
+  const panel = $(`food-${activityId}`);
+  if (!panel) return;
+  if (panel.classList.contains('active')) { panel.classList.remove('active'); return; }
+
+  // Close any open route panel on same card
+  $(`route-${activityId}`)?.classList.remove('active');
+
+  panel.classList.add('active');
+  const cacheKey = `${lat}-${lon}`;
+  if (foodCache[cacheKey]) { renderFoodPanel(panel, foodCache[cacheKey], lat, lon); return; }
+
+  panel.innerHTML = `<div class="panel-loading">${t('loadingFood')}</div>`;
+  try {
+    const res = await fetch(`${API}/lunch?city=${city}&nearLat=${lat}&nearLon=${lon}&radius=500&limit=5`);
+    const data = await res.json();
+    foodCache[cacheKey] = data;
+    renderFoodPanel(panel, data, lat, lon);
+  } catch {
+    panel.innerHTML = `<div class="panel-error">${t('noNearbyFood')}</div>`;
+  }
+}
+
+function renderFoodPanel(panel, data, centerLat, centerLon) {
+  const spots = data.spots || [];
+  if (spots.length === 0) {
+    panel.innerHTML = `<div class="panel-empty">${t('noNearbyFood')}</div>`;
+    return;
+  }
+  const CUISINE_EMOJIS = { swiss:'🫕', italian:'🍝', asian:'🍜', kebab:'🥙', cafe:'☕', vegetarian:'🥗', fastfood:'🍔', international:'🌍', other:'🍽️' };
+  let html = '<div class="food-spots">';
+  for (const s of spots) {
+    const emoji = CUISINE_EMOJIS[s.cuisineCategory] || '🍽️';
+    const distM = s.distanceKm != null ? Math.round(s.distanceKm * 1000) : null;
+    html += `<div class="food-spot-mini" onclick="window.open('${mapsUrl(s.lat, s.lon, s.name)}','_blank')">
+      <span class="food-mini-emoji">${emoji}</span>
+      <div class="food-mini-info">
+        <div class="food-mini-name">${esc(s.name)}</div>
+        <div class="food-mini-meta">${esc(s.cuisineCategory || s.amenity || '')}${distM != null ? ` · ${distM}m` : ''}${s.openForLunch === true ? ' · Open' : ''}</div>
+      </div>
+    </div>`;
+  }
+  html += '</div>';
+  panel.innerHTML = html;
 }
 
 // ═══ SURPRISE ME ═══

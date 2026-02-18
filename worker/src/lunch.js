@@ -2,7 +2,7 @@
  * Lunch — Overpass API integration for nearby restaurants.
  */
 
-export const VERSION = '2.0.0';
+export const VERSION = '2.1.0';
 
 import { getCity } from './data.js';
 
@@ -82,8 +82,8 @@ function checkOpenForLunch(oh) {
   return found ? open : null;
 }
 
-async function fetchOverpass(lat, lon) {
-  const q = `[out:json][timeout:25];(node["amenity"="restaurant"](around:3000,${lat},${lon});node["amenity"="cafe"](around:3000,${lat},${lon});node["amenity"="fast_food"](around:3000,${lat},${lon}););out body;`;
+async function fetchOverpass(lat, lon, radius = 3000) {
+  const q = `[out:json][timeout:25];(node["amenity"="restaurant"](around:${radius},${lat},${lon});node["amenity"="cafe"](around:${radius},${lat},${lon});node["amenity"="fast_food"](around:${radius},${lat},${lon}););out body;`;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 15000);
   try {
@@ -117,14 +117,47 @@ function normalize(elements) {
   });
 }
 
+function haversineDist(lat1, lon1, lat2, lon2) {
+  const R = 6371, toR = Math.PI / 180;
+  const dLat = (lat2 - lat1) * toR, dLon = (lon2 - lon1) * toR;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * toR) * Math.cos(lat2 * toR) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export async function handleLunch(url, env) {
   const cityId = url.searchParams.get('city') || 'zurich';
   const city = getCity(cityId);
+  const nearLat = parseFloat(url.searchParams.get('nearLat'));
+  const nearLon = parseFloat(url.searchParams.get('nearLon'));
+  const radius = parseInt(url.searchParams.get('radius')) || 3000;
+  const limit = parseInt(url.searchParams.get('limit')) || 0;
+  const isNearQuery = !isNaN(nearLat) && !isNaN(nearLon);
 
-  const cache = caches.default;
+  // For near queries, use the provided coordinates and smaller radius, no caching
+  if (isNearQuery) {
+    const nearRadius = Math.min(radius, 1000);
+    const elements = await fetchOverpass(nearLat, nearLon, nearRadius);
+    let spots = normalize(elements);
+    // Sort by distance from the target point
+    spots.sort((a, b) => haversineDist(nearLat, nearLon, a.lat, a.lon) - haversineDist(nearLat, nearLon, b.lat, b.lon));
+    // Add distance to each spot
+    spots = spots.map(s => ({ ...s, distanceKm: Math.round(haversineDist(nearLat, nearLon, s.lat, s.lon) * 100) / 100 }));
+    if (limit > 0) spots = spots.slice(0, limit);
+
+    return new Response(JSON.stringify({
+      spots, center: { lat: nearLat, lon: nearLon },
+      city: { id: cityId, name: city.name },
+      timestamp: new Date().toISOString()
+    }), {
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*', 'Cache-Control': 'public, max-age=300' }
+    });
+  }
+
+  // Standard city-center query with caching
+  const cfCache = caches.default;
   const cacheKey = new Request(`https://cache.local/lunch-${cityId}`, { method: 'GET' });
 
-  let cached = await cache.match(cacheKey);
+  let cached = await cfCache.match(cacheKey);
   if (cached) {
     const body = await cached.text();
     return new Response(body, {
@@ -144,6 +177,6 @@ export async function handleLunch(url, env) {
   const response = new Response(body, {
     headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*', 'Cache-Control': 'public, max-age=1800' }
   });
-  await cache.put(cacheKey, new Response(body, { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=1800' } }));
+  await cfCache.put(cacheKey, new Response(body, { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=1800' } }));
   return response;
 }

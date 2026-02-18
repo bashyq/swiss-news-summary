@@ -12,7 +12,7 @@ import { handleLunch, VERSION as LUNCH_V } from './lunch.js';
 import { handleSunshine, VERSION as SUNSHINE_V } from './sunshine.js';
 import { VERSION as DATA_V } from './data.js';
 import { VERSION as WEATHER_V } from './weather.js';
-import { VERSION as TRANSPORT_V } from './transport.js';
+import { handleRoute, VERSION as TRANSPORT_V } from './transport.js';
 import { VERSION as EVENTS_V } from './events.js';
 
 function cors(env) {
@@ -64,6 +64,7 @@ const ROUTES = {
   '/weekend': handleWeekend,
   '/lunch': handleLunch,
   '/sunshine': handleSunshine,
+  '/route': handleRoute,
   '/version': handleVersion,
 };
 
