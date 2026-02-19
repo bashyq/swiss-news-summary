@@ -9,6 +9,7 @@ export const CITIES = {
     name: 'Zürich', lat: 47.3769, lon: 8.5417, station: 'Zürich HB',
     sources: [
       { name: 'NZZ Zürich', url: 'https://www.nzz.ch/zuerich.rss' },
+      { name: 'Tsüri', url: 'https://tsri.ch/feed' },
       { name: 'Google Zürich', url: 'https://news.google.com/rss/search?q=zurich+OR+zürich&hl=en&gl=CH&ceid=CH:en' }
     ]
   },
