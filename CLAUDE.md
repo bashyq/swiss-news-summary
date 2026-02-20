@@ -349,6 +349,7 @@ Each city has:
 | Variable | Location | Description |
 |----------|----------|-------------|
 | `CLAUDE_API_KEY` | Wrangler secret | Claude API key (required) |
+| `STRIPE_SECRET_KEY` | Wrangler secret | Stripe secret key (for donate feature, not yet deployed) |
 | `ALLOWED_ORIGIN` | wrangler.toml | CORS origin (`*`) |
 | `ACTIVITIES_KV` | wrangler.toml | KV namespace for activities |
 
@@ -440,9 +441,22 @@ Each city has:
 
 ## Notes
 
+### Performance Optimizations
+- **API prefetching**: Inline `<script>` in `<head>` starts API fetch before app.js loads (`window.__prefetch`)
+- **Non-render-blocking fonts**: Google Fonts loaded via `<link rel="preload" as="style">` + `onload` swap
+- **Deferred JS**: `<script src="app.js" defer>` — doesn't block rendering
+- **DNS prefetch**: `<link rel="dns-prefetch">` for unpkg.com, api.open-meteo.com, tile.openstreetmap.org
+- **Preconnect**: Worker API preconnected in `<head>`
+- **Service worker strategies**: cache-first for static/CDN, stale-while-revalidate for API, networkOnly for `?refresh`
+- **Parallel RSS fetching**: All 7 feeds fetched via `Promise.allSettled` (removed sequential batching)
+- **Fetch timeouts**: 8-second `AbortController` timeout on RSS, weather, transport fetches
+- **CF edge cache**: 30-minute `max-age` on worker responses
+- **Loading bar**: CSS animation progress indicator shown during all data fetches
+
+### General
 - Open-Meteo rate limits: Worker IP can hit daily quota. Client-side fallback in app.js handles this.
 - Sunshine uses multi-location API (single request for all 29 destinations incl. Zürich baseline) to avoid rate limits.
-- Sunshine is always Zürich-based — `setCity()` doesn't affect it.
+- Sunshine and Snow are always Zürich-based — `setCity()` doesn't affect them.
 
 ## Troubleshooting
 
