@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-"Today in Switzerland" is a PWA that aggregates Swiss news, weather, transport disruptions, holidays, historical facts, family activities for toddlers (ages 2-5), and weekend sunshine forecasts. It uses Claude AI for news categorization and consists of a modular Cloudflare Worker backend (10 modules) and a 3-file frontend (HTML shell + CSS + JS).
+"Today in Switzerland" is a PWA that aggregates Swiss news, weather, transport disruptions, holidays, historical facts, family activities for toddlers (ages 2-5), weekend sunshine/snow forecasts, and deals. It uses Claude AI for news categorization and consists of a modular Cloudflare Worker backend (12 modules) and a 3-file frontend (HTML shell + CSS + JS).
 
 **GitHub:** https://github.com/bashyq/swiss-news-summary
 
@@ -61,9 +61,9 @@ swiss-news-summary/
 ├── frontend/
 │   ├── index.html      # Slim HTML shell (~36 lines)
 │   ├── styles.css      # Design system + all component styles
-│   ├── app.js          # Full JS app: state, views, components, utils (~1200 lines)
+│   ├── app.js          # Full JS app: state, views, components, utils (~2800 lines)
 │   ├── widget.html     # Compact widget page
-│   ├── sw.js           # Service worker (cache v21)
+│   ├── sw.js           # Service worker (cache v40)
 │   ├── manifest.json   # PWA manifest with shortcuts
 │   └── icon.svg        # App icon
 ├── worker/
@@ -368,6 +368,9 @@ Each city has:
 | `events-list` | Events calendar list |
 | `calendar-grid` | Calendar day grid |
 | `calendar-month-label` | Calendar month/year display |
+| `loading-bar` | Animated progress bar during data fetches |
+| `pull-indicator` | Pull-to-refresh visual indicator |
+| `toast-container` | Toast notification container |
 
 ## Key JavaScript Functions
 
@@ -412,6 +415,8 @@ Each city has:
 | `renderDealCard(d)` | Render single deal card |
 | `filterDeals(f)` | Filter deals by type (all/free/deal/tip) |
 | `getSchoolHolidays()` | Worker: return Zürich 2026 school holiday dates |
+| `showLoading()` | Show animated loading bar at top of page |
+| `hideLoading()` | Hide loading bar with completion animation |
 
 ## Storage
 
@@ -419,7 +424,7 @@ Each city has:
 - `lang` - Language preference (en/de)
 - `city` - Selected city
 - `theme` - Theme preference (light/dark)
-- `view` - Active view (news/activities/lunch/events/weekend/sunshine), persisted across refresh
+- `view` - Active view (news/activities/lunch/events/weekend/sunshine/snow/deals), persisted across refresh
 - `savedActivities` - Array of saved activity IDs
 - `customActivities` - Array of user-created activities
 - `installDismissed` - PWA install prompt dismissed
