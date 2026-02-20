@@ -1,4 +1,4 @@
-const CACHE_NAME = 'today-switzerland-v37';
+const CACHE_NAME = 'today-switzerland-v38';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -37,9 +37,13 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  // API requests: stale-while-revalidate (serve cached instantly, refresh in bg)
+  // API requests: stale-while-revalidate, but bypass cache on explicit refresh
   if (url.hostname.includes('workers.dev')) {
-    event.respondWith(staleWhileRevalidate(event.request));
+    if (url.searchParams.has('refresh')) {
+      event.respondWith(networkOnly(event.request));
+    } else {
+      event.respondWith(staleWhileRevalidate(event.request));
+    }
     return;
   }
 
@@ -58,6 +62,25 @@ self.addEventListener('fetch', (event) => {
   // Static assets: cache-first, update in background
   event.respondWith(cacheFirstWithRefresh(event.request));
 });
+
+// Network only — bypass SW cache entirely, update cache with fresh response
+async function networkOnly(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      // Cache the fresh response (without ?refresh param) for future stale-while-revalidate
+      const cache = await caches.open(CACHE_NAME);
+      const cleanUrl = new URL(request.url);
+      cleanUrl.searchParams.delete('refresh');
+      cache.put(new Request(cleanUrl.toString()), response.clone());
+    }
+    return response;
+  } catch {
+    return new Response(JSON.stringify({ error: 'Offline' }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
 
 // Serve from cache instantly; if not cached, fetch from network and cache
 async function cacheFirst(request) {
