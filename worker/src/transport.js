@@ -7,7 +7,10 @@ export const VERSION = '2.0.0';
 export async function fetchTransportDisruptions(stationName) {
   try {
     const url = `https://transport.opendata.ch/v1/stationboard?station=${encodeURIComponent(stationName)}&limit=20`;
-    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    const res = await fetch(url, { headers: { Accept: 'application/json' }, signal: controller.signal });
+    clearTimeout(timeout);
     if (!res.ok) return { delays: [], summary: null };
 
     const data = await res.json();

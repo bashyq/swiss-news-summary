@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.8.3';
+const APP_VERSION = '2.9.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -224,6 +224,25 @@ const cache = {
     try { localStorage.setItem(key, JSON.stringify({ ...data, _cachedAt: Date.now() })); } catch {}
   }
 };
+
+// ═══ LOADING BAR ═══
+function showLoading() {
+  const bar = $('loading-bar');
+  if (!bar) return;
+  bar.classList.remove('done');
+  // Reset animation by removing and re-adding
+  const inner = bar.querySelector('.loading-bar-inner');
+  inner.style.animation = 'none';
+  inner.offsetHeight; // force reflow
+  inner.style.animation = '';
+  bar.classList.add('active');
+}
+function hideLoading() {
+  const bar = $('loading-bar');
+  if (!bar) return;
+  bar.classList.add('done');
+  setTimeout(() => { bar.classList.remove('active', 'done'); }, 700);
+}
 
 function timeAgo(iso) {
   if (!iso) return '';
@@ -883,6 +902,7 @@ async function fetchNews(force = false) {
     if (cached) { newsData = cached; renderAll(); }
   }
 
+  showLoading();
   try {
     // Use prefetched data if available (started in <head> before JS loaded)
     let data;
@@ -897,7 +917,6 @@ async function fetchNews(force = false) {
     newsData = data;
     cache.set(cacheKey, data);
     if (hadData) {
-      // Targeted update — avoid full DOM rebuild on second render
       if (view === 'news') renderCurrentView();
       renderNav();
     } else {
@@ -912,6 +931,8 @@ async function fetchNews(force = false) {
     showToast('toastNetworkError', 'error');
     const newsEl = $('view-news');
     if (!newsData && newsEl) newsEl.innerHTML = '<div class="loading-msg">Failed to load. Check your connection.</div>';
+  } finally {
+    hideLoading();
   }
 }
 
@@ -927,6 +948,7 @@ async function loadActivities(force = false) {
     }
   }
 
+  showLoading();
   try {
     const res = await fetch(`${API}/activities?city=${city}&lang=${lang}${force ? '&refresh=true' : ''}`);
     const data = await res.json();
@@ -938,6 +960,8 @@ async function loadActivities(force = false) {
   } catch (e) {
     console.error('Activities error:', e);
     if (!activitiesData.length) showToast('toastNetworkError', 'error');
+  } finally {
+    hideLoading();
   }
 }
 
@@ -989,14 +1013,17 @@ async function loadEventsCalendar() {
 }
 
 async function loadWeekendPlanner(force = false) {
+  showLoading();
   try {
     const res = await fetch(`${API}/weekend?city=${city}&lang=${lang}${force ? '&refresh=true' : ''}`);
     weekendData = await res.json();
     renderCurrentView();
   } catch (e) { console.error('Weekend error:', e); showToast('toastNetworkError', 'error'); }
+  finally { hideLoading(); }
 }
 
 async function loadLunchSpots(force = false) {
+  showLoading();
   try {
     const res = await fetch(`${API}/lunch?city=${city}${force ? '&refresh=true' : ''}`);
     const data = await res.json();
@@ -1004,6 +1031,7 @@ async function loadLunchSpots(force = false) {
     renderCurrentView();
     afterRender(initLunchMap);
   } catch (e) { console.error('Lunch error:', e); showToast('toastNetworkError', 'error'); }
+  finally { hideLoading(); }
 }
 
 // ═══ RENDERING HELPERS ═══
@@ -1934,6 +1962,7 @@ async function loadSunshine(force = false) {
     if (cached && cached.destinations?.length > 0) { sunshineData = cached; renderCurrentView(); afterRender(initSunshineMap); return; }
   }
 
+  showLoading();
   try {
     // Try worker first
     const res = await fetch(`${API}/sunshine?lang=${lang}${force ? '&refresh=true' : ''}`);
@@ -1944,6 +1973,7 @@ async function loadSunshine(force = false) {
       cache.set(cacheKey, data);
       renderCurrentView();
       afterRender(initSunshineMap);
+      hideLoading();
       return;
     }
   } catch (e) { console.error('Worker sunshine error:', e); }
@@ -1956,10 +1986,12 @@ async function loadSunshine(force = false) {
       cache.set(cacheKey, data);
       renderCurrentView();
       afterRender(initSunshineMap);
+      hideLoading();
       return;
     }
   } catch (e) { console.error('Client sunshine error:', e); showToast('toastNetworkError', 'error'); }
 
+  hideLoading();
   if (!sunshineData) {
     const vEl = $('view-sunshine');
     if (vEl) vEl.innerHTML = '<div class="loading-msg">Failed to load sunshine data.</div>';
@@ -2371,6 +2403,7 @@ async function loadSnow(force = false) {
     if (cached && cached.destinations?.length > 0) { snowData = cached; renderCurrentView(); afterRender(initSnowMap); return; }
   }
 
+  showLoading();
   try {
     const res = await fetch(`${API}/snow?lang=${lang}${force ? '&refresh=true' : ''}`);
     if (!res.ok) throw new Error(`Worker returned ${res.status}`);
@@ -2380,6 +2413,7 @@ async function loadSnow(force = false) {
       cache.set(cacheKey, data);
       renderCurrentView();
       afterRender(initSnowMap);
+      hideLoading();
       return;
     }
   } catch (e) { console.error('Worker snow error:', e); }
@@ -2391,10 +2425,12 @@ async function loadSnow(force = false) {
       cache.set(cacheKey, data);
       renderCurrentView();
       afterRender(initSnowMap);
+      hideLoading();
       return;
     }
   } catch (e) { console.error('Client snow error:', e); showToast('toastNetworkError', 'error'); }
 
+  hideLoading();
   if (!snowData) {
     const vEl = $('view-snow');
     if (vEl) vEl.innerHTML = '<div class="loading-msg">Failed to load snow data.</div>';

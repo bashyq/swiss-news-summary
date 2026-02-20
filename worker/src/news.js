@@ -52,26 +52,30 @@ function parseRSSItems(xml) {
 }
 
 async function fetchFeed(source) {
-  const res = await fetch(source.url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      Accept: 'application/rss+xml, application/xml, text/xml, */*'
-    }
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return parseRSSItems(await res.text());
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(source.url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        Accept: 'application/rss+xml, application/xml, text/xml, */*'
+      },
+      signal: controller.signal
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return parseRSSItems(await res.text());
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function fetchAllFeeds(sources) {
+  const results = await Promise.allSettled(
+    sources.map(async s => ({ source: s.name, headlines: await fetchFeed(s) }))
+  );
   const all = [];
-  for (let i = 0; i < sources.length; i += 4) {
-    const batch = sources.slice(i, i + 4);
-    const results = await Promise.allSettled(
-      batch.map(async s => ({ source: s.name, headlines: await fetchFeed(s) }))
-    );
-    for (const r of results) {
-      if (r.status === 'fulfilled' && r.value.headlines?.length > 0) all.push(r.value);
-    }
+  for (const r of results) {
+    if (r.status === 'fulfilled' && r.value.headlines?.length > 0) all.push(r.value);
   }
   return all;
 }
@@ -147,7 +151,7 @@ Antworte NUR mit diesem JSON:
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: 'claude-3-haiku-20240307', max_tokens: 4096, messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify({ model: 'claude-3-haiku-20240307', max_tokens: 2048, messages: [{ role: 'user', content: prompt }] })
   });
   if (!res.ok) { const e = await res.text(); throw new Error(`Claude API ${res.status}: ${e}`); }
 

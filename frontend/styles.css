@@ -45,6 +45,14 @@ a { color: var(--accent); text-decoration: none; }
 .card:focus-visible, .activity-card:focus-visible, .sunshine-card:focus-visible, .snow-card:focus-visible, .event-card:focus-visible { outline-offset: -2px; }
 input:focus-visible, textarea:focus-visible, select:focus-visible { outline-offset: -1px; }
 
+/* ═══ LOADING BAR ═══ */
+.loading-bar { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 1100; pointer-events: none; opacity: 0; transition: opacity .2s; }
+.loading-bar.active { opacity: 1; }
+.loading-bar-inner { height: 100%; background: var(--accent); border-radius: 0 2px 2px 0; animation: loadProgress 12s ease-out forwards; }
+@keyframes loadProgress { 0% { width: 0; } 15% { width: 30%; } 40% { width: 55%; } 60% { width: 70%; } 80% { width: 85%; } 100% { width: 95%; } }
+.loading-bar.done .loading-bar-inner { width: 100% !important; animation: none; transition: width .3s; }
+.loading-bar.done { transition: opacity .4s .3s; opacity: 0; }
+
 /* ═══ LAYOUT ═══ */
 .container { max-width: 720px; margin: 0 auto; padding: 0 24px; padding-top: max(env(safe-area-inset-top),20px); padding-bottom: 100px; }
 .pull-indicator { position: fixed; top: 0; left: 0; right: 0; text-align: center; padding: 20px; color: var(--muted); font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; background: linear-gradient(to bottom,var(--bg),transparent); transform: translateY(-100%); transition: transform .3s; z-index: 100; }
