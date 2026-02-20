@@ -277,13 +277,13 @@ export async function handleNews(url, env) {
     headers: {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*',
-      'Cache-Control': 'public, max-age=900',
+      'Cache-Control': 'public, max-age=1800',
       'X-Cache': 'MISS'
     }
   });
 
   // Cache 15 min
-  try { if (cache && cacheKey) await cache.put(cacheKey, new Response(body, { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=900' } })); } catch {}
+  try { if (cache && cacheKey) await cache.put(cacheKey, new Response(body, { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=1800' } })); } catch {}
 
   return response;
 }
