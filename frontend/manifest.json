@@ -59,6 +59,13 @@
       "icons": [{ "src": "icon.svg", "sizes": "96x96" }]
     },
     {
+      "name": "Deals & Free",
+      "short_name": "Deals",
+      "description": "Free entry and family deals",
+      "url": "/?view=deals",
+      "icons": [{ "src": "icon.svg", "sizes": "96x96" }]
+    },
+    {
       "name": "Quick Widget",
       "short_name": "Widget",
       "description": "Compact weather & headlines",

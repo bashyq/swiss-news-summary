@@ -252,6 +252,7 @@ nav { margin: 16px 0; }
 .dot-festival { background: #a855f7; }
 .dot-recurring { background: #3b82f6; }
 .dot-seasonal { background: #22c55e; }
+.dot-school-holiday { background: #f59e0b; }
 
 .event-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 8px; }
 .event-date { font-size: .7rem; color: var(--accent); font-weight: 600; margin-bottom: 4px; }
@@ -560,6 +561,10 @@ nav { margin: 16px 0; }
 .day-detail-trending-headline { font-size: .9rem; font-weight: 600; margin-bottom: 4px; }
 .day-detail-trending-source { font-size: .7rem; color: var(--muted); }
 
+.day-detail-school-holiday { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: linear-gradient(135deg, rgba(245,158,11,.15) 0%, rgba(245,158,11,.05) 100%); border: 1px solid rgba(245,158,11,.25); border-radius: var(--radius); margin-bottom: 10px; font-weight: 600; font-size: .9rem; color: #f59e0b; flex-wrap: wrap; }
+.day-detail-school-holiday-dates { font-size: .75rem; font-weight: 400; color: var(--muted); margin-left: auto; }
+.badge-school-holiday { background: rgba(245,158,11,.15); color: #f59e0b; border: 1px solid rgba(245,158,11,.3); font-size: .7rem; padding: 2px 8px; border-radius: 12px; }
+
 [data-theme="light"] .day-detail-festival:hover,
 [data-theme="light"] .day-detail-activity:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); }
 [data-theme="light"] .day-detail-weather:hover { border-color: rgba(0,0,0,.15); }
@@ -593,6 +598,23 @@ nav { margin: 16px 0; }
   .filter-btn { font-size: .7rem; padding: 6px 8px; }
   .activities-actions { flex-direction: column; }
 }
+/* ── Deals View ── */
+.deals-list { display: flex; flex-direction: column; gap: 10px; }
+.deal-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; cursor: pointer; transition: border-color .2s, transform .2s; }
+.deal-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.12); border-color: rgba(255,255,255,.15); }
+.deal-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.deal-emoji { font-size: 1.3rem; line-height: 1; }
+.deal-card-title { font-family: var(--serif); font-size: .95rem; font-weight: 600; }
+.deal-card-desc { font-size: .82rem; color: var(--text2); margin-bottom: 10px; line-height: 1.5; }
+.deal-card-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.deal-type-badge { font-size: .7rem; padding: 3px 10px; border-radius: 12px; font-weight: 600; }
+.deal-type-free { background: rgba(34,197,94,.15); color: var(--clr-green); border: 1px solid rgba(34,197,94,.3); }
+.deal-type-deal { background: rgba(59,130,246,.15); color: var(--clr-blue); border: 1px solid rgba(59,130,246,.3); }
+.deal-type-tip { background: rgba(245,158,11,.15); color: #f59e0b; border: 1px solid rgba(245,158,11,.3); }
+.deal-savings-badge { font-size: .7rem; padding: 3px 10px; border-radius: 12px; background: rgba(168,85,247,.15); color: var(--clr-purple); border: 1px solid rgba(168,85,247,.3); }
+.deal-recurring-badge { font-size: .7rem; padding: 3px 10px; border-radius: 12px; background: var(--bg2); color: var(--text2); }
+[data-theme="light"] .deal-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); border-color: rgba(0,0,0,.15); }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
   .skeleton { animation: none; background: var(--bg2); }

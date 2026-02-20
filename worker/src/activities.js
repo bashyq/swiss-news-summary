@@ -2,7 +2,7 @@
  * Activities — curated family activities, seasonal, stay-home, handler.
  */
 
-export const VERSION = '2.0.0';
+export const VERSION = '2.1.0';
 
 import { getCity } from './data.js';
 import { fetchWeather, RAINY_CODES } from './weather.js';
@@ -217,7 +217,12 @@ export async function getCuratedActivities(env, cityId) {
       if (custom?.length > 0) return custom;
     } catch {}
   }
-  return [...(CITY_ACTIVITIES[cityId] || CITY_ACTIVITIES.zurich), ...getSeasonalActivities(cityId), ...getStayHomeActivities()];
+  const all = [...(CITY_ACTIVITIES[cityId] || CITY_ACTIVITIES.zurich), ...getSeasonalActivities(cityId), ...getStayHomeActivities()];
+  // Auto-tag free activities
+  for (const a of all) {
+    if (a.price && /^free|^gratis/i.test(a.price.trim())) a.free = true;
+  }
+  return all;
 }
 
 export async function handleActivities(url, env) {

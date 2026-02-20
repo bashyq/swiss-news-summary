@@ -69,7 +69,7 @@ swiss-news-summary/
 ├── worker/
 │   ├── src/
 │   │   ├── index.js      # Router, CORS, entry point
-│   │   ├── data.js       # Cities config, holidays, history facts
+│   │   ├── data.js       # Cities config, holidays, school holidays, history facts
 │   │   ├── weather.js    # Open Meteo integration
 │   │   ├── transport.js  # Swiss Transport API
 │   │   ├── news.js       # RSS parsing, Claude API, news assembly
@@ -99,7 +99,7 @@ swiss-news-summary/
 ### Activities View ("What to do?")
 - Curated family-friendly activities for toddlers (ages 2-5)
 - **7 cities**: Zürich, Basel, Bern, Geneva, Lausanne, Luzern, Winterthur
-- **Filters**: All, Near me, Indoor, Outdoor, Saved, Seasonal
+- **Filters**: All, Near me, Indoor, Outdoor, Free, Saved, Seasonal
 - **"Near me"**: Uses geolocation, shows distance badges
 - **Weather-based**: Indoor prioritized when rainy/cold
 - **Custom activities**: Users can add their own
@@ -110,14 +110,16 @@ swiss-news-summary/
 
 ### Events View ("What's On")
 - Combined calendar + daily digest — merged from separate Events Calendar and What's On views
-- **Calendar grid**: Auto-selects today, purple dots for festivals, red for holidays, blue for recurring
+- **Calendar grid**: Auto-selects today, purple dots for festivals, red for holidays, amber for school holidays, blue for recurring
 - **Day detail panel**: Click any day to see detail below calendar:
   - Holidays on that date (purple banner)
+  - School holidays on that date (amber banner with date range)
   - Festivals with date range overlap (purple left-border cards)
   - Recurring activities matching that day-of-week
   - Weather-based activity picks (today only — indoor when rainy/<5°C)
   - Trending news (today only)
-- **All Events list**: Below detail panel with filter bar (All, Holidays, Events, Recurring, Seasonal, Festivals)
+- **School holidays**: Zürich 2026 dates (Sport, Easter, Spring, Ascension, Summer, Autumn, Christmas) from `getSchoolHolidays()` in worker
+- **All Events list**: Below detail panel with filter bar (All, Holidays, School Holidays, Events, Recurring, Seasonal, Festivals)
 - **City events**: ~70 hardcoded 2026 festivals/events served via `getCityEvents()` in worker
 - **Date-range awareness**: Multi-day festivals show dots on all days, filter by date overlap
 - **Festival cards**: Show date ranges, toddler-friendly and free badges
@@ -174,6 +176,18 @@ swiss-news-summary/
 - Always Zürich-based (not affected by city selector)
 - **Cache keys**: Worker `snow-v1-{lang}`, Frontend `snowCache-v1` (30min TTL)
 
+### Deals & Free View ("Best deals?")
+- Curated list of free entry spots, family passes, and money-saving tips
+- **DEALS array**: ~30 static entries in app.js (no worker endpoint)
+- **Categories**: Museums, Outdoor, Transport, Family Passes, Seasonal
+- **Types**: Free (green badge), Deal (blue badge), Tip (amber badge)
+- **Filters**: All / Free / Deals / Tips
+- **City-aware**: Shows only deals relevant to selected city + "all" deals
+- **Month-aware**: Seasonal deals filtered by `validMonths` array
+- **Free filter in Activities**: Activities with `free: true` (auto-tagged from `price` field) shown via "Free" filter tab
+- `filterDeals(f)` function, `dealsFilter` state variable
+- `renderDealsView()`, `renderDealCard(d)` renderers
+
 ### Widget Page (`/widget.html`)
 - Compact view: weather, top headline, transport status
 - Auto-refreshes every 5 minutes
@@ -192,6 +206,7 @@ swiss-news-summary/
     "summary": { "totalDelayed": 3, "maxDelay": 10, "status": "minor" }
   },
   "holidays": [{ "name": "Easter", "nameDE": "Ostern", "daysUntil": 45 }],
+  "schoolHolidays": [{ "name": "Summer", "nameDE": "Sommerferien", "startDate": "2026-07-13", "endDate": "2026-08-14", "type": "schoolHoliday" }],
   "history": { "year": 1958, "event": "...", "eventDE": "..." },
   "categories": {
     "disruptions": [{ "headline": "...", "summary": "...", "source": "NZZ", "url": "..." }],
@@ -393,6 +408,10 @@ Each city has:
 | `setSnowSort(sort)` | Sort by 'snowfall' or 'distance' |
 | `setSnowFilter(filter)` | Filter by 'all'/'heavy'/'moderate'/'light' |
 | `fetchSnowClientSide()` | Client-side Open-Meteo fallback for snow |
+| `renderDealsView()` | Render deals & free view with filter bar |
+| `renderDealCard(d)` | Render single deal card |
+| `filterDeals(f)` | Filter deals by type (all/free/deal/tip) |
+| `getSchoolHolidays()` | Worker: return Zürich 2026 school holiday dates |
 
 ## Storage
 

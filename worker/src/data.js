@@ -2,7 +2,7 @@
  * Cities, holidays, history — static data shared across modules.
  */
 
-export const VERSION = '2.0.0';
+export const VERSION = '2.1.0';
 
 export const CITIES = {
   zurich: {
@@ -140,6 +140,22 @@ export function getUpcomingHolidays(cityId) {
     })
     .sort((a, b) => a.daysUntil - b.daysUntil)
     .slice(0, 3);
+}
+
+/* ── School Holidays (Zürich 2026) ── */
+
+const SCHOOL_HOLIDAYS_2026 = [
+  { name: 'Sport/Ski Week', nameDE: 'Sportferien', startDate: '2026-02-09', endDate: '2026-02-20' },
+  { name: 'Easter', nameDE: 'Osterferien', startDate: '2026-04-02', endDate: '2026-04-06' },
+  { name: 'Spring', nameDE: 'Frühlingsferien', startDate: '2026-04-20', endDate: '2026-05-01' },
+  { name: 'Ascension', nameDE: 'Auffahrtsferien', startDate: '2026-05-14', endDate: '2026-05-15' },
+  { name: 'Summer', nameDE: 'Sommerferien', startDate: '2026-07-13', endDate: '2026-08-14' },
+  { name: 'Autumn', nameDE: 'Herbstferien', startDate: '2026-10-05', endDate: '2026-10-16' },
+  { name: 'Christmas', nameDE: 'Weihnachtsferien', startDate: '2026-12-21', endDate: '2027-01-01' },
+];
+
+export function getSchoolHolidays() {
+  return SCHOOL_HOLIDAYS_2026.map(h => ({ ...h, type: 'schoolHoliday' }));
 }
 
 /* ── This Day in History ── */

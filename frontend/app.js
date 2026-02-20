@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.9.0';
+const APP_VERSION = '2.10.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -41,6 +41,7 @@ let snowData = null;
 let snowSort = 'snowfall';
 let snowFilter = 'all';
 let snowExpanded = false;
+let dealsFilter = 'all';
 let snowMap = null;
 let snowMarkers = {};
 let userLat = null, userLon = null;
@@ -196,6 +197,26 @@ const T = {
   emptySnowHint: { en:'Try "All" to see every resort', de:'Wähle "Alle" um alle Gebiete zu sehen' },
   weekOf: { en:'Week of', de:'Woche vom' },
   freshPowder: { en:'Fresh powder alert', de:'Neuschnee-Alarm' },
+  schoolHolidaysFilter: { en:'School Holidays', de:'Schulferien' },
+  schoolHoliday: { en:'School Holiday', de:'Schulferien' },
+  schoolHolidayBanner: { en:'School holidays', de:'Schulferien' },
+  freeFilter: { en:'Free', de:'Gratis' },
+  deals: { en:'Deals', de:'Deals' },
+  bestDeals: { en:'Best', de:'Beste' },
+  dealsTitle: { en:'deals?', de:'Deals?' },
+  dealsSubtitle: { en:'Free entry, family passes & money-saving tips', de:'Gratis Eintritt, Familienpässe & Spartipps' },
+  freeEntry: { en:'Free entry', de:'Gratis Eintritt' },
+  deal: { en:'Deal', de:'Deal' },
+  tip: { en:'Tip', de:'Tipp' },
+  museumFree: { en:'Museums', de:'Museen' },
+  outdoorFree: { en:'Outdoor', de:'Draussen' },
+  transportDeal: { en:'Transport', de:'Transport' },
+  familyPass: { en:'Family Passes', de:'Familienpässe' },
+  seasonalDeal: { en:'Seasonal', de:'Saisonales' },
+  alwaysFree: { en:'Always free', de:'Immer gratis' },
+  savingsLabel: { en:'Savings', de:'Ersparnis' },
+  emptyDeals: { en:'No deals match this filter', de:'Keine Deals für diesen Filter' },
+  emptyDealsHint: { en:'Try "All" to see every deal', de:'Wähle "Alle" um alle Deals zu sehen' },
 };
 const t = k => T[k]?.[lang] || k;
 
@@ -203,6 +224,46 @@ function getSubcategoryLabel(sub) {
   const labels = { sensory: { en:'Sensory', de:'Sensorik' }, art: { en:'Art & Crafts', de:'Basteln' }, active: { en:'Active Play', de:'Bewegung' }, pretend: { en:'Pretend Play', de:'Rollenspiel' }, kitchen: { en:'Kitchen Fun', de:'Küchenspass' } };
   return labels[sub]?.[lang] || sub;
 }
+
+// ═══ DEALS DATA ═══
+const DEALS = [
+  // Museum Free Days
+  { id: 'kunsthaus-free', name: 'Kunsthaus Zürich — Free Wednesdays', nameDE: 'Kunsthaus Zürich — Mittwochs gratis', description: 'Free entry every Wednesday. World-class art collection.', descriptionDE: 'Jeden Mittwoch gratis Eintritt. Weltklasse-Kunstsammlung.', category: 'museum', type: 'free', city: 'zurich', url: 'https://www.kunsthaus.ch', recurring: 'Wednesdays', savings: 'Free' },
+  { id: 'landesmuseum-free', name: 'Swiss National Museum — Kids free', nameDE: 'Landesmuseum — Kinder gratis', description: 'Free for under 16. First Saturday of month free for everyone.', descriptionDE: 'Gratis für unter 16. Erster Samstag im Monat gratis für alle.', category: 'museum', type: 'free', city: 'zurich', url: 'https://www.landesmuseum.ch', recurring: '1st Saturday / Always (kids)', savings: 'Free' },
+  { id: 'zoologisches-museum', name: 'Zoological Museum — Always free', nameDE: 'Zoologisches Museum — Immer gratis', description: 'Free entry always. Dinosaur skeletons, animal exhibits kids love.', descriptionDE: 'Immer gratis. Dinosaurierskelette und Tierausstellungen.', category: 'museum', type: 'free', city: 'zurich', url: 'https://www.zm.uzh.ch', recurring: 'Always', savings: 'Free' },
+  { id: 'botanischer-garten-free', name: 'Botanical Garden Zürich — Always free', nameDE: 'Botanischer Garten Zürich — Immer gratis', description: 'Free tropical greenhouses, turtles, and space to run.', descriptionDE: 'Kostenlose Tropenhäuser, Schildkröten und Platz zum Spielen.', category: 'museum', type: 'free', city: 'zurich', url: 'https://www.bg.uzh.ch', recurring: 'Always', savings: 'Free' },
+  { id: 'fifa-museum-kids', name: 'FIFA Museum — Kids under 6 free', nameDE: 'FIFA Museum — Kinder unter 6 gratis', description: 'Interactive football museum. Free for toddlers.', descriptionDE: 'Interaktives Fussball-Museum. Gratis für Kleinkinder.', category: 'museum', type: 'free', city: 'zurich', url: 'https://www.fifamuseum.com', recurring: 'Always (under 6)', savings: 'Free' },
+  { id: 'rietberg-permanent', name: 'Museum Rietberg — Free permanent collection', nameDE: 'Museum Rietberg — Dauerausstellung gratis', description: 'Free entry to the permanent collection. Beautiful park.', descriptionDE: 'Gratis Eintritt zur Dauerausstellung. Schöner Park.', category: 'museum', type: 'free', city: 'zurich', url: 'https://rietberg.ch', recurring: 'Always', savings: 'Free' },
+  { id: 'basel-zoo-kids', name: 'Zoo Basel — Kids under 6 free', nameDE: 'Zoo Basel — Kinder unter 6 gratis', description: 'One of the oldest zoos in Switzerland. Free for toddlers.', descriptionDE: 'Einer der ältesten Zoos der Schweiz. Gratis für Kleinkinder.', category: 'museum', type: 'free', city: 'basel', url: 'https://www.zoobasel.ch', recurring: 'Always (under 6)', savings: 'Free' },
+  { id: 'basel-lange-erlen-free', name: 'Lange Erlen Animal Park — Always free', nameDE: 'Tierpark Lange Erlen — Immer gratis', description: 'Free animal park with deer, wild boar, birds, and playground.', descriptionDE: 'Gratis Tierpark mit Hirschen, Wildschweinen, Vögeln und Spielplatz.', category: 'museum', type: 'free', city: 'basel', recurring: 'Always', savings: 'Free' },
+  { id: 'bern-barenpark-free', name: 'BärenPark Bern — Always free', nameDE: 'BärenPark Bern — Immer gratis', description: 'See the famous Bern bears for free. Right by the old town.', descriptionDE: 'Die berühmten Berner Bären gratis sehen. Direkt bei der Altstadt.', category: 'museum', type: 'free', city: 'bern', url: 'https://www.baerenpark-bern.ch', recurring: 'Always', savings: 'Free' },
+  { id: 'geneva-natural-history', name: 'Natural History Museum Geneva — Always free', nameDE: 'Naturhistorisches Museum Genf — Immer gratis', description: 'Huge dinosaur and animal collection. Always free entry.', descriptionDE: 'Riesige Dinosaurier- und Tiersammlung. Immer gratis.', category: 'museum', type: 'free', city: 'geneva', url: 'https://www.museum-geneve.ch', recurring: 'Always', savings: 'Free' },
+  // Free Outdoor
+  { id: 'wildnispark-free', name: 'Wildnispark Zürich — Always free', nameDE: 'Wildnispark Zürich — Immer gratis', description: 'Free nature park with native Swiss animals and forest trails.', descriptionDE: 'Gratis Naturpark mit einheimischen Tieren und Waldwegen.', category: 'outdoor', type: 'free', city: 'zurich', url: 'https://www.wildnispark.ch', recurring: 'Always', savings: 'Free' },
+  { id: 'uetliberg-free', name: 'Uetliberg Hiking — Free', nameDE: 'Uetliberg Wandern — Gratis', description: 'Free hiking with amazing views of Zürich and the Alps.', descriptionDE: 'Gratis Wandern mit Aussicht auf Zürich und die Alpen.', category: 'outdoor', type: 'free', city: 'zurich', recurring: 'Always', savings: 'Free' },
+  { id: 'irchelpark-free', name: 'Irchelpark Playground — Free', nameDE: 'Spielplatz Irchelpark — Gratis', description: 'Large natural playground with climbing, sand pit, and water play.', descriptionDE: 'Grosser Naturspielplatz mit Klettergerüsten und Wasserspiel.', category: 'outdoor', type: 'free', city: 'zurich', recurring: 'Always', savings: 'Free' },
+  { id: 'sauvabelin-free', name: 'Sauvabelin Park Lausanne — Free', nameDE: 'Sauvabelin Park Lausanne — Gratis', description: 'Forest park with animals, playground, and wooden observation tower.', descriptionDE: 'Waldpark mit Tieren, Spielplatz und Holzturm.', category: 'outdoor', type: 'free', city: 'lausanne', recurring: 'Always', savings: 'Free' },
+  { id: 'bruderhaus-free', name: 'Wildpark Bruderhaus — Free', nameDE: 'Wildpark Bruderhaus — Gratis', description: 'Free forest animal park with deer, wild boar, and wolves.', descriptionDE: 'Gratis Waldtierpark mit Hirschen, Wildschweinen und Wölfen.', category: 'outdoor', type: 'free', city: 'winterthur', url: 'https://www.wildpark.ch', recurring: 'Always', savings: 'Free' },
+  // Transport Deals
+  { id: 'junior-card', name: 'SBB Junior Card — CHF 30/year', nameDE: 'SBB Junior-Karte — CHF 30/Jahr', description: 'Kids travel free on all Swiss trains when accompanied by a parent. Best deal in Switzerland!', descriptionDE: 'Kinder fahren gratis auf allen Schweizer Zügen in Begleitung eines Elternteils. Bester Deal der Schweiz!', category: 'transport', type: 'deal', city: 'all', url: 'https://www.sbb.ch/en/travelcards-and-tickets/railpasses/junior-card.html', recurring: 'Annual', savings: 'Kids ride free' },
+  { id: 'zvv-9oclock', name: 'ZVV 9 o\'clock Pass', nameDE: 'ZVV 9-Uhr-Pass', description: 'Unlimited travel in Zürich zone after 9am for CHF 28.80/month.', descriptionDE: 'Unbegrenzte Fahrten in der Zone Zürich nach 9 Uhr für CHF 28.80/Monat.', category: 'transport', type: 'deal', city: 'zurich', url: 'https://www.zvv.ch', recurring: 'Monthly', savings: '~50% off' },
+  { id: 'sbb-supersaver', name: 'SBB Supersaver Tickets', nameDE: 'SBB Spartageskarten', description: 'Up to 70% off train tickets when booked in advance online.', descriptionDE: 'Bis zu 70% Rabatt auf Zugtickets bei Online-Vorbuchung.', category: 'transport', type: 'tip', city: 'all', url: 'https://www.sbb.ch/en/travelcards-and-tickets/tickets-for-switzerland/supersaver-tickets.html', recurring: 'Always', savings: 'Up to 70% off' },
+  // Family Passes
+  { id: 'zurich-card', name: 'Zürich Card — Free transport + museums', nameDE: 'Zürich Card — Gratis Transport + Museen', description: 'Free public transport, free or reduced museum entry. CHF 27/24h.', descriptionDE: 'Gratis ÖV, gratis oder reduzierter Museums-Eintritt. CHF 27/24h.', category: 'family', type: 'deal', city: 'zurich', url: 'https://www.zuerich.com/en/zurichcard', recurring: 'Per visit', savings: 'CHF 27/24h' },
+  { id: 'swiss-museum-pass', name: 'Swiss Museum Pass — 500+ museums', nameDE: 'Schweizer Museumspass — 500+ Museen', description: 'Free entry to 500+ Swiss museums for one year. CHF 166/year.', descriptionDE: 'Gratis Eintritt in 500+ Schweizer Museen für ein Jahr. CHF 166/Jahr.', category: 'family', type: 'deal', city: 'all', url: 'https://www.museumspass.ch', recurring: 'Annual', savings: 'CHF 166/year' },
+  { id: 'raiffeisen-member', name: 'Raiffeisen Member Discounts', nameDE: 'Raiffeisen Mitglieder-Rabatte', description: 'Reduced entry to zoos, museums, and attractions with Raiffeisen membership.', descriptionDE: 'Reduzierter Eintritt in Zoos, Museen und Attraktionen mit Raiffeisen-Mitgliedschaft.', category: 'family', type: 'tip', city: 'all', url: 'https://www.raiffeisen.ch/memberplus', recurring: 'Annual', savings: '20-50% off' },
+  { id: 'family-card-sbb', name: 'SBB Family Card — Free', nameDE: 'SBB Family Card — Gratis', description: 'Free card: kids 6-16 travel free with a parent holding a valid ticket.', descriptionDE: 'Gratis Karte: Kinder 6-16 fahren gratis mit einem Elternteil.', category: 'family', type: 'free', city: 'all', url: 'https://www.sbb.ch', recurring: 'Always', savings: 'Free' },
+  // Seasonal
+  { id: 'summer-badi-free', name: 'Free Badi Days', nameDE: 'Gratis Badi-Tage', description: 'Many public pools offer free entry days in summer. Check local listings.', descriptionDE: 'Viele Freibäder bieten im Sommer Gratis-Tage an. Lokale Veranstaltungen prüfen.', category: 'seasonal', type: 'free', city: 'all', recurring: 'Summer', validMonths: [6, 7, 8], savings: 'Free' },
+  { id: 'christmas-markets-free', name: 'Christmas Markets — Free entry', nameDE: 'Weihnachtsmärkte — Gratis Eintritt', description: 'All Swiss Christmas markets are free to enter. Food and drinks for purchase.', descriptionDE: 'Alle Schweizer Weihnachtsmärkte haben freien Eintritt. Essen und Getränke zum Kaufen.', category: 'seasonal', type: 'free', city: 'all', recurring: 'Nov-Dec', validMonths: [11, 12], savings: 'Free' },
+  { id: 'open-air-cinemas', name: 'Open-air Cinemas', nameDE: 'Open-Air Kinos', description: 'Summer outdoor cinemas in most Swiss cities. Family screenings available.', descriptionDE: 'Sommer-Open-Air-Kinos in den meisten Schweizer Städten. Familienvorstellungen verfügbar.', category: 'seasonal', type: 'deal', city: 'all', recurring: 'Jul-Aug', validMonths: [7, 8], savings: 'From CHF 10' },
+  // Tips
+  { id: 'gz-play-free', name: 'GZ Play Afternoons — Free', nameDE: 'GZ Spielnachmittage — Gratis', description: 'Free drop-in play sessions at Zürich community centers (Gemeinschaftszentren).', descriptionDE: 'Kostenlose Spielnachmittage in Zürcher Gemeinschaftszentren.', category: 'outdoor', type: 'free', city: 'zurich', url: 'https://gz-zh.ch', recurring: 'Various days', savings: 'Free' },
+  { id: 'library-story-time', name: 'Library Story Times — Free', nameDE: 'Bibliothek Geschichtenzeit — Gratis', description: 'Free story readings for toddlers at public libraries across Switzerland.', descriptionDE: 'Kostenlose Geschichten für Kleinkinder in öffentlichen Bibliotheken.', category: 'outdoor', type: 'free', city: 'all', recurring: 'Various days', savings: 'Free' },
+  { id: 'migros-kulturprozent', name: 'Migros Kulturprozent — Free events', nameDE: 'Migros Kulturprozent — Gratis Events', description: 'Free family workshops, concerts, and cultural events funded by Migros.', descriptionDE: 'Gratis Familien-Workshops, Konzerte und Kulturveranstaltungen von Migros.', category: 'family', type: 'free', city: 'all', url: 'https://www.migros-kulturprozent.ch', recurring: 'Various', savings: 'Free' },
+];
+
+const DEAL_CATEGORY_EMOJIS = { museum: '🏛️', outdoor: '🌳', transport: '🚂', family: '👨‍👩‍👧', seasonal: '🎄' };
 
 // ═══ UTILS ═══
 const $ = id => document.getElementById(id);
@@ -373,6 +434,7 @@ function getPageTitle() {
   if (view === 'weekend') return `${t('weekend')}<br><span class="accent">${t('weekendPlanner')}</span>`;
   if (view === 'sunshine') return `${t('whereSun')}<br><span class="accent">${t('sunTitle')}</span>`;
   if (view === 'snow') return `${t('whereSnow')}<br><span class="accent">${t('snowTitle')}</span>`;
+  if (view === 'deals') return `${t('bestDeals')}<br><span class="accent">${t('dealsTitle')}</span>`;
   return '';
 }
 
@@ -386,10 +448,10 @@ function renderNav() {
   }).join('')}</div>`;
 }
 
-const VIEW_RENDERERS = { news: renderNewsView, activities: renderActivitiesView, lunch: renderLunchView, events: renderEventsView, weekend: renderWeekendView, sunshine: renderSunshineView, snow: renderSnowView };
+const VIEW_RENDERERS = { news: renderNewsView, activities: renderActivitiesView, lunch: renderLunchView, events: renderEventsView, weekend: renderWeekendView, sunshine: renderSunshineView, snow: renderSnowView, deals: renderDealsView };
 
 function renderMain() {
-  const views = ['news', 'activities', 'lunch', 'events', 'weekend', 'sunshine', 'snow'];
+  const views = ['news', 'activities', 'lunch', 'events', 'weekend', 'sunshine', 'snow', 'deals'];
   $('main').innerHTML = views.map(v => `<div class="app-view${view === v ? ' active' : ''}" id="view-${v}"></div>`).join('');
   renderCurrentView();
 }
@@ -411,6 +473,7 @@ function renderMenu() {
     <div class="menu-item${view === 'weekend' ? ' active' : ''}" onclick="switchView('weekend')"><span class="menu-item-icon">🌤️</span>${t('weekend')}</div>
     <div class="menu-item${view === 'sunshine' ? ' active' : ''}" onclick="switchView('sunshine')"><span class="menu-item-icon">☀️</span>${t('sunshine')}</div>
     <div class="menu-item${view === 'snow' ? ' active' : ''}" onclick="switchView('snow')"><span class="menu-item-icon">❄️</span>${t('snow')}</div>
+    <div class="menu-item${view === 'deals' ? ' active' : ''}" onclick="switchView('deals')"><span class="menu-item-icon">🎁</span>${t('deals')}</div>
     ${canDonate ? `<div class="menu-item" onclick="openDonateModal()"><span class="menu-item-icon">☕</span>${t('donate')}</div>` : ''}
     <div class="menu-section">
       <div class="menu-section-title">${t('language')}</div>
@@ -514,7 +577,7 @@ function renderActivitiesView() {
   // Filters
   const filters = [
     ['all', t('all')], ['near', t('nearMe')], ['indoor', t('indoor')], ['outdoor', t('outdoor')],
-    ['saved', t('saved')], ['seasonal', t('seasonal')], ['stayhome', t('stayHome')]
+    ['free', '🆓 ' + t('freeFilter')], ['saved', t('saved')], ['seasonal', t('seasonal')], ['stayhome', t('stayHome')]
   ];
   html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${activityFilter === k ? ' active' : ''}" onclick="filterActivities('${k}')">${v}</button>`).join('')}</div>`;
 
@@ -615,6 +678,7 @@ function getFilteredActivities() {
   else if (activityFilter === 'near') { items = items.filter(a => a.category !== 'stayhome' && a.lat); if (userLat) items.sort((a, b) => haversine(userLat, userLon, a.lat, a.lon) - haversine(userLat, userLon, b.lat, b.lon)); }
   else if (activityFilter === 'indoor') items = items.filter(a => a.indoor && a.category !== 'stayhome');
   else if (activityFilter === 'outdoor') items = items.filter(a => !a.indoor && a.category !== 'stayhome');
+  else if (activityFilter === 'free') items = items.filter(a => a.free === true);
   else if (activityFilter === 'saved') items = items.filter(a => savedActivities.includes(a.id));
   else if (activityFilter === 'seasonal') items = items.filter(a => a.category === 'seasonal');
   else if (activityFilter === 'stayhome') items = items.filter(a => a.category === 'stayhome');
@@ -641,7 +705,7 @@ function renderEventsView() {
   html += '</div>';
 
   // Filter bar for events list below
-  const filters = [['all', t('all')], ['holidays', t('holidaysFilter')], ['events', t('eventsTab')], ['recurring', t('recurringFilter')], ['seasonal', t('seasonal')], ['festivals', t('festivalsFilter')]];
+  const filters = [['all', t('all')], ['holidays', t('holidaysFilter')], ['schoolHoliday', t('schoolHolidaysFilter')], ['events', t('eventsTab')], ['recurring', t('recurringFilter')], ['seasonal', t('seasonal')], ['festivals', t('festivalsFilter')]];
   html += `<div class="events-list-header" style="margin-top:20px;font-family:var(--serif);font-size:1.05rem;font-weight:600;margin-bottom:8px">${lang === 'de' ? 'Alle Events' : 'All Events'}</div>`;
   html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${eventFilter === k ? ' active' : ''}" onclick="filterEvents('${k}')">${v}</button>`).join('')}</div>`;
 
@@ -701,6 +765,7 @@ function renderCalendarGrid() {
       dots = '<div class="calendar-dots">';
       if (types.has('holiday')) dots += '<div class="calendar-dot dot-holiday"></div>';
       if (types.has('festival')) dots += '<div class="calendar-dot dot-festival"></div>';
+      if (types.has('schoolHoliday')) dots += '<div class="calendar-dot dot-school-holiday"></div>';
       if (types.has('recurring')) dots += '<div class="calendar-dot dot-recurring"></div>';
       if (types.has('seasonal')) dots += '<div class="calendar-dot dot-seasonal"></div>';
       dots += '</div>';
@@ -743,6 +808,7 @@ function renderEventsList() {
     if (e.endDate && e.endDate !== e.startDate) dateLabel += ` — ${e.endDate}`;
 
     let badges = '';
+    if (e.type === 'schoolHoliday') badges += '<span class="badge badge-school-holiday">🎒 ' + t('schoolHoliday') + '</span>';
     if (e.toddlerFriendly) badges += '<span class="badge badge-toddler">👶 Toddler-friendly</span>';
     if (e.free) badges += '<span class="badge badge-free">🆓 Free</span>';
 
@@ -1003,6 +1069,13 @@ async function loadEventsCalendar() {
 
   for (const e of cityEventsData) eventsCalendarData.push({ ...e, type: 'festival' });
 
+  // School holidays from news data
+  if (newsData?.schoolHolidays) {
+    for (const sh of newsData.schoolHolidays) {
+      eventsCalendarData.push({ ...sh, type: 'schoolHoliday' });
+    }
+  }
+
   // Recurring & seasonal from activities
   for (const a of activitiesData) {
     if (a.recurring) eventsCalendarData.push({ name: a.name, nameDE: a.nameDE, description: `${a.recurring}`, descriptionDE: `${a.recurring}`, startDate: new Date().toISOString().split('T')[0], type: 'recurring' });
@@ -1111,6 +1184,7 @@ function switchView(v) {
   else if (v === 'weekend') loadWeekendPlanner();
   else if (v === 'sunshine') loadSunshine();
   else if (v === 'snow') loadSnow();
+  // deals view uses static data — no async load needed
 }
 
 function setTab(tab) {
@@ -2468,6 +2542,65 @@ async function initSnowMap() {
   }
 }
 
+// ═══ DEALS VIEW ═══
+
+function renderDealsView() {
+  const currentMonth = new Date().getMonth() + 1;
+  let html = `<div class="subtitle">${t('dealsSubtitle')}</div>`;
+
+  // Filter bar
+  const filters = [
+    ['all', t('all')], ['free', '🆓 ' + t('freeEntry')], ['deal', '🏷️ ' + t('deal')], ['tip', '💡 ' + t('tip')]
+  ];
+  html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${dealsFilter === k ? ' active' : ''}" onclick="filterDeals('${k}')">${v}</button>`).join('')}</div>`;
+
+  // Filter deals
+  let items = DEALS.filter(d => {
+    // Filter by valid months
+    if (d.validMonths && !d.validMonths.includes(currentMonth)) return false;
+    // Filter by city
+    if (d.city !== 'all' && d.city !== city) return false;
+    return true;
+  });
+
+  if (dealsFilter !== 'all') {
+    items = items.filter(d => d.type === dealsFilter);
+  }
+
+  if (items.length === 0) {
+    html += renderEmptyState('🎁', 'emptyDeals', 'emptyDealsHint');
+  } else {
+    html += '<div class="deals-list">';
+    for (const d of items) html += renderDealCard(d);
+    html += '</div>';
+  }
+
+  return html;
+}
+
+function renderDealCard(d) {
+  const name = lang === 'de' ? (d.nameDE || d.name) : d.name;
+  const desc = lang === 'de' ? (d.descriptionDE || d.description) : d.description;
+  const emoji = DEAL_CATEGORY_EMOJIS[d.category] || '🎁';
+  const typeLabel = d.type === 'free' ? t('freeEntry') : d.type === 'deal' ? t('deal') : t('tip');
+  const typeCls = d.type === 'free' ? 'deal-type-free' : d.type === 'deal' ? 'deal-type-deal' : 'deal-type-tip';
+
+  let badges = `<span class="deal-type-badge ${typeCls}">${typeLabel}</span>`;
+  if (d.savings && d.savings !== 'Free') badges += `<span class="deal-savings-badge">💰 ${esc(d.savings)}</span>`;
+  if (d.recurring) badges += `<span class="deal-recurring-badge">🔄 ${esc(d.recurring)}</span>`;
+
+  return `<div class="deal-card" onclick="${safeUrl(d.url) ? `window.open('${esc(d.url)}','_blank')` : ''}">
+    <div class="deal-card-header">
+      <span class="deal-emoji">${emoji}</span>
+      <div class="deal-card-title">${esc(name)}</div>
+    </div>
+    <div class="deal-card-desc">${esc(desc)}</div>
+    <div class="deal-card-badges">${badges}</div>
+  </div>`;
+}
+
+function filterDeals(f) { dealsFilter = f; renderCurrentView(); }
+
 // ═══ DAY DETAIL (integrated into Events view) ═══
 
 function renderDayDetailSection(titleKey, icon, content) {
@@ -2549,6 +2682,22 @@ function renderDayDetail(dateStr) {
         return `<div class="day-detail-holiday">🎉 ${esc(name)}</div>`;
       }).join('');
       sections += renderDayDetailSection('holidayToday', '🏳️', holidayHtml);
+    }
+  }
+
+  // School holidays overlapping this date
+  if (newsData?.schoolHolidays) {
+    const daySchoolHols = newsData.schoolHolidays.filter(sh => {
+      const start = new Date(sh.startDate);
+      const end = new Date(sh.endDate);
+      return selDate >= start && selDate <= end;
+    });
+    if (daySchoolHols.length) {
+      const shHtml = daySchoolHols.map(sh => {
+        const name = lang === 'de' ? (sh.nameDE || sh.name) : sh.name;
+        return `<div class="day-detail-school-holiday">🎒 ${esc(name)} <span class="day-detail-school-holiday-dates">${sh.startDate} — ${sh.endDate}</span></div>`;
+      }).join('');
+      sections += renderDayDetailSection('schoolHolidayBanner', '🎒', shHtml);
     }
   }
 
@@ -2692,7 +2841,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Check URL params (override persisted view if present)
   const params = new URLSearchParams(window.location.search);
   const viewParam = params.get('view');
-  if (viewParam && ['activities', 'lunch', 'events', 'weekend', 'sunshine', 'snow'].includes(viewParam)) {
+  if (viewParam && ['activities', 'lunch', 'events', 'weekend', 'sunshine', 'snow', 'deals'].includes(viewParam)) {
     switchView(viewParam);
   } else if (view === 'news') {
     fetchNews();

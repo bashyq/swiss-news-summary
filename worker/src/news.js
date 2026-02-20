@@ -4,7 +4,7 @@
 
 export const VERSION = '2.0.0';
 
-import { NATIONAL_SOURCES, getCity, getUpcomingHolidays, getThisDayInHistory } from './data.js';
+import { NATIONAL_SOURCES, getCity, getUpcomingHolidays, getThisDayInHistory, getSchoolHolidays } from './data.js';
 import { fetchWeather, RAINY_CODES } from './weather.js';
 import { fetchTransportDisruptions } from './transport.js';
 import { getCuratedActivities } from './activities.js';
@@ -216,6 +216,7 @@ export async function handleNews(url, env) {
 
   const allSources = [...NATIONAL_SOURCES, ...city.sources];
   const holidays = getUpcomingHolidays(cityId);
+  const schoolHolidays = getSchoolHolidays();
   const historyFact = getThisDayInHistory();
 
   const [weather, transport, allHeadlines] = await Promise.all([
@@ -271,7 +272,7 @@ export async function handleNews(url, env) {
   } catch {}
 
   const body = JSON.stringify({
-    categories, weather, holidays, history: historyFact,
+    categories, weather, holidays, schoolHolidays, history: historyFact,
     transport, trending, briefing,
     city: { id: cityId, name: city.name },
     timestamp: new Date().toISOString()
