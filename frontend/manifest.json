@@ -52,6 +52,13 @@
       "icons": [{ "src": "icon.svg", "sizes": "96x96" }]
     },
     {
+      "name": "Where is Snow?",
+      "short_name": "Snow",
+      "description": "Weekly snowfall for ski resorts",
+      "url": "/?view=snow",
+      "icons": [{ "src": "icon.svg", "sizes": "96x96" }]
+    },
+    {
       "name": "Quick Widget",
       "short_name": "Widget",
       "description": "Compact weather & headlines",

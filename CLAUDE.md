@@ -47,6 +47,11 @@ Cloudflare Worker (worker/src/)
 1. Fetch weekend (Fri/Sat/Sun) sunshine forecasts for 28 destinations
 2. Single multi-location Open-Meteo API call (all destinations in one request)
 3. Return destinations ranked by total sunshine hours
+
+    ↓ HTTP GET /snow?lang={en|de}
+1. Fetch weekly (Mon–Sun) snowfall forecasts for 22 ski resorts
+2. Single multi-location Open-Meteo API call (snowfall_sum, snow_depth)
+3. Return resorts ranked by weekly snowfall total
 ```
 
 ## File Structure
@@ -72,7 +77,8 @@ swiss-news-summary/
 │   │   ├── events.js     # City events/festivals data
 │   │   ├── weekend.js    # Weekend planner logic
 │   │   ├── lunch.js      # Overpass API + lunch handler
-│   │   └── sunshine.js   # Weekend sunshine forecast (29 destinations, Zürich baseline)
+│   │   ├── sunshine.js   # Weekend sunshine forecast (29 destinations, Zürich baseline)
+│   │   └── snow.js       # Weekly snowfall forecast (22 ski resorts)
 │   └── wrangler.toml   # Worker config (main = "src/index.js")
 ├── CLAUDE.md
 └── README.md
@@ -102,13 +108,20 @@ swiss-news-summary/
 - **"Surprise me!" button**: Random weather-appropriate activity picker
 - **Age filter**: Toggle between All ages, 2-3 years, or 4-5 years
 
-### Events Calendar
-- Aggregates holidays, news events, recurring activities, seasonal activities, and city festivals
-- **Filters**: All, Holidays, Events, Recurring, Seasonal, Festivals
-- **Calendar grid**: Purple dots for festivals, red for holidays, blue for recurring
+### Events View ("What's On")
+- Combined calendar + daily digest — merged from separate Events Calendar and What's On views
+- **Calendar grid**: Auto-selects today, purple dots for festivals, red for holidays, blue for recurring
+- **Day detail panel**: Click any day to see detail below calendar:
+  - Holidays on that date (purple banner)
+  - Festivals with date range overlap (purple left-border cards)
+  - Recurring activities matching that day-of-week
+  - Weather-based activity picks (today only — indoor when rainy/<5°C)
+  - Trending news (today only)
+- **All Events list**: Below detail panel with filter bar (All, Holidays, Events, Recurring, Seasonal, Festivals)
 - **City events**: ~70 hardcoded 2026 festivals/events served via `getCityEvents()` in worker
 - **Date-range awareness**: Multi-day festivals show dots on all days, filter by date overlap
-- **Festival cards**: Show date ranges, toddler-friendly (👶) and free (🆓) badges
+- **Festival cards**: Show date ranges, toddler-friendly and free badges
+- Fetches news data (weather, trending, holidays) if not already loaded
 
 ### Weekend Planner
 - Smart activity filtering based on weather and day-of-week
@@ -128,19 +141,6 @@ swiss-news-summary/
 - **Theme toggle**: Light / Dark mode
 - **Holidays display**: Upcoming Swiss holidays
 
-### What's On View ("What's On")
-- Daily digest aggregating today's highlights from news + activities data
-- **No new worker endpoint** — reuses `/` (news) and `/activities` data, fetched in parallel
-- **Holiday banner**: Purple gradient strip when today is a holiday
-- **Weather card**: Large icon + temp + indoor/outdoor recommendation badge
-- **"Happening Today"**: Festivals whose date range spans today, purple left-border cards
-- **"Available Today"**: Recurring activities matching today's day-of-week (max 5)
-- **"Weather Picks"**: 3 random weather-appropriate activities (indoor when rainy/<5°C, outdoor otherwise)
-- **Trending**: News trending topic card
-- **Empty state**: When no content is available for today
-- Activity cards tap → switches to Activities view
-- Refresh button reshuffles weather picks
-- First item in hamburger menu
 
 ### Sunshine Page ("Where is Sun?")
 - Weekend sunshine forecast for 29 destinations (28 + Zürich baseline) within driving distance of Zürich
@@ -159,6 +159,20 @@ swiss-news-summary/
 - **Destination highlights**: `DEST_HIGHLIGHTS` in app.js — 2-3 curated toddler-friendly attractions per destination (57 total)
 - **Overlap cities** (Basel, Lausanne, Luzern): Show "See all activities →" link to Activities view
 - **Google Maps links**: "Find playgrounds" / "Find restaurants" near destination coordinates
+
+### Snow Page ("Where is Snow?")
+- Weekly snowfall forecast for 22 Swiss ski resorts within driving distance of Zürich
+- **Regions**: Valais, Graubunden, Bernese Oberland, Central Switzerland, Eastern Switzerland
+- **Interactive Leaflet map**: Circle markers with radius proportional to snowfall (deep blue/blue/gray)
+- **Ranked card list**: Sorted by weekly snowfall, collapsible (top 10 default)
+- **Sort**: By snowfall or by distance from current location (geolocation)
+- **Filter**: All / Heavy (>30cm) / Moderate (10-30cm) / Light (<10cm)
+- **7-day forecast**: Daily snowfall bars with weather icons and temperature
+- **Badges**: Drive time, altitude, snow depth, distance
+- **Fresh powder alert**: Banner when top resort has >40cm weekly snowfall
+- **Client-side fallback**: If worker is rate-limited, fetches directly from Open-Meteo
+- Always Zürich-based (not affected by city selector)
+- **Cache keys**: Worker `snow-v1-{lang}`, Frontend `snowCache-v1` (30min TTL)
 
 ### Widget Page (`/widget.html`)
 - Compact view: weather, top headline, transport status
@@ -261,6 +275,28 @@ swiss-news-summary/
 }
 ```
 
+### Snow Endpoint
+`GET /snow?lang={en|de}&refresh={true}`
+
+```json
+{
+  "destinations": [
+    {
+      "id": "zermatt", "name": "Zermatt", "nameDE": "Zermatt",
+      "lat": 46.0207, "lon": 7.7491,
+      "region": "Valais", "regionDE": "Wallis", "driveMinutes": 195, "altitude": 1620,
+      "forecast": [
+        { "date": "2026-02-16", "snowfallCm": 5.2, "weatherCode": 73, "tempMax": -2, "tempMin": -8 }
+      ],
+      "snowfallWeekTotal": 28.5,
+      "snowDepthCm": 145
+    }
+  ],
+  "weekDates": { "monday": "2026-02-16", "sunday": "2026-02-22" },
+  "timestamp": "2026-..."
+}
+```
+
 ## Data Sources
 
 **News:**
@@ -347,12 +383,16 @@ Each city has:
 | `setSunshineFilter(filter)` | Filter by 'all'/'sunny'/'partly'/'cloudy' |
 | `getBaselineDest()` | Get Zürich baseline entry from sunshine data |
 | `fetchSunshineClientSide()` | Client-side Open-Meteo fallback |
-| `loadWhatsOn(forceRefresh)` | Load What's On daily digest |
-| `assembleWhatsOn()` | Build digest from news + activities data |
-| `renderWhatsOnView()` | Render What's On sections |
-| `isAvailableOnDate(activity, date)` | Check if recurring/seasonal activity is available on date |
+| `renderDayDetail(dateStr)` | Render day detail panel for selected calendar day |
+| `selectCalendarDay(dateStr)` | Toggle calendar day selection |
 | `renderSunshineHighlights(dest)` | Render expandable highlights section for sunshine card |
 | `renderHighlightItem(highlight)` | Render single destination highlight with directions link |
+| `loadSnow(forceRefresh)` | Load snow data (worker + client fallback) |
+| `renderSnowView()` | Render snow map + card list |
+| `initSnowMap()` | Init Leaflet map with snow markers |
+| `setSnowSort(sort)` | Sort by 'snowfall' or 'distance' |
+| `setSnowFilter(filter)` | Filter by 'all'/'heavy'/'moderate'/'light' |
+| `fetchSnowClientSide()` | Client-side Open-Meteo fallback for snow |
 
 ## Storage
 
@@ -360,7 +400,7 @@ Each city has:
 - `lang` - Language preference (en/de)
 - `city` - Selected city
 - `theme` - Theme preference (light/dark)
-- `view` - Active view (news/activities/lunch/events/weekend/sunshine/whatson), persisted across refresh
+- `view` - Active view (news/activities/lunch/events/weekend/sunshine), persisted across refresh
 - `savedActivities` - Array of saved activity IDs
 - `customActivities` - Array of user-created activities
 - `installDismissed` - PWA install prompt dismissed
@@ -368,6 +408,7 @@ Each city has:
 - `newsCache-{city}-{lang}` - Cached news data per city/language (2hr TTL)
 - `activitiesCache-{city}` - Cached activities data per city
 - `sunshineCache-v2` - Cached sunshine data with Zürich baseline (30min TTL)
+- `snowCache-v1` - Cached snow/ski resort data (30min TTL)
 
 **Cloudflare KV:**
 - Key format: `activities-{cityId}`

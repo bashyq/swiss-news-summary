@@ -11,6 +11,7 @@ import { handleWeekend, VERSION as WEEKEND_V } from './weekend.js';
 import { handleLunch, VERSION as LUNCH_V } from './lunch.js';
 import { handleSunshine, VERSION as SUNSHINE_V } from './sunshine.js';
 import { handleDonate, VERSION as DONATE_V } from './donate.js';
+import { handleSnow, VERSION as SNOW_V } from './snow.js';
 import { VERSION as DATA_V } from './data.js';
 import { VERSION as WEATHER_V } from './weather.js';
 import { VERSION as TRANSPORT_V } from './transport.js';
@@ -55,6 +56,7 @@ function handleVersion(url, env) {
       lunch: LUNCH_V,
       sunshine: SUNSHINE_V,
       donate: DONATE_V,
+      snow: SNOW_V,
     },
     deployedAt: new Date().toISOString(),
   }, env);
@@ -67,6 +69,7 @@ const ROUTES = {
   '/lunch': handleLunch,
   '/sunshine': handleSunshine,
   '/donate': handleDonate,
+  '/snow': handleSnow,
   '/version': handleVersion,
 };
 

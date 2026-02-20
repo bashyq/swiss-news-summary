@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.6.0';
+const APP_VERSION = '2.7.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -37,6 +37,12 @@ let sunshineData = null;
 let sunshineSort = 'sunshine';
 let sunshineFilter = 'all';
 let sunshineExpanded = false;
+let snowData = null;
+let snowSort = 'snowfall';
+let snowFilter = 'all';
+let snowExpanded = false;
+let snowMap = null;
+let snowMarkers = {};
 let userLat = null, userLon = null;
 let activityMap = null, lunchMap = null, sunshineMap = null;
 let lunchMapExpanded = false;
@@ -174,6 +180,22 @@ const T = {
   findPlaygrounds: { en:'Find playgrounds', de:'Spielplätze finden' },
   findRestaurants: { en:'Find restaurants', de:'Restaurants finden' },
   seeAllActivities: { en:'See all activities', de:'Alle Aktivitäten anzeigen' },
+  snow: { en:'Snow', de:'Schnee' },
+  whereSnow: { en:'Where is', de:'Wo liegt' },
+  snowTitle: { en:'snow?', de:'Schnee?' },
+  snowSubtitle: { en:'Weekly snowfall — best ski resorts from Zürich', de:'Wöchentlicher Schneefall — beste Skigebiete ab Zürich' },
+  snowfallCm: { en:'cm snow', de:'cm Schnee' },
+  snowDepth: { en:'snow depth', de:'Schneehöhe' },
+  altitudeM: { en:'m altitude', de:'m Höhe' },
+  heavySnow: { en:'Heavy snow', de:'Viel Schnee' },
+  moderateSnow: { en:'Moderate', de:'Mässig' },
+  lightSnow: { en:'Light', de:'Wenig' },
+  sortBySnow: { en:'By snowfall', de:'Nach Schneefall' },
+  noSnowData: { en:'No snow data available', de:'Keine Schneedaten verfügbar' },
+  emptySnow: { en:'No resorts match this filter', de:'Keine Gebiete für diesen Filter' },
+  emptySnowHint: { en:'Try "All" to see every resort', de:'Wähle "Alle" um alle Gebiete zu sehen' },
+  weekOf: { en:'Week of', de:'Woche vom' },
+  freshPowder: { en:'Fresh powder alert', de:'Neuschnee-Alarm' },
 };
 const t = k => T[k]?.[lang] || k;
 
@@ -331,6 +353,7 @@ function getPageTitle() {
   if (view === 'events') return `${lang === 'de' ? 'Was läuft' : "What's on"}<br><span class="accent">${lang === 'de' ? 'heute?' : 'today?'}</span>`;
   if (view === 'weekend') return `${t('weekend')}<br><span class="accent">${t('weekendPlanner')}</span>`;
   if (view === 'sunshine') return `${t('whereSun')}<br><span class="accent">${t('sunTitle')}</span>`;
+  if (view === 'snow') return `${t('whereSnow')}<br><span class="accent">${t('snowTitle')}</span>`;
   return '';
 }
 
@@ -344,10 +367,10 @@ function renderNav() {
   }).join('')}</div>`;
 }
 
-const VIEW_RENDERERS = { news: renderNewsView, activities: renderActivitiesView, lunch: renderLunchView, events: renderEventsView, weekend: renderWeekendView, sunshine: renderSunshineView };
+const VIEW_RENDERERS = { news: renderNewsView, activities: renderActivitiesView, lunch: renderLunchView, events: renderEventsView, weekend: renderWeekendView, sunshine: renderSunshineView, snow: renderSnowView };
 
 function renderMain() {
-  const views = ['news', 'activities', 'lunch', 'events', 'weekend', 'sunshine'];
+  const views = ['news', 'activities', 'lunch', 'events', 'weekend', 'sunshine', 'snow'];
   $('main').innerHTML = views.map(v => `<div class="app-view${view === v ? ' active' : ''}" id="view-${v}"></div>`).join('');
   renderCurrentView();
 }
@@ -368,6 +391,7 @@ function renderMenu() {
     <div class="menu-item${view === 'events' ? ' active' : ''}" onclick="switchView('events')"><span class="menu-item-icon">📅</span>${t('events')}</div>
     <div class="menu-item${view === 'weekend' ? ' active' : ''}" onclick="switchView('weekend')"><span class="menu-item-icon">🌤️</span>${t('weekend')}</div>
     <div class="menu-item${view === 'sunshine' ? ' active' : ''}" onclick="switchView('sunshine')"><span class="menu-item-icon">☀️</span>${t('sunshine')}</div>
+    <div class="menu-item${view === 'snow' ? ' active' : ''}" onclick="switchView('snow')"><span class="menu-item-icon">❄️</span>${t('snow')}</div>
     ${canDonate ? `<div class="menu-item" onclick="openDonateModal()"><span class="menu-item-icon">☕</span>${t('donate')}</div>` : ''}
     <div class="menu-section">
       <div class="menu-section-title">${t('language')}</div>
@@ -1050,6 +1074,7 @@ function switchView(v) {
   else if (v === 'events') loadEventsCalendar();
   else if (v === 'weekend') loadWeekendPlanner();
   else if (v === 'sunshine') loadSunshine();
+  else if (v === 'snow') loadSnow();
 }
 
 function setTab(tab) {
@@ -1070,6 +1095,7 @@ function setCity(id) {
   else if (view === 'events') loadEventsCalendar();
   else if (view === 'weekend') loadWeekendPlanner();
   else if (view === 'sunshine') loadSunshine();
+  else if (view === 'snow') loadSnow();
 }
 
 function setLanguage(l) {
@@ -1240,6 +1266,7 @@ function refreshCurrentView() {
   else if (view === 'events') loadEventsCalendar();
   else if (view === 'weekend') loadWeekendPlanner(true);
   else if (view === 'sunshine') loadSunshine(true);
+  else if (view === 'snow') loadSnow(true);
 }
 
 async function shareSummary() {
@@ -2059,6 +2086,344 @@ function expandSunshineList() {
   afterRender(initSunshineMap);
 }
 
+// ═══ SNOW VIEW ═══
+
+const SNOW_DESTS = [
+  { id:'zermatt',name:'Zermatt',nameDE:'Zermatt',lat:46.0207,lon:7.7491,region:'Valais',regionDE:'Wallis',driveMinutes:195,altitude:1620 },
+  { id:'verbier',name:'Verbier',nameDE:'Verbier',lat:46.0967,lon:7.2286,region:'Valais',regionDE:'Wallis',driveMinutes:170,altitude:1500 },
+  { id:'saas-fee',name:'Saas-Fee',nameDE:'Saas-Fee',lat:46.1048,lon:7.9329,region:'Valais',regionDE:'Wallis',driveMinutes:185,altitude:1800 },
+  { id:'crans-montana',name:'Crans-Montana',nameDE:'Crans-Montana',lat:46.3072,lon:7.4816,region:'Valais',regionDE:'Wallis',driveMinutes:175,altitude:1500 },
+  { id:'nendaz',name:'Nendaz',nameDE:'Nendaz',lat:46.1871,lon:7.3041,region:'Valais',regionDE:'Wallis',driveMinutes:165,altitude:1400 },
+  { id:'davos',name:'Davos',nameDE:'Davos',lat:46.8027,lon:9.836,region:'Graubunden',regionDE:'Graubünden',driveMinutes:115,altitude:1560 },
+  { id:'stmoritz',name:'St. Moritz',nameDE:'St. Moritz',lat:46.4908,lon:9.8355,region:'Graubunden',regionDE:'Graubünden',driveMinutes:150,altitude:1822 },
+  { id:'laax',name:'Laax',nameDE:'Laax',lat:46.8097,lon:9.2579,region:'Graubunden',regionDE:'Graubünden',driveMinutes:100,altitude:1100 },
+  { id:'arosa',name:'Arosa',nameDE:'Arosa',lat:46.7832,lon:9.678,region:'Graubunden',regionDE:'Graubünden',driveMinutes:110,altitude:1775 },
+  { id:'lenzerheide',name:'Lenzerheide',nameDE:'Lenzerheide',lat:46.7394,lon:9.5584,region:'Graubunden',regionDE:'Graubünden',driveMinutes:95,altitude:1473 },
+  { id:'klosters',name:'Klosters',nameDE:'Klosters',lat:46.8683,lon:9.8756,region:'Graubunden',regionDE:'Graubünden',driveMinutes:110,altitude:1191 },
+  { id:'grindelwald',name:'Grindelwald',nameDE:'Grindelwald',lat:46.6244,lon:8.0413,region:'Bernese Oberland',regionDE:'Berner Oberland',driveMinutes:130,altitude:1034 },
+  { id:'wengen',name:'Wengen',nameDE:'Wengen',lat:46.6082,lon:7.9222,region:'Bernese Oberland',regionDE:'Berner Oberland',driveMinutes:140,altitude:1274 },
+  { id:'adelboden',name:'Adelboden',nameDE:'Adelboden',lat:46.4917,lon:7.5611,region:'Bernese Oberland',regionDE:'Berner Oberland',driveMinutes:125,altitude:1353 },
+  { id:'gstaad',name:'Gstaad',nameDE:'Gstaad',lat:46.475,lon:7.2861,region:'Bernese Oberland',regionDE:'Berner Oberland',driveMinutes:145,altitude:1050 },
+  { id:'engelberg',name:'Engelberg',nameDE:'Engelberg',lat:46.821,lon:8.4013,region:'Central Switzerland',regionDE:'Zentralschweiz',driveMinutes:65,altitude:1000 },
+  { id:'andermatt',name:'Andermatt',nameDE:'Andermatt',lat:46.6343,lon:8.5936,region:'Central Switzerland',regionDE:'Zentralschweiz',driveMinutes:85,altitude:1444 },
+  { id:'stoos',name:'Stoos',nameDE:'Stoos',lat:46.9767,lon:8.6625,region:'Central Switzerland',regionDE:'Zentralschweiz',driveMinutes:55,altitude:1300 },
+  { id:'flumserberg',name:'Flumserberg',nameDE:'Flumserberg',lat:47.0912,lon:9.2739,region:'Eastern Switzerland',regionDE:'Ostschweiz',driveMinutes:60,altitude:1220 },
+  { id:'hoch-ybrig',name:'Hoch-Ybrig',nameDE:'Hoch-Ybrig',lat:47.031,lon:8.789,region:'Central Switzerland',regionDE:'Zentralschweiz',driveMinutes:50,altitude:1100 },
+  { id:'braunwald',name:'Braunwald',nameDE:'Braunwald',lat:46.9412,lon:8.9998,region:'Eastern Switzerland',regionDE:'Ostschweiz',driveMinutes:70,altitude:1256 },
+  { id:'sattel-hochstuckli',name:'Sattel-Hochstuckli',nameDE:'Sattel-Hochstuckli',lat:47.08,lon:8.63,region:'Central Switzerland',regionDE:'Zentralschweiz',driveMinutes:40,altitude:1170 },
+];
+
+function getSnowClass(totalCm) {
+  if (totalCm > 30) return 'heavy';
+  if (totalCm >= 10) return 'moderate';
+  return 'light';
+}
+
+function getSnowEmoji(totalCm) {
+  if (totalCm > 30) return '🏔️';
+  if (totalCm >= 10) return '❄️';
+  return '🌨️';
+}
+
+function getFilteredSnowDests() {
+  let dests = (snowData?.destinations || []).slice();
+  if (snowFilter === 'heavy') dests = dests.filter(d => d.snowfallWeekTotal > 30);
+  else if (snowFilter === 'moderate') dests = dests.filter(d => d.snowfallWeekTotal >= 10 && d.snowfallWeekTotal <= 30);
+  else if (snowFilter === 'light') dests = dests.filter(d => d.snowfallWeekTotal < 10);
+
+  if (snowSort === 'distance' && userLat) {
+    dests.sort((a, b) => haversine(userLat, userLon, a.lat, a.lon) - haversine(userLat, userLon, b.lat, b.lon));
+  }
+  // 'snowfall' sort is the API default order
+  return dests;
+}
+
+function renderSnowView() {
+  if (!snowData) return `<div class="loading-msg">${t('loading')}</div><div class="loading-skeleton">${'<div class="skeleton skeleton-line"></div>'.repeat(6)}</div>`;
+
+  const allDests = snowData.destinations || [];
+  if (allDests.length === 0) return `<div class="loading-msg">${t('noSnowData')}</div>`;
+
+  const wd = snowData.weekDates || {};
+  let html = `<div class="subtitle">${t('snowSubtitle')}</div>`;
+
+  // Filter bar
+  const filters = [
+    ['all', t('all')],
+    ['heavy', '🏔️ ' + t('heavySnow')],
+    ['moderate', '❄️ ' + t('moderateSnow')],
+    ['light', '🌨️ ' + t('lightSnow')],
+  ];
+  html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${snowFilter === k ? ' active' : ''}" onclick="setSnowFilter('${k}')">${v}</button>`).join('')}</div>`;
+
+  // Sort toggle
+  html += `<div class="snow-sort">
+    <button class="sort-btn${snowSort === 'snowfall' ? ' active' : ''}" onclick="setSnowSort('snowfall')">❄️ ${t('sortBySnow')}</button>
+    <button class="sort-btn${snowSort === 'distance' ? ' active' : ''}" onclick="setSnowSort('distance')">📍 ${t('sortByDist')}</button>
+  </div>`;
+
+  // Map
+  html += '<div class="map-container" id="snow-map" style="height:350px;"></div>';
+
+  // Week date label
+  const fmtDate = d => new Date(d + 'T12:00:00').toLocaleDateString(lang === 'de' ? 'de-CH' : 'en-CH', { weekday: 'short', day: 'numeric', month: 'short' });
+  html += `<div class="snow-dates">${t('weekOf')} ${fmtDate(wd.monday)} — ${fmtDate(wd.sunday)}</div>`;
+
+  // Legend
+  html += `<div class="snow-legend">
+    <div class="legend-item"><span class="legend-dot snow-dot-heavy"></span>&gt;30cm</div>
+    <div class="legend-item"><span class="legend-dot snow-dot-moderate"></span>10-30cm</div>
+    <div class="legend-item"><span class="legend-dot snow-dot-light"></span>&lt;10cm</div>
+  </div>`;
+
+  // Fresh powder nudge — if top resort has >40cm
+  const topDest = allDests[0];
+  if (topDest && topDest.snowfallWeekTotal > 40) {
+    const tName = lang === 'de' ? (topDest.nameDE || topDest.name) : topDest.name;
+    const tDrive = topDest.driveMinutes >= 60
+      ? `${Math.floor(topDest.driveMinutes / 60)}h${topDest.driveMinutes % 60 ? (topDest.driveMinutes % 60 + 'min') : ''}`
+      : `${topDest.driveMinutes}min`;
+    html += `<div class="snow-powder-alert" onclick="snowCardClick('${topDest.id}')">
+      <span class="snow-powder-label">🏔️ ${t('freshPowder')}</span>
+      <span class="snow-powder-dest"><b>${esc(tName)}</b> — ${topDest.snowfallWeekTotal}${t('snowfallCm')} · 🚗 ${tDrive}</span>
+    </div>`;
+  }
+
+  // Ranked cards
+  html += '<div class="snow-list">';
+  const dests = getFilteredSnowDests();
+  const showCount = snowExpanded ? dests.length : Math.min(10, dests.length);
+  if (dests.length === 0) {
+    html += renderEmptyState('❄️', 'emptySnow', 'emptySnowHint');
+  } else {
+    for (let i = 0; i < showCount; i++) html += renderSnowCard(dests[i], i + 1);
+    if (!snowExpanded && dests.length > 10) {
+      html += `<button class="snow-expand-btn" onclick="expandSnowList()">
+        ${lang === 'de' ? `Alle ${dests.length} Gebiete anzeigen` : `Show all ${dests.length} resorts`} ▾
+      </button>`;
+    }
+  }
+  html += '</div>';
+
+  return html;
+}
+
+function renderSnowCard(d, rank) {
+  const name = lang === 'de' ? (d.nameDE || d.name) : d.name;
+  const region = lang === 'de' ? (d.regionDE || d.region) : d.region;
+  const cls = getSnowClass(d.snowfallWeekTotal);
+  const emoji = getSnowEmoji(d.snowfallWeekTotal);
+  const driveLabel = d.driveMinutes >= 60
+    ? `${Math.floor(d.driveMinutes / 60)}h${d.driveMinutes % 60 ? (d.driveMinutes % 60 + 'min') : ''}`
+    : `${d.driveMinutes}min`;
+  const dist = userLat ? haversine(userLat, userLon, d.lat, d.lon) : null;
+
+  const dayNames = [
+    lang === 'de' ? 'Mo' : 'Mon',
+    lang === 'de' ? 'Di' : 'Tue',
+    lang === 'de' ? 'Mi' : 'Wed',
+    lang === 'de' ? 'Do' : 'Thu',
+    lang === 'de' ? 'Fr' : 'Fri',
+    lang === 'de' ? 'Sa' : 'Sat',
+    lang === 'de' ? 'So' : 'Sun',
+  ];
+
+  // Find max daily snowfall for bar scaling
+  const maxDaily = d.forecast ? Math.max(...d.forecast.map(f => f.snowfallCm), 1) : 1;
+
+  let forecastHtml = '';
+  if (d.forecast) {
+    forecastHtml = '<div class="snow-days">';
+    d.forecast.forEach((f, i) => {
+      const barHeight = Math.round((f.snowfallCm / maxDaily) * 32);
+      forecastHtml += `<div class="snow-day">
+        <div class="snow-day-label">${dayNames[i] || ''}</div>
+        <div class="snow-day-icon">${WEATHER_ICONS[f.weatherCode] || '🌡️'}</div>
+        <div class="snow-day-temp">${f.tempMax}°/${f.tempMin}°</div>
+        <div class="snow-day-bar-wrap"><div class="snow-day-bar" style="height:${barHeight}px">${f.snowfallCm > 0 ? f.snowfallCm : ''}</div></div>
+      </div>`;
+    });
+    forecastHtml += '</div>';
+  }
+
+  let badges = `<span class="snow-drive-badge">🚗 ${driveLabel} ${t('driveFrom')}</span>`;
+  badges += `<span class="snow-altitude-badge">⛰️ ${d.altitude}${t('altitudeM')}</span>`;
+  if (d.snowDepthCm > 0) badges += `<span class="snow-depth-badge">📏 ${d.snowDepthCm}cm ${t('snowDepth')}</span>`;
+  if (dist !== null) badges += `<span class="snow-dist-badge">📍 ${formatDist(dist)}</span>`;
+
+  return `<div class="snow-card snow-${cls}" id="snow-${d.id}" onclick="snowCardClick('${d.id}')" data-id="${d.id}">
+    <div class="snow-card-header">
+      <div class="snow-rank">${rank}</div>
+      <div class="snow-card-info">
+        <div class="snow-card-name">${emoji} ${esc(name)}</div>
+        <div class="snow-card-region">${esc(region)}</div>
+      </div>
+      <div class="snow-card-total">
+        <div class="snow-total-num">${d.snowfallWeekTotal}</div>
+        <div class="snow-total-label">${t('snowfallCm')}</div>
+      </div>
+    </div>
+    <div class="snow-card-body">
+      <div class="snow-badges">${badges}</div>
+      ${forecastHtml}
+    </div>
+  </div>`;
+}
+
+function snowCardClick(id) {
+  document.querySelectorAll('.snow-card.expanded').forEach(c => {
+    if (c.dataset.id !== id) c.classList.remove('expanded');
+  });
+  const card = document.getElementById(`snow-${id}`);
+  if (card) card.classList.toggle('expanded');
+  if (snowMap) panToMarker(snowMarkers, id, snowMap, 10);
+}
+
+function setSnowFilter(f) {
+  snowFilter = f;
+  snowExpanded = false;
+  renderCurrentView();
+  afterRender(initSnowMap);
+}
+
+function setSnowSort(s) {
+  if (s === 'distance' && !userLat) {
+    navigator.geolocation?.getCurrentPosition(pos => {
+      userLat = pos.coords.latitude;
+      userLon = pos.coords.longitude;
+      snowSort = 'distance';
+      renderCurrentView();
+      afterRender(initSnowMap);
+    }, () => {}, { enableHighAccuracy: true });
+    return;
+  }
+  snowSort = s;
+  renderCurrentView();
+  afterRender(initSnowMap);
+}
+
+function expandSnowList() {
+  snowExpanded = true;
+  renderCurrentView();
+  afterRender(initSnowMap);
+}
+
+function getSnowWeekDates() {
+  const now = new Date();
+  const day = now.getDay();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((day + 6) % 7));
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const fmt = d => d.toISOString().split('T')[0];
+  return { monday: fmt(monday), sunday: fmt(sunday) };
+}
+
+async function fetchSnowClientSide() {
+  const wd = getSnowWeekDates();
+  const lats = SNOW_DESTS.map(d => d.lat).join(',');
+  const lons = SNOW_DESTS.map(d => d.lon).join(',');
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&daily=snowfall_sum,weather_code,temperature_2m_max,temperature_2m_min&hourly=snow_depth&start_date=${wd.monday}&end_date=${wd.sunday}&timezone=Europe/Zurich`;
+
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const raw = await res.json();
+  const locations = Array.isArray(raw) ? raw : [raw];
+
+  const WD = {0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Foggy',48:'Foggy',51:'Light drizzle',53:'Drizzle',55:'Heavy drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Light snow',73:'Snow',75:'Heavy snow',80:'Rain showers',81:'Rain showers',82:'Heavy showers',85:'Snow showers',86:'Heavy snow showers',95:'Thunderstorm',96:'Thunderstorm with hail',99:'Thunderstorm with hail'};
+
+  const results = [];
+  for (let i = 0; i < SNOW_DESTS.length && i < locations.length; i++) {
+    const loc = locations[i];
+    if (!loc.daily?.time) continue;
+    const forecast = loc.daily.time.map((date, di) => ({
+      date,
+      snowfallCm: Math.round((loc.daily.snowfall_sum[di] || 0) * 10) / 10,
+      weatherCode: loc.daily.weather_code[di],
+      tempMax: loc.daily.temperature_2m_max[di] != null ? Math.round(loc.daily.temperature_2m_max[di]) : 0,
+      tempMin: loc.daily.temperature_2m_min[di] != null ? Math.round(loc.daily.temperature_2m_min[di]) : 0,
+      description: WD[loc.daily.weather_code[di]] || 'Unknown',
+    }));
+    const snowfallWeekTotal = Math.round(forecast.reduce((s, d) => s + d.snowfallCm, 0) * 10) / 10;
+    let snowDepthCm = 0;
+    if (loc.hourly?.snow_depth) {
+      const maxD = Math.max(...loc.hourly.snow_depth.filter(v => v != null));
+      if (isFinite(maxD)) snowDepthCm = Math.round(maxD * 100);
+    }
+    results.push({ ...SNOW_DESTS[i], forecast, snowfallWeekTotal, snowDepthCm });
+  }
+  results.sort((a, b) => b.snowfallWeekTotal - a.snowfallWeekTotal);
+  return { destinations: results, weekDates: wd, timestamp: new Date().toISOString() };
+}
+
+async function loadSnow(force = false) {
+  const cacheKey = 'snowCache-v1';
+  if (!force) {
+    const cached = cache.get(cacheKey, 1800000);
+    if (cached && cached.destinations?.length > 0) { snowData = cached; renderCurrentView(); afterRender(initSnowMap); return; }
+  }
+
+  try {
+    const res = await fetch(`${API}/snow?lang=${lang}${force ? '&refresh=true' : ''}`);
+    if (!res.ok) throw new Error(`Worker returned ${res.status}`);
+    const data = await res.json();
+    if (data.destinations?.length > 0) {
+      snowData = data;
+      cache.set(cacheKey, data);
+      renderCurrentView();
+      afterRender(initSnowMap);
+      return;
+    }
+  } catch (e) { console.error('Worker snow error:', e); }
+
+  try {
+    const data = await fetchSnowClientSide();
+    if (data) {
+      snowData = data;
+      cache.set(cacheKey, data);
+      renderCurrentView();
+      afterRender(initSnowMap);
+      return;
+    }
+  } catch (e) { console.error('Client snow error:', e); showToast('toastNetworkError', 'error'); }
+
+  if (!snowData) {
+    const vEl = $('view-snow');
+    if (vEl) vEl.innerHTML = '<div class="loading-msg">Failed to load snow data.</div>';
+  }
+}
+
+async function initSnowMap() {
+  const el = $('snow-map');
+  if (!el || !el.offsetParent) return;
+  await loadLeaflet();
+  if (!window.L) return;
+
+  if (snowMap) snowMap.remove();
+  snowMap = L.map(el).setView([46.8, 8.2], 7);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(snowMap);
+
+  if (!snowData?.destinations) return;
+
+  snowMarkers = {};
+  for (const d of snowData.destinations) {
+    const name = lang === 'de' ? (d.nameDE || d.name) : d.name;
+    const cls = getSnowClass(d.snowfallWeekTotal);
+    const color = cls === 'heavy' ? '#1e40af' : cls === 'moderate' ? '#60a5fa' : '#94a3b8';
+    const radius = Math.max(8, Math.min(25, 8 + d.snowfallWeekTotal / 2));
+
+    const marker = L.circleMarker([d.lat, d.lon], {
+      radius,
+      fillColor: color,
+      fillOpacity: 0.8,
+      weight: 2,
+      color: '#fff',
+    }).addTo(snowMap).bindPopup(`<b>${esc(name)}</b><br>${d.snowfallWeekTotal}${t('snowfallCm')}<br>${getSnowEmoji(d.snowfallWeekTotal)}`);
+    marker.on('click', () => highlightCard(`snow-${d.id}`));
+    snowMarkers[d.id] = marker;
+  }
+}
+
 // ═══ DAY DETAIL (integrated into Events view) ═══
 
 function renderDayDetailSection(titleKey, icon, content) {
@@ -2283,7 +2648,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Check URL params (override persisted view if present)
   const params = new URLSearchParams(window.location.search);
   const viewParam = params.get('view');
-  if (viewParam && ['activities', 'lunch', 'events', 'weekend', 'sunshine'].includes(viewParam)) {
+  if (viewParam && ['activities', 'lunch', 'events', 'weekend', 'sunshine', 'snow'].includes(viewParam)) {
     switchView(viewParam);
   } else if (view === 'news') {
     fetchNews();
