@@ -39,13 +39,15 @@ struct SurpriseMeSheet: View {
                     badgesRow
 
                     // Price info
-                    HStack(spacing: 6) {
-                        Image(systemName: "banknote")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        Text(activity.localizedPrice(language: appState.language))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                    if let price = activity.localizedPrice(language: appState.language) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "banknote")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Text(price)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
                     }
 
                     Divider()

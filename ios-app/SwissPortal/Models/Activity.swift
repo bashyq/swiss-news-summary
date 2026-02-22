@@ -23,7 +23,7 @@ struct Activity: Codable, Identifiable {
     let indoor: Bool
     let ageRange: String
     let duration: String
-    let price: String
+    let price: String?
     let priceDE: String?
     let url: String?
     let lat: Double?
@@ -54,7 +54,7 @@ struct Activity: Codable, Identifiable {
         }
     }
 
-    func localizedPrice(language: AppLanguage) -> String {
+    func localizedPrice(language: AppLanguage) -> String? {
         switch language {
         case .en: return price
         case .de: return priceDE ?? price
@@ -71,7 +71,7 @@ struct Activity: Codable, Identifiable {
     /// Whether activity is free (auto-detected from price field)
     var isFree: Bool {
         if let free { return free }
-        let p = price.lowercased()
+        guard let p = price?.lowercased() else { return false }
         return p.hasPrefix("free") || p.hasPrefix("gratis")
     }
 

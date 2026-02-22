@@ -111,11 +111,13 @@ struct ActivityCard: View {
                 )
 
                 // Price badge
-                BadgeView(
-                    text: activity.localizedPrice(language: language),
-                    icon: "banknote",
-                    color: .gray
-                )
+                if let price = activity.localizedPrice(language: language) {
+                    BadgeView(
+                        text: price,
+                        icon: "banknote",
+                        color: .gray
+                    )
+                }
 
                 // Free badge
                 if activity.isFree {
