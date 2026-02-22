@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-"Today in Switzerland" is a PWA that aggregates Swiss news, weather, transport disruptions, holidays, historical facts, family activities for toddlers (ages 2-5), weekend sunshine/snow forecasts, and deals. It uses Claude AI for news categorization and consists of a modular Cloudflare Worker backend (12 modules) and a 3-file frontend (HTML shell + CSS + JS).
+"Today in Switzerland" is a PWA + native iOS app that aggregates Swiss news, weather, transport disruptions, holidays, historical facts, family activities for toddlers (ages 2-5), weekend sunshine/snow forecasts, and deals. It uses Claude AI for news categorization and consists of a modular Cloudflare Worker backend (12 modules), a 3-file frontend (HTML shell + CSS + JS), and a SwiftUI iOS app.
 
 **GitHub:** https://github.com/bashyq/swiss-news-summary
 
@@ -80,11 +80,62 @@ swiss-news-summary/
 │   │   ├── sunshine.js   # Weekend sunshine forecast (29 destinations, Zürich baseline)
 │   │   └── snow.js       # Weekly snowfall forecast (22 ski resorts)
 │   └── wrangler.toml   # Worker config (main = "src/index.js")
+├── ios-app/
+│   ├── SwissPortal.xcodeproj
+│   └── SwissPortal/
+│       ├── App/                  # App entry, AppState, ContentView
+│       ├── Models/               # Codable models (Activity, LunchSpot, etc.)
+│       ├── ViewModels/           # @Observable view models
+│       ├── Views/                # SwiftUI views by feature
+│       │   ├── Activities/
+│       │   ├── Events/
+│       │   ├── Lunch/
+│       │   ├── News/
+│       │   ├── Shared/           # Reusable components (Skeleton, Toast, MapLegend, etc.)
+│       │   ├── Snow/
+│       │   ├── Sunshine/
+│       │   └── Weather/
+│       ├── Services/             # LocationManager, CacheManager, APIClient
+│       └── Info.plist            # URL scheme (swissportal://)
 ├── CLAUDE.md
 └── README.md
 ```
 
-## Features
+## iOS App
+
+Native SwiftUI app (iOS 17+) consuming the same Worker API as the PWA.
+
+### Build & Run
+```bash
+cd ios-app
+open SwissPortal.xcodeproj
+# Build: Cmd+B, Run: Cmd+R (requires Xcode 15+)
+
+# CLI build:
+xcodebuild -project SwissPortal.xcodeproj -scheme SwissPortal \
+  -destination 'platform=iOS Simulator,name=iPhone 16' build
+```
+
+### iOS-Specific Features
+- **Quick city picker**: Toolbar title menu (tap nav title → city dropdown)
+- **Skeleton loading**: Shimmer placeholders during initial load (no cache)
+- **Lunch display limit**: 50 spots shown by default, "Show all" to expand
+- **Lunch map collapsed**: Map starts hidden, toggle via toolbar button
+- **"Closed" badge**: Gray badge on lunch cards when `openForLunch == false`
+- **Calendar "Today" button**: Pill appears when viewing non-current month
+- **Near Me map focus**: Tapping "Near me" / "Near" sort centers map on user location
+- **URL deep linking**: `swissportal://news`, `swissportal://activities?city=basel`, etc.
+- **Toast notifications**: Save/unsave feedback via ToastManager
+- **Pull-to-refresh**: On list views (not triggered by horizontal filter scroll)
+
+### Architecture
+- **@Observable** view models (iOS 17 Observation framework)
+- **CacheManager**: Disk cache with per-endpoint TTLs (show cached → fetch fresh)
+- **APIClient**: Centralized networking to Worker API
+- **LocationManager**: On-demand location for "Near me" features
+- **PBXFileSystemSynchronizedRootGroup**: Xcode auto-discovers source files (no manual file references)
+
+## Features (PWA)
 
 ### News View (Landing Page)
 - **5 Categories**: Politics, Disruptions, Events, Culture, Local (city-specific)
