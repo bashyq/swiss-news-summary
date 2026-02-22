@@ -69,7 +69,7 @@ struct BriefingCard: View {
                 HStack(spacing: 8) {
                     Image(systemName: categoryIcon(for: activity.category))
                         .font(.caption)
-                        .foregroundStyle(.purple)
+                        .foregroundStyle(.brand)
                         .frame(width: 20)
 
                     VStack(alignment: .leading, spacing: 1) {
@@ -94,7 +94,7 @@ struct BriefingCard: View {
                         } label: {
                             Image(systemName: "arrow.up.right.square")
                                 .font(.caption)
-                                .foregroundStyle(.purple)
+                                .foregroundStyle(.brand)
                         }
                         .buttonStyle(.plain)
                     }
@@ -102,11 +102,11 @@ struct BriefingCard: View {
             }
         }
         .padding(14)
-        .background(Color.purple.opacity(0.06))
+        .background(Color.brand.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.purple.opacity(0.15), lineWidth: 1)
+                .stroke(Color.brand.opacity(0.15), lineWidth: 1)
         )
     }
 

@@ -44,7 +44,7 @@ struct EventCard: View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "party.popper.fill")
                 .font(.caption)
-                .foregroundStyle(.purple)
+                .foregroundStyle(.brand)
                 .frame(width: 20, height: 20)
 
             Text(event.localizedName(language: appState.language))

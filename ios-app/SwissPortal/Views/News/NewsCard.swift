@@ -126,7 +126,7 @@ struct NewsCard: View {
                         .font(.caption2)
                     Spacer()
                 }
-                .foregroundStyle(.purple)
+                .foregroundStyle(.brand)
                 .padding(.vertical, 6)
                 .contentShape(Rectangle())
             }

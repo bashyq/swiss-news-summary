@@ -248,10 +248,10 @@ struct LunchView: View {
                                 ))
                                 .font(.subheadline)
                                 .fontWeight(.medium)
-                                .foregroundStyle(.purple)
+                                .foregroundStyle(.brand)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
-                                .background(Color.purple.opacity(0.08))
+                                .background(Color.brand.opacity(0.08))
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                             }
                             .buttonStyle(.plain)
@@ -325,10 +325,10 @@ struct LunchView: View {
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 12)
-            .background(LinearGradient.purpleIndigo)
+            .background(LinearGradient.brand)
             .foregroundStyle(.white)
             .clipShape(Capsule())
-            .shadow(color: .purple.opacity(0.3), radius: 8, x: 0, y: 4)
+            .shadow(color: .brand.opacity(0.3), radius: 8, x: 0, y: 4)
         }
     }
 

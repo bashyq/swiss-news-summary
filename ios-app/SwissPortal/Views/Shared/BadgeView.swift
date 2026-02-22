@@ -119,6 +119,6 @@ struct ToddlerFriendlyBadge: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        BadgeView(text: appState.localized(en: "Toddler-friendly", de: "Kleinkindfreundlich"), icon: "figure.and.child.holdinghands", color: .purple)
+        BadgeView(text: appState.localized(en: "Toddler-friendly", de: "Kleinkindfreundlich"), icon: "figure.and.child.holdinghands", color: .brand)
     }
 }

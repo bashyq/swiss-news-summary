@@ -32,11 +32,11 @@ struct SunshineCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(isBaseline ? Color.purple.opacity(0.5) : .clear, lineWidth: isBaseline ? 2 : 0)
+                .stroke(isBaseline ? Color.brand.opacity(0.5) : .clear, lineWidth: isBaseline ? 2 : 0)
         )
         .overlay(alignment: .leading) {
             RoundedRectangle(cornerRadius: 2)
-                .fill(isBaseline ? Color.purple : Color.sunshineColor(hours: destination.sunshineHoursTotal))
+                .fill(isBaseline ? Color.brand : Color.sunshineColor(hours: destination.sunshineHoursTotal))
                 .frame(width: 4)
                 .padding(.vertical, 6)
         }
@@ -51,7 +51,7 @@ struct SunshineCard: View {
     @ViewBuilder
     private var cardBackground: some View {
         if isBaseline {
-            LinearGradient(colors: [Color.purple.opacity(0.08), Color.purple.opacity(0.03)],
+            LinearGradient(colors: [Color.brand.opacity(0.08), Color.brand.opacity(0.03)],
                            startPoint: .top, endPoint: .bottom)
         } else {
             Color(.secondarySystemGroupedBackground)
@@ -72,7 +72,7 @@ struct SunshineCard: View {
                     if isBaseline {
                         Image(systemName: "house.fill")
                             .font(.caption2)
-                            .foregroundStyle(.purple)
+                            .foregroundStyle(.brand)
                     }
                     Text(destination.localizedName(language: language))
                         .font(.system(.subheadline, design: .serif))

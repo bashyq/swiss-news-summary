@@ -42,7 +42,7 @@ struct StayHomeSection: View {
         HStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.subheadline)
-                .foregroundStyle(.purple)
+                .foregroundStyle(.brand)
             Text(localizedCategoryName(category))
                 .font(.subheadline)
                 .fontWeight(.semibold)
@@ -177,7 +177,7 @@ struct StayHomeCard: View {
                     Text(language == .en ? "Materials:" : "Material:")
                         .font(.caption2)
                         .fontWeight(.medium)
-                        .foregroundStyle(.purple)
+                        .foregroundStyle(.brand)
 
                     Text(materials)
                         .font(.caption2)

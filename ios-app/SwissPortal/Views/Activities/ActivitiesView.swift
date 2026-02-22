@@ -316,10 +316,10 @@ struct ActivitiesView: View {
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 12)
-            .background(LinearGradient.purpleIndigo)
+            .background(LinearGradient.brand)
             .foregroundStyle(.white)
             .clipShape(Capsule())
-            .shadow(color: .purple.opacity(0.3), radius: 8, x: 0, y: 4)
+            .shadow(color: .brand.opacity(0.3), radius: 8, x: 0, y: 4)
         }
     }
 

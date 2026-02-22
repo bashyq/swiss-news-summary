@@ -1,23 +1,45 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Gradient Presets
 
 extension LinearGradient {
-    static let purpleIndigo = LinearGradient(
-        colors: [.purple, .indigo], startPoint: .leading, endPoint: .trailing
+    static let brand = LinearGradient(
+        colors: [.brand, .brandDark], startPoint: .leading, endPoint: .trailing
     )
+}
+
+// MARK: - ShapeStyle conformance (enables `.brand` shorthand in .foregroundStyle etc.)
+
+extension ShapeStyle where Self == Color {
+    static var brand: Color { Color.brand }
+    static var brandDark: Color { Color.brandDark }
 }
 
 /// App color palette — adapts to light/dark mode automatically
 extension Color {
+    // MARK: - Brand Colors (matches website accent: #dc2626 light / #e53e3e dark)
+
+    static let brand = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.898, green: 0.243, blue: 0.243, alpha: 1) // #e53e3e
+            : UIColor(red: 0.863, green: 0.149, blue: 0.149, alpha: 1) // #dc2626
+    })
+
+    static let brandDark = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.725, green: 0.110, blue: 0.110, alpha: 1) // #b91c1c
+            : UIColor(red: 0.600, green: 0.106, blue: 0.106, alpha: 1) // #991b1b
+    })
+
     // MARK: - Primary Colors
-    static let appPrimary = Color.purple
-    static let appAccent = Color.purple
+    static let appPrimary = Color.brand
+    static let appAccent = Color.brand
 
     // MARK: - Semantic Colors (fallback values if asset catalog not configured)
 
-    /// Purple accent used for baseline/highlights
-    static let baseline = Color.purple
+    /// Brand accent used for baseline/highlights
+    static let baseline = Color.brand
 
     /// Green for positive sentiment, free badges
     static let positive = Color.green

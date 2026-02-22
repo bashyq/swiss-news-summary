@@ -111,7 +111,7 @@ struct DealCard: View {
                         Image(systemName: "arrow.up.right")
                             .font(.caption2)
                     }
-                    .foregroundStyle(.purple)
+                    .foregroundStyle(.brand)
                 }
             }
         }

@@ -65,7 +65,7 @@ struct ActivityCard: View {
             // Category icon
             Image(systemName: categoryIcon)
                 .font(.caption)
-                .foregroundStyle(.purple)
+                .foregroundStyle(.brand)
                 .frame(width: 20, height: 20)
 
             // Activity name
@@ -156,7 +156,7 @@ struct ActivityCard: View {
                 BadgeView(
                     text: activity.ageRange,
                     icon: "figure.and.child.holdinghands",
-                    color: .purple
+                    color: .brand
                 )
 
                 // Seasonal badge

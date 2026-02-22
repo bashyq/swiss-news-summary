@@ -108,7 +108,7 @@ struct LunchCard: View {
                 Link(destination: url) {
                     Image(systemName: "safari")
                         .font(.body)
-                        .foregroundStyle(.purple)
+                        .foregroundStyle(.brand)
                 }
             }
 

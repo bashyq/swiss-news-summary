@@ -134,7 +134,7 @@ struct WeatherDetailSheet: View {
         .frame(width: 44)
         .padding(.vertical, 8)
         .padding(.horizontal, 4)
-        .background(isCurrentHour(entry) ? Color.purple.opacity(0.1) : Color.clear)
+        .background(isCurrentHour(entry) ? Color.brand.opacity(0.1) : Color.clear)
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 

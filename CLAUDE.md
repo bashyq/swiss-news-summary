@@ -119,9 +119,11 @@ xcodebuild -project SwissPortal.xcodeproj -scheme SwissPortal \
 ### iOS-Specific Features
 - **Tab bar layout**: News, Activities, Lunch (fork.knife), Weather, More — Events moved to More
 - **Quick city picker**: Toolbar title menu (tap nav title → city dropdown) on News, Activities, Lunch
-- **Visual design**: Serif headlines on cards, colored left border strips, purple→indigo gradient buttons, deeper shadows
+- **Visual design**: Serif headlines on cards, colored left border strips, red brand gradient buttons (`#dc2626`/`#e53e3e`), deeper shadows
 - **Card border colors**: News (category color), Activities (indoor/outdoor/free), Lunch (cuisine), Sunshine (hours), Snow (snowfall)
-- **Gradient buttons**: "Surprise me!" and "Try another" use purple→indigo gradient; selected filter chips also gradient
+- **Brand red accent**: All accent UI uses website red (`#dc2626` light / `#e53e3e` dark) via `Color.brand` / `LinearGradient.brand`
+- **Gradient buttons**: "Surprise me!" and "Try another" use brand red gradient; selected filter chips also gradient
+- **Tab bar icons**: 15% smaller than default (~19pt vs ~22pt) via custom UIImage symbol configuration
 - **Weather background tint**: Subtle orange/blue/gray tint on News and Activities based on weather code
 - **Numeric transitions**: Count labels animate with `.contentTransition(.numericText())`
 - **Sensory feedback**: Haptic on card expand/collapse (NewsCard, SunshineCard, SnowCard)

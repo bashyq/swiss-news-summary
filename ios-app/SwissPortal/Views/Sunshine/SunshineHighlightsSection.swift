@@ -36,8 +36,8 @@ struct SunshineHighlightsSection: View {
                     .fontWeight(.medium)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
-                    .background(Color.purple.opacity(0.12))
-                    .foregroundStyle(.purple)
+                    .background(Color.brand.opacity(0.12))
+                    .foregroundStyle(.brand)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
@@ -69,7 +69,7 @@ struct SunshineHighlightsSection: View {
         HStack(spacing: 10) {
             Image(systemName: highlight.sfSymbol)
                 .font(.caption)
-                .foregroundStyle(.purple)
+                .foregroundStyle(.brand)
                 .frame(width: 20, height: 20)
 
             VStack(alignment: .leading, spacing: 1) {
@@ -112,8 +112,8 @@ struct SunshineHighlightsSection: View {
                 .fontWeight(.medium)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
-                .background(Color.purple.opacity(0.12))
-                .foregroundStyle(.purple)
+                .background(Color.brand.opacity(0.12))
+                .foregroundStyle(.brand)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             }
             .buttonStyle(.plain)

@@ -14,7 +14,7 @@ struct HistoryBanner: View {
             // Calendar icon
             Image(systemName: "clock.arrow.circlepath")
                 .font(.caption)
-                .foregroundStyle(.purple.opacity(0.8))
+                .foregroundStyle(.brand.opacity(0.8))
                 .padding(.top, 2)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -25,7 +25,7 @@ struct HistoryBanner: View {
                 ))
                 .font(.caption2)
                 .fontWeight(.semibold)
-                .foregroundStyle(.purple.opacity(0.8))
+                .foregroundStyle(.brand.opacity(0.8))
                 .textCase(.uppercase)
 
                 // Year + event
@@ -40,7 +40,7 @@ struct HistoryBanner: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color.purple.opacity(0.06))
+        .background(Color.brand.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .accessibilityElement(children: .combine)
     }

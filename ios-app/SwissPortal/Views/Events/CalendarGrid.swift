@@ -39,7 +39,7 @@ struct CalendarGrid: View {
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(.purple)
+                    .foregroundStyle(.brand)
                     .frame(width: 36, height: 36)
                     .contentShape(Rectangle())
             }
@@ -62,8 +62,8 @@ struct CalendarGrid: View {
                         .fontWeight(.medium)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(Color.purple.opacity(0.12))
-                        .foregroundStyle(.purple)
+                        .background(Color.brand.opacity(0.12))
+                        .foregroundStyle(.brand)
                         .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
@@ -78,7 +78,7 @@ struct CalendarGrid: View {
             } label: {
                 Image(systemName: "chevron.right")
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(.purple)
+                    .foregroundStyle(.brand)
                     .frame(width: 36, height: 36)
                     .contentShape(Rectangle())
             }
@@ -199,7 +199,7 @@ private struct DayCell: View {
         if isSelected {
             return .white
         } else if isToday {
-            return .purple
+            return .brand
         } else {
             return .primary
         }
@@ -208,11 +208,11 @@ private struct DayCell: View {
     @ViewBuilder
     private var dayBackground: some View {
         if isSelected {
-            Color.purple
+            Color.brand
         } else if isToday {
             Circle()
-                .strokeBorder(Color.purple, lineWidth: 1.5)
-                .background(Circle().fill(Color.purple.opacity(0.08)))
+                .strokeBorder(Color.brand, lineWidth: 1.5)
+                .background(Circle().fill(Color.brand.opacity(0.08)))
         } else {
             Color.clear
         }

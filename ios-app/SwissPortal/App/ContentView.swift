@@ -13,7 +13,7 @@ struct ContentView: View {
                     NewsView()
                 }
                 .tabItem {
-                    Label(tabLabel(.news), systemImage: AppTab.news.sfSymbol)
+                    Label { Text(tabLabel(.news)) } icon: { tabIcon(AppTab.news.sfSymbol) }
                 }
                 .tag(AppTab.news)
 
@@ -21,7 +21,7 @@ struct ContentView: View {
                     ActivitiesView()
                 }
                 .tabItem {
-                    Label(tabLabel(.activities), systemImage: AppTab.activities.sfSymbol)
+                    Label { Text(tabLabel(.activities)) } icon: { tabIcon(AppTab.activities.sfSymbol) }
                 }
                 .tag(AppTab.activities)
 
@@ -29,7 +29,7 @@ struct ContentView: View {
                     LunchView()
                 }
                 .tabItem {
-                    Label(tabLabel(.lunch), systemImage: AppTab.lunch.sfSymbol)
+                    Label { Text(tabLabel(.lunch)) } icon: { tabIcon(AppTab.lunch.sfSymbol) }
                 }
                 .tag(AppTab.lunch)
 
@@ -37,7 +37,7 @@ struct ContentView: View {
                     WeatherTabView()
                 }
                 .tabItem {
-                    Label(tabLabel(.weather), systemImage: AppTab.weather.sfSymbol)
+                    Label { Text(tabLabel(.weather)) } icon: { tabIcon(AppTab.weather.sfSymbol) }
                 }
                 .tag(AppTab.weather)
 
@@ -45,11 +45,11 @@ struct ContentView: View {
                     MoreView()
                 }
                 .tabItem {
-                    Label(tabLabel(.more), systemImage: AppTab.more.sfSymbol)
+                    Label { Text(tabLabel(.more)) } icon: { tabIcon(AppTab.more.sfSymbol) }
                 }
                 .tag(AppTab.more)
             }
-            .tint(.purple)
+            .tint(.brand)
 
             ToastOverlay()
                 .padding(.bottom, 50)
@@ -58,6 +58,15 @@ struct ContentView: View {
 
     private func tabLabel(_ tab: AppTab) -> String {
         appState.language == .en ? tab.label : tab.labelDE
+    }
+
+    /// Tab bar icon sized 15% smaller than default (~22pt → 19pt)
+    private func tabIcon(_ systemName: String) -> Image {
+        let config = UIImage.SymbolConfiguration(pointSize: 19, weight: .medium)
+        if let uiImage = UIImage(systemName: systemName, withConfiguration: config) {
+            return Image(uiImage: uiImage)
+        }
+        return Image(systemName: systemName)
     }
 }
 

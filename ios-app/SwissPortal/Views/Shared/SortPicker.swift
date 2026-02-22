@@ -23,8 +23,8 @@ struct SortPicker<S: Hashable>: View {
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
-                    .background(selected == option.value ? Color.purple.opacity(0.15) : .clear)
-                    .foregroundStyle(selected == option.value ? .purple : .secondary)
+                    .background(selected == option.value ? Color.brand.opacity(0.15) : .clear)
+                    .foregroundStyle(selected == option.value ? .brand : .secondary)
                 }
                 .buttonStyle(.plain)
 
@@ -62,7 +62,7 @@ struct ShowAllButton: View {
                     Image(systemName: showAll ? "chevron.up" : "chevron.down")
                         .font(.caption)
                 }
-                .foregroundStyle(.purple)
+                .foregroundStyle(.brand)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .background(Color(.systemGray6))

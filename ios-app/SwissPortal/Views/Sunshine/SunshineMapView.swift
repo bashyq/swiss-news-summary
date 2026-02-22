@@ -89,7 +89,7 @@ struct SunshineMapView: View {
                 .init(color: .orange, label: ">6h"),
                 .init(color: .blue, label: "3-6h"),
                 .init(color: .gray, label: "<3h"),
-                .init(color: .purple, label: language == .de ? "Zürich" : "Zürich"),
+                .init(color: .brand, label: language == .de ? "Zürich" : "Zürich"),
             ])
             .padding(8)
         }
@@ -111,7 +111,7 @@ struct SunshineMapView: View {
     /// Color based on sunshine level. Purple for baseline (Zurich).
     private func circleColor(for destination: SunshineDestination) -> Color {
         if destination.isBaseline == true {
-            return .purple
+            return .brand
         }
         return .sunshineColor(hours: destination.sunshineHoursTotal)
     }

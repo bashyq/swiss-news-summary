@@ -34,7 +34,7 @@ struct FilterChip: View {
             .padding(.vertical, 7)
             .background {
                 if isSelected {
-                    LinearGradient.purpleIndigo
+                    LinearGradient.brand
                 } else {
                     LinearGradient(colors: [Color(.systemGray6)], startPoint: .leading, endPoint: .trailing)
                 }

@@ -72,7 +72,7 @@ struct DayDetailView: View {
         HStack(spacing: 8) {
             Image(systemName: "calendar")
                 .font(.subheadline)
-                .foregroundStyle(.purple)
+                .foregroundStyle(.brand)
 
             Text(formattedDate)
                 .font(.subheadline)
@@ -86,8 +86,8 @@ struct DayDetailView: View {
                     .fontWeight(.medium)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(Color.purple.opacity(0.15))
-                    .foregroundStyle(.purple)
+                    .background(Color.brand.opacity(0.15))
+                    .foregroundStyle(.brand)
                     .clipShape(Capsule())
             }
         }
@@ -131,7 +131,7 @@ struct DayDetailView: View {
             Spacer()
         }
         .padding(10)
-        .background(Color.purple)
+        .background(Color.brand)
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
@@ -167,7 +167,7 @@ struct DayDetailView: View {
         HStack(spacing: 0) {
             // Purple left border
             RoundedRectangle(cornerRadius: 2)
-                .fill(Color.purple)
+                .fill(Color.brand)
                 .frame(width: 4)
 
             VStack(alignment: .leading, spacing: 4) {
@@ -213,7 +213,7 @@ struct DayDetailView: View {
                 } label: {
                     Image(systemName: "arrow.up.right.square")
                         .font(.caption)
-                        .foregroundStyle(.purple)
+                        .foregroundStyle(.brand)
                 }
                 .buttonStyle(.plain)
                 .padding(.trailing, 10)
@@ -343,7 +343,7 @@ struct DayDetailView: View {
         HStack(spacing: 8) {
             Image(systemName: activityCategoryIcon(activity.category))
                 .font(.caption2)
-                .foregroundStyle(.purple)
+                .foregroundStyle(.brand)
                 .frame(width: 16)
 
             Text(activity.localizedName(language: appState.language))
@@ -358,7 +358,7 @@ struct DayDetailView: View {
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
-                .background(Color.purple.opacity(0.1))
+                .background(Color.brand.opacity(0.1))
                 .clipShape(Capsule())
         }
         .contentShape(Rectangle())

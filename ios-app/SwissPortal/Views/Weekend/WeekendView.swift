@@ -137,7 +137,7 @@ struct WeekendView: View {
     private var cityHeader: some View {
         HStack(spacing: 8) {
             Image(systemName: "mappin.circle.fill")
-                .foregroundStyle(.purple)
+                .foregroundStyle(.brand)
             Text(appState.city.localizedName(language: appState.language))
                 .font(.subheadline)
                 .fontWeight(.medium)

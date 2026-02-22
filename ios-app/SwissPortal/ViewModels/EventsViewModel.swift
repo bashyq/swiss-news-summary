@@ -195,7 +195,7 @@ final class EventsViewModel {
     /// Returns an array of dot colors to display under a calendar day.
     ///
     /// Color mapping:
-    /// - `.purple` — holiday or festival
+    /// - `.brand` — festival
     /// - `.red` — holiday (public)
     /// - `.orange` (amber) — school holiday
     /// - `.blue` — recurring activity
@@ -207,7 +207,7 @@ final class EventsViewModel {
             colors.append(.red)
         }
         if !events.festivals.isEmpty {
-            colors.append(.purple)
+            colors.append(.brand)
         }
         if !events.schoolHolidays.isEmpty {
             colors.append(.orange)

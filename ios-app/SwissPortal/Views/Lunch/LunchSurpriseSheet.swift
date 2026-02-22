@@ -64,12 +64,12 @@ struct LunchSurpriseSheet: View {
     private var cuisineIcon: some View {
         ZStack {
             Circle()
-                .fill(Color.purple.opacity(0.12))
+                .fill(Color.brand.opacity(0.12))
                 .frame(width: 96, height: 96)
 
             Image(systemName: spot.cuisineSFSymbol)
                 .font(.system(size: 40))
-                .foregroundStyle(.purple)
+                .foregroundStyle(.brand)
         }
     }
 
@@ -112,7 +112,7 @@ struct LunchSurpriseSheet: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(LinearGradient.purpleIndigo)
+                .background(LinearGradient.brand)
                 .foregroundStyle(.white)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
