@@ -26,12 +26,12 @@ struct ContentView: View {
                 .tag(AppTab.activities)
 
                 NavigationStack {
-                    EventsView()
+                    LunchView()
                 }
                 .tabItem {
-                    Label(tabLabel(.events), systemImage: AppTab.events.sfSymbol)
+                    Label(tabLabel(.lunch), systemImage: AppTab.lunch.sfSymbol)
                 }
-                .tag(AppTab.events)
+                .tag(AppTab.lunch)
 
                 NavigationStack {
                     WeatherTabView()
@@ -131,9 +131,9 @@ struct MoreView: View {
                 }
 
                 NavigationLink {
-                    LunchView()
+                    EventsView()
                 } label: {
-                    Label(appState.localized(en: "Lunch", de: "Mittagessen"), systemImage: "fork.knife")
+                    Label(appState.localized(en: "Events", de: "Events"), systemImage: "calendar")
                 }
 
                 NavigationLink {

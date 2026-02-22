@@ -27,6 +27,11 @@ struct BadgeView: View {
         .background(background)
         .foregroundStyle(foreground)
         .clipShape(Capsule())
+        .overlay {
+            if style == .filled {
+                Capsule().stroke(color.opacity(0.3), lineWidth: 0.5)
+            }
+        }
     }
 
     private var background: some ShapeStyle {

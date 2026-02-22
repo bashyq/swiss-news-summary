@@ -21,7 +21,13 @@ struct LunchCard: View {
         }
         .background(Color(.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Color.cuisineBorderColor(spot.cuisineCategory))
+                .frame(width: 4)
+                .padding(.vertical, 6)
+        }
+        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
     }
 
     // MARK: - Card Content
@@ -64,7 +70,7 @@ struct LunchCard: View {
 
             // Restaurant name
             Text(spot.name)
-                .font(.subheadline)
+                .font(.system(.subheadline, design: .serif))
                 .fontWeight(.semibold)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)

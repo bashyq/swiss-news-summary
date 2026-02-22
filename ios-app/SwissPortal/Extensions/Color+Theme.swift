@@ -1,5 +1,13 @@
 import SwiftUI
 
+// MARK: - Gradient Presets
+
+extension LinearGradient {
+    static let purpleIndigo = LinearGradient(
+        colors: [.purple, .indigo], startPoint: .leading, endPoint: .trailing
+    )
+}
+
 /// App color palette — adapts to light/dark mode automatically
 extension Color {
     // MARK: - Primary Colors
@@ -86,6 +94,26 @@ extension Color {
         case "culture": return .orange
         case "local": return .teal
         default: return .gray
+        }
+    }
+
+    // MARK: - Card Border Colors
+
+    static func activityBorderColor(indoor: Bool, isFree: Bool) -> Color {
+        if isFree { return .green }
+        return indoor ? .blue : .orange
+    }
+
+    static func cuisineBorderColor(_ category: String?) -> Color {
+        switch category?.lowercased() {
+        case "swiss": return .red
+        case "italian": return .green
+        case "asian": return .orange
+        case "kebab": return .brown
+        case "cafe": return .purple
+        case "vegetarian": return .mint
+        case "fastfood": return .yellow
+        default: return .blue
         }
     }
 }

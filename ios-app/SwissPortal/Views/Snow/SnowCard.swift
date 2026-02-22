@@ -26,7 +26,14 @@ struct SnowCard: View {
         }
         .background(Color(.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Color.snowColor(cm: resort.snowfallWeekTotal))
+                .frame(width: 4)
+                .padding(.vertical, 6)
+        }
+        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+        .sensoryFeedback(.selection, trigger: isExpanded)
         .contentShape(Rectangle())
         .onTapGesture { onTap() }
     }
@@ -42,7 +49,7 @@ struct SnowCard: View {
             // Name and region
             VStack(alignment: .leading, spacing: 2) {
                 Text(resort.localizedName(language: language))
-                    .font(.subheadline)
+                    .font(.system(.subheadline, design: .serif))
                     .fontWeight(.semibold)
                     .lineLimit(1)
                 Text(resort.localizedRegion(language: language))
@@ -103,6 +110,7 @@ struct SnowCard: View {
                 .font(.title3)
                 .fontWeight(.bold)
                 .foregroundStyle(Color.snowColor(cm: resort.snowfallWeekTotal))
+                .contentTransition(.numericText())
             Text("cm")
                 .font(.caption2)
                 .foregroundStyle(.secondary)

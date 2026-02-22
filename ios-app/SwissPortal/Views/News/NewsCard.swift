@@ -9,6 +9,7 @@ struct NewsCard: View {
     @Environment(AppState.self) private var appState
 
     let item: NewsItem
+    var category: String = "topStories"
 
     @State private var isExpanded = false
 
@@ -18,7 +19,14 @@ struct NewsCard: View {
         }
         .background(Color(.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Color.categoryColor(category))
+                .frame(width: 4)
+                .padding(.vertical, 6)
+        }
+        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+        .sensoryFeedback(.selection, trigger: isExpanded)
     }
 
     // MARK: - Card Content
@@ -49,7 +57,7 @@ struct NewsCard: View {
 
     private var headline: some View {
         Text(item.localizedHeadline(language: appState.language))
-            .font(.subheadline)
+            .font(.system(.subheadline, design: .serif))
             .fontWeight(.semibold)
             .lineLimit(3)
             .fixedSize(horizontal: false, vertical: true)

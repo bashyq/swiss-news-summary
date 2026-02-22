@@ -115,9 +115,9 @@ final class AppState {
         switch host {
         case "news": selectedTab = .news
         case "activities": selectedTab = .activities
-        case "events": selectedTab = .events
+        case "lunch": selectedTab = .lunch
         case "weather": selectedTab = .weather
-        case "lunch": selectedTab = .more
+        case "events": selectedTab = .more
         default: break
         }
 
@@ -135,7 +135,7 @@ final class AppState {
 enum AppTab: String, CaseIterable {
     case news
     case activities
-    case events
+    case lunch
     case weather // sunshine + snow
     case more
 
@@ -143,7 +143,7 @@ enum AppTab: String, CaseIterable {
         switch self {
         case .news: return "News"
         case .activities: return "Activities"
-        case .events: return "Events"
+        case .lunch: return "Lunch"
         case .weather: return "Weather"
         case .more: return "More"
         }
@@ -153,7 +153,7 @@ enum AppTab: String, CaseIterable {
         switch self {
         case .news: return "Nachrichten"
         case .activities: return "Aktivitäten"
-        case .events: return "Events"
+        case .lunch: return "Mittagessen"
         case .weather: return "Wetter"
         case .more: return "Mehr"
         }
@@ -163,7 +163,7 @@ enum AppTab: String, CaseIterable {
         switch self {
         case .news: return "newspaper"
         case .activities: return "figure.play"
-        case .events: return "calendar"
+        case .lunch: return "fork.knife"
         case .weather: return "sun.max"
         case .more: return "ellipsis.circle"
         }

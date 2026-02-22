@@ -10,39 +10,37 @@ struct EventsView: View {
     @State private var viewModel = EventsViewModel()
 
     var body: some View {
-        NavigationStack {
-            content
-                .navigationTitle(navigationTitle)
-                .navigationBarTitleDisplayMode(.large)
-                .refreshable {
+        content
+            .navigationTitle(navigationTitle)
+            .navigationBarTitleDisplayMode(.large)
+            .refreshable {
+                await viewModel.loadData(
+                    city: appState.city,
+                    language: appState.language
+                )
+            }
+            .task {
+                await viewModel.loadData(
+                    city: appState.city,
+                    language: appState.language
+                )
+            }
+            .onChange(of: appState.city) { _, _ in
+                Task {
                     await viewModel.loadData(
                         city: appState.city,
                         language: appState.language
                     )
                 }
-                .task {
+            }
+            .onChange(of: appState.language) { _, _ in
+                Task {
                     await viewModel.loadData(
                         city: appState.city,
                         language: appState.language
                     )
                 }
-                .onChange(of: appState.city) { _, _ in
-                    Task {
-                        await viewModel.loadData(
-                            city: appState.city,
-                            language: appState.language
-                        )
-                    }
-                }
-                .onChange(of: appState.language) { _, _ in
-                    Task {
-                        await viewModel.loadData(
-                            city: appState.city,
-                            language: appState.language
-                        )
-                    }
-                }
-        }
+            }
     }
 
     // MARK: - Navigation Title

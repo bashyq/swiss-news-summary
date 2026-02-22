@@ -144,6 +144,16 @@ struct ActivitiesView: View {
         }
     }
 
+    private var weatherTintColor: Color? {
+        guard let code = viewModel.activitiesData?.weather.weatherCode else { return nil }
+        switch code {
+        case 0...3: return Color.orange.opacity(0.03)
+        case 51...67, 80...82: return Color.blue.opacity(0.03)
+        case 71...77, 85, 86: return Color.gray.opacity(0.03)
+        default: return nil
+        }
+    }
+
     // MARK: - Activities Content
 
     private var activitiesContent: some View {
@@ -166,6 +176,8 @@ struct ActivitiesView: View {
                     ))
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .contentTransition(.numericText())
+                    .animation(.default, value: filteredAndSorted.count)
                     Spacer()
                 }
                 .padding(.horizontal)
@@ -212,6 +224,7 @@ struct ActivitiesView: View {
             surpriseMeButton
                 .padding(.bottom, 16)
         }
+        .background(weatherTintColor ?? .clear)
     }
 
     // MARK: - Activity List
@@ -303,7 +316,7 @@ struct ActivitiesView: View {
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 12)
-            .background(Color.purple)
+            .background(LinearGradient.purpleIndigo)
             .foregroundStyle(.white)
             .clipShape(Capsule())
             .shadow(color: .purple.opacity(0.3), radius: 8, x: 0, y: 4)

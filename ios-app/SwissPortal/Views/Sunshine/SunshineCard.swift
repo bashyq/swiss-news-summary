@@ -34,20 +34,27 @@ struct SunshineCard: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(isBaseline ? Color.purple.opacity(0.5) : .clear, lineWidth: isBaseline ? 2 : 0)
         )
-        .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(isBaseline ? Color.purple : Color.sunshineColor(hours: destination.sunshineHoursTotal))
+                .frame(width: 4)
+                .padding(.vertical, 6)
+        }
+        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+        .sensoryFeedback(.selection, trigger: isExpanded)
         .contentShape(Rectangle())
         .onTapGesture { onTap() }
     }
 
     // MARK: - Card Background
 
+    @ViewBuilder
     private var cardBackground: some View {
-        Group {
-            if isBaseline {
-                Color.purple.opacity(0.06)
-            } else {
-                Color(.secondarySystemGroupedBackground)
-            }
+        if isBaseline {
+            LinearGradient(colors: [Color.purple.opacity(0.08), Color.purple.opacity(0.03)],
+                           startPoint: .top, endPoint: .bottom)
+        } else {
+            Color(.secondarySystemGroupedBackground)
         }
     }
 
@@ -68,7 +75,7 @@ struct SunshineCard: View {
                             .foregroundStyle(.purple)
                     }
                     Text(destination.localizedName(language: language))
-                        .font(.subheadline)
+                        .font(.system(.subheadline, design: .serif))
                         .fontWeight(.semibold)
                         .lineLimit(1)
                 }
@@ -107,6 +114,7 @@ struct SunshineCard: View {
                 .font(.title3)
                 .fontWeight(.bold)
                 .foregroundStyle(Color.sunshineColor(hours: destination.sunshineHoursTotal))
+                .contentTransition(.numericText())
             Text(language == .de ? "Std" : "hrs")
                 .font(.caption2)
                 .foregroundStyle(.secondary)

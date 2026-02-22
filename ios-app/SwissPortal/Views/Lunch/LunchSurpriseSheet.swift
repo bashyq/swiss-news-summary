@@ -112,7 +112,7 @@ struct LunchSurpriseSheet: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(Color.purple)
+                .background(LinearGradient.purpleIndigo)
                 .foregroundStyle(.white)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }

@@ -125,6 +125,16 @@ struct NewsView: View {
         }
     }
 
+    private var weatherTintColor: Color? {
+        guard let code = viewModel.newsData?.weather.weatherCode else { return nil }
+        switch code {
+        case 0...3: return Color.orange.opacity(0.03)
+        case 51...67, 80...82: return Color.blue.opacity(0.03)
+        case 71...77, 85, 86: return Color.gray.opacity(0.03)
+        default: return nil
+        }
+    }
+
     private var newsContent: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
@@ -189,7 +199,7 @@ struct NewsView: View {
                 } else {
                     LazyVStack(spacing: 12) {
                         ForEach(viewModel.currentItems) { item in
-                            NewsCard(item: item)
+                            NewsCard(item: item, category: viewModel.selectedCategory)
                         }
                     }
                     .padding(.horizontal)
@@ -198,6 +208,7 @@ struct NewsView: View {
                 }
             }
         }
+        .background(weatherTintColor ?? .clear)
         .refreshable {
             await viewModel.loadNews(
                 city: appState.city,

@@ -26,13 +26,23 @@ struct FilterChip: View {
                         .padding(.vertical, 1)
                         .background(isSelected ? .white.opacity(0.3) : .secondary.opacity(0.2))
                         .clipShape(Capsule())
+                        .contentTransition(.numericText())
+                        .animation(.default, value: count)
                 }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
-            .background(isSelected ? Color.purple : Color(.systemGray6))
+            .background {
+                if isSelected {
+                    LinearGradient.purpleIndigo
+                } else {
+                    LinearGradient(colors: [Color(.systemGray6)], startPoint: .leading, endPoint: .trailing)
+                }
+            }
             .foregroundStyle(isSelected ? .white : .primary)
             .clipShape(Capsule())
+            .scaleEffect(isSelected ? 1.02 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
         }
         .buttonStyle(.plain)
     }

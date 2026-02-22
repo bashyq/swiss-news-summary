@@ -15,7 +15,7 @@ struct BriefingCard: View {
             // Header: greeting + dismiss button
             HStack {
                 Text(greeting)
-                    .font(.headline)
+                    .font(.system(.headline, design: .serif))
                     .fontWeight(.bold)
 
                 Spacer()
@@ -35,7 +35,7 @@ struct BriefingCard: View {
             if let topStory = briefing.topStory {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(topStory.headline)
-                        .font(.subheadline)
+                        .font(.system(.subheadline, design: .serif))
                         .fontWeight(.semibold)
                         .lineLimit(2)
 

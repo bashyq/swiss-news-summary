@@ -67,6 +67,17 @@ struct ActivityMapView: View {
             }
         }
         .overlay(alignment: .bottom) {
+            VStack(spacing: 0) {
+                Spacer()
+                LinearGradient(
+                    colors: [.clear, Color(.systemBackground).opacity(0.8)],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .frame(height: 20)
+                .allowsHitTesting(false)
+            }
+        }
+        .overlay(alignment: .bottom) {
             if let selected = selectedActivity {
                 selectedActivityCard(selected)
                     .transition(.move(edge: .bottom).combined(with: .opacity))

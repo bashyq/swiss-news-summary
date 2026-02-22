@@ -18,6 +18,20 @@ struct LunchView: View {
         content
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.large)
+            .toolbarTitleMenu {
+                ForEach(City.allCases) { city in
+                    Button {
+                        appState.city = city
+                    } label: {
+                        HStack {
+                            Text(city.localizedName(language: appState.language))
+                            if city == appState.city {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 12) {
@@ -148,6 +162,8 @@ struct LunchView: View {
                         ))
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .contentTransition(.numericText())
+                        .animation(.default, value: total)
                     } else {
                         Text(appState.localized(
                             en: "\(total) results",
@@ -155,6 +171,8 @@ struct LunchView: View {
                         ))
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .contentTransition(.numericText())
+                        .animation(.default, value: total)
                     }
                     Spacer()
                 }
@@ -299,7 +317,7 @@ struct LunchView: View {
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 12)
-            .background(Color.purple)
+            .background(LinearGradient.purpleIndigo)
             .foregroundStyle(.white)
             .clipShape(Capsule())
             .shadow(color: .purple.opacity(0.3), radius: 8, x: 0, y: 4)

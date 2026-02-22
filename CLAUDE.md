@@ -117,14 +117,24 @@ xcodebuild -project SwissPortal.xcodeproj -scheme SwissPortal \
 ```
 
 ### iOS-Specific Features
-- **Quick city picker**: Toolbar title menu (tap nav title → city dropdown)
+- **Tab bar layout**: News, Activities, Lunch (fork.knife), Weather, More — Events moved to More
+- **Quick city picker**: Toolbar title menu (tap nav title → city dropdown) on News, Activities, Lunch
+- **Visual design**: Serif headlines on cards, colored left border strips, purple→indigo gradient buttons, deeper shadows
+- **Card border colors**: News (category color), Activities (indoor/outdoor/free), Lunch (cuisine), Sunshine (hours), Snow (snowfall)
+- **Gradient buttons**: "Surprise me!" and "Try another" use purple→indigo gradient; selected filter chips also gradient
+- **Weather background tint**: Subtle orange/blue/gray tint on News and Activities based on weather code
+- **Numeric transitions**: Count labels animate with `.contentTransition(.numericText())`
+- **Sensory feedback**: Haptic on card expand/collapse (NewsCard, SunshineCard, SnowCard)
+- **Map gradient fade**: Bottom gradient overlay on all 4 map views (Lunch, Activities, Sunshine, Snow)
+- **Badge borders**: Filled badges have subtle stroke overlay
+- **Filter chip bounce**: Scale effect with spring animation on selected chips
 - **Skeleton loading**: Shimmer placeholders during initial load (no cache)
 - **Lunch display limit**: 50 spots shown by default, "Show all" to expand
 - **Lunch map collapsed**: Map starts hidden, toggle via toolbar button
 - **"Closed" badge**: Gray badge on lunch cards when `openForLunch == false`
 - **Calendar "Today" button**: Pill appears when viewing non-current month
 - **Near Me map focus**: Tapping "Near me" / "Near" sort centers map on user location
-- **URL deep linking**: `swissportal://news`, `swissportal://activities?city=basel`, etc.
+- **URL deep linking**: `swissportal://lunch` → Lunch tab, `swissportal://events` → More tab, etc.
 - **Toast notifications**: Save/unsave feedback via ToastManager
 - **Pull-to-refresh**: On list views (not triggered by horizontal filter scroll)
 
@@ -159,7 +169,7 @@ xcodebuild -project SwissPortal.xcodeproj -scheme SwissPortal \
 - **"Surprise me!" button**: Random weather-appropriate activity picker
 - **Age filter**: Toggle between All ages, 2-3 years, or 4-5 years
 
-### Events View ("What's On")
+### Events View ("What's On") — accessed via More tab
 - Combined calendar + daily digest — merged from separate Events Calendar and What's On views
 - **Calendar grid**: Auto-selects today, purple dots for festivals, red for holidays, amber for school holidays, blue for recurring
 - **Day detail panel**: Click any day to see detail below calendar:
@@ -180,8 +190,9 @@ xcodebuild -project SwissPortal.xcodeproj -scheme SwissPortal \
 - Smart activity filtering based on weather and day-of-week
 - Uses `isAvailableOnDate()` for recurring/seasonal filtering
 
-### Lunch Page
+### Lunch Page — iOS tab bar (3rd tab, fork.knife icon)
 - Restaurant recommendations with compact map strip + list
+- Quick city picker via toolbar title menu (same pattern as Activities)
 - "Surprise me!" random restaurant picker
 
 ### Stay-Home Activities
