@@ -170,7 +170,7 @@ struct StayHomeCard: View {
                 .lineLimit(3)
                 .fixedSize(horizontal: false, vertical: true)
 
-            // Materials list
+            // Materials
             if let materials = activity.localizedMaterials(language: language), !materials.isEmpty {
                 Divider()
                 VStack(alignment: .leading, spacing: 2) {
@@ -179,17 +179,10 @@ struct StayHomeCard: View {
                         .fontWeight(.medium)
                         .foregroundStyle(.purple)
 
-                    ForEach(materials, id: \.self) { material in
-                        HStack(alignment: .top, spacing: 4) {
-                            Text("\u{2022}")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                            Text(material)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-                    }
+                    Text(materials)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
                 }
             }
         }
@@ -226,8 +219,8 @@ struct StayHomeCard: View {
             stayHome: true,
             availableMonths: nil,
             subcategory: "sensory",
-            materials: StringOrArray(values: ["Play dough", "Cookie cutters", "Rolling pin"]),
-            materialsDE: StringOrArray(values: ["Knete", "Ausstechformen", "Nudelholz"])
+            materials: "Play dough, Cookie cutters, Rolling pin",
+            materialsDE: "Knete, Ausstechformen, Nudelholz"
         ),
         Activity(
             id: "art-1",
@@ -252,8 +245,8 @@ struct StayHomeCard: View {
             stayHome: true,
             availableMonths: nil,
             subcategory: "art",
-            materials: StringOrArray(values: ["Finger paints", "Large paper", "Old clothes"]),
-            materialsDE: StringOrArray(values: ["Fingerfarben", "Grosses Papier", "Alte Kleidung"])
+            materials: "Finger paints, Large paper, Old clothes",
+            materialsDE: "Fingerfarben, Grosses Papier, Alte Kleidung"
         )
     ]
 

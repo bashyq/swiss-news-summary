@@ -104,22 +104,18 @@ struct ActivityCard: View {
                 )
 
                 // Duration badge
-                if let duration = activity.duration {
-                    BadgeView(
-                        text: duration,
-                        icon: "clock",
-                        color: .gray
-                    )
-                }
+                BadgeView(
+                    text: activity.duration,
+                    icon: "clock",
+                    color: .gray
+                )
 
                 // Price badge
-                if let price = activity.localizedPrice(language: language) {
-                    BadgeView(
-                        text: price,
-                        icon: "banknote",
-                        color: .gray
-                    )
-                }
+                BadgeView(
+                    text: activity.localizedPrice(language: language),
+                    icon: "banknote",
+                    color: .gray
+                )
 
                 // Free badge
                 if activity.isFree {
@@ -127,13 +123,11 @@ struct ActivityCard: View {
                 }
 
                 // Age range badge
-                if let ageRange = activity.ageRange {
-                    BadgeView(
-                        text: ageRange,
-                        icon: "figure.and.child.holdinghands",
-                        color: .purple
-                    )
-                }
+                BadgeView(
+                    text: activity.ageRange,
+                    icon: "figure.and.child.holdinghands",
+                    color: .purple
+                )
 
                 // Seasonal badge
                 if let season = activity.season {
@@ -154,7 +148,7 @@ struct ActivityCard: View {
     }
 
     private var categoryIcon: String {
-        switch activity.category?.lowercased() {
+        switch activity.category.lowercased() {
         case "animals": return "pawprint.fill"
         case "playground": return "figure.play"
         case "museum": return "building.columns.fill"
@@ -198,35 +192,8 @@ struct ActivityCard: View {
 }
 
 #Preview {
-    let sampleActivity = Activity(
-        id: "zoo-zurich",
-        name: "Zoo Zurich",
-        nameDE: "Zoo Zurich",
-        description: "One of the best zoos in Europe with a large Masoala Rainforest hall.",
-        descriptionDE: "Einer der besten Zoos Europas mit einer grossen Masoala-Regenwaldhalle.",
-        indoor: false,
-        ageRange: "2-5 years",
-        duration: "2-4 hours",
-        price: "CHF 29 adults, kids under 6 free",
-        priceDE: nil,
-        url: "https://www.zoo.ch",
-        lat: 47.3849,
-        lon: 8.5743,
-        category: "animals",
-        minAge: 2,
-        maxAge: 5,
-        season: nil,
-        free: false,
-        recurring: nil,
-        stayHome: nil,
-        availableMonths: nil,
-        subcategory: nil,
-        materials: nil,
-        materialsDE: nil
-    )
-
     ActivityCard(
-        activity: sampleActivity,
+        activity: PreviewData.activity,
         language: .en,
         location: nil
     )

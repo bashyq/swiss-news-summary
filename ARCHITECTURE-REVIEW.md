@@ -142,7 +142,6 @@ TodayInSwitzerlandWidget/
 | Consider String Catalogs for localization | Nice to have |
 | Add App Group capability for widget data sharing | Should do |
 | Remove debug error logging before App Store submission | Must do |
-| Add pull-to-refresh on all list views | Nice to have |
 | Add offline indicator when no cached data available | Nice to have |
 
 ---

@@ -6,8 +6,6 @@ import CoreLocation
 /// Response from GET /lunch?lang={en|de}&city={cityId}
 struct LunchResponse: Codable {
     let spots: [LunchSpot]
-    let city: CityInfo?
-    let timestamp: String?
 }
 
 // MARK: - Lunch Spot
@@ -25,8 +23,10 @@ struct LunchSpot: Codable, Identifiable {
     let openingHours: String?
     let openForLunch: Bool?
     let vegetarian: String?
+    let vegan: String?
     let phone: String?
     let website: String?
+    let amenity: String
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: lat, longitude: lon)

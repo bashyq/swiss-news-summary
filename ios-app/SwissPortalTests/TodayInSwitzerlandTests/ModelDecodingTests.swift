@@ -1,5 +1,6 @@
 import XCTest
-@testable import TodayInSwitzerland
+import CoreLocation
+@testable import SwissPortal
 
 /// Tests that all Codable models decode correctly from JSON
 /// matching the actual Cloudflare Worker API response shapes.
@@ -12,7 +13,7 @@ final class ModelDecodingTests: XCTestCase {
         {
             "weather": {"temperature": 5.2, "description": "Partly cloudy", "weatherCode": 2, "windSpeed": 12.5, "hourly": []},
             "transport": {"delays": [{"line": "IC 8", "destination": "Bern", "delay": 5, "scheduledTime": "14:02"}], "summary": {"totalDelayed": 1, "maxDelay": 5, "status": "minor"}},
-            "holidays": [{"name": "Easter", "nameDE": "Ostern", "daysUntil": 45}],
+            "holidays": [{"name": "Easter", "nameDE": "Ostern", "daysUntil": 45, "date": "2026-04-06"}],
             "schoolHolidays": [{"name": "Sport", "nameDE": "Sportferien", "startDate": "2026-02-09", "endDate": "2026-02-21", "type": "schoolHoliday"}],
             "history": {"year": 1958, "event": "Test event", "eventDE": "Test-Ereignis"},
             "categories": {"topStories": [{"headline": "Test headline", "summary": "Test summary", "source": "NZZ"}], "politics": [], "disruptions": [], "events": [], "culture": [], "local": []},
@@ -31,6 +32,7 @@ final class ModelDecodingTests: XCTestCase {
         XCTAssertEqual(response.transport.summary.status, "minor")
         XCTAssertEqual(response.holidays.count, 1)
         XCTAssertEqual(response.holidays[0].localizedName(language: .de), "Ostern")
+        XCTAssertEqual(response.holidays[0].date, "2026-04-06")
         XCTAssertEqual(response.schoolHolidays.count, 1)
         XCTAssertEqual(response.history.year, 1958)
         XCTAssertEqual(response.categories.items(for: "topStories").count, 1)
@@ -58,6 +60,26 @@ final class ModelDecodingTests: XCTestCase {
         XCTAssertEqual(response.categories.items(for: "topStories").count, 0)
     }
 
+    func testDecodeTransportSummaryAsString() throws {
+        let json = """
+        {
+            "weather": {"temperature": 5, "description": "Clear", "weatherCode": 0, "windSpeed": 3},
+            "transport": {"delays": [], "summary": "ok"},
+            "holidays": [],
+            "schoolHolidays": [],
+            "history": {"year": 2000, "event": "Test"},
+            "categories": {},
+            "city": {"id": "zurich", "name": "Zürich"},
+            "timestamp": "2026-01-01T00:00:00Z"
+        }
+        """.data(using: .utf8)!
+
+        let response = try JSONDecoder().decode(NewsResponse.self, from: json)
+        // When summary is a string, custom decoder falls back to default
+        XCTAssertEqual(response.transport.summary.status, "none")
+        XCTAssertEqual(response.transport.summary.totalDelayed, 0)
+    }
+
     // MARK: - Activities Response
 
     func testDecodeActivitiesResponse() throws {
@@ -83,14 +105,18 @@ final class ModelDecodingTests: XCTestCase {
             "cityEvents": [{
                 "id": "zh-sechselaeuten",
                 "name": "Sechseläuten",
+                "nameDE": "Sechseläuten",
                 "city": "zurich",
                 "startDate": "2026-04-20",
                 "endDate": "2026-04-20",
+                "description": "Spring festival",
+                "descriptionDE": "Frühlingsfest",
                 "toddlerFriendly": true,
                 "free": true
             }],
             "weather": {"temperature": 10, "description": "Sunny", "weatherCode": 0, "windSpeed": 5},
-            "city": {"id": "zurich", "name": "Zürich"}
+            "city": {"id": "zurich", "name": "Zürich"},
+            "timestamp": "2026-02-21T12:00:00Z"
         }
         """.data(using: .utf8)!
 
@@ -100,7 +126,38 @@ final class ModelDecodingTests: XCTestCase {
         XCTAssertFalse(response.activities[0].indoor)
         XCTAssertNotNil(response.activities[0].coordinate)
         XCTAssertEqual(response.cityEvents.count, 1)
-        XCTAssertTrue(response.cityEvents[0].toddlerFriendly ?? false)
+        XCTAssertTrue(response.cityEvents[0].toddlerFriendly)
+    }
+
+    func testDecodeActivityWithStringMaterials() throws {
+        let json = """
+        {
+            "activities": [{
+                "id": "sensory-bin",
+                "name": "Sensory Bin",
+                "nameDE": "Sensorik-Kiste",
+                "description": "Play with sensory materials",
+                "descriptionDE": "Spielen mit sensorischen Materialien",
+                "indoor": true,
+                "ageRange": "2-5 years",
+                "duration": "30-60 min",
+                "price": "Free",
+                "category": "sensory",
+                "materials": "Rice, Pasta, Small toys",
+                "materialsDE": "Reis, Nudeln, Kleine Spielzeuge",
+                "stayHome": true,
+                "free": true
+            }],
+            "cityEvents": [],
+            "weather": {"temperature": 10, "description": "Sunny", "weatherCode": 0, "windSpeed": 5},
+            "city": {"id": "zurich", "name": "Zürich"},
+            "timestamp": "2026-02-21T12:00:00Z"
+        }
+        """.data(using: .utf8)!
+
+        let response = try JSONDecoder().decode(ActivitiesResponse.self, from: json)
+        XCTAssertEqual(response.activities[0].materials, "Rice, Pasta, Small toys")
+        XCTAssertEqual(response.activities[0].localizedMaterials(language: .de), "Reis, Nudeln, Kleine Spielzeuge")
     }
 
     // MARK: - Sunshine Response
@@ -123,7 +180,8 @@ final class ModelDecodingTests: XCTestCase {
                     "tempMin": 3,
                     "sunshineHours": 7.2,
                     "precipMm": 0,
-                    "sunnyHours": [8,9,10,11,12,13,14,15,16]
+                    "sunnyHours": [8,9,10,11,12,13,14,15,16],
+                    "description": "Mainly sunny"
                 }],
                 "sunshineHoursTotal": 18.5,
                 "isBaseline": false
@@ -137,6 +195,7 @@ final class ModelDecodingTests: XCTestCase {
         XCTAssertEqual(response.destinations.count, 1)
         XCTAssertEqual(response.destinations[0].sunshineHoursTotal, 18.5)
         XCTAssertEqual(response.destinations[0].forecast[0].sunnyHours?.count, 9)
+        XCTAssertEqual(response.destinations[0].forecast[0].description, "Mainly sunny")
         XCTAssertEqual(response.weekendDates.friday, "2026-02-20")
     }
 
@@ -153,7 +212,7 @@ final class ModelDecodingTests: XCTestCase {
                 "region": "Valais",
                 "driveMinutes": 195,
                 "altitude": 1620,
-                "forecast": [{"date": "2026-02-16", "snowfallCm": 5.2, "weatherCode": 73, "tempMax": -2, "tempMin": -8}],
+                "forecast": [{"date": "2026-02-16", "snowfallCm": 5.2, "weatherCode": 73, "tempMax": -2, "tempMin": -8, "description": "Moderate snow"}],
                 "snowfallWeekTotal": 28.5,
                 "snowDepthCm": 145
             }],
@@ -166,6 +225,7 @@ final class ModelDecodingTests: XCTestCase {
         XCTAssertEqual(response.destinations.count, 1)
         XCTAssertEqual(response.destinations[0].altitude, 1620)
         XCTAssertEqual(response.destinations[0].snowfallWeekTotal, 28.5)
+        XCTAssertEqual(response.destinations[0].snowDepthCm, 145)
         XCTAssertEqual(response.destinations[0].snowfallLevel, .moderate)
     }
 
@@ -182,9 +242,9 @@ final class ModelDecodingTests: XCTestCase {
                 "cuisine": "Swiss",
                 "cuisineCategory": "swiss",
                 "outdoorSeating": true,
-                "openForLunch": true
-            }],
-            "city": {"id": "zurich", "name": "Zürich"}
+                "openForLunch": true,
+                "amenity": "restaurant"
+            }]
         }
         """.data(using: .utf8)!
 
@@ -192,6 +252,7 @@ final class ModelDecodingTests: XCTestCase {
         XCTAssertEqual(response.spots.count, 1)
         XCTAssertEqual(response.spots[0].cuisineDisplay, "Swiss")
         XCTAssertTrue(response.spots[0].outdoorSeating ?? false)
+        XCTAssertEqual(response.spots[0].amenity, "restaurant")
     }
 
     // MARK: - Weekend Response
@@ -214,7 +275,8 @@ final class ModelDecodingTests: XCTestCase {
                     "morning": {"id": "indoor-play", "name": "Indoor Play", "description": "Play indoors", "indoor": true}
                 }
             },
-            "city": {"id": "zurich", "name": "Zürich"}
+            "city": {"id": "zurich", "name": "Zürich"},
+            "timestamp": "2026-02-21T06:00:00Z"
         }
         """.data(using: .utf8)!
 
@@ -223,6 +285,7 @@ final class ModelDecodingTests: XCTestCase {
         XCTAssertNotNil(response.saturday.plan.morning)
         XCTAssertNotNil(response.saturday.plan.afternoon)
         XCTAssertNil(response.sunday.plan.afternoon)
+        XCTAssertEqual(response.timestamp, "2026-02-21T06:00:00Z")
     }
 
     // MARK: - Weather Helpers
@@ -243,15 +306,15 @@ final class ModelDecodingTests: XCTestCase {
     // MARK: - Activity Helpers
 
     func testActivityFreeDetection() {
-        let freeActivity = Activity(id: "test", name: "Test", nameDE: nil, description: "Test", descriptionDE: nil, indoor: false, ageRange: nil, duration: nil, price: "Free entry", priceDE: nil, url: nil, lat: nil, lon: nil, category: nil, minAge: nil, maxAge: nil, season: nil, free: nil, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil)
+        let freeActivity = Activity(id: "test", name: "Test", nameDE: "Test", description: "Test", descriptionDE: "Test", indoor: false, ageRange: "2-5", duration: "1h", price: "Free entry", priceDE: nil, url: nil, lat: nil, lon: nil, category: "nature", minAge: nil, maxAge: nil, season: nil, free: nil, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil)
         XCTAssertTrue(freeActivity.isFree)
 
-        let paidActivity = Activity(id: "test2", name: "Test", nameDE: nil, description: "Test", descriptionDE: nil, indoor: false, ageRange: nil, duration: nil, price: "CHF 15", priceDE: nil, url: nil, lat: nil, lon: nil, category: nil, minAge: nil, maxAge: nil, season: nil, free: nil, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil)
+        let paidActivity = Activity(id: "test2", name: "Test", nameDE: "Test", description: "Test", descriptionDE: "Test", indoor: false, ageRange: "2-5", duration: "2h", price: "CHF 15", priceDE: nil, url: nil, lat: nil, lon: nil, category: "museum", minAge: nil, maxAge: nil, season: nil, free: nil, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil)
         XCTAssertFalse(paidActivity.isFree)
     }
 
     func testActivityAgeFilter() {
-        let toddlerActivity = Activity(id: "t", name: "T", nameDE: nil, description: "T", descriptionDE: nil, indoor: false, ageRange: nil, duration: nil, price: nil, priceDE: nil, url: nil, lat: nil, lon: nil, category: nil, minAge: 2, maxAge: 3, season: nil, free: nil, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil)
+        let toddlerActivity = Activity(id: "t", name: "T", nameDE: "T", description: "T", descriptionDE: "T", indoor: false, ageRange: "2-3", duration: "1h", price: "Free", priceDE: nil, url: nil, lat: nil, lon: nil, category: "play", minAge: 2, maxAge: 3, season: nil, free: nil, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil)
 
         XCTAssertTrue(toddlerActivity.matchesAge(.all))
         XCTAssertTrue(toddlerActivity.matchesAge(.toddler))
@@ -261,13 +324,13 @@ final class ModelDecodingTests: XCTestCase {
     // MARK: - Snow/Sunshine Levels
 
     func testSnowfallLevel() {
-        let heavy = SnowDestination(id: "t", name: "T", nameDE: nil, lat: 0, lon: 0, region: "R", regionDE: nil, driveMinutes: 0, altitude: 1000, forecast: [], snowfallWeekTotal: 45, snowDepthCm: nil)
+        let heavy = SnowDestination(id: "t", name: "T", nameDE: nil, lat: 0, lon: 0, region: "R", regionDE: nil, driveMinutes: 0, altitude: 1000, forecast: [], snowfallWeekTotal: 45, snowDepthCm: 100)
         XCTAssertEqual(heavy.snowfallLevel, .heavy)
 
-        let moderate = SnowDestination(id: "t", name: "T", nameDE: nil, lat: 0, lon: 0, region: "R", regionDE: nil, driveMinutes: 0, altitude: 1000, forecast: [], snowfallWeekTotal: 20, snowDepthCm: nil)
+        let moderate = SnowDestination(id: "t", name: "T", nameDE: nil, lat: 0, lon: 0, region: "R", regionDE: nil, driveMinutes: 0, altitude: 1000, forecast: [], snowfallWeekTotal: 20, snowDepthCm: 50)
         XCTAssertEqual(moderate.snowfallLevel, .moderate)
 
-        let light = SnowDestination(id: "t", name: "T", nameDE: nil, lat: 0, lon: 0, region: "R", regionDE: nil, driveMinutes: 0, altitude: 1000, forecast: [], snowfallWeekTotal: 5, snowDepthCm: nil)
+        let light = SnowDestination(id: "t", name: "T", nameDE: nil, lat: 0, lon: 0, region: "R", regionDE: nil, driveMinutes: 0, altitude: 1000, forecast: [], snowfallWeekTotal: 5, snowDepthCm: 10)
         XCTAssertEqual(light.snowfallLevel, .light)
     }
 
@@ -322,7 +385,7 @@ final class ModelDecodingTests: XCTestCase {
     func testSunshineDestinationsCount() {
         XCTAssertEqual(SunshineDestinations.all.count, 29)
         // First should be baseline (Zürich)
-        XCTAssertTrue(SunshineDestinations.all[0].isBaseline)
+        XCTAssertEqual(SunshineDestinations.all[0].isBaseline, true)
         XCTAssertEqual(SunshineDestinations.all[0].id, "zurich")
     }
 
@@ -349,7 +412,7 @@ final class ModelDecodingTests: XCTestCase {
     // MARK: - CityEvent Date Overlap
 
     func testCityEventOverlap() {
-        let event = CityEvent(id: "test", name: "Festival", nameDE: nil, city: "zurich", startDate: "2026-02-20", endDate: "2026-02-22", description: nil, descriptionDE: nil, toddlerFriendly: nil, free: nil, url: nil)
+        let event = CityEvent(id: "test", name: "Festival", nameDE: "Festival", city: "zurich", startDate: "2026-02-20", endDate: "2026-02-22", description: "A festival", descriptionDE: "Ein Festival", toddlerFriendly: true, free: true, url: nil)
 
         let feb21 = DateHelpers.parseISO("2026-02-21")!
         XCTAssertTrue(event.overlaps(with: feb21))

@@ -55,6 +55,16 @@
 		03CD27602F4B12400011395A /* TodayInSwitzerlandWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TodayInSwitzerlandWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		03CD276D2F4B12400011395A /* Exceptions for "TodayInSwitzerlandWidget" folder in "TodayInSwitzerlandWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 03CD27622F4B12400011395A /* TodayInSwitzerlandWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		03CD272F2F4B123E0011395A /* SwissPortal */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -74,22 +84,12 @@
 		03CD27612F4B12400011395A /* TodayInSwitzerlandWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				03CD276D2F4B12400011395A /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+				03CD276D2F4B12400011395A /* Exceptions for "TodayInSwitzerlandWidget" folder in "TodayInSwitzerlandWidgetExtension" target */,
 			);
 			path = TodayInSwitzerlandWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
-
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		03CD276D2F4B12400011395A /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 03CD27622F4B12400011395A /* TodayInSwitzerlandWidgetExtension */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		03CD272A2F4B123E0011395A /* Frameworks */ = {

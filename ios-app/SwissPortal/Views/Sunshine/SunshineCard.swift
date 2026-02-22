@@ -1,5 +1,4 @@
 import SwiftUI
-import MapKit
 import CoreLocation
 
 /// Expandable card for a sunshine destination.
@@ -141,11 +140,8 @@ struct SunshineCard: View {
             // Hourly timeline for the best day
             hourlyTimelineSection
 
-            // Destination highlights
-            highlightsSection
-
-            // Action buttons
-            actionButtons
+            // Destination highlights + action buttons
+            SunshineHighlightsSection(destination: destination, language: language)
         }
         .padding(14)
         .transition(.opacity.combined(with: .move(edge: .top)))
@@ -236,118 +232,6 @@ struct SunshineCard: View {
         }
     }
 
-    // MARK: - Highlights
-
-    @ViewBuilder
-    private var highlightsSection: some View {
-        let highlights = DestinationHighlights.forDestination(destination.id)
-        if !highlights.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(language == .de ? "Highlights" : "Things to do")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-
-                ForEach(highlights) { highlight in
-                    highlightRow(highlight)
-                }
-            }
-        }
-    }
-
-    private func highlightRow(_ highlight: DestinationHighlight) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: highlight.sfSymbol)
-                .font(.caption)
-                .foregroundStyle(.purple)
-                .frame(width: 20, height: 20)
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(highlight.localizedName(language: language))
-                    .font(.caption)
-                    .fontWeight(.medium)
-                Text(highlight.localizedDescription(language: language))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-            }
-
-            Spacer()
-
-            // Directions button
-            Button {
-                openDirections(to: highlight.coordinate, name: highlight.localizedName(language: language))
-            } label: {
-                Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
-                    .font(.caption)
-                    .foregroundStyle(.blue)
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    // MARK: - Action Buttons
-
-    private var actionButtons: some View {
-        VStack(spacing: 8) {
-            // Get directions button
-            Button {
-                openDirections(to: destination.coordinate, name: destination.localizedName(language: language))
-            } label: {
-                Label(
-                    language == .de ? "Route anzeigen" : "Get directions",
-                    systemImage: "car.fill"
-                )
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(Color.purple.opacity(0.12))
-                .foregroundStyle(.purple)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
-            .buttonStyle(.plain)
-
-            // Find playgrounds / restaurants
-            HStack(spacing: 8) {
-                Button {
-                    searchNearby(query: "playground", coordinate: destination.coordinate)
-                } label: {
-                    Label(
-                        language == .de ? "Spielplätze" : "Find playgrounds",
-                        systemImage: "figure.play"
-                    )
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-                    .background(Color(.systemGray6))
-                    .foregroundStyle(.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    searchNearby(query: "restaurant", coordinate: destination.coordinate)
-                } label: {
-                    Label(
-                        language == .de ? "Restaurants" : "Find restaurants",
-                        systemImage: "fork.knife"
-                    )
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-                    .background(Color(.systemGray6))
-                    .foregroundStyle(.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
-
     // MARK: - Helpers
 
     private var distanceMeters: Double? {
@@ -358,22 +242,5 @@ struct SunshineCard: View {
     private func dayName(for dateString: String) -> String {
         guard let date = DateHelpers.parseISO(dateString) else { return dateString }
         return DateHelpers.shortDayName(date)
-    }
-
-    private func openDirections(to coordinate: CLLocationCoordinate2D, name: String) {
-        let placemark = MKPlacemark(coordinate: coordinate)
-        let mapItem = MKMapItem(placemark: placemark)
-        mapItem.name = name
-        mapItem.openInMaps(launchOptions: [
-            MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving
-        ])
-    }
-
-    private func searchNearby(query: String, coordinate: CLLocationCoordinate2D) {
-        let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
-        let urlString = "maps://?q=\(encodedQuery)&sll=\(coordinate.latitude),\(coordinate.longitude)&z=14"
-        if let url = URL(string: urlString) {
-            UIApplication.shared.open(url)
-        }
     }
 }

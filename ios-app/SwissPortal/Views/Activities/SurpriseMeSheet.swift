@@ -39,15 +39,13 @@ struct SurpriseMeSheet: View {
                     badgesRow
 
                     // Price info
-                    if let price = activity.localizedPrice(language: appState.language) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "banknote")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                            Text(price)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
+                    HStack(spacing: 6) {
+                        Image(systemName: "banknote")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Text(activity.localizedPrice(language: appState.language))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                     }
 
                     Divider()
@@ -90,7 +88,7 @@ struct SurpriseMeSheet: View {
     }
 
     private var categoryIcon: String {
-        switch activity.category?.lowercased() {
+        switch activity.category.lowercased() {
         case "animals": return "pawprint.fill"
         case "playground": return "figure.play"
         case "museum": return "building.columns.fill"
@@ -119,9 +117,7 @@ struct SurpriseMeSheet: View {
             )
 
             // Duration
-            if let duration = activity.duration {
-                BadgeView(text: duration, icon: "clock", color: .gray)
-            }
+            BadgeView(text: activity.duration, icon: "clock", color: .gray)
 
             // Free badge
             if activity.isFree {
@@ -129,13 +125,11 @@ struct SurpriseMeSheet: View {
             }
 
             // Age range
-            if let ageRange = activity.ageRange {
-                BadgeView(
-                    text: ageRange,
-                    icon: "figure.and.child.holdinghands",
-                    color: .purple
-                )
-            }
+            BadgeView(
+                text: activity.ageRange,
+                icon: "figure.and.child.holdinghands",
+                color: .purple
+            )
         }
     }
 
@@ -197,35 +191,8 @@ struct SurpriseMeSheet: View {
 }
 
 #Preview {
-    let sample = Activity(
-        id: "zoo-zurich",
-        name: "Zoo Zurich",
-        nameDE: "Zoo Zurich",
-        description: "One of the best zoos in Europe with a large Masoala Rainforest hall.",
-        descriptionDE: "Einer der besten Zoos Europas mit einer grossen Masoala-Regenwaldhalle.",
-        indoor: false,
-        ageRange: "2-5 years",
-        duration: "2-4 hours",
-        price: "CHF 29 adults, kids under 6 free",
-        priceDE: nil,
-        url: "https://www.zoo.ch",
-        lat: 47.3849,
-        lon: 8.5743,
-        category: "animals",
-        minAge: 2,
-        maxAge: 5,
-        season: nil,
-        free: false,
-        recurring: nil,
-        stayHome: nil,
-        availableMonths: nil,
-        subcategory: nil,
-        materials: nil,
-        materialsDE: nil
-    )
-
     SurpriseMeSheet(
-        activity: sample,
+        activity: PreviewData.activity,
         onTryAnother: {},
         onSave: {},
         isSaved: false

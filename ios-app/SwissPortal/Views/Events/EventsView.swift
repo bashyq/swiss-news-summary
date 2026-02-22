@@ -118,55 +118,19 @@ struct EventsView: View {
     // MARK: - Filter Bar
 
     private var eventsFilterBar: some View {
-        let filters = ["all", "holidays", "schoolHolidays", "events", "recurring", "seasonal", "festivals"]
-
-        return ScrollView(.horizontal, showsIndicators: false) {
+        ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(filters, id: \.self) { filter in
+                ForEach(EventFilter.allCases, id: \.self) { filter in
                     FilterChip(
-                        label: filterLabel(for: filter),
+                        label: appState.language == .de ? filter.displayNameDE : filter.displayName,
                         isSelected: viewModel.eventFilter == filter,
-                        icon: filterIcon(for: filter)
+                        icon: filter.sfSymbol
                     ) {
                         viewModel.eventFilter = filter
                     }
                 }
             }
             .padding(.horizontal)
-        }
-    }
-
-    private func filterLabel(for filter: String) -> String {
-        switch filter {
-        case "all":
-            return appState.localized(en: "All", de: "Alle")
-        case "holidays":
-            return appState.localized(en: "Holidays", de: "Feiertage")
-        case "schoolHolidays":
-            return appState.localized(en: "School Holidays", de: "Schulferien")
-        case "events":
-            return appState.localized(en: "Events", de: "Veranstaltungen")
-        case "recurring":
-            return appState.localized(en: "Recurring", de: "Wiederkehrend")
-        case "seasonal":
-            return appState.localized(en: "Seasonal", de: "Saisonal")
-        case "festivals":
-            return appState.localized(en: "Festivals", de: "Festivals")
-        default:
-            return filter
-        }
-    }
-
-    private func filterIcon(for filter: String) -> String? {
-        switch filter {
-        case "all": return "square.grid.2x2"
-        case "holidays": return "flag"
-        case "schoolHolidays": return "graduationcap"
-        case "events": return "star"
-        case "recurring": return "arrow.triangle.2.circlepath"
-        case "seasonal": return "leaf"
-        case "festivals": return "party.popper"
-        default: return nil
         }
     }
 
@@ -180,8 +144,8 @@ struct EventsView: View {
                 emptyState
             } else {
                 LazyVStack(spacing: 12) {
-                    ForEach(Array(events.enumerated()), id: \.offset) { index, event in
-                        eventRow(for: event, index: index)
+                    ForEach(events) { item in
+                        eventRow(for: item)
                     }
                 }
             }
@@ -189,14 +153,15 @@ struct EventsView: View {
     }
 
     @ViewBuilder
-    private func eventRow(for event: Any, index: Int) -> some View {
-        if let holiday = event as? Holiday {
+    private func eventRow(for item: EventItem) -> some View {
+        switch item {
+        case .holiday(let holiday):
             holidayRow(holiday)
-        } else if let schoolHoliday = event as? SchoolHoliday {
+        case .schoolHoliday(let schoolHoliday):
             schoolHolidayRow(schoolHoliday)
-        } else if let cityEvent = event as? CityEvent {
+        case .cityEvent(let cityEvent):
             EventCard(event: cityEvent)
-        } else if let activity = event as? Activity {
+        case .activity(let activity):
             recurringActivityRow(activity)
         }
     }
@@ -215,11 +180,9 @@ struct EventsView: View {
                     .font(.subheadline)
                     .fontWeight(.semibold)
 
-                if let date = holiday.date {
-                    Text(date)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                Text(holiday.date)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Spacer()

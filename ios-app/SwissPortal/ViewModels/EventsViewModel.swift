@@ -34,7 +34,7 @@ final class EventsViewModel {
     var currentYear: Int
 
     /// Active filter for the events list
-    var eventFilter: String = "all"
+    var eventFilter: EventFilter = .all
 
     /// News response (provides holidays, school holidays, weather, trending)
     var newsData: NewsResponse?
@@ -142,8 +142,7 @@ final class EventsViewModel {
 
         // Holidays that fall on this date
         let matchingHolidays = holidays.filter { holiday in
-            guard let holidayDate = holiday.date else { return false }
-            return holidayDate == dateISO
+            return holiday.date == dateISO
         }
 
         // School holidays whose range overlaps this date
@@ -205,49 +204,47 @@ final class EventsViewModel {
 
     // MARK: - Filtered Events List
 
-    /// Returns all events filtered by the current `eventFilter`, as a heterogeneous array.
-    ///
-    /// Each element is one of: `Holiday`, `SchoolHoliday`, `CityEvent`, or `Activity`.
-    /// The caller should use `as?` or `switch` to determine the type and render accordingly.
-    ///
-    /// Filter options: "all", "holidays", "schoolHolidays", "events", "recurring", "seasonal", "festivals"
-    func filteredEvents(language: AppLanguage) -> [Any] {
-        var results: [Any] = []
+    /// Returns all events filtered by the current `eventFilter`, as a typed array.
+    func filteredEvents(language: AppLanguage) -> [EventItem] {
+        var results: [EventItem] = []
 
-        let includeAll = eventFilter == "all"
+        let includeAll = eventFilter == .all
 
         // Holidays
-        if includeAll || eventFilter == "holidays" {
-            results.append(contentsOf: holidays)
+        if includeAll || eventFilter == .holidays {
+            results.append(contentsOf: holidays.map { .holiday($0) })
         }
 
         // School holidays
-        if includeAll || eventFilter == "schoolHolidays" {
-            results.append(contentsOf: schoolHolidays)
+        if includeAll || eventFilter == .schoolHolidays {
+            results.append(contentsOf: schoolHolidays.map { .schoolHoliday($0) })
         }
 
         // City events / festivals
-        if includeAll || eventFilter == "events" || eventFilter == "festivals" {
-            results.append(contentsOf: cityEvents)
+        if includeAll || eventFilter == .events || eventFilter == .festivals {
+            results.append(contentsOf: cityEvents.map { .cityEvent($0) })
         }
 
         // Recurring activities
-        if includeAll || eventFilter == "recurring" {
+        if includeAll || eventFilter == .recurring {
             let allActivities = activitiesData?.activities ?? []
             let recurring = allActivities.filter { $0.recurring != nil }
-            results.append(contentsOf: recurring)
+            results.append(contentsOf: recurring.map { .activity($0) })
         }
 
         // Seasonal activities (exclude any already added as recurring to avoid duplicates)
-        if includeAll || eventFilter == "seasonal" {
+        if includeAll || eventFilter == .seasonal {
             let allActivities = activitiesData?.activities ?? []
             let addedRecurringIDs = Set(
-                (results.compactMap { ($0 as? Activity)?.id })
+                results.compactMap { item -> String? in
+                    if case .activity(let a) = item { return a.id }
+                    return nil
+                }
             )
             let seasonal = allActivities.filter {
                 $0.season != nil && $0.isCurrentSeason && !addedRecurringIDs.contains($0.id)
             }
-            results.append(contentsOf: seasonal)
+            results.append(contentsOf: seasonal.map { .activity($0) })
         }
 
         return results

@@ -77,7 +77,7 @@ struct ActivityMapView: View {
     }
 
     private func markerIcon(for activity: Activity) -> String {
-        switch activity.category?.lowercased() {
+        switch activity.category.lowercased() {
         case "animals": return "pawprint.fill"
         case "playground": return "figure.play"
         case "museum": return "building.columns.fill"
@@ -132,9 +132,7 @@ struct ActivityMapView: View {
                     color: activity.indoor ? .blue : .orange
                 )
 
-                if let duration = activity.duration {
-                    BadgeView(text: duration, icon: "clock", color: .gray)
-                }
+                BadgeView(text: activity.duration, icon: "clock", color: .gray)
 
                 if activity.isFree {
                     FreeBadge()

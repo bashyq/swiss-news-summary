@@ -72,7 +72,7 @@ enum PreviewData {
         history: HistoryFact(year: 1958, event: "The Swiss Pavilion opened at Expo 58 in Brussels", eventDE: "Der Schweizer Pavillon wurde an der Expo 58 in Brüssel eröffnet"),
         categories: categories,
         trending: TrendingTopic(topic: "SNB Interest Rates", topicDE: "SNB Leitzins", headline: nil, headlineDE: nil, url: nil),
-        briefing: Briefing(topStory: BriefingItem(headline: "SNB holds rates", summary: nil, source: nil, url: nil, sentiment: nil), suggestedActivity: BriefingActivity(id: nil, name: "Visit the Money Museum", nameDE: "Besuchen Sie das Geldmuseum", description: nil, descriptionDE: nil, indoor: nil)),
+        briefing: Briefing(topStory: BriefingItem(headline: "SNB holds rates", summary: "Summary of top story", source: "NZZ", url: "https://www.nzz.ch", sentiment: "neutral"), suggestedActivity: BriefingActivity(id: nil, name: "Visit the Money Museum", nameDE: "Besuchen Sie das Geldmuseum", description: nil, descriptionDE: nil, indoor: nil)),
         city: CityInfo(id: "zurich", name: "Zürich"),
         timestamp: "2026-02-21T12:00:00Z"
     )
@@ -129,8 +129,8 @@ enum PreviewData {
         stayHome: true,
         availableMonths: nil,
         subcategory: "sensory",
-        materials: StringOrArray(values: ["Rice or pasta", "Small toys", "Container"]),
-        materialsDE: StringOrArray(values: ["Reis oder Nudeln", "Kleine Spielzeuge", "Behälter"])
+        materials: "Rice or pasta, Small toys, Container",
+        materialsDE: "Reis oder Nudeln, Kleine Spielzeuge, Behälter"
     )
 
     static let cityEvent = CityEvent(
@@ -159,9 +159,9 @@ enum PreviewData {
         regionDE: "Tessin",
         driveMinutes: 150,
         forecast: [
-            SunshineDayForecast(date: "2026-02-20", weatherCode: 1, tempMax: 12, tempMin: 3, sunshineHours: 7.2, precipMm: 0, sunnyHours: [8,9,10,11,12,13,14,15,16], description: SunshineDescription(en: "Mainly sunny", de: "Überwiegend sonnig")),
-            SunshineDayForecast(date: "2026-02-21", weatherCode: 2, tempMax: 11, tempMin: 2, sunshineHours: 6.0, precipMm: 0, sunnyHours: [9,10,11,12,13,14,15], description: nil),
-            SunshineDayForecast(date: "2026-02-22", weatherCode: 3, tempMax: 9, tempMin: 4, sunshineHours: 3.5, precipMm: 2, sunnyHours: [10,11,12,13], description: nil),
+            SunshineDayForecast(date: "2026-02-20", weatherCode: 1, tempMax: 12, tempMin: 3, sunshineHours: 7.2, precipMm: 0, sunnyHours: [8,9,10,11,12,13,14,15,16], description: "Mainly sunny"),
+            SunshineDayForecast(date: "2026-02-21", weatherCode: 2, tempMax: 11, tempMin: 2, sunshineHours: 6.0, precipMm: 0, sunnyHours: [9,10,11,12,13,14,15], description: "Partly cloudy"),
+            SunshineDayForecast(date: "2026-02-22", weatherCode: 3, tempMax: 9, tempMin: 4, sunshineHours: 3.5, precipMm: 2, sunnyHours: [10,11,12,13], description: "Overcast"),
         ],
         sunshineHoursTotal: 16.7,
         isBaseline: false
@@ -170,13 +170,13 @@ enum PreviewData {
     // MARK: - Snow
 
     private static let sampleSnowForecast: [SnowDayForecast] = [
-        SnowDayForecast(date: "2026-02-16", snowfallCm: 5.2, weatherCode: 73, tempMax: -2, tempMin: -8),
-        SnowDayForecast(date: "2026-02-17", snowfallCm: 0, weatherCode: 2, tempMax: 0, tempMin: -5),
-        SnowDayForecast(date: "2026-02-18", snowfallCm: 12.3, weatherCode: 75, tempMax: -4, tempMin: -10),
-        SnowDayForecast(date: "2026-02-19", snowfallCm: 8.1, weatherCode: 73, tempMax: -3, tempMin: -8),
-        SnowDayForecast(date: "2026-02-20", snowfallCm: 0, weatherCode: 1, tempMax: 1, tempMin: -4),
-        SnowDayForecast(date: "2026-02-21", snowfallCm: 3.5, weatherCode: 71, tempMax: -1, tempMin: -6),
-        SnowDayForecast(date: "2026-02-22", snowfallCm: 0, weatherCode: 2, tempMax: 0, tempMin: -5),
+        SnowDayForecast(date: "2026-02-16", snowfallCm: 5.2, weatherCode: 73, tempMax: -2, tempMin: -8, description: "Moderate snow"),
+        SnowDayForecast(date: "2026-02-17", snowfallCm: 0, weatherCode: 2, tempMax: 0, tempMin: -5, description: "Partly cloudy"),
+        SnowDayForecast(date: "2026-02-18", snowfallCm: 12.3, weatherCode: 75, tempMax: -4, tempMin: -10, description: "Heavy snow"),
+        SnowDayForecast(date: "2026-02-19", snowfallCm: 8.1, weatherCode: 73, tempMax: -3, tempMin: -8, description: "Moderate snow"),
+        SnowDayForecast(date: "2026-02-20", snowfallCm: 0, weatherCode: 1, tempMax: 1, tempMin: -4, description: "Mainly clear"),
+        SnowDayForecast(date: "2026-02-21", snowfallCm: 3.5, weatherCode: 71, tempMax: -1, tempMin: -6, description: "Light snow"),
+        SnowDayForecast(date: "2026-02-22", snowfallCm: 0, weatherCode: 2, tempMax: 0, tempMin: -5, description: "Partly cloudy"),
     ]
 
     static let snowDestination = SnowDestination(
@@ -209,7 +209,9 @@ enum PreviewData {
         openingHours: "Mo-Sa 11:00-23:00",
         openForLunch: true,
         vegetarian: nil,
+        vegan: nil,
         phone: nil,
-        website: "https://www.zeughauskeller.ch"
+        website: "https://www.zeughauskeller.ch",
+        amenity: "restaurant"
     )
 }

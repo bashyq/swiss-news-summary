@@ -221,11 +221,11 @@ struct WeekendDayCard: View {
     let sampleDay = WeekendDay(
         date: "2026-02-21",
         weather: DayWeather(
+            date: "2026-02-21",
             weatherCode: 1,
             tempMax: 8,
             tempMin: 2,
-            description: "Partly cloudy",
-            descriptionDE: "Teilweise bewolkt"
+            description: "Partly cloudy"
         ),
         plan: DayPlan(
             morning: PlannedActivity(

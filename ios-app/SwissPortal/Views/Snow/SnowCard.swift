@@ -63,9 +63,7 @@ struct SnowCard: View {
                     AltitudeBadge(meters: resort.altitude)
                 }
                 HStack(spacing: 4) {
-                    if let depth = resort.snowDepthCm {
-                        snowDepthBadge(depth)
-                    }
+                    snowDepthBadge(resort.snowDepthCm)
                     if let distance = distanceMeters {
                         DistanceBadge(meters: distance)
                     }
@@ -245,32 +243,9 @@ struct SnowCard: View {
 }
 
 #Preview {
-    let sampleResort = SnowDestination(
-        id: "zermatt",
-        name: "Zermatt",
-        nameDE: "Zermatt",
-        lat: 46.0207,
-        lon: 7.7491,
-        region: "Valais",
-        regionDE: "Wallis",
-        driveMinutes: 195,
-        altitude: 1620,
-        forecast: [
-            SnowDayForecast(date: "2026-02-16", snowfallCm: 5.2, weatherCode: 73, tempMax: -2, tempMin: -8),
-            SnowDayForecast(date: "2026-02-17", snowfallCm: 12.0, weatherCode: 71, tempMax: -1, tempMin: -6),
-            SnowDayForecast(date: "2026-02-18", snowfallCm: 0.0, weatherCode: 1, tempMax: 2, tempMin: -4),
-            SnowDayForecast(date: "2026-02-19", snowfallCm: 3.5, weatherCode: 73, tempMax: 0, tempMin: -5),
-            SnowDayForecast(date: "2026-02-20", snowfallCm: 8.0, weatherCode: 75, tempMax: -3, tempMin: -9),
-            SnowDayForecast(date: "2026-02-21", snowfallCm: 0.0, weatherCode: 2, tempMax: 1, tempMin: -3),
-            SnowDayForecast(date: "2026-02-22", snowfallCm: 0.0, weatherCode: 0, tempMax: 3, tempMin: -2)
-        ],
-        snowfallWeekTotal: 28.7,
-        snowDepthCm: 145
-    )
-
     VStack {
         SnowCard(
-            resort: sampleResort,
+            resort: PreviewData.snowDestination,
             language: .en,
             isExpanded: true,
             userLocation: nil,

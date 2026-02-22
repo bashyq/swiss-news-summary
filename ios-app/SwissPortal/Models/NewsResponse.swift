@@ -25,7 +25,7 @@ struct Weather: Codable {
     let windSpeed: Double
     let hourly: [HourlyWeather]?
 
-    /// WMO weather code → SF Symbol name
+    /// WMO weather code -> SF Symbol name
     var sfSymbol: String {
         switch weatherCode {
         case 0: return "sun.max.fill"
@@ -75,7 +75,27 @@ struct HourlyWeather: Codable, Identifiable {
 
 struct Transport: Codable {
     let delays: [TrainDelay]
-    let summary: TransportSummary?
+    let summary: TransportSummary
+
+    enum CodingKeys: String, CodingKey {
+        case delays, summary
+    }
+
+    init(delays: [TrainDelay], summary: TransportSummary) {
+        self.delays = delays
+        self.summary = summary
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        delays = try container.decode([TrainDelay].self, forKey: .delays)
+        // Handle summary being either an object, a string, or null gracefully
+        if let obj = try? container.decode(TransportSummary.self, forKey: .summary) {
+            summary = obj
+        } else {
+            summary = TransportSummary(totalDelayed: 0, maxDelay: 0, status: "none")
+        }
+    }
 }
 
 struct TrainDelay: Codable, Identifiable {
@@ -108,7 +128,10 @@ struct Holiday: Codable, Identifiable {
     let name: String
     let nameDE: String?
     let daysUntil: Int
-    let date: String?
+    let date: String
+    var cantons: [String]? = nil
+    var national: Bool? = nil
+    var isToday: Bool? = nil
 
     var id: String { name }
 
@@ -122,10 +145,10 @@ struct Holiday: Codable, Identifiable {
 
 struct SchoolHoliday: Codable, Identifiable {
     let name: String
-    let nameDE: String?
+    let nameDE: String
     let startDate: String
     let endDate: String
-    let type: String?
+    let type: String
 
     var id: String { name }
 
@@ -135,7 +158,7 @@ struct SchoolHoliday: Codable, Identifiable {
     func localizedName(language: AppLanguage) -> String {
         switch language {
         case .en: return name
-        case .de: return nameDE ?? name
+        case .de: return nameDE
         }
     }
 }
@@ -293,20 +316,25 @@ struct Briefing: Codable {
 }
 
 struct BriefingItem: Codable {
-    let headline: String?
-    let summary: String?
-    let source: String?
-    let url: String?
-    let sentiment: String?
+    let headline: String
+    let summary: String
+    let source: String
+    let url: String
+    let sentiment: String
 }
 
 struct BriefingActivity: Codable {
-    let id: String?
-    let name: String?
-    let nameDE: String?
-    let description: String?
-    let descriptionDE: String?
-    let indoor: Bool?
+    var id: String? = nil
+    var name: String? = nil
+    var nameDE: String? = nil
+    var description: String? = nil
+    var descriptionDE: String? = nil
+    var indoor: Bool? = nil
+    var ageRange: String? = nil
+    var category: String? = nil
+    var duration: String? = nil
+    var price: String? = nil
+    var url: String? = nil
 }
 
 // MARK: - City Info

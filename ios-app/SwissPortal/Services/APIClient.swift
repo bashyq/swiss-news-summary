@@ -160,10 +160,12 @@ actor APIClient {
                 do {
                     return try decoder.decode(T.self, from: data)
                 } catch let decodingError as DecodingError {
+                    #if DEBUG
                     print("🔴 DecodingError for \(endpoint): \(Self.detailedDecodingError(decodingError))")
                     if let jsonStr = String(data: data.prefix(2000), encoding: .utf8) {
                         print("🔴 Response preview: \(jsonStr)")
                     }
+                    #endif
                     throw APIError.decodingError(decodingError)
                 }
             } catch let error as APIError {
@@ -230,7 +232,7 @@ actor APIClient {
                     sunshineHours: hours,
                     precipMm: precipSums[i],
                     sunnyHours: nil,
-                    description: nil
+                    description: Self.weatherDescription(for: weatherCodes[i])
                 ))
             }
 
@@ -311,15 +313,16 @@ actor APIClient {
                     snowfallCm: snowfalls[i],
                     weatherCode: weatherCodes[i],
                     tempMax: tempMaxes[i],
-                    tempMin: tempMins[i]
+                    tempMin: tempMins[i],
+                    description: Self.weatherDescription(for: weatherCodes[i])
                 ))
             }
 
             // Get max snow depth from hourly if available
-            var maxDepth: Double? = nil
+            var maxDepth: Double = 0
             if let hourly = locationData["hourly"] as? [String: Any],
                let depths = hourly["snow_depth"] as? [Double] {
-                maxDepth = depths.max()
+                maxDepth = depths.max() ?? 0
             }
 
             results.append(SnowDestination(
@@ -348,6 +351,30 @@ actor APIClient {
             ),
             timestamp: ISO8601DateFormatter().string(from: Date())
         )
+    }
+
+    // MARK: - Weather Description Helper
+
+    /// WMO weather code to human-readable description (client-side fallback)
+    static func weatherDescription(for code: Int) -> String {
+        switch code {
+        case 0: return "Clear sky"
+        case 1: return "Mainly clear"
+        case 2: return "Partly cloudy"
+        case 3: return "Overcast"
+        case 45, 48: return "Foggy"
+        case 51, 53, 55: return "Drizzle"
+        case 56, 57: return "Freezing drizzle"
+        case 61, 63, 65: return "Rain"
+        case 66, 67: return "Freezing rain"
+        case 71, 73, 75: return "Snowfall"
+        case 77: return "Snow grains"
+        case 80, 81, 82: return "Rain showers"
+        case 85, 86: return "Snow showers"
+        case 95: return "Thunderstorm"
+        case 96, 99: return "Thunderstorm with hail"
+        default: return "Cloudy"
+        }
     }
 
     // MARK: - Error Helpers

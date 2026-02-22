@@ -1,29 +1,6 @@
 import Foundation
 import CoreLocation
 
-// MARK: - Flexible String/Array Decoder
-
-/// Handles JSON fields that may be either a single string or an array of strings.
-struct StringOrArray: Codable {
-    let values: [String]
-
-    init(values: [String]) { self.values = values }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        if let arr = try? container.decode([String].self) {
-            values = arr
-        } else {
-            values = [try container.decode(String.self)]
-        }
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        try container.encode(values)
-    }
-}
-
 // MARK: - Activities Response
 
 /// Response from GET /activities?lang={en|de}&city={cityId}
@@ -32,7 +9,7 @@ struct ActivitiesResponse: Codable {
     let cityEvents: [CityEvent]
     let weather: Weather
     let city: CityInfo
-    let timestamp: String?
+    let timestamp: String
 }
 
 // MARK: - Activity
@@ -40,18 +17,18 @@ struct ActivitiesResponse: Codable {
 struct Activity: Codable, Identifiable {
     let id: String
     let name: String
-    let nameDE: String?
+    let nameDE: String
     let description: String
-    let descriptionDE: String?
+    let descriptionDE: String
     let indoor: Bool
-    let ageRange: String?
-    let duration: String?
-    let price: String?
+    let ageRange: String
+    let duration: String
+    let price: String
     let priceDE: String?
     let url: String?
     let lat: Double?
     let lon: Double?
-    let category: String?
+    let category: String
     let minAge: Int?
     let maxAge: Int?
     let season: String?
@@ -60,42 +37,42 @@ struct Activity: Codable, Identifiable {
     let stayHome: Bool?
     let availableMonths: [Int]?
     let subcategory: String?
-    let materials: StringOrArray?
-    let materialsDE: StringOrArray?
+    let materials: String?
+    let materialsDE: String?
 
     func localizedName(language: AppLanguage) -> String {
         switch language {
         case .en: return name
-        case .de: return nameDE ?? name
+        case .de: return nameDE
         }
     }
 
     func localizedDescription(language: AppLanguage) -> String {
         switch language {
         case .en: return description
-        case .de: return descriptionDE ?? description
+        case .de: return descriptionDE
         }
     }
 
-    func localizedPrice(language: AppLanguage) -> String? {
+    func localizedPrice(language: AppLanguage) -> String {
         switch language {
         case .en: return price
         case .de: return priceDE ?? price
         }
     }
 
-    func localizedMaterials(language: AppLanguage) -> [String]? {
+    func localizedMaterials(language: AppLanguage) -> String? {
         switch language {
-        case .en: return materials?.values
-        case .de: return (materialsDE ?? materials)?.values
+        case .en: return materials
+        case .de: return materialsDE ?? materials
         }
     }
 
     /// Whether activity is free (auto-detected from price field)
     var isFree: Bool {
         if let free { return free }
-        guard let price = price?.lowercased() else { return false }
-        return price.hasPrefix("free") || price.hasPrefix("gratis")
+        let p = price.lowercased()
+        return p.hasPrefix("free") || p.hasPrefix("gratis")
     }
 
     /// Coordinate if available
@@ -226,14 +203,14 @@ enum ActivityFilter: String, CaseIterable {
 struct CityEvent: Codable, Identifiable {
     let id: String
     let name: String
-    let nameDE: String?
+    let nameDE: String
     let city: String
     let startDate: String
     let endDate: String
-    let description: String?
-    let descriptionDE: String?
-    let toddlerFriendly: Bool?
-    let free: Bool?
+    let description: String
+    let descriptionDE: String
+    let toddlerFriendly: Bool
+    let free: Bool
     let url: String?
 
     var startDateParsed: Date? { DateHelpers.parseISO(startDate) }
@@ -242,14 +219,14 @@ struct CityEvent: Codable, Identifiable {
     func localizedName(language: AppLanguage) -> String {
         switch language {
         case .en: return name
-        case .de: return nameDE ?? name
+        case .de: return nameDE
         }
     }
 
-    func localizedDescription(language: AppLanguage) -> String? {
+    func localizedDescription(language: AppLanguage) -> String {
         switch language {
         case .en: return description
-        case .de: return descriptionDE ?? description
+        case .de: return descriptionDE
         }
     }
 
@@ -261,5 +238,73 @@ struct CityEvent: Codable, Identifiable {
         let eventStart = calendar.startOfDay(for: start)
         let eventEnd = calendar.startOfDay(for: end)
         return dateStart >= eventStart && dateStart <= eventEnd
+    }
+}
+
+// MARK: - Event Filter
+
+/// Typed filter replacing string-based filter for the Events view.
+enum EventFilter: String, CaseIterable {
+    case all
+    case holidays
+    case schoolHolidays
+    case events
+    case recurring
+    case seasonal
+    case festivals
+
+    var displayName: String {
+        switch self {
+        case .all: return "All"
+        case .holidays: return "Holidays"
+        case .schoolHolidays: return "School Holidays"
+        case .events: return "Events"
+        case .recurring: return "Recurring"
+        case .seasonal: return "Seasonal"
+        case .festivals: return "Festivals"
+        }
+    }
+
+    var displayNameDE: String {
+        switch self {
+        case .all: return "Alle"
+        case .holidays: return "Feiertage"
+        case .schoolHolidays: return "Schulferien"
+        case .events: return "Veranstaltungen"
+        case .recurring: return "Wiederkehrend"
+        case .seasonal: return "Saisonal"
+        case .festivals: return "Festivals"
+        }
+    }
+
+    var sfSymbol: String {
+        switch self {
+        case .all: return "square.grid.2x2"
+        case .holidays: return "flag"
+        case .schoolHolidays: return "graduationcap"
+        case .events: return "star"
+        case .recurring: return "arrow.triangle.2.circlepath"
+        case .seasonal: return "leaf"
+        case .festivals: return "party.popper"
+        }
+    }
+}
+
+// MARK: - Event Item
+
+/// Typed wrapper replacing `[Any]` for heterogeneous event lists.
+enum EventItem: Identifiable {
+    case holiday(Holiday)
+    case schoolHoliday(SchoolHoliday)
+    case cityEvent(CityEvent)
+    case activity(Activity)
+
+    var id: String {
+        switch self {
+        case .holiday(let h): return "holiday-\(h.id)"
+        case .schoolHoliday(let sh): return "schoolHoliday-\(sh.id)"
+        case .cityEvent(let e): return "cityEvent-\(e.id)"
+        case .activity(let a): return "activity-\(a.id)"
+        }
     }
 }

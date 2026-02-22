@@ -237,8 +237,10 @@ struct LunchCard: View {
         openingHours: "Mo-Sa 11:30-14:00",
         openForLunch: true,
         vegetarian: "yes",
+        vegan: nil,
         phone: "+41 44 262 99 00",
-        website: "https://www.kronenhalle.ch"
+        website: "https://www.kronenhalle.ch",
+        amenity: "restaurant"
     )
 
     LunchCard(

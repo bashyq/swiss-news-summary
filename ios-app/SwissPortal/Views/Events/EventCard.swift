@@ -19,13 +19,11 @@ struct EventCard: View {
             dateRange
 
             // Description
-            if let description = event.localizedDescription(language: appState.language) {
-                Text(description)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+            Text(event.localizedDescription(language: appState.language))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
 
             // Badges
             badgesRow
@@ -89,11 +87,11 @@ struct EventCard: View {
 
     private var badgesRow: some View {
         HStack(spacing: 6) {
-            if event.toddlerFriendly == true {
+            if event.toddlerFriendly {
                 ToddlerFriendlyBadge()
             }
 
-            if event.free == true {
+            if event.free {
                 FreeBadge()
             }
 
@@ -116,23 +114,7 @@ struct EventCard: View {
 }
 
 #Preview {
-    let sampleEvent = CityEvent(
-        id: "zh-sechselaeuten",
-        name: "Sechseläuten",
-        nameDE: "Sechseläuten",
-        city: "zurich",
-        startDate: "2026-04-20",
-        endDate: "2026-04-20",
-        description: "Zurich's traditional spring festival with the burning of the Böögg snowman.",
-        descriptionDE: "Zürichs traditionelles Frühlingsfest mit der Verbrennung des Böögg.",
-        toddlerFriendly: true,
-        free: true,
-        url: "https://www.sechselaeuten.ch/"
-    )
-
-    VStack {
-        EventCard(event: sampleEvent)
-            .padding()
-    }
-    .environment(AppState())
+    EventCard(event: PreviewData.cityEvent)
+        .padding()
+        .environment(AppState())
 }

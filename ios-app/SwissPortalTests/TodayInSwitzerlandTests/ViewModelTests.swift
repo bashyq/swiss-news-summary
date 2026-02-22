@@ -1,5 +1,5 @@
 import XCTest
-@testable import TodayInSwitzerland
+@testable import SwissPortal
 
 /// Tests for ViewModel logic (filtering, sorting, computed properties).
 /// Note: These tests don't hit the network — they test pure logic on the ViewModels.
@@ -49,7 +49,8 @@ final class ViewModelTests: XCTestCase {
             activities: [PreviewData.activity, PreviewData.stayHomeActivity],
             cityEvents: [],
             weather: PreviewData.weather,
-            city: CityInfo(id: "zurich", name: "Zürich")
+            city: CityInfo(id: "zurich", name: "Zürich"),
+            timestamp: "2026-02-21T12:00:00Z"
         )
         vm.filter = .all
 
@@ -66,7 +67,8 @@ final class ViewModelTests: XCTestCase {
             activities: [PreviewData.activity, PreviewData.stayHomeActivity],
             cityEvents: [],
             weather: PreviewData.weather,
-            city: CityInfo(id: "zurich", name: "Zürich")
+            city: CityInfo(id: "zurich", name: "Zürich"),
+            timestamp: "2026-02-21T12:00:00Z"
         )
         vm.filter = .stayHome
 
@@ -82,7 +84,8 @@ final class ViewModelTests: XCTestCase {
             activities: [PreviewData.activity, PreviewData.stayHomeActivity],
             cityEvents: [],
             weather: PreviewData.weather,
-            city: CityInfo(id: "zurich", name: "Zürich")
+            city: CityInfo(id: "zurich", name: "Zürich"),
+            timestamp: "2026-02-21T12:00:00Z"
         )
         vm.filter = .saved
 
@@ -98,7 +101,8 @@ final class ViewModelTests: XCTestCase {
             activities: [PreviewData.activity, PreviewData.stayHomeActivity],
             cityEvents: [],
             weather: PreviewData.weather,
-            city: CityInfo(id: "zurich", name: "Zürich")
+            city: CityInfo(id: "zurich", name: "Zürich"),
+            timestamp: "2026-02-21T12:00:00Z"
         )
         vm.filter = .indoor
 
@@ -114,7 +118,8 @@ final class ViewModelTests: XCTestCase {
             activities: [PreviewData.activity],
             cityEvents: [],
             weather: PreviewData.weather,
-            city: CityInfo(id: "zurich", name: "Zürich")
+            city: CityInfo(id: "zurich", name: "Zürich"),
+            timestamp: "2026-02-21T12:00:00Z"
         )
 
         let surprise = vm.surpriseMe(weather: PreviewData.weather, savedIDs: [])
@@ -145,7 +150,9 @@ final class ViewModelTests: XCTestCase {
     @MainActor
     func testEventsDateSelection() {
         let vm = EventsViewModel()
-        let testDate = Date()
+        // Use a date that isn't today — the VM defaults selectedDate to today,
+        // so selecting today again would deselect instead of select.
+        let testDate = Calendar.current.date(byAdding: .day, value: 3, to: Date())!
 
         vm.selectDate(testDate)
         XCTAssertNotNil(vm.selectedDate)
@@ -153,6 +160,48 @@ final class ViewModelTests: XCTestCase {
         // Selecting same date again deselects
         vm.selectDate(testDate)
         XCTAssertNil(vm.selectedDate)
+    }
+
+    @MainActor
+    func testEventsFilterEnum() {
+        let vm = EventsViewModel()
+        // Default filter is .all
+        XCTAssertEqual(vm.eventFilter, .all)
+
+        // Set to holidays
+        vm.eventFilter = .holidays
+        XCTAssertEqual(vm.eventFilter, .holidays)
+
+        // Verify EventFilter has expected cases
+        XCTAssertEqual(EventFilter.allCases.count, 7)
+    }
+
+    @MainActor
+    func testEventsFilteredReturnsTypedItems() {
+        let vm = EventsViewModel()
+        vm.newsData = PreviewData.newsResponse
+        vm.activitiesData = ActivitiesResponse(
+            activities: [PreviewData.activity],
+            cityEvents: [PreviewData.cityEvent],
+            weather: PreviewData.weather,
+            city: CityInfo(id: "zurich", name: "Zürich"),
+            timestamp: "2026-02-21T12:00:00Z"
+        )
+        vm.eventFilter = .all
+
+        let events: [EventItem] = vm.filteredEvents(language: .en)
+        // Should contain typed EventItem cases
+        XCTAssertGreaterThan(events.count, 0)
+
+        // Verify we can switch on items
+        for item in events {
+            switch item {
+            case .holiday: break
+            case .schoolHoliday: break
+            case .cityEvent: break
+            case .activity: break
+            }
+        }
     }
 
     // MARK: - Deals ViewModel

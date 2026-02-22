@@ -29,7 +29,7 @@ struct SnowDestination: Codable, Identifiable {
     let altitude: Int
     let forecast: [SnowDayForecast]
     let snowfallWeekTotal: Double
-    let snowDepthCm: Double?
+    let snowDepthCm: Double
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: lat, longitude: lon)
@@ -69,6 +69,7 @@ struct SnowDayForecast: Codable, Identifiable {
     let weatherCode: Int
     let tempMax: Double
     let tempMin: Double
+    let description: String?
 
     var id: String { date }
 

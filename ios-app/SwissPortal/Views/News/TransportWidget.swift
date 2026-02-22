@@ -123,11 +123,11 @@ struct TransportWidget: View {
     // MARK: - Helpers
 
     private var statusColor: Color {
-        Color.transportStatus(transport.summary?.status ?? "none")
+        Color.transportStatus(transport.summary.status)
     }
 
     private var statusText: String {
-        let count = transport.summary?.totalDelayed ?? 0
+        let count = transport.summary.totalDelayed
         return appState.localized(
             en: "\(count) delay\(count == 1 ? "" : "s")",
             de: "\(count) Verspätung\(count == 1 ? "" : "en")"
@@ -135,7 +135,7 @@ struct TransportWidget: View {
     }
 
     private var statusBadgeText: String {
-        switch transport.summary?.status {
+        switch transport.summary.status {
         case "minor":
             return appState.localized(en: "Minor", de: "Gering")
         case "major":

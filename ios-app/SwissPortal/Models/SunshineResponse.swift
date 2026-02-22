@@ -75,7 +75,7 @@ struct SunshineDayForecast: Codable, Identifiable {
     let sunshineHours: Double
     let precipMm: Double
     let sunnyHours: [Int]?
-    let description: SunshineDescription?
+    let description: String?
 
     var id: String { date }
 
@@ -83,18 +83,6 @@ struct SunshineDayForecast: Codable, Identifiable {
 
     var sfSymbol: String {
         Weather(temperature: tempMax, description: "", weatherCode: weatherCode, windSpeed: 0, hourly: nil).sfSymbol
-    }
-}
-
-struct SunshineDescription: Codable {
-    let en: String
-    let de: String
-
-    func localized(language: AppLanguage) -> String {
-        switch language {
-        case .en: return en
-        case .de: return de
-        }
     }
 }
 

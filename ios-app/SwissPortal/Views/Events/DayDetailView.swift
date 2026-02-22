@@ -186,19 +186,17 @@ struct DayDetailView: View {
                 }
 
                 // Description
-                if let description = festival.localizedDescription(language: appState.language) {
-                    Text(description)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
+                Text(festival.localizedDescription(language: appState.language))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
 
                 // Badges
                 HStack(spacing: 6) {
-                    if festival.toddlerFriendly == true {
+                    if festival.toddlerFriendly {
                         ToddlerFriendlyBadge()
                     }
-                    if festival.free == true {
+                    if festival.free {
                         FreeBadge()
                     }
                 }
