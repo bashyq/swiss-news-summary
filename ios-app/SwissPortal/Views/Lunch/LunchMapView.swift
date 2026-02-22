@@ -11,15 +11,17 @@ struct LunchMapView: View {
     let city: City
     let language: AppLanguage
     var userFocusLocation: CLLocation?
+    @Binding var focusedSpot: LunchSpot?
 
     @State private var selectedSpot: LunchSpot?
     @State private var cameraPosition: MapCameraPosition
 
-    init(spots: [LunchSpot], city: City, language: AppLanguage, userFocusLocation: CLLocation? = nil) {
+    init(spots: [LunchSpot], city: City, language: AppLanguage, userFocusLocation: CLLocation? = nil, focusedSpot: Binding<LunchSpot?> = .constant(nil)) {
         self.spots = spots
         self.city = city
         self.language = language
         self.userFocusLocation = userFocusLocation
+        self._focusedSpot = focusedSpot
         // Center on user location if available, otherwise city
         let center = userFocusLocation?.coordinate ?? city.coordinate
         let region = MKCoordinateRegion(
@@ -64,6 +66,19 @@ struct LunchMapView: View {
                     )
                     cameraPosition = .region(region)
                 }
+            }
+        }
+        .onChange(of: focusedSpot?.id) { _, _ in
+            if let spot = focusedSpot {
+                withAnimation {
+                    let region = MKCoordinateRegion(
+                        center: spot.coordinate,
+                        span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                    )
+                    cameraPosition = .region(region)
+                    selectedSpot = spot
+                }
+                focusedSpot = nil
             }
         }
         .overlay(alignment: .bottom) {

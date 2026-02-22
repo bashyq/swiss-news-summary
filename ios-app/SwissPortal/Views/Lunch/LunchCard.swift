@@ -4,9 +4,10 @@ import CoreLocation
 /// Card view for a single lunch spot.
 ///
 /// Displays the restaurant name, cuisine icon, cuisine category badge,
-/// opening hours, outdoor/vegetarian badges, a heart button for saving,
+/// opening hours, outdoor/vegetarian badges, a website link, a heart button for saving,
 /// a 5-star rating, and optional distance from the user's location.
-/// Tapping the card opens directions in Apple Maps or the website if available.
+/// Tapping the card triggers `onTap` (typically zooms the map). The safari icon opens the website.
+/// Tapping the distance badge opens walking directions in Apple Maps.
 struct LunchCard: View {
     @Environment(AppState.self) private var appState
     @Environment(ToastManager.self) private var toastManager
@@ -14,6 +15,7 @@ struct LunchCard: View {
     let spot: LunchSpot
     let language: AppLanguage
     let location: CLLocation?
+    var onTap: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -46,15 +48,23 @@ struct LunchCard: View {
             // Star rating
             starRating
 
-            // Distance badge (if location available)
+            // Distance badge (if location available) — tapping opens Apple Maps directions
             if let meters = distanceMeters {
-                DistanceBadge(meters: meters)
+                Button {
+                    let urlString = "maps://?daddr=\(spot.lat),\(spot.lon)&dirflg=w"
+                    if let url = URL(string: urlString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    DistanceBadge(meters: meters)
+                }
+                .buttonStyle(.plain)
             }
         }
         .padding(14)
         .contentShape(Rectangle())
         .onTapGesture {
-            openSpot()
+            onTap?()
         }
     }
 
@@ -91,6 +101,15 @@ struct LunchCard: View {
                         .foregroundStyle(.red.opacity(0.7))
                 }
                 .buttonStyle(.plain)
+            }
+
+            // Website button
+            if let website = spot.website, let url = URL(string: website) {
+                Link(destination: url) {
+                    Image(systemName: "safari")
+                        .font(.body)
+                        .foregroundStyle(.purple)
+                }
             }
 
             // Heart button
@@ -248,17 +267,6 @@ struct LunchCard: View {
         return meters
     }
 
-    private func openSpot() {
-        // Prefer website, fall back to Apple Maps directions
-        if let website = spot.website, let url = URL(string: website) {
-            UIApplication.shared.open(url)
-        } else {
-            let urlString = "http://maps.apple.com/?daddr=\(spot.lat),\(spot.lon)&dirflg=w"
-            if let url = URL(string: urlString) {
-                UIApplication.shared.open(url)
-            }
-        }
-    }
 }
 
 #Preview {

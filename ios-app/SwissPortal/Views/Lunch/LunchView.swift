@@ -13,6 +13,7 @@ struct LunchView: View {
     @State private var viewModel = LunchViewModel()
     @State private var surpriseSpot: LunchSpot?
     @State private var showAddSheet = false
+    @State private var focusedSpot: LunchSpot?
 
     var body: some View {
         content
@@ -191,7 +192,8 @@ struct LunchView: View {
                         spots: currentSpots,
                         city: appState.city,
                         language: appState.language,
-                        userFocusLocation: viewModel.filter == .nearMe ? locationManager.location : nil
+                        userFocusLocation: viewModel.filter == .nearMe ? locationManager.location : nil,
+                        focusedSpot: $focusedSpot
                     )
                     .frame(height: 240)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -226,7 +228,13 @@ struct LunchView: View {
                             LunchCard(
                                 spot: spot,
                                 language: appState.language,
-                                location: locationManager.location
+                                location: locationManager.location,
+                                onTap: {
+                                    withAnimation(.easeInOut(duration: 0.25)) {
+                                        viewModel.showMap = true
+                                    }
+                                    focusedSpot = spot
+                                }
                             )
                         }
 

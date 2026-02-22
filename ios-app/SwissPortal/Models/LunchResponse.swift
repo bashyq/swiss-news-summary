@@ -73,7 +73,7 @@ enum LunchFilter: String, CaseIterable {
         case .all: return "All"
         case .nearMe: return "Near me"
         case .saved: return "Saved"
-        case .open: return "Open now"
+        case .open: return "Open for lunch"
         case .outdoor: return "Outdoor"
         case .vegetarian: return "Vegetarian"
         }
@@ -84,7 +84,7 @@ enum LunchFilter: String, CaseIterable {
         case .all: return "Alle"
         case .nearMe: return "In der Nähe"
         case .saved: return "Gespeichert"
-        case .open: return "Jetzt offen"
+        case .open: return "Mittagstisch"
         case .outdoor: return "Terrasse"
         case .vegetarian: return "Vegetarisch"
         }

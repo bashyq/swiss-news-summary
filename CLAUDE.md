@@ -132,6 +132,10 @@ xcodebuild -project SwissPortal.xcodeproj -scheme SwissPortal \
 - **Lunch display limit**: 50 spots shown by default, "Show all" to expand
 - **Lunch map collapsed**: Map starts hidden, toggle via toolbar button
 - **"Closed" badge**: Gray badge on lunch cards when `openForLunch == false`
+- **Lunch card tap → map zoom**: Tapping a card shows the map and zooms to that restaurant
+- **Lunch website icon**: Safari icon in card header opens the restaurant's website
+- **Lunch distance → directions**: Tapping the distance badge opens walking directions in Apple Maps
+- **"Open for lunch" filter**: Filter renamed from "Open now" to accurately reflect 11:00-14:00 check
 - **Calendar "Today" button**: Pill appears when viewing non-current month
 - **Near Me map focus**: Tapping "Near me" / "Near" sort centers map on user location
 - **URL deep linking**: `swissportal://lunch` → Lunch tab, `swissportal://events` → More tab, etc.
