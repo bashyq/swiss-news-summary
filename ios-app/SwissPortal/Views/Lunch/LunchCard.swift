@@ -126,6 +126,7 @@ struct LunchCard: View {
                     .foregroundStyle(isSaved ? .red : .secondary)
             }
             .buttonStyle(.plain)
+            .sensoryFeedback(.impact(flexibility: .soft), trigger: isSaved)
         }
     }
 

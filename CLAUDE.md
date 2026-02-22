@@ -126,7 +126,7 @@ xcodebuild -project SwissPortal.xcodeproj -scheme SwissPortal \
 - **Tab bar icons**: 15% smaller than default (~19pt vs ~22pt) via custom UIImage symbol configuration
 - **Weather background tint**: Subtle orange/blue/gray tint on News and Activities based on weather code
 - **Numeric transitions**: Count labels animate with `.contentTransition(.numericText())`
-- **Sensory feedback**: Haptic on card expand/collapse (NewsCard, SunshineCard, SnowCard)
+- **Sensory feedback**: Haptic on card expand/collapse (NewsCard, SunshineCard, SnowCard) and heart/save toggle (LunchCard, ActivityCard)
 - **Map gradient fade**: Bottom gradient overlay on all 4 map views (Lunch, Activities, Sunshine, Snow)
 - **Badge borders**: Filled badges have subtle stroke overlay
 - **Filter chip bounce**: Scale effect with spring animation on selected chips
@@ -143,10 +143,13 @@ xcodebuild -project SwissPortal.xcodeproj -scheme SwissPortal \
 - **URL deep linking**: `swissportal://lunch` → Lunch tab, `swissportal://events` → More tab, etc.
 - **Toast notifications**: Save/unsave feedback via ToastManager
 - **Pull-to-refresh**: On list views (not triggered by horizontal filter scroll)
+- **Task cancellation**: `.task(id:)` auto-cancels in-flight requests on city/language change (News, Activities, Lunch)
+- **Stale cache fallback**: On network failure, shows expired cached data instead of error screen
+- **Cached DateFormatters**: Sunshine/Snow date range formatting uses static cached formatters via `DateHelpers.formatDateRange()`
 
 ### Architecture
 - **@Observable** view models (iOS 17 Observation framework)
-- **CacheManager**: Disk cache with per-endpoint TTLs (show cached → fetch fresh)
+- **CacheManager**: Disk cache with per-endpoint TTLs (show cached → fetch fresh); `getStale()` returns expired data as fallback
 - **APIClient**: Centralized networking to Worker API
 - **LocationManager**: On-demand location for "Near me" features
 - **PBXFileSystemSynchronizedRootGroup**: Xcode auto-discovers source files (no manual file references)

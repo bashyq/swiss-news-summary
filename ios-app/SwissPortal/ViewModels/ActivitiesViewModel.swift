@@ -115,7 +115,13 @@ final class ActivitiesViewModel {
         } catch {
             // Only set error if we have no cached data to show
             if self.activitiesData == nil {
-                self.error = error.localizedDescription
+                // Try stale cache before showing error
+                let stale: ActivitiesResponse? = await CacheManager.shared.getStale(ActivitiesResponse.self, key: cacheKey)
+                if let stale {
+                    self.activitiesData = stale
+                } else {
+                    self.error = error.localizedDescription
+                }
             }
         }
 

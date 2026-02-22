@@ -114,7 +114,13 @@ final class LunchViewModel {
         } catch {
             // Only set error if we have no cached data to show
             if self.lunchData == nil {
-                self.error = error.localizedDescription
+                // Try stale cache before showing error
+                let stale: LunchResponse? = await CacheManager.shared.getStale(LunchResponse.self, key: cacheKey)
+                if let stale {
+                    self.lunchData = stale
+                } else {
+                    self.error = error.localizedDescription
+                }
             }
         }
 

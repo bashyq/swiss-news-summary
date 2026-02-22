@@ -151,6 +151,38 @@ enum DateHelpers {
         Calendar.current.isDateInToday(date)
     }
 
+    // MARK: - Date Range Formatting (cached formatters)
+
+    private static let isoDateRangeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
+    private static let shortDateFormatterEN: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "d MMM"
+        f.locale = Locale(identifier: "en_US")
+        return f
+    }()
+
+    private static let shortDateFormatterDE: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "d MMM"
+        f.locale = Locale(identifier: "de_CH")
+        return f
+    }()
+
+    /// Format a date range from ISO strings (e.g. "2026-02-20" - "2026-02-22") into a localized short form (e.g. "20 Feb - 22 Feb").
+    static func formatDateRange(from: String, to: String, language: AppLanguage) -> String {
+        guard let startDate = isoDateRangeFormatter.date(from: from),
+              let endDate = isoDateRangeFormatter.date(from: to) else {
+            return "\(from) - \(to)"
+        }
+        let formatter = language == .de ? shortDateFormatterDE : shortDateFormatterEN
+        return "\(formatter.string(from: startDate)) - \(formatter.string(from: endDate))"
+    }
+
     /// Time ago string
     static func timeAgo(from date: Date) -> String {
         let interval = Date().timeIntervalSince(date)

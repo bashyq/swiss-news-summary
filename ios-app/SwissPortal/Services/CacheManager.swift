@@ -48,12 +48,21 @@ actor CacheManager {
             return nil
         }
 
-        // Check TTL
+        // Check TTL — expired data stays on disk for getStale() fallback
         if Date().timeIntervalSince(wrapper.cachedAt) > ttl.seconds {
-            try? fileManager.removeItem(at: fileURL)
             return nil
         }
 
+        return wrapper.data
+    }
+
+    /// Get cached data regardless of TTL — used as fallback when network fails
+    func getStale<T: Codable>(_ type: T.Type, key: String) -> T? {
+        let fileURL = cacheDirectory.appendingPathComponent(sanitize(key) + ".json")
+        guard let data = try? Data(contentsOf: fileURL),
+              let wrapper = try? JSONDecoder().decode(CacheWrapper<T>.self, from: data) else {
+            return nil
+        }
         return wrapper.data
     }
 

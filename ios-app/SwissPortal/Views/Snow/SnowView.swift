@@ -143,16 +143,7 @@ struct SnowView: View {
     }
 
     private func formattedWeekRange(_ dates: WeekDates) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        guard let mon = formatter.date(from: dates.monday),
-              let sun = formatter.date(from: dates.sunday) else {
-            return "\(dates.monday) - \(dates.sunday)"
-        }
-        let displayFormatter = DateFormatter()
-        displayFormatter.dateFormat = "d MMM"
-        displayFormatter.locale = Locale(identifier: appState.language == .de ? "de_CH" : "en_US")
-        return "\(displayFormatter.string(from: mon)) - \(displayFormatter.string(from: sun))"
+        DateHelpers.formatDateRange(from: dates.monday, to: dates.sunday, language: appState.language)
     }
 
     // MARK: - Filter & Sort Bar

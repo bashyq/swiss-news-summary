@@ -89,7 +89,13 @@ final class NewsViewModel {
         } catch {
             // Only set error if we have no cached data to show
             if self.newsData == nil {
-                self.error = error.localizedDescription
+                // Try stale cache before showing error
+                let stale: NewsResponse? = await CacheManager.shared.getStale(NewsResponse.self, key: cacheKey)
+                if let stale {
+                    self.newsData = stale
+                } else {
+                    self.error = error.localizedDescription
+                }
             }
         }
 

@@ -15,79 +15,61 @@ struct ActivitiesView: View {
     @State private var showAddSheet = false
 
     var body: some View {
-        NavigationStack {
-            content
-                .navigationTitle(navigationTitle)
-                .navigationBarTitleDisplayMode(.large)
-                .toolbarTitleMenu {
-                    ForEach(City.allCases) { city in
-                        Button {
-                            appState.city = city
-                        } label: {
-                            HStack {
-                                Text(city.localizedName(language: appState.language))
-                                if city == appState.city {
-                                    Image(systemName: "checkmark")
-                                }
+        content
+            .navigationTitle(navigationTitle)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarTitleMenu {
+                ForEach(City.allCases) { city in
+                    Button {
+                        appState.city = city
+                    } label: {
+                        HStack {
+                            Text(city.localizedName(language: appState.language))
+                            if city == appState.city {
+                                Image(systemName: "checkmark")
                             }
                         }
                     }
                 }
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        HStack(spacing: 12) {
-                            mapToggleButton
-                            addButton
-                        }
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    HStack(spacing: 12) {
+                        mapToggleButton
+                        addButton
                     }
                 }
-                .task {
-                    await viewModel.loadActivities(
-                        city: appState.city,
-                        language: appState.language
-                    )
+            }
+            .task(id: "\(appState.city.id)-\(appState.language)") {
+                await viewModel.loadActivities(
+                    city: appState.city,
+                    language: appState.language
+                )
+            }
+            .onChange(of: viewModel.filter) { _, newFilter in
+                if newFilter == .nearMe {
+                    locationManager.requestLocation()
                 }
-                .onChange(of: appState.city) { _, _ in
-                    Task {
-                        await viewModel.loadActivities(
-                            city: appState.city,
-                            language: appState.language
+            }
+            .sheet(item: $surpriseActivity) { activity in
+                SurpriseMeSheet(
+                    activity: activity,
+                    onTryAnother: pickSurprise,
+                    onSave: {
+                        appState.toggleSavedActivity(activity.id)
+                        let wasSaved = appState.savedActivityIDs.contains(activity.id)
+                        toastManager.show(
+                            appState.localized(en: wasSaved ? "Saved" : "Removed", de: wasSaved ? "Gespeichert" : "Entfernt"),
+                            type: .success
                         )
-                    }
-                }
-                .onChange(of: appState.language) { _, _ in
-                    Task {
-                        await viewModel.loadActivities(
-                            city: appState.city,
-                            language: appState.language
-                        )
-                    }
-                }
-                .onChange(of: viewModel.filter) { _, newFilter in
-                    if newFilter == .nearMe {
-                        locationManager.requestLocation()
-                    }
-                }
-                .sheet(item: $surpriseActivity) { activity in
-                    SurpriseMeSheet(
-                        activity: activity,
-                        onTryAnother: pickSurprise,
-                        onSave: {
-                            appState.toggleSavedActivity(activity.id)
-                            let wasSaved = appState.savedActivityIDs.contains(activity.id)
-                            toastManager.show(
-                                appState.localized(en: wasSaved ? "Saved" : "Removed", de: wasSaved ? "Gespeichert" : "Entfernt"),
-                                type: .success
-                            )
-                        },
-                        isSaved: appState.savedActivityIDs.contains(activity.id)
-                    )
-                    .presentationDetents([.medium, .large])
-                }
-                .sheet(isPresented: $showAddSheet) {
-                    AddActivitySheet()
-                }
-        }
+                    },
+                    isSaved: appState.savedActivityIDs.contains(activity.id)
+                )
+                .presentationDetents([.medium, .large])
+            }
+            .sheet(isPresented: $showAddSheet) {
+                AddActivitySheet()
+            }
     }
 
     // MARK: - Navigation Title
@@ -157,7 +139,9 @@ struct ActivitiesView: View {
     // MARK: - Activities Content
 
     private var activitiesContent: some View {
-        ZStack(alignment: .bottom) {
+        let activities = filteredAndSorted
+
+        return ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
                 // 1. Filter bar
                 ActivityFilterBar(viewModel: viewModel, language: appState.language)
@@ -171,13 +155,13 @@ struct ActivitiesView: View {
                 // 2.6 Results count
                 HStack {
                     Text(appState.localized(
-                        en: "\(filteredAndSorted.count) results",
-                        de: "\(filteredAndSorted.count) Ergebnisse"
+                        en: "\(activities.count) results",
+                        de: "\(activities.count) Ergebnisse"
                     ))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .contentTransition(.numericText())
-                    .animation(.default, value: filteredAndSorted.count)
+                    .animation(.default, value: activities.count)
                     Spacer()
                 }
                 .padding(.horizontal)
@@ -192,7 +176,7 @@ struct ActivitiesView: View {
                 // 4. Map or list
                 if viewModel.showMap {
                     ActivityMapView(
-                        activities: filteredAndSorted,
+                        activities: activities,
                         city: appState.city,
                         language: appState.language,
                         userFocusLocation: viewModel.filter == .nearMe ? locationManager.location : nil
@@ -202,7 +186,7 @@ struct ActivitiesView: View {
                     // Stay-home activities get their own grouped layout
                     ScrollView {
                         StayHomeSection(
-                            activities: filteredAndSorted,
+                            activities: activities,
                             language: appState.language
                         )
                         .padding(.horizontal)

@@ -41,27 +41,11 @@ struct LunchView: View {
                     }
                 }
             }
-            .task {
+            .task(id: "\(appState.city.id)-\(appState.language)") {
                 await viewModel.loadLunch(
                     city: appState.city,
                     language: appState.language
                 )
-            }
-            .onChange(of: appState.city) { _, _ in
-                Task {
-                    await viewModel.loadLunch(
-                        city: appState.city,
-                        language: appState.language
-                    )
-                }
-            }
-            .onChange(of: appState.language) { _, _ in
-                Task {
-                    await viewModel.loadLunch(
-                        city: appState.city,
-                        language: appState.language
-                    )
-                }
             }
             .onChange(of: viewModel.filter) { _, newFilter in
                 if newFilter == .nearMe {
@@ -146,7 +130,9 @@ struct LunchView: View {
     // MARK: - Lunch Content
 
     private var lunchContent: some View {
-        ZStack(alignment: .bottom) {
+        let spots = currentSpots
+
+        return ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
                 // 1. Filter bar
                 LunchFilterBar(viewModel: viewModel, language: appState.language)
@@ -154,8 +140,8 @@ struct LunchView: View {
 
                 // 1.5 Results count
                 HStack {
-                    let total = currentSpots.count
-                    let displayed = viewModel.displaySpots(from: currentSpots).count
+                    let total = spots.count
+                    let displayed = viewModel.displaySpots(from: spots).count
                     if displayed < total {
                         Text(appState.localized(
                             en: "\(displayed) of \(total) results",
@@ -189,7 +175,7 @@ struct LunchView: View {
                 // 3. Map or list
                 if viewModel.showMap {
                     LunchMapView(
-                        spots: currentSpots,
+                        spots: spots,
                         city: appState.city,
                         language: appState.language,
                         userFocusLocation: viewModel.filter == .nearMe ? locationManager.location : nil,

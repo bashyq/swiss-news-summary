@@ -11,62 +11,42 @@ struct NewsView: View {
     @State private var briefingDismissedToday = false
 
     var body: some View {
-        NavigationStack {
-            content
-                .navigationTitle(navigationTitle)
-                .navigationBarTitleDisplayMode(.large)
-                .toolbarTitleMenu {
-                    ForEach(City.allCases) { city in
-                        Button {
-                            appState.city = city
-                        } label: {
-                            HStack {
-                                Text(city.localizedName(language: appState.language))
-                                if city == appState.city {
-                                    Image(systemName: "checkmark")
-                                }
+        content
+            .navigationTitle(navigationTitle)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarTitleMenu {
+                ForEach(City.allCases) { city in
+                    Button {
+                        appState.city = city
+                    } label: {
+                        HStack {
+                            Text(city.localizedName(language: appState.language))
+                            if city == appState.city {
+                                Image(systemName: "checkmark")
                             }
                         }
                     }
                 }
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        shareButton
-                    }
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    shareButton
                 }
-                .task {
-                    await viewModel.loadNews(
-                        city: appState.city,
-                        language: appState.language
-                    )
+            }
+            .task(id: "\(appState.city.id)-\(appState.language)") {
+                await viewModel.loadNews(
+                    city: appState.city,
+                    language: appState.language
+                )
+            }
+            .sheet(isPresented: $showWeatherDetail) {
+                if let weather = viewModel.newsData?.weather {
+                    WeatherDetailSheet(weather: weather)
                 }
-                .onChange(of: appState.city) { _, _ in
-                    Task {
-                        await viewModel.loadNews(
-                            city: appState.city,
-                            language: appState.language,
-                            forceRefresh: true
-                        )
-                    }
-                }
-                .onChange(of: appState.language) { _, _ in
-                    Task {
-                        await viewModel.loadNews(
-                            city: appState.city,
-                            language: appState.language,
-                            forceRefresh: true
-                        )
-                    }
-                }
-                .sheet(isPresented: $showWeatherDetail) {
-                    if let weather = viewModel.newsData?.weather {
-                        WeatherDetailSheet(weather: weather)
-                    }
-                }
-                .onAppear {
-                    checkBriefingDismissed()
-                }
-        }
+            }
+            .onAppear {
+                checkBriefingDismissed()
+            }
     }
 
     // MARK: - Briefing Helpers

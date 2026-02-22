@@ -153,16 +153,7 @@ struct SunshineView: View {
     }
 
     private func formattedWeekendRange(_ dates: WeekendDates) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        guard let fri = formatter.date(from: dates.friday),
-              let sun = formatter.date(from: dates.sunday) else {
-            return "\(dates.friday) - \(dates.sunday)"
-        }
-        let displayFormatter = DateFormatter()
-        displayFormatter.dateFormat = "d MMM"
-        displayFormatter.locale = Locale(identifier: appState.language == .de ? "de_CH" : "en_US")
-        return "\(displayFormatter.string(from: fri)) - \(displayFormatter.string(from: sun))"
+        DateHelpers.formatDateRange(from: dates.friday, to: dates.sunday, language: appState.language)
     }
 
     // MARK: - Filter & Sort Bar

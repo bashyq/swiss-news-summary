@@ -107,6 +107,7 @@ struct ActivityCard: View {
                     .foregroundStyle(isSaved ? .red : .secondary)
             }
             .buttonStyle(.plain)
+            .sensoryFeedback(.impact(flexibility: .soft), trigger: isSaved)
 
             // External link indicator
             if activity.url != nil {
