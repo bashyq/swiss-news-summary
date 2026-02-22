@@ -10,6 +10,12 @@ enum DateHelpers {
 
     private static let isoDateTimeFormatter: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+
+    private static let isoDateTimeFractionalFormatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f
     }()
@@ -44,9 +50,10 @@ enum DateHelpers {
         isoFormatter.date(from: string)
     }
 
-    /// Parse ISO datetime string
+    /// Parse ISO datetime string (with or without fractional seconds)
     static func parseISODateTime(_ string: String) -> Date? {
         isoDateTimeFormatter.date(from: string)
+            ?? isoDateTimeFractionalFormatter.date(from: string)
     }
 
     /// Format date for display

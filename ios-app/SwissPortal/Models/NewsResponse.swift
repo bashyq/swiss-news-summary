@@ -75,7 +75,7 @@ struct HourlyWeather: Codable, Identifiable {
 
 struct Transport: Codable {
     let delays: [TrainDelay]
-    let summary: TransportSummary
+    let summary: TransportSummary?
 }
 
 struct TrainDelay: Codable, Identifiable {
@@ -238,7 +238,9 @@ struct NewsItem: Codable, Identifiable {
 
     /// Time ago string from publishedAt
     var timeAgo: String? {
-        guard let publishedAt, let date = DateHelpers.parseISO(publishedAt) else { return nil }
+        guard let publishedAt,
+              let date = DateHelpers.parseISODateTime(publishedAt) ?? DateHelpers.parseISO(publishedAt)
+        else { return nil }
         let interval = Date().timeIntervalSince(date)
         let minutes = Int(interval / 60)
         if minutes < 60 { return "\(minutes)m" }

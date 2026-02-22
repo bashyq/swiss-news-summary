@@ -128,7 +128,7 @@ struct LunchCard: View {
                 }
 
                 // Vegetarian badge
-                if spot.vegetarian == true {
+                if spot.vegetarian == "yes" {
                     BadgeView(
                         text: appState.localized(en: "Vegetarian", de: "Vegetarisch"),
                         icon: "leaf",
@@ -236,7 +236,7 @@ struct LunchCard: View {
         takeaway: false,
         openingHours: "Mo-Sa 11:30-14:00",
         openForLunch: true,
-        vegetarian: true,
+        vegetarian: "yes",
         phone: "+41 44 262 99 00",
         website: "https://www.kronenhalle.ch"
     )

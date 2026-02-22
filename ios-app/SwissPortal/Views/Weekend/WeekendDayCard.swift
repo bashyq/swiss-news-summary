@@ -82,40 +82,43 @@ struct WeekendDayCard: View {
 
     // MARK: - Weather Row
 
+    @ViewBuilder
     private var weatherRow: some View {
-        HStack(spacing: 10) {
-            // Weather icon
-            Image(systemName: day.weather.sfSymbol)
-                .font(.title2)
-                .foregroundStyle(weatherIconColor)
-                .frame(width: 32, height: 32)
+        if let weather = day.weather {
+            HStack(spacing: 10) {
+                // Weather icon
+                Image(systemName: weather.sfSymbol)
+                    .font(.title2)
+                    .foregroundStyle(weatherIconColor)
+                    .frame(width: 32, height: 32)
 
-            // Temperature range
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 4) {
-                    Text("\(Int(day.weather.tempMax))\u{00B0}")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                    Text("/")
+                // Temperature range
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text("\(Int(weather.tempMax))\u{00B0}")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                        Text("/")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text("\(Int(weather.tempMin))\u{00B0}")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    // Weather description
+                    Text(weather.localizedDescription(language: language))
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text("\(Int(day.weather.tempMin))\u{00B0}")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
 
-                // Weather description
-                Text(day.weather.localizedDescription(language: language))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                Spacer()
             }
-
-            Spacer()
+            .padding(10)
+            .background(Color.weatherCard)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
         }
-        .padding(10)
-        .background(Color.weatherCard)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
     // MARK: - Activity Section
@@ -199,7 +202,7 @@ struct WeekendDayCard: View {
     // MARK: - Helpers
 
     private var weatherIconColor: Color {
-        switch day.weather.weatherCode {
+        switch day.weather?.weatherCode ?? 3 {
         case 0: return .orange
         case 1, 2: return .yellow
         case 3: return .gray

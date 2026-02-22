@@ -157,11 +157,17 @@ actor APIClient {
                     throw APIError.serverError(httpResponse.statusCode)
                 }
 
-                return try decoder.decode(T.self, from: data)
+                do {
+                    return try decoder.decode(T.self, from: data)
+                } catch let decodingError as DecodingError {
+                    print("🔴 DecodingError for \(endpoint): \(Self.detailedDecodingError(decodingError))")
+                    if let jsonStr = String(data: data.prefix(2000), encoding: .utf8) {
+                        print("🔴 Response preview: \(jsonStr)")
+                    }
+                    throw APIError.decodingError(decodingError)
+                }
             } catch let error as APIError {
                 throw error // Don't retry API errors
-            } catch let error as DecodingError {
-                throw APIError.decodingError(error)
             } catch {
                 lastError = error
                 if attempt < 2 {
@@ -343,6 +349,27 @@ actor APIClient {
             timestamp: ISO8601DateFormatter().string(from: Date())
         )
     }
+
+    // MARK: - Error Helpers
+
+    static func detailedDecodingError(_ error: DecodingError) -> String {
+        switch error {
+        case .typeMismatch(let type, let context):
+            let path = context.codingPath.map(\.stringValue).joined(separator: ".")
+            return "typeMismatch: expected \(type) at '\(path)' — \(context.debugDescription)"
+        case .valueNotFound(let type, let context):
+            let path = context.codingPath.map(\.stringValue).joined(separator: ".")
+            return "valueNotFound: expected \(type) at '\(path)' — \(context.debugDescription)"
+        case .keyNotFound(let key, let context):
+            let path = context.codingPath.map(\.stringValue).joined(separator: ".")
+            return "keyNotFound: '\(key.stringValue)' at '\(path)' — \(context.debugDescription)"
+        case .dataCorrupted(let context):
+            let path = context.codingPath.map(\.stringValue).joined(separator: ".")
+            return "dataCorrupted at '\(path)' — \(context.debugDescription)"
+        @unknown default:
+            return "unknown: \(error)"
+        }
+    }
 }
 
 // MARK: - API Errors
@@ -360,7 +387,11 @@ enum APIError: LocalizedError {
         case .invalidURL(let url): return "Invalid URL: \(url)"
         case .invalidResponse: return "Invalid server response"
         case .serverError(let code): return "Server error (\(code))"
-        case .decodingError(let error): return "Data parsing error: \(error.localizedDescription)"
+        case .decodingError(let error):
+            if let decodingError = error as? DecodingError {
+                return "Parse error: \(APIClient.detailedDecodingError(decodingError))"
+            }
+            return "Data parsing error: \(error.localizedDescription)"
         case .invalidData(let msg): return msg
         case .unknown: return "An unknown error occurred"
         }

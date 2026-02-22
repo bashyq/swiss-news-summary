@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		03CD276C2F4B12400011395A /* TodayInSwitzerlandWidgetExtension.appex in Embed Widget Extension */ = {isa = PBXBuildFile; fileRef = 03CD27602F4B12400011395A /* TodayInSwitzerlandWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		03CD273B2F4B123F0011395A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -21,12 +25,34 @@
 			remoteGlobalIDString = 03CD272C2F4B123E0011395A;
 			remoteInfo = SwissPortal;
 		};
+		03CD27692F4B12400011395A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 03CD27252F4B123E0011395A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 03CD27622F4B12400011395A;
+			remoteInfo = TodayInSwitzerlandWidgetExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		03CD276B2F4B12400011395A /* Embed Widget Extension */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				03CD276C2F4B12400011395A /* TodayInSwitzerlandWidgetExtension.appex in Embed Widget Extension */,
+			);
+			name = "Embed Widget Extension";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		03CD272D2F4B123E0011395A /* SwissPortal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwissPortal.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		03CD273A2F4B123F0011395A /* SwissPortalTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SwissPortalTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		03CD27442F4B123F0011395A /* SwissPortalUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SwissPortalUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		03CD27602F4B12400011395A /* TodayInSwitzerlandWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TodayInSwitzerlandWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -45,7 +71,25 @@
 			path = SwissPortalUITests;
 			sourceTree = "<group>";
 		};
+		03CD27612F4B12400011395A /* TodayInSwitzerlandWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				03CD276D2F4B12400011395A /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
+			path = TodayInSwitzerlandWidget;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		03CD276D2F4B12400011395A /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 03CD27622F4B12400011395A /* TodayInSwitzerlandWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		03CD272A2F4B123E0011395A /* Frameworks */ = {
@@ -69,6 +113,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		03CD27642F4B12400011395A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -76,6 +127,7 @@
 			isa = PBXGroup;
 			children = (
 				03CD272F2F4B123E0011395A /* SwissPortal */,
+				03CD27612F4B12400011395A /* TodayInSwitzerlandWidget */,
 				03CD273D2F4B123F0011395A /* SwissPortalTests */,
 				03CD27472F4B123F0011395A /* SwissPortalUITests */,
 				03CD272E2F4B123E0011395A /* Products */,
@@ -88,6 +140,7 @@
 				03CD272D2F4B123E0011395A /* SwissPortal.app */,
 				03CD273A2F4B123F0011395A /* SwissPortalTests.xctest */,
 				03CD27442F4B123F0011395A /* SwissPortalUITests.xctest */,
+				03CD27602F4B12400011395A /* TodayInSwitzerlandWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -102,10 +155,12 @@
 				03CD27292F4B123E0011395A /* Sources */,
 				03CD272A2F4B123E0011395A /* Frameworks */,
 				03CD272B2F4B123E0011395A /* Resources */,
+				03CD276B2F4B12400011395A /* Embed Widget Extension */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				03CD276A2F4B12400011395A /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				03CD272F2F4B123E0011395A /* SwissPortal */,
@@ -163,6 +218,28 @@
 			productReference = 03CD27442F4B123F0011395A /* SwissPortalUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		03CD27622F4B12400011395A /* TodayInSwitzerlandWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 03CD27682F4B12400011395A /* Build configuration list for PBXNativeTarget "TodayInSwitzerlandWidgetExtension" */;
+			buildPhases = (
+				03CD27632F4B12400011395A /* Sources */,
+				03CD27642F4B12400011395A /* Frameworks */,
+				03CD27652F4B12400011395A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				03CD27612F4B12400011395A /* TodayInSwitzerlandWidget */,
+			);
+			name = TodayInSwitzerlandWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = TodayInSwitzerlandWidgetExtension;
+			productReference = 03CD27602F4B12400011395A /* TodayInSwitzerlandWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -184,6 +261,9 @@
 						CreatedOnToolsVersion = 26.2;
 						TestTargetID = 03CD272C2F4B123E0011395A;
 					};
+					03CD27622F4B12400011395A = {
+						CreatedOnToolsVersion = 26.2;
+					};
 				};
 			};
 			buildConfigurationList = 03CD27282F4B123E0011395A /* Build configuration list for PBXProject "SwissPortal" */;
@@ -201,6 +281,7 @@
 			projectRoot = "";
 			targets = (
 				03CD272C2F4B123E0011395A /* SwissPortal */,
+				03CD27622F4B12400011395A /* TodayInSwitzerlandWidgetExtension */,
 				03CD27392F4B123F0011395A /* SwissPortalTests */,
 				03CD27432F4B123F0011395A /* SwissPortalUITests */,
 			);
@@ -223,6 +304,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		03CD27422F4B123F0011395A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		03CD27652F4B12400011395A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -253,6 +341,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		03CD27632F4B12400011395A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -265,6 +360,11 @@
 			isa = PBXTargetDependency;
 			target = 03CD272C2F4B123E0011395A /* SwissPortal */;
 			targetProxy = 03CD27452F4B123F0011395A /* PBXContainerItemProxy */;
+		};
+		03CD276A2F4B12400011395A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 03CD27622F4B12400011395A /* TodayInSwitzerlandWidgetExtension */;
+			targetProxy = 03CD27692F4B12400011395A /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -321,7 +421,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -378,7 +478,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -398,6 +498,7 @@
 				DEVELOPMENT_TEAM = 83YV88VTB8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "SwissPortal uses your location to show nearby activities and calculate distances.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -430,6 +531,7 @@
 				DEVELOPMENT_TEAM = 83YV88VTB8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "SwissPortal uses your location to show nearby activities and calculate distances.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -460,7 +562,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 83YV88VTB8;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Bashar.SwissPortalTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -482,7 +584,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 83YV88VTB8;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = Bashar.SwissPortalTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -536,6 +638,60 @@
 			};
 			name = Release;
 		};
+		03CD27662F4B12400011395A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 83YV88VTB8;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TodayInSwitzerlandWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Today in Switzerland";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Bashar.SwissPortal.TodayInSwitzerlandWidgetExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		03CD27672F4B12400011395A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 83YV88VTB8;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TodayInSwitzerlandWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Today in Switzerland";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Bashar.SwissPortal.TodayInSwitzerlandWidgetExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -571,6 +727,15 @@
 			buildConfigurations = (
 				03CD27552F4B123F0011395A /* Debug */,
 				03CD27562F4B123F0011395A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		03CD27682F4B12400011395A /* Build configuration list for PBXNativeTarget "TodayInSwitzerlandWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				03CD27662F4B12400011395A /* Debug */,
+				03CD27672F4B12400011395A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

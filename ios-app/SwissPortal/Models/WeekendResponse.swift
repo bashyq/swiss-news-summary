@@ -12,7 +12,7 @@ struct WeekendResponse: Codable {
 
 struct WeekendDay: Codable {
     let date: String
-    let weather: DayWeather
+    let weather: DayWeather?
     let plan: DayPlan
 }
 

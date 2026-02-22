@@ -2,6 +2,7 @@ import SwiftUI
 
 /// Error state with retry button
 struct ErrorView: View {
+    @Environment(AppState.self) private var appState
     let message: String
     var retryAction: (() -> Void)?
 
@@ -19,7 +20,7 @@ struct ErrorView: View {
 
             if let retryAction {
                 Button(action: retryAction) {
-                    Label("Try again", systemImage: "arrow.clockwise")
+                    Label(appState.localized(en: "Try again", de: "Erneut versuchen"), systemImage: "arrow.clockwise")
                         .font(.subheadline.weight(.medium))
                 }
                 .buttonStyle(.bordered)

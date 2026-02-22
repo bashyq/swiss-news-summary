@@ -163,7 +163,7 @@ struct SurpriseMeSheet: View {
                     Link(destination: url) {
                         HStack(spacing: 6) {
                             Image(systemName: "safari")
-                            Text(appState.localized(en: "Open", de: "Offnen"))
+                            Text(appState.localized(en: "Open", de: "Öffnen"))
                                 .fontWeight(.medium)
                         }
                         .frame(maxWidth: .infinity)

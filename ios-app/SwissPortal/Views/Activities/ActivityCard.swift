@@ -40,7 +40,7 @@ struct ActivityCard: View {
             badgesRow
 
             // Distance badge (if location available)
-            if let distanceText = distanceBadgeText {
+            if distanceBadgeText != nil {
                 DistanceBadge(meters: distanceMeters ?? 0)
             }
         }

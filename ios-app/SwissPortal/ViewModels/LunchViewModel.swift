@@ -44,7 +44,7 @@ final class LunchViewModel {
         case .outdoor:
             return spots.filter { $0.outdoorSeating == true }
         case .vegetarian:
-            return spots.filter { $0.vegetarian == true }
+            return spots.filter { $0.vegetarian == "yes" }
         }
     }
 

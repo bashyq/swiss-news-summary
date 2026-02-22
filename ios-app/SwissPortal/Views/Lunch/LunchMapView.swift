@@ -122,7 +122,7 @@ struct LunchMapView: View {
                     )
                 }
 
-                if spot.vegetarian == true {
+                if spot.vegetarian == "yes" {
                     BadgeView(
                         text: language == .en ? "Vegetarian" : "Vegetarisch",
                         icon: "leaf",

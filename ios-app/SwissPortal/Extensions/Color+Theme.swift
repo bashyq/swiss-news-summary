@@ -3,7 +3,7 @@ import SwiftUI
 /// App color palette — adapts to light/dark mode automatically
 extension Color {
     // MARK: - Primary Colors
-    static let appPrimary = Color("AppPrimary", bundle: nil)
+    static let appPrimary = Color.purple
     static let appAccent = Color.purple
 
     // MARK: - Semantic Colors (fallback values if asset catalog not configured)

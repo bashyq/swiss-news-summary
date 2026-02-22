@@ -1,6 +1,29 @@
 import Foundation
 import CoreLocation
 
+// MARK: - Flexible String/Array Decoder
+
+/// Handles JSON fields that may be either a single string or an array of strings.
+struct StringOrArray: Codable {
+    let values: [String]
+
+    init(values: [String]) { self.values = values }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let arr = try? container.decode([String].self) {
+            values = arr
+        } else {
+            values = [try container.decode(String.self)]
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(values)
+    }
+}
+
 // MARK: - Activities Response
 
 /// Response from GET /activities?lang={en|de}&city={cityId}
@@ -37,8 +60,8 @@ struct Activity: Codable, Identifiable {
     let stayHome: Bool?
     let availableMonths: [Int]?
     let subcategory: String?
-    let materials: [String]?
-    let materialsDE: [String]?
+    let materials: StringOrArray?
+    let materialsDE: StringOrArray?
 
     func localizedName(language: AppLanguage) -> String {
         switch language {
@@ -63,8 +86,8 @@ struct Activity: Codable, Identifiable {
 
     func localizedMaterials(language: AppLanguage) -> [String]? {
         switch language {
-        case .en: return materials
-        case .de: return materialsDE ?? materials
+        case .en: return materials?.values
+        case .de: return (materialsDE ?? materials)?.values
         }
     }
 

@@ -330,7 +330,7 @@ private struct LunchSurpriseSheet: View {
                 )
             }
 
-            if spot.vegetarian == true {
+            if spot.vegetarian == "yes" {
                 BadgeView(
                     text: appState.localized(en: "Vegetarian", de: "Vegetarisch"),
                     icon: "leaf",

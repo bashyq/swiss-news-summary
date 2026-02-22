@@ -18,11 +18,13 @@ struct LoadingView: View {
 
 /// Inline loading indicator for refresh states
 struct InlineLoadingView: View {
+    @Environment(AppState.self) private var appState
+
     var body: some View {
         HStack(spacing: 8) {
             ProgressView()
                 .controlSize(.small)
-            Text("Updating...")
+            Text(appState.localized(en: "Updating...", de: "Aktualisieren..."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

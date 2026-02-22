@@ -109,7 +109,7 @@ struct StayHomeSection: View {
         case ("pretend", .en): return "Pretend Play"
         case ("pretend", .de): return "Rollenspiele"
         case ("kitchen", .en): return "Kitchen Fun"
-        case ("kitchen", .de): return "Kuchenspass"
+        case ("kitchen", .de): return "Küchenspass"
         case ("other", .en): return "Other"
         case ("other", .de): return "Sonstiges"
         default: return category.capitalized
@@ -125,7 +125,7 @@ struct StayHomeSection: View {
                 .foregroundStyle(.secondary)
             Text(language == .en
                  ? "No stay-home activities available"
-                 : "Keine Zuhause-Aktivitaten verfugbar"
+                 : "Keine Zuhause-Aktivitäten verfügbar"
             )
             .font(.subheadline)
             .foregroundStyle(.secondary)
@@ -226,8 +226,8 @@ struct StayHomeCard: View {
             stayHome: true,
             availableMonths: nil,
             subcategory: "sensory",
-            materials: ["Play dough", "Cookie cutters", "Rolling pin"],
-            materialsDE: ["Knete", "Ausstechformen", "Nudelholz"]
+            materials: StringOrArray(values: ["Play dough", "Cookie cutters", "Rolling pin"]),
+            materialsDE: StringOrArray(values: ["Knete", "Ausstechformen", "Nudelholz"])
         ),
         Activity(
             id: "art-1",
@@ -252,8 +252,8 @@ struct StayHomeCard: View {
             stayHome: true,
             availableMonths: nil,
             subcategory: "art",
-            materials: ["Finger paints", "Large paper", "Old clothes"],
-            materialsDE: ["Fingerfarben", "Grosses Papier", "Alte Kleidung"]
+            materials: StringOrArray(values: ["Finger paints", "Large paper", "Old clothes"]),
+            materialsDE: StringOrArray(values: ["Fingerfarben", "Grosses Papier", "Alte Kleidung"])
         )
     ]
 

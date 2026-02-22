@@ -8,35 +8,45 @@ struct ContentView: View {
         @Bindable var state = appState
 
         TabView(selection: $state.selectedTab) {
-            Tab(tabLabel(.news), systemImage: AppTab.news.sfSymbol, value: .news) {
-                NavigationStack {
-                    NewsView()
-                }
+            NavigationStack {
+                NewsView()
             }
+            .tabItem {
+                Label(tabLabel(.news), systemImage: AppTab.news.sfSymbol)
+            }
+            .tag(AppTab.news)
 
-            Tab(tabLabel(.activities), systemImage: AppTab.activities.sfSymbol, value: .activities) {
-                NavigationStack {
-                    ActivitiesView()
-                }
+            NavigationStack {
+                ActivitiesView()
             }
+            .tabItem {
+                Label(tabLabel(.activities), systemImage: AppTab.activities.sfSymbol)
+            }
+            .tag(AppTab.activities)
 
-            Tab(tabLabel(.events), systemImage: AppTab.events.sfSymbol, value: .events) {
-                NavigationStack {
-                    EventsView()
-                }
+            NavigationStack {
+                EventsView()
             }
+            .tabItem {
+                Label(tabLabel(.events), systemImage: AppTab.events.sfSymbol)
+            }
+            .tag(AppTab.events)
 
-            Tab(tabLabel(.weather), systemImage: AppTab.weather.sfSymbol, value: .weather) {
-                NavigationStack {
-                    WeatherTabView()
-                }
+            NavigationStack {
+                WeatherTabView()
             }
+            .tabItem {
+                Label(tabLabel(.weather), systemImage: AppTab.weather.sfSymbol)
+            }
+            .tag(AppTab.weather)
 
-            Tab(tabLabel(.more), systemImage: AppTab.more.sfSymbol, value: .more) {
-                NavigationStack {
-                    MoreView()
-                }
+            NavigationStack {
+                MoreView()
             }
+            .tabItem {
+                Label(tabLabel(.more), systemImage: AppTab.more.sfSymbol)
+            }
+            .tag(AppTab.more)
         }
         .tint(.purple)
     }

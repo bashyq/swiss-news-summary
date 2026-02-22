@@ -41,6 +41,7 @@ struct SortPicker<S: Hashable>: View {
 
 /// "Show all / Show less" toggle button
 struct ShowAllButton: View {
+    @Environment(AppState.self) private var appState
     @Binding var showAll: Bool
     let totalCount: Int
     let visibleCount: Int
@@ -53,7 +54,9 @@ struct ShowAllButton: View {
                 }
             } label: {
                 HStack {
-                    Text(showAll ? "Show less" : "Show all \(totalCount)")
+                    Text(showAll
+                         ? appState.localized(en: "Show less", de: "Weniger anzeigen")
+                         : appState.localized(en: "Show all \(totalCount)", de: "Alle \(totalCount) anzeigen"))
                         .font(.subheadline)
                         .fontWeight(.medium)
                     Image(systemName: showAll ? "chevron.up" : "chevron.down")

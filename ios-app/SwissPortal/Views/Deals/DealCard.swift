@@ -105,7 +105,7 @@ struct DealCard: View {
             if let urlString = deal.url, let url = URL(string: urlString) {
                 Link(destination: url) {
                     HStack(spacing: 4) {
-                        Text(language == .en ? "Open" : "Offnen")
+                        Text(language == .en ? "Open" : "Öffnen")
                             .font(.caption)
                             .fontWeight(.medium)
                         Image(systemName: "arrow.up.right")
@@ -125,10 +125,10 @@ struct DealCard: View {
 
     private var categoryDisplayName: String {
         switch deal.category {
-        case "museums": return language == .en ? "Museums" : "Museen"
+        case "museum", "museums": return language == .en ? "Museums" : "Museen"
         case "outdoor": return language == .en ? "Outdoor" : "Outdoor"
         case "transport": return language == .en ? "Transport" : "Verkehr"
-        case "family_passes": return language == .en ? "Family Passes" : "Familienpasse"
+        case "family", "family_passes": return language == .en ? "Family Passes" : "Familienpässe"
         case "seasonal": return language == .en ? "Seasonal" : "Saisonal"
         default: return deal.category.capitalized
         }

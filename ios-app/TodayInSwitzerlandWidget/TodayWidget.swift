@@ -1,6 +1,16 @@
 import SwiftUI
 import WidgetKit
 
+// MARK: - Language Helper
+
+private var widgetLanguage: String {
+    UserDefaults(suiteName: "group.com.todayinswitzerland")?.string(forKey: "language") ?? "en"
+}
+
+private func localized(en: String, de: String) -> String {
+    widgetLanguage == "de" ? de : en
+}
+
 // MARK: - Timeline Provider
 
 struct TodayWidgetProvider: TimelineProvider {
@@ -75,9 +85,9 @@ struct TodayWidgetSmallView: View {
 
     private var transportLabel: String {
         switch entry.transportStatus {
-        case "none": return "Trains OK"
-        case "minor": return "\(entry.transportDelays) delays"
-        case "major": return "\(entry.transportDelays) delays"
+        case "none": return localized(en: "Trains OK", de: "Züge OK")
+        case "minor": return localized(en: "\(entry.transportDelays) delays", de: "\(entry.transportDelays) Verspätungen")
+        case "major": return localized(en: "\(entry.transportDelays) delays", de: "\(entry.transportDelays) Verspätungen")
         default: return "—"
         }
     }
@@ -108,7 +118,9 @@ struct TodayWidgetMediumView: View {
                     Circle()
                         .fill(transportColor)
                         .frame(width: 6, height: 6)
-                    Text(entry.transportStatus == "none" ? "Trains OK" : "\(entry.transportDelays) delays")
+                    Text(entry.transportStatus == "none"
+                         ? localized(en: "Trains OK", de: "Züge OK")
+                         : localized(en: "\(entry.transportDelays) delays", de: "\(entry.transportDelays) Verspätungen"))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -150,10 +162,7 @@ struct TodayWidget: Widget {
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: TodayWidgetProvider()) { entry in
-            switch WidgetFamily.self {
-            default:
-                TodayWidgetEntryView(entry: entry)
-            }
+            TodayWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("Today in Switzerland")
         .description("Weather, headlines, and transport status")

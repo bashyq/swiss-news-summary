@@ -17,7 +17,7 @@ final class ModelDecodingTests: XCTestCase {
             "history": {"year": 1958, "event": "Test event", "eventDE": "Test-Ereignis"},
             "categories": {"topStories": [{"headline": "Test headline", "summary": "Test summary", "source": "NZZ"}], "politics": [], "disruptions": [], "events": [], "culture": [], "local": []},
             "trending": {"topic": "Test topic"},
-            "briefing": {"topStory": "Top story text"},
+            "briefing": {"topStory": {"headline": "Top story headline", "summary": "Top story summary", "source": "NZZ", "url": "https://example.com", "sentiment": "neutral"}, "suggestedActivity": {"id": "zoo", "name": "Zoo Zürich", "indoor": false}},
             "city": {"id": "zurich", "name": "Zürich"},
             "timestamp": "2026-02-21T12:00:00Z"
         }
@@ -243,15 +243,15 @@ final class ModelDecodingTests: XCTestCase {
     // MARK: - Activity Helpers
 
     func testActivityFreeDetection() {
-        let freeActivity = Activity(id: "test", name: "Test", nameDE: nil, description: "Test", descriptionDE: nil, indoor: false, ageRange: nil, duration: nil, price: "Free entry", priceDE: nil, url: nil, lat: nil, lon: nil, category: nil, minAge: nil, maxAge: nil, season: nil, free: nil, recurring: nil, stayHome: nil, subcategory: nil, materials: nil, materialsDE: nil)
+        let freeActivity = Activity(id: "test", name: "Test", nameDE: nil, description: "Test", descriptionDE: nil, indoor: false, ageRange: nil, duration: nil, price: "Free entry", priceDE: nil, url: nil, lat: nil, lon: nil, category: nil, minAge: nil, maxAge: nil, season: nil, free: nil, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil)
         XCTAssertTrue(freeActivity.isFree)
 
-        let paidActivity = Activity(id: "test2", name: "Test", nameDE: nil, description: "Test", descriptionDE: nil, indoor: false, ageRange: nil, duration: nil, price: "CHF 15", priceDE: nil, url: nil, lat: nil, lon: nil, category: nil, minAge: nil, maxAge: nil, season: nil, free: nil, recurring: nil, stayHome: nil, subcategory: nil, materials: nil, materialsDE: nil)
+        let paidActivity = Activity(id: "test2", name: "Test", nameDE: nil, description: "Test", descriptionDE: nil, indoor: false, ageRange: nil, duration: nil, price: "CHF 15", priceDE: nil, url: nil, lat: nil, lon: nil, category: nil, minAge: nil, maxAge: nil, season: nil, free: nil, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil)
         XCTAssertFalse(paidActivity.isFree)
     }
 
     func testActivityAgeFilter() {
-        let toddlerActivity = Activity(id: "t", name: "T", nameDE: nil, description: "T", descriptionDE: nil, indoor: false, ageRange: nil, duration: nil, price: nil, priceDE: nil, url: nil, lat: nil, lon: nil, category: nil, minAge: 2, maxAge: 3, season: nil, free: nil, recurring: nil, stayHome: nil, subcategory: nil, materials: nil, materialsDE: nil)
+        let toddlerActivity = Activity(id: "t", name: "T", nameDE: nil, description: "T", descriptionDE: nil, indoor: false, ageRange: nil, duration: nil, price: nil, priceDE: nil, url: nil, lat: nil, lon: nil, category: nil, minAge: 2, maxAge: 3, season: nil, free: nil, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil)
 
         XCTAssertTrue(toddlerActivity.matchesAge(.all))
         XCTAssertTrue(toddlerActivity.matchesAge(.toddler))

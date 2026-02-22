@@ -129,8 +129,8 @@ enum PreviewData {
         stayHome: true,
         availableMonths: nil,
         subcategory: "sensory",
-        materials: ["Rice or pasta", "Small toys", "Container"],
-        materialsDE: ["Reis oder Nudeln", "Kleine Spielzeuge", "Behälter"]
+        materials: StringOrArray(values: ["Rice or pasta", "Small toys", "Container"]),
+        materialsDE: StringOrArray(values: ["Reis oder Nudeln", "Kleine Spielzeuge", "Behälter"])
     )
 
     static let cityEvent = CityEvent(
@@ -208,7 +208,7 @@ enum PreviewData {
         takeaway: false,
         openingHours: "Mo-Sa 11:00-23:00",
         openForLunch: true,
-        vegetarian: false,
+        vegetarian: nil,
         phone: nil,
         website: "https://www.zeughauskeller.ch"
     )

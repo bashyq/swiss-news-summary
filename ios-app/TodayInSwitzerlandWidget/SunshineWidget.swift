@@ -1,6 +1,16 @@
 import SwiftUI
 import WidgetKit
 
+// MARK: - Language Helper
+
+private var widgetLanguage: String {
+    UserDefaults(suiteName: "group.com.todayinswitzerland")?.string(forKey: "language") ?? "en"
+}
+
+private func localized(en: String, de: String) -> String {
+    widgetLanguage == "de" ? de : en
+}
+
 // MARK: - Timeline Provider
 
 struct SunshineWidgetProvider: TimelineProvider {
@@ -37,7 +47,7 @@ struct SunshineWidgetView: View {
             HStack {
                 Image(systemName: "sun.max.fill")
                     .foregroundStyle(.orange)
-                Text("Weekend Sunshine")
+                Text(localized(en: "Weekend Sunshine", de: "Wochenend-Sonnenschein"))
                     .font(.caption.weight(.semibold))
                 Spacer()
                 // Zürich baseline
@@ -109,8 +119,8 @@ struct SunshineWidget: Widget {
         StaticConfiguration(kind: kind, provider: SunshineWidgetProvider()) { entry in
             SunshineWidgetView(entry: entry)
         }
-        .configurationDisplayName("Weekend Sunshine")
-        .description("Top 3 sunniest weekend destinations")
+        .configurationDisplayName(localized(en: "Weekend Sunshine", de: "Wochenend-Sonnenschein"))
+        .description(localized(en: "Top 3 sunniest weekend destinations", de: "Top 3 sonnigste Wochenendziele"))
         .supportedFamilies([.systemMedium])
     }
 }

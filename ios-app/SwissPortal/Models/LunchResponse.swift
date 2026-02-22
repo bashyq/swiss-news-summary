@@ -6,7 +6,7 @@ import CoreLocation
 /// Response from GET /lunch?lang={en|de}&city={cityId}
 struct LunchResponse: Codable {
     let spots: [LunchSpot]
-    let city: CityInfo
+    let city: CityInfo?
     let timestamp: String?
 }
 
@@ -24,7 +24,7 @@ struct LunchSpot: Codable, Identifiable {
     let takeaway: Bool?
     let openingHours: String?
     let openForLunch: Bool?
-    let vegetarian: Bool?
+    let vegetarian: String?
     let phone: String?
     let website: String?
 

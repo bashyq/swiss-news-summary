@@ -2,24 +2,43 @@
 
 **Date:** 2026-02-22
 **Branch:** `claude/plan-ios-app-4aOQo`
-**Build Status:** COMPILES (xcodebuild succeeds for simulator)
-**Runtime Status:** Partially functional - JSON decoding errors on some endpoints
+**Build Status:** COMPILES & RUNS on real device (iPhone 18,1 / iOS 26.3)
+**Runtime Status:** All tabs functional — News, Activities, Events, Weekend, Lunch, Sunshine, Snow, Deals
 
 ---
 
-## 1. Build Verdict
+## 1. Architecture Overview
 
 ```
-** BUILD SUCCEEDED **
+iOS App (SwiftUI + MVVM)
+    ↓ HTTPS
+Cloudflare Worker (swiss-news-worker.swissnews.workers.dev)
+    ↓
+RSS feeds, Open-Meteo, Swiss Transport API, Claude API
 ```
 
-The app compiles cleanly from command line for iPhone 17 Pro Simulator (iOS 26.2 SDK). Zero warnings, zero errors. It launches and the News tab works after our `Briefing` model fix. Activities also load after fixing the `recurring` field type.
+The iOS app is a thin presentation layer over the same Cloudflare Worker API that the PWA uses. All data aggregation, RSS parsing, and Claude AI categorization happen server-side. The app handles:
+- Caching (file-based, per-endpoint TTL)
+- Offline resilience (show cached data, fetch fresh in background)
+- Client-side fallback for Sunshine/Snow (direct Open-Meteo when worker is rate-limited)
+- Location services for "Near me" filtering
+- Widget extension for home screen widgets
+
+### API Endpoints Used
+
+| Endpoint | Swift Model | Tab |
+|----------|-------------|-----|
+| `GET /` | `NewsResponse` | News, Events |
+| `GET /activities` | `ActivitiesResponse` | Activities, Events |
+| `GET /weekend` | `WeekendResponse` | Weekend Planner |
+| `GET /lunch` | `LunchResponse` | Lunch |
+| `GET /sunshine` | `SunshineResponse` | Where to go? (Sunshine) |
+| `GET /snow` | `SnowResponse` | Where to go? (Snow) |
+| (static) | `DealsData` | Deals & Free |
 
 ---
 
-## 2. Project Structure (What's Good)
-
-The overall MVVM architecture is solid and well-organized:
+## 2. Project Structure
 
 ```
 SwissPortal/
@@ -31,136 +50,111 @@ SwissPortal/
 ├── Views/         (42 files) - Organized by feature
 ├── Resources/     (4 files) - Static data (deals, destinations, resorts)
 └── Preview Content/ (1 file) - PreviewData
+
+TodayInSwitzerlandWidget/
+├── WidgetBundle.swift      - @main entry, bundles both widgets
+├── TodayWidget.swift       - News + weather + transport widget (small/medium)
+├── SunshineWidget.swift    - Weekend sunshine top 3 widget (medium)
+├── WidgetDataProvider.swift - API client + lightweight Codable models
+└── Info.plist              - NSExtension configuration
 ```
 
-**Good decisions:**
+**Design decisions:**
 - Zero external dependencies (no CocoaPods, no SPM packages)
-- Proper use of `@Observable` (iOS 17+) instead of `ObservableObject`
+- `@Observable` (iOS 17+) instead of `ObservableObject`
 - Actor-based services (`APIClient`, `CacheManager`) for thread safety
 - File-based caching with TTL per endpoint type
 - Clean separation: Models know nothing about Views
-- Widget extension has its own lightweight Codable models (doesn't import the main app's)
+- Widget extension has its own lightweight Codable models (doesn't import main app)
+- Deployment target: iOS 17.0
 
 ---
 
-## 3. What's Broken / Messy
+## 3. Issues Found & Fixed
 
-### A. CRITICAL: Models Don't Match the API (Root cause of all runtime crashes)
+### Session 1: Compilation Fixes (11 errors)
 
-The Swift Codable models were written based on the PLAN document, not the actual API responses. Multiple fields are wrong:
+| # | Issue | Fix |
+|---|-------|-----|
+| A | `Briefing` model expected strings, API sends objects | Rewrote as `BriefingItem`/`BriefingActivity` structs |
+| B | `Activity.recurring` was `RecurringSchedule` struct, API sends plain string | Changed to `String?` |
+| C | `CacheTTL` enum had duplicate raw values | Removed raw values, used computed `seconds` |
+| D | `DestinationHighlights` defined twice (Resources + SunshineCard) | Removed 290-line duplicate |
+| E | `SnowCard` used `.tertiary` (`ShapeStyle`) where `Color` expected | Changed to `Color.gray` |
+| F | `SettingsView` passed `AppState` where `Bindable<AppState>` needed | Fixed binding pass-through |
+| G | Missing `availableMonths` field on `Activity` | Added `availableMonths: [Int]?` |
+| H | Missing `timestamp` on `ActivitiesResponse` | Added `timestamp: String?` |
+| I | Missing `url` on `TrendingTopic` | Added `url: String?` |
+| J | DayDetailView/EventsView referenced `RecurringSchedule` struct | Simplified to use `String` |
+| K | PreviewData complex expressions wouldn't type-check | Broke into sub-expressions |
 
-| Model | Field | Expected | Actual API |
-|-------|-------|----------|------------|
-| `Briefing.topStory` | `String?` | **Full NewsItem object** |
-| `Briefing.suggestedActivity` | `String?` | **Full Activity object** |
-| `Activity.recurring` | `RecurringSchedule` struct | **Plain string** (`"Tue & Fri 6:00-11:00"`) |
-| `CacheTTL` | Raw value enum | Duplicate raw values (Swift doesn't allow) |
-| `DestinationHighlights` | Defined once | **Defined twice** (Resources + SunshineCard) |
-| `Activity` | Missing field | Missing `availableMonths: [Int]?` |
-| `Activity` | Missing field | Missing `priceDE` in API (but model has it) |
-| `ActivitiesResponse` | Missing field | Missing `timestamp` |
-| `TrendingTopic` | Missing field | Missing `url` |
-| `Holiday` | Extra fields | API has `cantons`, `isToday` (harmless, ignored) |
-| `TrainDelay` | Extra fields | API has `platform` (harmless, ignored) |
-| `NewsItem` | Extra fields | Model has `headlineDE`, `summaryDE`, `detailDE` that API doesn't send (harmless, nil) |
-| `SnowCard` | Type error | `.tertiary` is `ShapeStyle`, not `Color` |
-| `SettingsView` | Bindable error | Passing `AppState` where `Bindable<AppState>` expected |
+### Session 2: Runtime & Localization Fixes
 
-**We've fixed all of the above during this session.** But the pattern is clear: the models were generated from docs, not validated against the live API.
+| # | Issue | Fix |
+|---|-------|-----|
+| L | `NewsItem.timeAgo` always nil — parser required date-only format | Added `parseISODateTime()` with fractional-seconds fallback |
+| M | Deal category mismatch — `"museum"` vs `"museums"` | DealCard now matches both singular/plural |
+| N | 6 German umlaut typos across 3 files | Fixed `Öffnen`, `Küchenspass`, `Aktivitäten`, `verfügbar`, `Familienpässe` |
+| O | 5 shared views had hardcoded English | Added `@Environment(AppState.self)` for localization |
+| P | Duplicate activities in Events "all" filter | Deduplicated by ID before appending |
+| Q | Unused variable warning in ActivityCard | Changed `if let` to `if != nil` |
+| R | Stale unit test JSON for Briefing model | Updated test data to match new object shape |
 
-### B. CRITICAL: Widget Extension Target Missing
+### Session 3: Xcode Project + API Model Fixes
 
-The `TodayInSwitzerlandWidget/` directory has 4 complete Swift files:
-- `WidgetBundle.swift` (with `@main`)
-- `TodayWidget.swift`
-- `SunshineWidget.swift`
-- `WidgetDataProvider.swift`
-
-**But there is NO widget extension target in the Xcode project.** These files are completely orphaned - they exist on disk but are never compiled. The project only has 3 targets:
-1. SwissPortal (app)
-2. SwissPortalTests
-3. SwissPortalUITests
-
-To make widgets work, you need to add a Widget Extension target in Xcode.
-
-### C. No Location Permission Declared
-
-The app has a `LocationManager` service and "Near Me" activity filtering, but `NSLocationWhenInUseUsageDescription` is not set anywhere - not in a custom Info.plist, not in build settings. The app will crash when requesting location.
-
-### D. Deployment Target is iOS 26.2
-
-`IPHONEOS_DEPLOYMENT_TARGET = 26.2` - this is whatever your Xcode defaulted to. The code uses `@Observable` which requires iOS 17+. If you want anyone besides beta testers to use this, lower it to iOS 17.0.
-
-### E. Tests Won't Pass
-
-The test files (`ModelDecodingTests.swift`, `ViewModelTests.swift`) test against the old model shapes:
-- They create `Briefing` with string arguments (old shape)
-- They reference `RecurringSchedule` (deleted)
-- PreviewData used in tests has been updated but the test assertions may still reference old field paths
-
-### F. `Color("AppPrimary")` References Missing Asset
-
-`Color+Theme.swift` line 6: `static let appPrimary = Color("AppPrimary", bundle: nil)` - but there's no asset catalog with an "AppPrimary" color set. This will silently fall back to clear/default at runtime.
+| # | Issue | Fix |
+|---|-------|-----|
+| S | ContentView used iOS 18+ `Tab()` API | Rewrote to `.tabItem{}` + `.tag()` (iOS 17) |
+| T | No `NSLocationWhenInUseUsageDescription` | Added to build settings (Debug + Release) |
+| U | Deployment target was iOS 26.2 | Lowered to iOS 17.0 (all targets) |
+| V | Widget Extension target missing from Xcode project | Added full target to project.pbxproj (PBXNativeTarget, build phases, configs) |
+| W | Widget Info.plist missing `NSExtension` dictionary | Created Info.plist with `NSExtensionPointIdentifier` |
+| X | `Color("AppPrimary")` referenced missing asset | Changed to `Color.purple` |
+| Y | Widget UI text not localized | Added `localized(en:de:)` helpers to both widget files |
+| Z | `transport.summary` can be `null` | Made `TransportSummary?` optional, updated TransportWidget |
+| AA | `WeekendDay.weather` can be `null` (Sunday) | Made `DayWeather?` optional, added `if let` guard in WeekendDayCard |
+| AB | Lunch API has no `city`/`timestamp` at top level | Made `city: CityInfo?` optional |
+| AC | `LunchSpot.vegetarian` is `String?` not `Bool?` | Changed type, updated all `== true` to `== "yes"` (4 files) |
+| AD | `Activity.materials` can be string OR array | Added `StringOrArray` Codable type that handles both |
+| AE | Added detailed DecodingError logging | `APIClient.detailedDecodingError()` shows field path + type in UI |
 
 ---
 
-## 4. Code Quality Issues (Not Blocking, But Messy)
+## 4. Known Issues (Not Yet Fixed)
 
-### Preview Code Bloat
-Almost every view file has a `#Preview` block at the bottom that manually constructs full model objects with 15+ parameters. This creates massive maintenance burden - every model change requires updating 5-10 preview blocks. PreviewData.swift was supposed to centralize this but many views have their own inline sample data instead.
+### Code Quality (Non-blocking)
 
-### Localization is DIY
-Instead of using String Catalogs or `.strings` files, every view manually calls `appState.localized(en: "...", de: "...")`. This is ~200 inline localization calls scattered across views. Works, but doesn't scale to more languages and can't leverage Xcode's localization tools.
+| Issue | Severity | Notes |
+|-------|----------|-------|
+| `filteredEvents()` returns `[Any]` | Low | Should use enum `EventItem` with associated values |
+| Preview code bloat | Low | Many views have inline sample data instead of using PreviewData.swift |
+| DIY localization (~200 inline calls) | Medium | Uses `appState.localized(en:de:)` instead of String Catalogs |
+| `AppState` is a god object | Medium | Holds city, language, theme, saved data, AND localization helpers |
+| Hardcoded Easter calculation | Low | 20-line Computus algorithm duplicated from worker's data.js |
+| Error messages show raw paths (debug) | Low | `detailedDecodingError` is useful for dev but should be user-friendly for production |
 
-### Error Handling Shows Raw Errors
-`APIError.decodingError` shows `error.localizedDescription` which gives the user useless messages like "The data couldn't be read because it isn't in the correct format." Should show a user-friendly message and log the actual decoding path for debugging.
+### Future Improvements
 
-### `AppState` is a God Object
-`AppState.swift` holds: selected city, language, theme, saved activities, lunch ratings, custom activities, AND provides localization helpers. It's the single `@Observable` environment object. This works for now but will get unwieldy.
-
-### Hardcoded Easter Calculation
-`SettingsView.swift` has a full Computus (Easter date calculation algorithm) - 20 lines of math. Fine for correctness, but this logic is duplicated from the worker's `data.js`.
-
----
-
-## 5. What's Actually Good
-
-- **The MVVM split is clean.** ViewModels fetch data, Views render it. No business logic in views.
-- **Actor-based networking is correct.** `APIClient` and `CacheManager` are proper Swift actors.
-- **The widget architecture is smart** - lightweight Codable models that don't import the main app, preventing bloat.
-- **Client-side fallback for Open-Meteo** is well-implemented. When the worker gets rate-limited, the app fetches directly.
-- **The tab structure maps 1:1 to the PWA** which makes feature parity easy to verify.
-- **Zero dependencies** means no supply chain risk, no version conflicts, no build complexity.
+| Improvement | Priority |
+|-------------|----------|
+| Replace `[Any]` in `filteredEvents()` with typed enum | Should do |
+| Centralize preview data in PreviewData.swift | Nice to have |
+| Consider String Catalogs for localization | Nice to have |
+| Add App Group capability for widget data sharing | Should do |
+| Remove debug error logging before App Store submission | Must do |
+| Add pull-to-refresh on all list views | Nice to have |
+| Add offline indicator when no cached data available | Nice to have |
 
 ---
 
-## 6. Recommended Fix Priority
+## 5. Files Changed (All Sessions)
 
-### Must Fix (Before App Store)
-1. ~~Models vs API mismatches~~ (DONE in this session)
-2. Add `NSLocationWhenInUseUsageDescription` to build settings
-3. Lower deployment target to iOS 17.0
-4. Add Widget Extension target to Xcode project
-5. Fix/update unit tests for new model shapes
-
-### Should Fix (Before Beta)
-6. Add `Color("AppPrimary")` to asset catalog (or remove the reference)
-7. Add better error messages for decoding failures (log the keyPath)
-8. Validate ALL endpoint responses against models (lunch, weekend, snow, sunshine)
-
-### Nice to Have
-9. Centralize all preview data in PreviewData.swift, remove inline #Preview constructors
-10. Consider String Catalogs for localization
-11. Add App Group capability for widget data sharing
-
----
-
-## 7. Files Changed in This Session
+### Session 1 — Compilation Fixes (12 files)
 
 | File | Change |
 |------|--------|
 | `Models/NewsResponse.swift` | Rewrote `Briefing` from strings to objects, added `url` to `TrendingTopic` |
-| `Models/Activity.swift` | Changed `recurring` from `RecurringSchedule?` to `String?`, added `availableMonths`, added `timestamp` to response |
+| `Models/Activity.swift` | Changed `recurring` from `RecurringSchedule?` to `String?`, added `availableMonths`, `timestamp` |
 | `Services/CacheManager.swift` | Fixed `CacheTTL` enum (no raw values), changed generics to `Codable` |
 | `Views/Sunshine/SunshineCard.swift` | Removed 290-line duplicate `DestinationHighlights` enum |
 | `Views/Snow/SnowCard.swift` | Fixed `.tertiary` to `Color.gray` |
@@ -171,3 +165,44 @@ Instead of using String Catalogs or `.strings` files, every view manually calls 
 | `Views/Activities/ActivityCard.swift` | Added `availableMonths` parameter |
 | `Views/Activities/StayHomeSection.swift` | Added `availableMonths` parameter |
 | `Views/Activities/SurpriseMeSheet.swift` | Added `availableMonths` parameter |
+
+### Session 2 — Runtime & Localization Fixes (12 files)
+
+| File | Change |
+|------|--------|
+| `Extensions/Date+Helpers.swift` | Fixed `isoDateTimeFormatter`, added fractional-seconds fallback |
+| `Models/NewsResponse.swift` | Fixed `timeAgo` to use `parseISODateTime` |
+| `Views/Deals/DealCard.swift` | Fixed category mismatch + 2 umlauts |
+| `Views/Activities/StayHomeSection.swift` | Fixed 3 umlauts |
+| `Views/Activities/SurpriseMeSheet.swift` | Fixed 1 umlaut |
+| `Views/Shared/BadgeView.swift` | Localized FreeBadge + ToddlerFriendlyBadge |
+| `Views/Shared/LoadingView.swift` | Localized InlineLoadingView |
+| `Views/Shared/ErrorView.swift` | Localized "Try again" |
+| `Views/Shared/SortPicker.swift` | Localized ShowAllButton |
+| `Views/Activities/ActivityCard.swift` | Fixed unused variable |
+| `ViewModels/EventsViewModel.swift` | Deduplicated activities in "all" filter |
+| `SwissPortalTests/.../ModelDecodingTests.swift` | Updated test JSON |
+
+### Session 3 — Xcode Project + API Model Fixes (18 files)
+
+| File | Change |
+|------|--------|
+| `App/ContentView.swift` | Rewrote Tab API from iOS 18+ to iOS 17 compatible |
+| `SwissPortal.xcodeproj/project.pbxproj` | Lowered deployment target to 17.0, added location plist key, added full Widget Extension target |
+| `TodayInSwitzerlandWidget/Info.plist` | **NEW** — NSExtension dictionary for widget |
+| `Extensions/Color+Theme.swift` | Changed `Color("AppPrimary")` to `Color.purple` |
+| `TodayInSwitzerlandWidget/TodayWidget.swift` | Localized all widget strings |
+| `TodayInSwitzerlandWidget/SunshineWidget.swift` | Localized all widget strings |
+| `Models/NewsResponse.swift` | Made `Transport.summary` optional |
+| `Models/WeekendResponse.swift` | Made `WeekendDay.weather` optional |
+| `Models/LunchResponse.swift` | Made `city` optional, changed `vegetarian` to `String?` |
+| `Models/Activity.swift` | Added `StringOrArray` type, changed `materials`/`materialsDE` |
+| `Views/News/TransportWidget.swift` | Optional chaining for `summary?.status` |
+| `Views/Weekend/WeekendDayCard.swift` | `if let weather` guard for nil weather |
+| `Views/Lunch/LunchCard.swift` | `vegetarian == "yes"`, fixed preview sample |
+| `Views/Lunch/LunchMapView.swift` | `vegetarian == "yes"` |
+| `Views/Lunch/LunchView.swift` | `vegetarian == "yes"` |
+| `ViewModels/LunchViewModel.swift` | `vegetarian == "yes"` in filter |
+| `Services/APIClient.swift` | Added detailed DecodingError logging with field paths |
+| `Preview Content/PreviewData.swift` | Updated `vegetarian` and `materials` types |
+| `Views/Activities/StayHomeSection.swift` | Updated `materials` to `StringOrArray` |

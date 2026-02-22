@@ -238,10 +238,15 @@ final class EventsViewModel {
             results.append(contentsOf: recurring)
         }
 
-        // Seasonal activities
+        // Seasonal activities (exclude any already added as recurring to avoid duplicates)
         if includeAll || eventFilter == "seasonal" {
             let allActivities = activitiesData?.activities ?? []
-            let seasonal = allActivities.filter { $0.season != nil && $0.isCurrentSeason }
+            let addedRecurringIDs = Set(
+                (results.compactMap { ($0 as? Activity)?.id })
+            )
+            let seasonal = allActivities.filter {
+                $0.season != nil && $0.isCurrentSeason && !addedRecurringIDs.contains($0.id)
+            }
             results.append(contentsOf: seasonal)
         }
 
