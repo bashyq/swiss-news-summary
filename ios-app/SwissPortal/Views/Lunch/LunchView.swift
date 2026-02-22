@@ -8,9 +8,11 @@ import CoreLocation
 struct LunchView: View {
     @Environment(AppState.self) private var appState
     @Environment(LocationManager.self) private var locationManager
+    @Environment(ToastManager.self) private var toastManager
 
     @State private var viewModel = LunchViewModel()
     @State private var surpriseSpot: LunchSpot?
+    @State private var showAddSheet = false
 
     var body: some View {
         content
@@ -18,14 +20,11 @@ struct LunchView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    mapToggleButton
+                    HStack(spacing: 12) {
+                        mapToggleButton
+                        addButton
+                    }
                 }
-            }
-            .refreshable {
-                await viewModel.loadLunch(
-                    city: appState.city,
-                    language: appState.language
-                )
             }
             .task {
                 await viewModel.loadLunch(
@@ -54,12 +53,20 @@ struct LunchView: View {
                     locationManager.requestLocation()
                 }
             }
+            .sheet(isPresented: $showAddSheet) {
+                AddRestaurantSheet()
+            }
             .sheet(item: $surpriseSpot) { spot in
                 LunchSurpriseSheet(
                     spot: spot,
                     onTryAnother: pickSurprise,
                     onSave: {
                         appState.toggleSavedLunch(spot.id)
+                        let wasSaved = appState.savedLunchIDs.contains(spot.id)
+                        toastManager.show(
+                            appState.localized(en: wasSaved ? "Saved" : "Removed", de: wasSaved ? "Gespeichert" : "Entfernt"),
+                            type: .success
+                        )
                     },
                     isSaved: appState.savedLunchIDs.contains(spot.id)
                 )
@@ -85,15 +92,28 @@ struct LunchView: View {
         }
     }
 
+    private var addButton: some View {
+        Button {
+            showAddSheet = true
+        } label: {
+            Image(systemName: "plus")
+        }
+    }
+
     // MARK: - Content
 
     @ViewBuilder
     private var content: some View {
         if viewModel.isLoading && viewModel.lunchData == nil {
-            LoadingView(message: appState.localized(
-                en: "Loading restaurants...",
-                de: "Restaurants laden..."
-            ))
+            ScrollView {
+                LazyVStack(spacing: 12) {
+                    ForEach(0..<5, id: \.self) { _ in
+                        SkeletonLunchCard()
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.top, 12)
+            }
         } else if let error = viewModel.error, viewModel.lunchData == nil {
             ErrorView(message: error) {
                 Task {
@@ -117,6 +137,30 @@ struct LunchView: View {
                 LunchFilterBar(viewModel: viewModel, language: appState.language)
                     .padding(.top, 8)
 
+                // 1.5 Results count
+                HStack {
+                    let total = currentSpots.count
+                    let displayed = viewModel.displaySpots(from: currentSpots).count
+                    if displayed < total {
+                        Text(appState.localized(
+                            en: "\(displayed) of \(total) results",
+                            de: "\(displayed) von \(total) Ergebnisse"
+                        ))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    } else {
+                        Text(appState.localized(
+                            en: "\(total) results",
+                            de: "\(total) Ergebnisse"
+                        ))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal)
+                .padding(.top, 8)
+
                 // 2. Inline loading indicator for background refresh
                 if viewModel.isLoading && viewModel.lunchData != nil {
                     InlineLoadingView()
@@ -128,7 +172,8 @@ struct LunchView: View {
                     LunchMapView(
                         spots: currentSpots,
                         city: appState.city,
-                        language: appState.language
+                        language: appState.language,
+                        userFocusLocation: viewModel.filter == .nearMe ? locationManager.location : nil
                     )
                     .frame(height: 240)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -149,25 +194,52 @@ struct LunchView: View {
     // MARK: - Spot List
 
     private var spotList: some View {
-        let spots = currentSpots
+        let allSpots = currentSpots
+        let displayedSpots = viewModel.displaySpots(from: allSpots)
+        let isTruncated = displayedSpots.count < allSpots.count
 
         return Group {
-            if spots.isEmpty {
+            if allSpots.isEmpty {
                 emptyState
             } else {
                 ScrollView {
                     LazyVStack(spacing: 12) {
-                        ForEach(spots) { spot in
+                        ForEach(displayedSpots) { spot in
                             LunchCard(
                                 spot: spot,
                                 language: appState.language,
                                 location: locationManager.location
                             )
                         }
+
+                        if isTruncated {
+                            Button {
+                                viewModel.showingAll = true
+                            } label: {
+                                Text(appState.localized(
+                                    en: "Show all \(allSpots.count) restaurants",
+                                    de: "Alle \(allSpots.count) Restaurants anzeigen"
+                                ))
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.purple)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.purple.opacity(0.08))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
                     .padding(.horizontal)
                     .padding(.top, 12)
                     .padding(.bottom, 80) // Space for floating button
+                }
+                .refreshable {
+                    await viewModel.loadLunch(
+                        city: appState.city,
+                        language: appState.language
+                    )
                 }
             }
         }
@@ -244,5 +316,6 @@ struct LunchView: View {
         LunchView()
             .environment(AppState())
             .environment(LocationManager())
+            .environment(ToastManager())
     }
 }

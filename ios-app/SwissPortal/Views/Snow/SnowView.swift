@@ -86,6 +86,7 @@ struct SnowView: View {
                 SnowMapView(
                     destinations: filteredDestinations,
                     language: appState.language,
+                    userFocusLocation: viewModel.sort == .distance ? locationManager.location : nil,
                     onResortTapped: { resort in
                         withAnimation(.easeInOut(duration: 0.3)) {
                             viewModel.toggleExpanded(resort.id)

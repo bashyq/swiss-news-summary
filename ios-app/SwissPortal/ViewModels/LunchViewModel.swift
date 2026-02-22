@@ -11,7 +11,9 @@ final class LunchViewModel {
     var lunchData: LunchResponse?
 
     /// Current filter for lunch spots
-    var filter: LunchFilter = .all
+    var filter: LunchFilter = .all {
+        didSet { showingAll = false }
+    }
 
     /// Whether a network fetch is in progress
     var isLoading: Bool = false
@@ -20,7 +22,13 @@ final class LunchViewModel {
     var error: String?
 
     /// Whether the map strip is shown (true = map + list, false = list only)
-    var showMap: Bool = true
+    var showMap: Bool = false
+
+    /// Maximum number of spots to display in the list (all remain in memory for map/filtering)
+    var displayLimit: Int = 50
+
+    /// Whether the user has tapped "Show all" to bypass the display limit
+    var showingAll: Bool = false
 
     // MARK: - Filtering
 
@@ -46,6 +54,11 @@ final class LunchViewModel {
         case .vegetarian:
             return spots.filter { $0.vegetarian == "yes" }
         }
+    }
+
+    /// Returns a limited slice of spots for display. All spots remain available for map/filtering.
+    func displaySpots(from spots: [LunchSpot]) -> [LunchSpot] {
+        showingAll ? spots : Array(spots.prefix(displayLimit))
     }
 
     // MARK: - Surprise Me

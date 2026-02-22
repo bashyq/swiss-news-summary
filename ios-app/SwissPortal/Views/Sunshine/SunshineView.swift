@@ -93,6 +93,7 @@ struct SunshineView: View {
                     SunshineMapView(
                         destinations: filteredDestinations,
                         language: appState.language,
+                        userFocusLocation: viewModel.sort == .distance ? locationManager.location : nil,
                         onDestinationTapped: { dest in
                             viewModel.toggleExpanded(dest.id)
                             withAnimation {

@@ -12,9 +12,6 @@ final class ActivitiesViewModel {
     /// Current activity filter (all, indoor, outdoor, free, etc.)
     var filter: ActivityFilter = .all
 
-    /// Current age filter (all, toddler 2-3, preschool 4-5)
-    var ageFilter: AgeFilter = .all
-
     /// Whether a network fetch is in progress
     var isLoading: Bool = false
 
@@ -37,43 +34,39 @@ final class ActivitiesViewModel {
         let categoryFiltered: [Activity]
         switch filter {
         case .all:
-            categoryFiltered = activities.filter { $0.stayHome != true }
+            categoryFiltered = activities.filter { !$0.isStayHome }
         case .indoor:
-            categoryFiltered = activities.filter { $0.indoor && $0.stayHome != true }
+            categoryFiltered = activities.filter { $0.indoor && !$0.isStayHome }
         case .outdoor:
-            categoryFiltered = activities.filter { !$0.indoor && $0.stayHome != true }
+            categoryFiltered = activities.filter { !$0.indoor && !$0.isStayHome }
         case .free:
-            categoryFiltered = activities.filter { $0.isFree && $0.stayHome != true }
+            categoryFiltered = activities.filter { $0.isFree && !$0.isStayHome }
         case .saved:
             categoryFiltered = activities.filter { savedIDs.contains($0.id) }
         case .seasonal:
-            categoryFiltered = activities.filter { $0.isCurrentSeason && $0.stayHome != true }
+            categoryFiltered = activities.filter { $0.isCurrentSeason && !$0.isStayHome }
         case .stayHome:
-            categoryFiltered = activities.filter { $0.stayHome == true }
+            categoryFiltered = activities.filter { $0.isStayHome }
         case .nearMe:
             // "Near me" returns all non-stayHome activities; sorting by distance is
             // handled in the view layer using the user's location.
-            categoryFiltered = activities.filter { $0.stayHome != true }
+            categoryFiltered = activities.filter { !$0.isStayHome }
         }
 
-        // Apply age filter
-        return categoryFiltered.filter { $0.matchesAge(ageFilter) }
+        return categoryFiltered
     }
 
     // MARK: - Surprise Me
 
-    /// Pick a random weather-appropriate activity.
+    /// Pick a random activity from the currently filtered set.
     ///
-    /// When weather is bad (rainy or cold), prefer indoor activities.
-    /// Excludes stay-home and saved-only activities for variety.
+    /// When no filter-specific results exist, falls back to all non-stayHome activities.
+    /// In bad weather, prefers indoor activities.
     func surpriseMe(weather: Weather?, savedIDs: Set<String>) -> Activity? {
-        guard let activities = activitiesData?.activities else { return nil }
-
-        // Exclude stay-home activities from the surprise pool
-        let pool = activities.filter { $0.stayHome != true }
+        let pool = filteredActivities(savedIDs: savedIDs)
         guard !pool.isEmpty else { return nil }
 
-        // If weather is bad, strongly prefer indoor activities
+        // If weather is bad, prefer indoor activities from the filtered pool
         if let weather, weather.isBadWeather {
             let indoorPool = pool.filter { $0.indoor }
             if !indoorPool.isEmpty {

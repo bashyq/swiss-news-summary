@@ -10,17 +10,20 @@ struct LunchMapView: View {
     let spots: [LunchSpot]
     let city: City
     let language: AppLanguage
+    var userFocusLocation: CLLocation?
 
     @State private var selectedSpot: LunchSpot?
     @State private var cameraPosition: MapCameraPosition
 
-    init(spots: [LunchSpot], city: City, language: AppLanguage) {
+    init(spots: [LunchSpot], city: City, language: AppLanguage, userFocusLocation: CLLocation? = nil) {
         self.spots = spots
         self.city = city
         self.language = language
-        // Center on the city coordinate with a ~5 km span (tighter for restaurant density)
+        self.userFocusLocation = userFocusLocation
+        // Center on user location if available, otherwise city
+        let center = userFocusLocation?.coordinate ?? city.coordinate
         let region = MKCoordinateRegion(
-            center: city.coordinate,
+            center: center,
             span: MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
         )
         _cameraPosition = State(initialValue: .region(region))
@@ -50,6 +53,17 @@ struct LunchMapView: View {
                     span: MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
                 )
                 cameraPosition = .region(region)
+            }
+        }
+        .onChange(of: userFocusLocation?.coordinate.latitude) { _, _ in
+            if let loc = userFocusLocation {
+                withAnimation {
+                    let region = MKCoordinateRegion(
+                        center: loc.coordinate,
+                        span: MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
+                    )
+                    cameraPosition = .region(region)
+                }
             }
         }
         .overlay(alignment: .bottom) {

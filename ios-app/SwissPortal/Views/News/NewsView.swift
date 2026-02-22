@@ -8,23 +8,31 @@ struct NewsView: View {
     @Environment(AppState.self) private var appState
     @State private var viewModel = NewsViewModel()
     @State private var showWeatherDetail = false
+    @State private var briefingDismissedToday = false
 
     var body: some View {
         NavigationStack {
             content
                 .navigationTitle(navigationTitle)
                 .navigationBarTitleDisplayMode(.large)
+                .toolbarTitleMenu {
+                    ForEach(City.allCases) { city in
+                        Button {
+                            appState.city = city
+                        } label: {
+                            HStack {
+                                Text(city.localizedName(language: appState.language))
+                                if city == appState.city {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                }
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         shareButton
                     }
-                }
-                .refreshable {
-                    await viewModel.loadNews(
-                        city: appState.city,
-                        language: appState.language,
-                        forceRefresh: true
-                    )
                 }
                 .task {
                     await viewModel.loadNews(
@@ -55,6 +63,26 @@ struct NewsView: View {
                         WeatherDetailSheet(weather: weather)
                     }
                 }
+                .onAppear {
+                    checkBriefingDismissed()
+                }
+        }
+    }
+
+    // MARK: - Briefing Helpers
+
+    private func checkBriefingDismissed() {
+        let key = "briefingDismissed"
+        let todayString = DateHelpers.toISO(Date())
+        briefingDismissedToday = UserDefaults.standard.string(forKey: key) == todayString
+    }
+
+    private func dismissBriefing() {
+        let key = "briefingDismissed"
+        let todayString = DateHelpers.toISO(Date())
+        UserDefaults.standard.set(todayString, forKey: key)
+        withAnimation {
+            briefingDismissedToday = true
         }
     }
 
@@ -73,10 +101,15 @@ struct NewsView: View {
     @ViewBuilder
     private var content: some View {
         if viewModel.isLoading && viewModel.newsData == nil {
-            LoadingView(message: appState.localized(
-                en: "Loading news...",
-                de: "Nachrichten laden..."
-            ))
+            ScrollView {
+                LazyVStack(spacing: 12) {
+                    ForEach(0..<5, id: \.self) { _ in
+                        SkeletonNewsCard()
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.top, 12)
+            }
         } else if let error = viewModel.error, viewModel.newsData == nil {
             ErrorView(message: error) {
                 Task {
@@ -95,6 +128,13 @@ struct NewsView: View {
     private var newsContent: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
+                // 0. Briefing card (dismissible, daily)
+                if let briefing = viewModel.newsData?.briefing, !briefingDismissedToday {
+                    BriefingCard(briefing: briefing, onDismiss: dismissBriefing)
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+                }
+
                 // 1. Compact weather (tappable)
                 if let weather = viewModel.newsData?.weather {
                     WeatherCompactView(weather: weather) {
@@ -157,6 +197,13 @@ struct NewsView: View {
                     .padding(.bottom, 24)
                 }
             }
+        }
+        .refreshable {
+            await viewModel.loadNews(
+                city: appState.city,
+                language: appState.language,
+                forceRefresh: true
+            )
         }
     }
 

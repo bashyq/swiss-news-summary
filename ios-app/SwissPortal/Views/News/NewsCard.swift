@@ -25,26 +25,24 @@ struct NewsCard: View {
 
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Headline
-            headline
+            // Tappable area: headline, summary, metadata → opens URL
+            VStack(alignment: .leading, spacing: 8) {
+                headline
+                summary
+                metadataRow
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                openURL()
+            }
 
-            // Summary
-            summary
-
-            // Metadata row: source, time ago, sentiment
-            metadataRow
-
-            // Expandable detail section
+            // Expandable detail section (separate hit target)
             if let detail = item.localizedDetail(language: appState.language),
                !detail.isEmpty {
                 detailSection(detail)
             }
         }
         .padding(14)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            openURL()
-        }
     }
 
     // MARK: - Headline
@@ -118,8 +116,11 @@ struct NewsCard: View {
                         .fontWeight(.medium)
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                         .font(.caption2)
+                    Spacer()
                 }
                 .foregroundStyle(.purple)
+                .padding(.vertical, 6)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 

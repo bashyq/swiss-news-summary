@@ -68,6 +68,11 @@ struct Activity: Codable, Identifiable {
         }
     }
 
+    /// Whether this is a stay-home activity (detected from category field or stayHome bool)
+    var isStayHome: Bool {
+        category.lowercased() == "stayhome" || stayHome == true
+    }
+
     /// Whether activity is free (auto-detected from price field)
     var isFree: Bool {
         if let free { return free }
@@ -99,16 +104,17 @@ struct Activity: Codable, Identifiable {
         }
     }
 
-    /// Whether this activity is currently seasonal (available this month)
+    /// Whether this activity is currently seasonal (available this month).
+    /// Activities without a season tag are NOT seasonal.
     var isCurrentSeason: Bool {
-        guard let season else { return true }
+        guard let season else { return false }
         let month = Calendar.current.component(.month, from: Date())
         switch season.lowercased() {
         case "winter": return [12, 1, 2].contains(month)
         case "spring": return [3, 4, 5].contains(month)
         case "summer": return [6, 7, 8].contains(month)
         case "autumn", "fall": return [9, 10, 11].contains(month)
-        default: return true
+        default: return false
         }
     }
 

@@ -7,48 +7,53 @@ struct ContentView: View {
     var body: some View {
         @Bindable var state = appState
 
-        TabView(selection: $state.selectedTab) {
-            NavigationStack {
-                NewsView()
-            }
-            .tabItem {
-                Label(tabLabel(.news), systemImage: AppTab.news.sfSymbol)
-            }
-            .tag(AppTab.news)
+        ZStack(alignment: .bottom) {
+            TabView(selection: $state.selectedTab) {
+                NavigationStack {
+                    NewsView()
+                }
+                .tabItem {
+                    Label(tabLabel(.news), systemImage: AppTab.news.sfSymbol)
+                }
+                .tag(AppTab.news)
 
-            NavigationStack {
-                ActivitiesView()
-            }
-            .tabItem {
-                Label(tabLabel(.activities), systemImage: AppTab.activities.sfSymbol)
-            }
-            .tag(AppTab.activities)
+                NavigationStack {
+                    ActivitiesView()
+                }
+                .tabItem {
+                    Label(tabLabel(.activities), systemImage: AppTab.activities.sfSymbol)
+                }
+                .tag(AppTab.activities)
 
-            NavigationStack {
-                EventsView()
-            }
-            .tabItem {
-                Label(tabLabel(.events), systemImage: AppTab.events.sfSymbol)
-            }
-            .tag(AppTab.events)
+                NavigationStack {
+                    EventsView()
+                }
+                .tabItem {
+                    Label(tabLabel(.events), systemImage: AppTab.events.sfSymbol)
+                }
+                .tag(AppTab.events)
 
-            NavigationStack {
-                WeatherTabView()
-            }
-            .tabItem {
-                Label(tabLabel(.weather), systemImage: AppTab.weather.sfSymbol)
-            }
-            .tag(AppTab.weather)
+                NavigationStack {
+                    WeatherTabView()
+                }
+                .tabItem {
+                    Label(tabLabel(.weather), systemImage: AppTab.weather.sfSymbol)
+                }
+                .tag(AppTab.weather)
 
-            NavigationStack {
-                MoreView()
+                NavigationStack {
+                    MoreView()
+                }
+                .tabItem {
+                    Label(tabLabel(.more), systemImage: AppTab.more.sfSymbol)
+                }
+                .tag(AppTab.more)
             }
-            .tabItem {
-                Label(tabLabel(.more), systemImage: AppTab.more.sfSymbol)
-            }
-            .tag(AppTab.more)
+            .tint(.purple)
+
+            ToastOverlay()
+                .padding(.bottom, 50)
         }
-        .tint(.purple)
     }
 
     private func tabLabel(_ tab: AppTab) -> String {

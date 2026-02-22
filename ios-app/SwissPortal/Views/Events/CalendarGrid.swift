@@ -51,6 +51,24 @@ struct CalendarGrid: View {
                 .font(.headline)
                 .fontWeight(.bold)
 
+            if !viewModel.isShowingCurrentMonth {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewModel.goToToday()
+                    }
+                } label: {
+                    Text(appState.localized(en: "Today", de: "Heute"))
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.purple.opacity(0.12))
+                        .foregroundStyle(.purple)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+
             Spacer()
 
             Button {

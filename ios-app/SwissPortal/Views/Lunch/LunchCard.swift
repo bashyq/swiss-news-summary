@@ -9,6 +9,7 @@ import CoreLocation
 /// Tapping the card opens directions in Apple Maps or the website if available.
 struct LunchCard: View {
     @Environment(AppState.self) private var appState
+    @Environment(ToastManager.self) private var toastManager
 
     let spot: LunchSpot
     let language: AppLanguage
@@ -70,9 +71,30 @@ struct LunchCard: View {
 
             Spacer()
 
+            // Delete button for custom lunch spots
+            if spot.id.hasPrefix("custom-") {
+                Button {
+                    appState.deleteCustomLunch(spot.id)
+                    toastManager.show(
+                        appState.localized(en: "Restaurant deleted", de: "Restaurant gelöscht"),
+                        type: .success
+                    )
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.body)
+                        .foregroundStyle(.red.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+            }
+
             // Heart button
             Button {
                 appState.toggleSavedLunch(spot.id)
+                let wasSaved = appState.savedLunchIDs.contains(spot.id)
+                toastManager.show(
+                    appState.localized(en: wasSaved ? "Saved" : "Removed", de: wasSaved ? "Gespeichert" : "Entfernt"),
+                    type: .success
+                )
             } label: {
                 Image(systemName: isSaved ? "heart.fill" : "heart")
                     .font(.body)
@@ -102,12 +124,18 @@ struct LunchCard: View {
 
             Spacer()
 
-            // "Open for lunch" green badge
+            // "Open for lunch" green badge / "Closed" gray badge
             if spot.openForLunch == true {
                 BadgeView(
                     text: appState.localized(en: "Open for lunch", de: "Mittagstisch"),
                     icon: "clock",
                     color: .green
+                )
+            } else if spot.openForLunch == false {
+                BadgeView(
+                    text: appState.localized(en: "Closed", de: "Geschlossen"),
+                    icon: "clock.badge.xmark",
+                    color: .gray
                 )
             }
         }
@@ -164,6 +192,10 @@ struct LunchCard: View {
             ForEach(1...5, id: \.self) { star in
                 Button {
                     appState.setLunchRating(spot.id, rating: star)
+                    toastManager.show(
+                        appState.localized(en: "Rating saved", de: "Bewertung gespeichert"),
+                        type: .success
+                    )
                 } label: {
                     Image(systemName: star <= currentRating ? "star.fill" : "star")
                         .font(.caption)
@@ -250,4 +282,5 @@ struct LunchCard: View {
     )
     .padding()
     .environment(AppState())
+    .environment(ToastManager())
 }

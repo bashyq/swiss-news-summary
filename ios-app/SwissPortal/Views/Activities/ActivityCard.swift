@@ -8,6 +8,7 @@ import CoreLocation
 /// Tapping the card opens the activity URL if available.
 struct ActivityCard: View {
     @Environment(AppState.self) private var appState
+    @Environment(ToastManager.self) private var toastManager
 
     let activity: Activity
     let language: AppLanguage
@@ -70,9 +71,30 @@ struct ActivityCard: View {
 
             Spacer()
 
+            // Delete button for custom activities
+            if activity.id.hasPrefix("custom-") {
+                Button {
+                    appState.deleteCustomActivity(activity.id)
+                    toastManager.show(
+                        appState.localized(en: "Activity deleted", de: "Aktivität gelöscht"),
+                        type: .success
+                    )
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.body)
+                        .foregroundStyle(.red.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+            }
+
             // Heart button
             Button {
                 appState.toggleSavedActivity(activity.id)
+                let wasSaved = appState.savedActivityIDs.contains(activity.id)
+                toastManager.show(
+                    appState.localized(en: wasSaved ? "Saved" : "Removed", de: wasSaved ? "Gespeichert" : "Entfernt"),
+                    type: .success
+                )
             } label: {
                 Image(systemName: isSaved ? "heart.fill" : "heart")
                     .font(.body)
@@ -201,4 +223,5 @@ struct ActivityCard: View {
     )
     .padding()
     .environment(AppState())
+    .environment(ToastManager())
 }

@@ -10,6 +10,7 @@ import MapKit
 struct SnowMapView: View {
     let destinations: [SnowDestination]
     let language: AppLanguage
+    var userFocusLocation: CLLocation?
     var onResortTapped: ((SnowDestination) -> Void)?
 
     @State private var cameraPosition: MapCameraPosition = .region(
@@ -20,45 +21,66 @@ struct SnowMapView: View {
     )
 
     var body: some View {
-        Map(position: $cameraPosition) {
-            ForEach(destinations) { resort in
-                MapCircle(
-                    center: resort.coordinate,
-                    radius: circleRadius(for: resort)
-                )
-                .foregroundStyle(circleColor(for: resort).opacity(0.4))
-                .stroke(circleColor(for: resort), lineWidth: 2)
-                .mapOverlayLevel(level: .aboveRoads)
+        ZStack(alignment: .bottomLeading) {
+            Map(position: $cameraPosition) {
+                ForEach(destinations) { resort in
+                    MapCircle(
+                        center: resort.coordinate,
+                        radius: circleRadius(for: resort)
+                    )
+                    .foregroundStyle(circleColor(for: resort).opacity(0.4))
+                    .stroke(circleColor(for: resort), lineWidth: 2)
+                    .mapOverlayLevel(level: .aboveRoads)
 
-                Annotation(
-                    resort.localizedName(language: language),
-                    coordinate: resort.coordinate,
-                    anchor: .center
-                ) {
-                    Button {
-                        onResortTapped?(resort)
-                    } label: {
-                        VStack(spacing: 2) {
-                            Image(systemName: "snowflake")
-                                .font(.caption2)
-                                .foregroundStyle(circleColor(for: resort))
-                            Text(String(format: "%.0fcm", resort.snowfallWeekTotal))
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(circleColor(for: resort))
+                    Annotation(
+                        resort.localizedName(language: language),
+                        coordinate: resort.coordinate,
+                        anchor: .center
+                    ) {
+                        Button {
+                            onResortTapped?(resort)
+                        } label: {
+                            VStack(spacing: 2) {
+                                Image(systemName: "snowflake")
+                                    .font(.caption2)
+                                    .foregroundStyle(circleColor(for: resort))
+                                Text(String(format: "%.0fcm", resort.snowfallWeekTotal))
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(circleColor(for: resort))
+                            }
+                            .padding(4)
+                            .background(.ultraThinMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
                         }
-                        .padding(4)
-                        .background(.ultraThinMaterial)
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
             }
+            .mapControls {
+                MapCompass()
+                MapScaleView()
+                MapUserLocationButton()
+            }
+            .mapStyle(.standard(elevation: .realistic))
+            .onChange(of: userFocusLocation?.coordinate.latitude) { _, _ in
+                if let loc = userFocusLocation {
+                    withAnimation {
+                        let region = MKCoordinateRegion(
+                            center: loc.coordinate,
+                            span: MKCoordinateSpan(latitudeDelta: 1.5, longitudeDelta: 2.0)
+                        )
+                        cameraPosition = .region(region)
+                    }
+                }
+            }
+
+            MapLegend(items: [
+                .init(color: Color(red: 0.1, green: 0.2, blue: 0.8), label: ">30cm"),
+                .init(color: Color(red: 0.3, green: 0.5, blue: 0.9), label: "10-30cm"),
+                .init(color: .gray, label: "<10cm"),
+            ])
+            .padding(8)
         }
-        .mapControls {
-            MapCompass()
-            MapScaleView()
-        }
-        .mapStyle(.standard(elevation: .realistic))
     }
 
     // MARK: - Circle Styling

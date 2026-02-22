@@ -63,11 +63,21 @@
 			);
 			target = 03CD27622F4B12400011395A /* TodayInSwitzerlandWidgetExtension */;
 		};
+		03CD27802F4B12400011395A /* Exceptions for "SwissPortal" folder in "SwissPortal" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 03CD272C2F4B123E0011395A /* SwissPortal */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		03CD272F2F4B123E0011395A /* SwissPortal */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				03CD27802F4B12400011395A /* Exceptions for "SwissPortal" folder in "SwissPortal" target */,
+			);
 			path = SwissPortal;
 			sourceTree = "<group>";
 		};
@@ -498,6 +508,7 @@
 				DEVELOPMENT_TEAM = 83YV88VTB8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SwissPortal/Info.plist;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "SwissPortal uses your location to show nearby activities and calculate distances.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -531,6 +542,7 @@
 				DEVELOPMENT_TEAM = 83YV88VTB8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SwissPortal/Info.plist;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "SwissPortal uses your location to show nearby activities and calculate distances.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

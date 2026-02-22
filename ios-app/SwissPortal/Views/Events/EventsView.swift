@@ -106,6 +106,19 @@ struct EventsView: View {
                 eventsFilterBar
                     .padding(.top, 16)
 
+                // 4.5 Results count
+                HStack {
+                    Text(appState.localized(
+                        en: "\(currentFilteredEvents.count) results",
+                        de: "\(currentFilteredEvents.count) Ergebnisse"
+                    ))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .padding(.horizontal)
+                .padding(.top, 8)
+
                 // 5. Filtered events list
                 filteredEventsList
                     .padding(.horizontal)
@@ -134,10 +147,16 @@ struct EventsView: View {
         }
     }
 
+    // MARK: - Filtered Events
+
+    private var currentFilteredEvents: [EventItem] {
+        viewModel.filteredEvents(language: appState.language)
+    }
+
     // MARK: - Filtered Events List
 
     private var filteredEventsList: some View {
-        let events = viewModel.filteredEvents(language: appState.language)
+        let events = currentFilteredEvents
 
         return Group {
             if events.isEmpty {

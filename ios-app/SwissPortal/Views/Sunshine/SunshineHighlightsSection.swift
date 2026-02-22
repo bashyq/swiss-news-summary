@@ -7,6 +7,8 @@ import CoreLocation
 /// Shows curated toddler-friendly attractions for a sunshine destination,
 /// plus buttons for getting directions and finding nearby playgrounds/restaurants.
 struct SunshineHighlightsSection: View {
+    @Environment(AppState.self) private var appState
+
     let destination: SunshineDestination
     let language: AppLanguage
 
@@ -17,6 +19,29 @@ struct SunshineHighlightsSection: View {
 
             // Action buttons
             actionButtons
+
+            // Cross-navigation for overlap cities
+            if DestinationHighlights.activityCities.contains(destination.id) {
+                Button {
+                    if let city = City(rawValue: destination.id) {
+                        appState.city = city
+                    }
+                    appState.selectedTab = .activities
+                } label: {
+                    Label(
+                        language == .de ? "Alle Aktivitäten \u{2192}" : "See all activities \u{2192}",
+                        systemImage: "figure.play"
+                    )
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(Color.purple.opacity(0.12))
+                    .foregroundStyle(.purple)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 

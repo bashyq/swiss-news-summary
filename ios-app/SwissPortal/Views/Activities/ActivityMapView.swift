@@ -11,17 +11,19 @@ struct ActivityMapView: View {
     let activities: [Activity]
     let city: City
     let language: AppLanguage
+    var userFocusLocation: CLLocation?
 
     @State private var selectedActivity: Activity?
     @State private var cameraPosition: MapCameraPosition
 
-    init(activities: [Activity], city: City, language: AppLanguage) {
+    init(activities: [Activity], city: City, language: AppLanguage, userFocusLocation: CLLocation? = nil) {
         self.activities = activities
         self.city = city
         self.language = language
-        // Center on the city coordinate with a ~10 km span
+        self.userFocusLocation = userFocusLocation
+        let center = userFocusLocation?.coordinate ?? city.coordinate
         let region = MKCoordinateRegion(
-            center: city.coordinate,
+            center: center,
             span: MKCoordinateSpan(latitudeDelta: 0.08, longitudeDelta: 0.08)
         )
         _cameraPosition = State(initialValue: .region(region))
@@ -51,6 +53,17 @@ struct ActivityMapView: View {
                     span: MKCoordinateSpan(latitudeDelta: 0.08, longitudeDelta: 0.08)
                 )
                 cameraPosition = .region(region)
+            }
+        }
+        .onChange(of: userFocusLocation?.coordinate.latitude) { _, _ in
+            if let loc = userFocusLocation {
+                withAnimation {
+                    let region = MKCoordinateRegion(
+                        center: loc.coordinate,
+                        span: MKCoordinateSpan(latitudeDelta: 0.08, longitudeDelta: 0.08)
+                    )
+                    cameraPosition = .region(region)
+                }
             }
         }
         .overlay(alignment: .bottom) {

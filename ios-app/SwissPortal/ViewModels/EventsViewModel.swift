@@ -101,6 +101,23 @@ final class EventsViewModel {
         activitiesData?.cityEvents ?? []
     }
 
+    /// Whether the currently displayed month is the same as the real-world current month
+    var isShowingCurrentMonth: Bool {
+        let cal = Calendar.current
+        let today = Date()
+        return currentMonth == cal.component(.month, from: today)
+            && currentYear == cal.component(.year, from: today)
+    }
+
+    /// Jump the calendar back to today's month and select today
+    func goToToday() {
+        let cal = Calendar.current
+        let today = Date()
+        currentMonth = cal.component(.month, from: today)
+        currentYear = cal.component(.year, from: today)
+        selectedDate = today
+    }
+
     // MARK: - Calendar Navigation
 
     /// Navigate to the previous month
@@ -247,7 +264,7 @@ final class EventsViewModel {
                 }
             )
             let seasonal = allActivities.filter {
-                $0.season != nil && $0.isCurrentSeason && !addedRecurringIDs.contains($0.id)
+                $0.season != nil && $0.isCurrentSeason && $0.stayHome != true && !addedRecurringIDs.contains($0.id)
             }
             results.append(contentsOf: seasonal.map { .activity($0) })
         }

@@ -11,6 +11,7 @@ import MapKit
 struct SunshineMapView: View {
     let destinations: [SunshineDestination]
     let language: AppLanguage
+    var userFocusLocation: CLLocation?
     var onDestinationTapped: ((SunshineDestination) -> Void)?
 
     @State private var cameraPosition: MapCameraPosition = .region(
@@ -21,45 +22,67 @@ struct SunshineMapView: View {
     )
 
     var body: some View {
-        Map(position: $cameraPosition) {
-            ForEach(destinations) { destination in
-                MapCircle(
-                    center: destination.coordinate,
-                    radius: circleRadius(for: destination)
-                )
-                .foregroundStyle(circleColor(for: destination).opacity(0.4))
-                .stroke(circleColor(for: destination), lineWidth: 2)
-                .mapOverlayLevel(level: .aboveRoads)
+        ZStack(alignment: .bottomLeading) {
+            Map(position: $cameraPosition) {
+                ForEach(destinations) { destination in
+                    MapCircle(
+                        center: destination.coordinate,
+                        radius: circleRadius(for: destination)
+                    )
+                    .foregroundStyle(circleColor(for: destination).opacity(0.4))
+                    .stroke(circleColor(for: destination), lineWidth: 2)
+                    .mapOverlayLevel(level: .aboveRoads)
 
-                Annotation(
-                    destination.localizedName(language: language),
-                    coordinate: destination.coordinate,
-                    anchor: .center
-                ) {
-                    Button {
-                        onDestinationTapped?(destination)
-                    } label: {
-                        VStack(spacing: 2) {
-                            Image(systemName: destination.isBaseline == true ? "house.fill" : "sun.max.fill")
-                                .font(.caption2)
-                                .foregroundStyle(circleColor(for: destination))
-                            Text(String(format: "%.0fh", destination.sunshineHoursTotal))
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(circleColor(for: destination))
+                    Annotation(
+                        destination.localizedName(language: language),
+                        coordinate: destination.coordinate,
+                        anchor: .center
+                    ) {
+                        Button {
+                            onDestinationTapped?(destination)
+                        } label: {
+                            VStack(spacing: 2) {
+                                Image(systemName: destination.isBaseline == true ? "house.fill" : "sun.max.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(circleColor(for: destination))
+                                Text(String(format: "%.0fh", destination.sunshineHoursTotal))
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(circleColor(for: destination))
+                            }
+                            .padding(4)
+                            .background(.ultraThinMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
                         }
-                        .padding(4)
-                        .background(.ultraThinMaterial)
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
             }
+            .mapControls {
+                MapCompass()
+                MapScaleView()
+                MapUserLocationButton()
+            }
+            .mapStyle(.standard(elevation: .realistic))
+            .onChange(of: userFocusLocation?.coordinate.latitude) { _, _ in
+                if let loc = userFocusLocation {
+                    withAnimation {
+                        let region = MKCoordinateRegion(
+                            center: loc.coordinate,
+                            span: MKCoordinateSpan(latitudeDelta: 1.5, longitudeDelta: 2.0)
+                        )
+                        cameraPosition = .region(region)
+                    }
+                }
+            }
+
+            MapLegend(items: [
+                .init(color: .orange, label: ">6h"),
+                .init(color: .blue, label: "3-6h"),
+                .init(color: .gray, label: "<3h"),
+                .init(color: .purple, label: language == .de ? "Zürich" : "Zürich"),
+            ])
+            .padding(8)
         }
-        .mapControls {
-            MapCompass()
-            MapScaleView()
-        }
-        .mapStyle(.standard(elevation: .realistic))
     }
 
     // MARK: - Circle Styling

@@ -73,9 +73,60 @@ final class AppState {
         lunchRatings[id] = rating
     }
 
+    func deleteCustomActivity(_ id: String) {
+        let key = "customActivities"
+        guard let data = UserDefaults.standard.data(forKey: key),
+              var list = try? JSONDecoder().decode([CustomActivity].self, from: data) else { return }
+        list.removeAll { $0.id == id }
+        if let encoded = try? JSONEncoder().encode(list) {
+            UserDefaults.standard.set(encoded, forKey: key)
+        }
+    }
+
+    func deleteCustomLunch(_ id: String) {
+        let key = "customLunch"
+        guard let data = UserDefaults.standard.data(forKey: key),
+              var list = try? JSONDecoder().decode([CustomLunchSpot].self, from: data) else { return }
+        list.removeAll { $0.id == id }
+        if let encoded = try? JSONEncoder().encode(list) {
+            UserDefaults.standard.set(encoded, forKey: key)
+        }
+    }
+
     /// Localized string helper
     func localized(en: String, de: String) -> String {
         language == .en ? en : de
+    }
+
+    // MARK: - Deep Linking
+
+    /// Handle incoming deep links with the `swissportal://` scheme.
+    ///
+    /// Supported routes:
+    /// - `swissportal://news` → News tab
+    /// - `swissportal://activities` → Activities tab
+    /// - `swissportal://events` → Events tab
+    /// - `swissportal://weather` → Weather tab
+    /// - `swissportal://activities?city=basel` → switch city + Activities tab
+    func handleDeepLink(_ url: URL) {
+        guard url.scheme == "swissportal" else { return }
+
+        let host = url.host ?? ""
+        switch host {
+        case "news": selectedTab = .news
+        case "activities": selectedTab = .activities
+        case "events": selectedTab = .events
+        case "weather": selectedTab = .weather
+        case "lunch": selectedTab = .more
+        default: break
+        }
+
+        // Parse query params for city
+        if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+           let cityParam = components.queryItems?.first(where: { $0.name == "city" })?.value,
+           let city = City(rawValue: cityParam) {
+            self.city = city
+        }
     }
 }
 
