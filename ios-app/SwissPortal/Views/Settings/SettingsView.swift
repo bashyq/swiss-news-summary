@@ -14,13 +14,13 @@ struct SettingsView: View {
 
         List {
             // 1. City picker
-            citySection(state: state)
+            citySection(state: $state)
 
             // 2. Language picker
-            languageSection(state: state)
+            languageSection(state: $state)
 
             // 3. Theme picker
-            themeSection(state: state)
+            themeSection(state: $state)
 
             // 4. Upcoming holidays
             holidaysSection

@@ -264,6 +264,7 @@ struct TrendingTopic: Codable {
     let topicDE: String?
     let headline: String?
     let headlineDE: String?
+    let url: String?
 
     func localizedTopic(language: AppLanguage) -> String? {
         switch language {
@@ -274,24 +275,36 @@ struct TrendingTopic: Codable {
 }
 
 struct Briefing: Codable {
-    let topStory: String?
-    let topStoryDE: String?
-    let suggestedActivity: String?
-    let suggestedActivityDE: String?
+    let topStory: BriefingItem?
+    let suggestedActivity: BriefingActivity?
 
     func localizedStory(language: AppLanguage) -> String? {
-        switch language {
-        case .en: return topStory
-        case .de: return topStoryDE ?? topStory
-        }
+        topStory?.headline
     }
 
     func localizedActivity(language: AppLanguage) -> String? {
         switch language {
-        case .en: return suggestedActivity
-        case .de: return suggestedActivityDE ?? suggestedActivity
+        case .en: return suggestedActivity?.name
+        case .de: return suggestedActivity?.nameDE ?? suggestedActivity?.name
         }
     }
+}
+
+struct BriefingItem: Codable {
+    let headline: String?
+    let summary: String?
+    let source: String?
+    let url: String?
+    let sentiment: String?
+}
+
+struct BriefingActivity: Codable {
+    let id: String?
+    let name: String?
+    let nameDE: String?
+    let description: String?
+    let descriptionDE: String?
+    let indoor: Bool?
 }
 
 // MARK: - City Info

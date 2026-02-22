@@ -16,19 +16,27 @@ actor CacheManager {
 
     // MARK: - Cache TTLs
 
-    enum CacheTTL: TimeInterval {
-        case news = 7200       // 2 hours
-        case activities = 7200 // 2 hours
-        case lunch = 1800      // 30 min
-        case sunshine = 1800   // 30 min
-        case snow = 1800       // 30 min
-        case weekend = 3600    // 1 hour
+    enum CacheTTL {
+        case news
+        case activities
+        case lunch
+        case sunshine
+        case snow
+        case weekend
+
+        var seconds: TimeInterval {
+            switch self {
+            case .news, .activities: return 7200   // 2 hours
+            case .lunch, .sunshine, .snow: return 1800  // 30 min
+            case .weekend: return 3600             // 1 hour
+            }
+        }
     }
 
     // MARK: - Public API
 
     /// Get cached data if it exists and hasn't expired
-    func get<T: Decodable>(_ type: T.Type, key: String, ttl: CacheTTL) -> T? {
+    func get<T: Codable>(_ type: T.Type, key: String, ttl: CacheTTL) -> T? {
         let fileURL = cacheDirectory.appendingPathComponent(sanitize(key) + ".json")
 
         guard fileManager.fileExists(atPath: fileURL.path),
@@ -41,7 +49,7 @@ actor CacheManager {
         }
 
         // Check TTL
-        if Date().timeIntervalSince(wrapper.cachedAt) > ttl.rawValue {
+        if Date().timeIntervalSince(wrapper.cachedAt) > ttl.seconds {
             try? fileManager.removeItem(at: fileURL)
             return nil
         }
@@ -50,7 +58,7 @@ actor CacheManager {
     }
 
     /// Store data in cache
-    func set<T: Encodable>(_ data: T, key: String) {
+    func set<T: Codable>(_ data: T, key: String) {
         let wrapper = CacheWrapper(data: data, cachedAt: Date())
         let fileURL = cacheDirectory.appendingPathComponent(sanitize(key) + ".json")
 

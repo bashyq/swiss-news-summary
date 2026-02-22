@@ -17,3 +17,7 @@ node_modules/
 # IDE
 .vscode/
 .idea/
+
+# Xcode user data
+xcuserdata/
+*.xcuserstate

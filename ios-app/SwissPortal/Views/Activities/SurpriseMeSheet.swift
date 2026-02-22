@@ -218,6 +218,7 @@ struct SurpriseMeSheet: View {
         free: false,
         recurring: nil,
         stayHome: nil,
+        availableMonths: nil,
         subcategory: nil,
         materials: nil,
         materialsDE: nil

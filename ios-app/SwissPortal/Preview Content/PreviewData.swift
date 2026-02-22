@@ -5,18 +5,23 @@ enum PreviewData {
 
     // MARK: - Weather
 
+    private static let sampleHourly: [HourlyWeather] = [
+        HourlyWeather(time: "2026-02-21T06:00", temperature: 4, weatherCode: 45),
+        HourlyWeather(time: "2026-02-21T08:00", temperature: 6, weatherCode: 45),
+        HourlyWeather(time: "2026-02-21T10:00", temperature: 8, weatherCode: 2),
+        HourlyWeather(time: "2026-02-21T12:00", temperature: 10, weatherCode: 2),
+        HourlyWeather(time: "2026-02-21T14:00", temperature: 10, weatherCode: 2),
+        HourlyWeather(time: "2026-02-21T16:00", temperature: 8, weatherCode: 3),
+        HourlyWeather(time: "2026-02-21T18:00", temperature: 6, weatherCode: 3),
+        HourlyWeather(time: "2026-02-21T20:00", temperature: 4, weatherCode: 3),
+    ]
+
     static let weather = Weather(
         temperature: 5,
         description: "Partly cloudy",
         weatherCode: 2,
         windSpeed: 12,
-        hourly: (6...22).map { hour in
-            HourlyWeather(
-                time: "2026-02-21T\(String(format: "%02d", hour)):00",
-                temperature: Double(hour < 14 ? hour - 2 : 24 - hour),
-                weatherCode: hour < 10 ? 45 : (hour < 17 ? 2 : 3)
-            )
-        }
+        hourly: sampleHourly
     )
 
     // MARK: - Transport
@@ -66,8 +71,8 @@ enum PreviewData {
         ],
         history: HistoryFact(year: 1958, event: "The Swiss Pavilion opened at Expo 58 in Brussels", eventDE: "Der Schweizer Pavillon wurde an der Expo 58 in Brüssel eröffnet"),
         categories: categories,
-        trending: TrendingTopic(topic: "SNB Interest Rates", topicDE: "SNB Leitzins", headline: nil, headlineDE: nil),
-        briefing: Briefing(topStory: "SNB holds rates", topStoryDE: "SNB hält Zinsen", suggestedActivity: "Visit the Money Museum", suggestedActivityDE: "Besuchen Sie das Geldmuseum"),
+        trending: TrendingTopic(topic: "SNB Interest Rates", topicDE: "SNB Leitzins", headline: nil, headlineDE: nil, url: nil),
+        briefing: Briefing(topStory: BriefingItem(headline: "SNB holds rates", summary: nil, source: nil, url: nil, sentiment: nil), suggestedActivity: BriefingActivity(id: nil, name: "Visit the Money Museum", nameDE: "Besuchen Sie das Geldmuseum", description: nil, descriptionDE: nil, indoor: nil)),
         city: CityInfo(id: "zurich", name: "Zürich"),
         timestamp: "2026-02-21T12:00:00Z"
     )
@@ -95,6 +100,7 @@ enum PreviewData {
         free: nil,
         recurring: nil,
         stayHome: nil,
+        availableMonths: nil,
         subcategory: nil,
         materials: nil,
         materialsDE: nil
@@ -121,6 +127,7 @@ enum PreviewData {
         free: true,
         recurring: nil,
         stayHome: true,
+        availableMonths: nil,
         subcategory: "sensory",
         materials: ["Rice or pasta", "Small toys", "Container"],
         materialsDE: ["Reis oder Nudeln", "Kleine Spielzeuge", "Behälter"]
@@ -162,6 +169,16 @@ enum PreviewData {
 
     // MARK: - Snow
 
+    private static let sampleSnowForecast: [SnowDayForecast] = [
+        SnowDayForecast(date: "2026-02-16", snowfallCm: 5.2, weatherCode: 73, tempMax: -2, tempMin: -8),
+        SnowDayForecast(date: "2026-02-17", snowfallCm: 0, weatherCode: 2, tempMax: 0, tempMin: -5),
+        SnowDayForecast(date: "2026-02-18", snowfallCm: 12.3, weatherCode: 75, tempMax: -4, tempMin: -10),
+        SnowDayForecast(date: "2026-02-19", snowfallCm: 8.1, weatherCode: 73, tempMax: -3, tempMin: -8),
+        SnowDayForecast(date: "2026-02-20", snowfallCm: 0, weatherCode: 1, tempMax: 1, tempMin: -4),
+        SnowDayForecast(date: "2026-02-21", snowfallCm: 3.5, weatherCode: 71, tempMax: -1, tempMin: -6),
+        SnowDayForecast(date: "2026-02-22", snowfallCm: 0, weatherCode: 2, tempMax: 0, tempMin: -5),
+    ]
+
     static let snowDestination = SnowDestination(
         id: "zermatt",
         name: "Zermatt",
@@ -172,15 +189,7 @@ enum PreviewData {
         regionDE: "Wallis",
         driveMinutes: 195,
         altitude: 1620,
-        forecast: (0..<7).map { i in
-            SnowDayForecast(
-                date: "2026-02-\(16 + i)",
-                snowfallCm: [5.2, 0, 12.3, 8.1, 0, 3.5, 0][i],
-                weatherCode: [73, 2, 75, 73, 1, 71, 2][i],
-                tempMax: [-2, 0, -4, -3, 1, -1, 0][i],
-                tempMin: [-8, -5, -10, -8, -4, -6, -5][i]
-            )
-        },
+        forecast: sampleSnowForecast,
         snowfallWeekTotal: 29.1,
         snowDepthCm: 145
     )

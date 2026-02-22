@@ -196,7 +196,7 @@ struct SnowCard: View {
             Text(day.snowfallCm > 0 ? String(format: "%.1fcm", day.snowfallCm) : "-")
                 .font(.caption2)
                 .fontWeight(.medium)
-                .foregroundStyle(day.snowfallCm > 0 ? Color.snowColor(cm: day.snowfallCm) : .tertiary)
+                .foregroundStyle(day.snowfallCm > 0 ? Color.snowColor(cm: day.snowfallCm) : Color.gray)
                 .frame(width: 40, alignment: .trailing)
         }
     }

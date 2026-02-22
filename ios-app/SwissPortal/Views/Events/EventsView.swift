@@ -284,18 +284,9 @@ struct EventsView: View {
                     .lineLimit(2)
 
                 if let schedule = activity.recurring {
-                    HStack(spacing: 4) {
-                        if let days = schedule.days {
-                            Text(days.map { $0.capitalized }.joined(separator: ", "))
-                                .font(.caption2)
-                                .foregroundStyle(.blue)
-                        }
-                        if let time = schedule.time {
-                            Text(time)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
+                    Text(schedule)
+                        .font(.caption2)
+                        .foregroundStyle(.blue)
                 }
             }
 

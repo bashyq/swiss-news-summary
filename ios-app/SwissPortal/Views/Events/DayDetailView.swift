@@ -245,18 +245,9 @@ struct DayDetailView: View {
                     .lineLimit(2)
 
                 if let schedule = activity.recurring {
-                    HStack(spacing: 4) {
-                        if let time = schedule.time {
-                            Text(time)
-                                .font(.caption2)
-                                .foregroundStyle(.blue)
-                        }
-                        if let frequency = schedule.frequency {
-                            Text(frequency.capitalized)
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
+                    Text(schedule)
+                        .font(.caption2)
+                        .foregroundStyle(.blue)
                 }
             }
 

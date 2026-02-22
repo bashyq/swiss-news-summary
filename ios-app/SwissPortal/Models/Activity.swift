@@ -9,6 +9,7 @@ struct ActivitiesResponse: Codable {
     let cityEvents: [CityEvent]
     let weather: Weather
     let city: CityInfo
+    let timestamp: String?
 }
 
 // MARK: - Activity
@@ -32,8 +33,9 @@ struct Activity: Codable, Identifiable {
     let maxAge: Int?
     let season: String?
     let free: Bool?
-    let recurring: RecurringSchedule?
+    let recurring: String?
     let stayHome: Bool?
+    let availableMonths: [Int]?
     let subcategory: String?
     let materials: [String]?
     let materialsDE: [String]?
@@ -114,17 +116,10 @@ struct Activity: Codable, Identifiable {
     func isAvailable(on date: Date) -> Bool {
         guard let recurring else { return true }
         let weekday = Calendar.current.component(.weekday, from: date)
-        // Sunday=1, Monday=2, ...Saturday=7
-        let dayNames = ["", "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
-        let todayName = dayNames[weekday]
-        return recurring.days?.contains(todayName) ?? true
+        let dayAbbreviations = ["", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+        let todayAbbr = dayAbbreviations[weekday]
+        return recurring.localizedCaseInsensitiveContains(todayAbbr)
     }
-}
-
-struct RecurringSchedule: Codable {
-    let days: [String]?
-    let time: String?
-    let frequency: String?
 }
 
 // MARK: - Age Filter

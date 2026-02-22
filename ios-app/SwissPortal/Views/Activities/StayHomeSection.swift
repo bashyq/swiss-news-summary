@@ -224,6 +224,7 @@ struct StayHomeCard: View {
             free: true,
             recurring: nil,
             stayHome: true,
+            availableMonths: nil,
             subcategory: "sensory",
             materials: ["Play dough", "Cookie cutters", "Rolling pin"],
             materialsDE: ["Knete", "Ausstechformen", "Nudelholz"]
@@ -249,6 +250,7 @@ struct StayHomeCard: View {
             free: true,
             recurring: nil,
             stayHome: true,
+            availableMonths: nil,
             subcategory: "art",
             materials: ["Finger paints", "Large paper", "Old clothes"],
             materialsDE: ["Fingerfarben", "Grosses Papier", "Alte Kleidung"]
