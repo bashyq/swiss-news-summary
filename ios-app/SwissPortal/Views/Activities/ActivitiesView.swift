@@ -10,7 +10,6 @@ struct ActivitiesView: View {
     @Environment(LocationManager.self) private var locationManager
 
     @State private var viewModel = ActivitiesViewModel()
-    @State private var showSurpriseSheet = false
     @State private var surpriseActivity: Activity?
     @State private var showAddSheet = false
 
@@ -60,18 +59,16 @@ struct ActivitiesView: View {
                         locationManager.requestLocation()
                     }
                 }
-                .sheet(isPresented: $showSurpriseSheet) {
-                    if let activity = surpriseActivity {
-                        SurpriseMeSheet(
-                            activity: activity,
-                            onTryAnother: pickSurprise,
-                            onSave: {
-                                appState.toggleSavedActivity(activity.id)
-                            },
-                            isSaved: appState.savedActivityIDs.contains(activity.id)
-                        )
-                        .presentationDetents([.medium, .large])
-                    }
+                .sheet(item: $surpriseActivity) { activity in
+                    SurpriseMeSheet(
+                        activity: activity,
+                        onTryAnother: pickSurprise,
+                        onSave: {
+                            appState.toggleSavedActivity(activity.id)
+                        },
+                        isSaved: appState.savedActivityIDs.contains(activity.id)
+                    )
+                    .presentationDetents([.medium, .large])
                 }
                 .sheet(isPresented: $showAddSheet) {
                     AddActivitySheet()
@@ -270,10 +267,7 @@ struct ActivitiesView: View {
 
     private func pickSurprise() {
         let weather = viewModel.activitiesData?.weather
-        if let activity = viewModel.surpriseMe(weather: weather, savedIDs: appState.savedActivityIDs) {
-            surpriseActivity = activity
-            showSurpriseSheet = true
-        }
+        surpriseActivity = viewModel.surpriseMe(weather: weather, savedIDs: appState.savedActivityIDs)
     }
 }
 

@@ -35,7 +35,7 @@ final class LunchViewModel {
         guard let spots = lunchData?.spots else { return [] }
 
         switch filter {
-        case .all:
+        case .all, .nearMe:
             return spots
         case .saved:
             return spots.filter { savedIDs.contains($0.id) }

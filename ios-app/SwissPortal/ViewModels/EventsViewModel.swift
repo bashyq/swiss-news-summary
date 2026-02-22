@@ -215,9 +215,14 @@ final class EventsViewModel {
             results.append(contentsOf: holidays.map { .holiday($0) })
         }
 
-        // School holidays
+        // School holidays (exclude those that have already ended)
         if includeAll || eventFilter == .schoolHolidays {
-            results.append(contentsOf: schoolHolidays.map { .schoolHoliday($0) })
+            let today = Calendar.current.startOfDay(for: Date())
+            let current = schoolHolidays.filter { sh in
+                guard let endDate = sh.endDateParsed else { return true }
+                return Calendar.current.startOfDay(for: endDate) >= today
+            }
+            results.append(contentsOf: current.map { .schoolHoliday($0) })
         }
 
         // City events / festivals

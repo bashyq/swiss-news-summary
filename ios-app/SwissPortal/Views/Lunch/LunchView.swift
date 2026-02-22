@@ -10,7 +10,6 @@ struct LunchView: View {
     @Environment(LocationManager.self) private var locationManager
 
     @State private var viewModel = LunchViewModel()
-    @State private var showSurpriseSheet = false
     @State private var surpriseSpot: LunchSpot?
 
     var body: some View {
@@ -50,18 +49,21 @@ struct LunchView: View {
                     )
                 }
             }
-            .sheet(isPresented: $showSurpriseSheet) {
-                if let spot = surpriseSpot {
-                    LunchSurpriseSheet(
-                        spot: spot,
-                        onTryAnother: pickSurprise,
-                        onSave: {
-                            appState.toggleSavedLunch(spot.id)
-                        },
-                        isSaved: appState.savedLunchIDs.contains(spot.id)
-                    )
-                    .presentationDetents([.medium, .large])
+            .onChange(of: viewModel.filter) { _, newFilter in
+                if newFilter == .nearMe {
+                    locationManager.requestLocation()
                 }
+            }
+            .sheet(item: $surpriseSpot) { spot in
+                LunchSurpriseSheet(
+                    spot: spot,
+                    onTryAnother: pickSurprise,
+                    onSave: {
+                        appState.toggleSavedLunch(spot.id)
+                    },
+                    isSaved: appState.savedLunchIDs.contains(spot.id)
+                )
+                .presentationDetents([.medium, .large])
             }
     }
 
@@ -176,8 +178,8 @@ struct LunchView: View {
     private var currentSpots: [LunchSpot] {
         var spots = viewModel.filteredSpots(savedIDs: appState.savedLunchIDs)
 
-        // Sort by distance if location is available
-        if let userLocation = locationManager.location {
+        // Sort by distance only when "Near me" filter is active
+        if viewModel.filter == .nearMe, let userLocation = locationManager.location {
             spots.sort { a, b in
                 a.distance(from: userLocation) < b.distance(from: userLocation)
             }
@@ -233,10 +235,7 @@ struct LunchView: View {
     }
 
     private func pickSurprise() {
-        if let spot = viewModel.surpriseMe(savedIDs: appState.savedLunchIDs) {
-            surpriseSpot = spot
-            showSurpriseSheet = true
-        }
+        surpriseSpot = viewModel.surpriseMe(savedIDs: appState.savedLunchIDs)
     }
 }
 

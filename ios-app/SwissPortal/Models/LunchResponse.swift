@@ -62,6 +62,7 @@ struct LunchSpot: Codable, Identifiable {
 
 enum LunchFilter: String, CaseIterable {
     case all
+    case nearMe
     case saved
     case open
     case outdoor
@@ -70,6 +71,7 @@ enum LunchFilter: String, CaseIterable {
     var displayName: String {
         switch self {
         case .all: return "All"
+        case .nearMe: return "Near me"
         case .saved: return "Saved"
         case .open: return "Open now"
         case .outdoor: return "Outdoor"
@@ -80,6 +82,7 @@ enum LunchFilter: String, CaseIterable {
     var displayNameDE: String {
         switch self {
         case .all: return "Alle"
+        case .nearMe: return "In der Nähe"
         case .saved: return "Gespeichert"
         case .open: return "Jetzt offen"
         case .outdoor: return "Terrasse"
@@ -90,6 +93,7 @@ enum LunchFilter: String, CaseIterable {
     var sfSymbol: String {
         switch self {
         case .all: return "square.grid.2x2"
+        case .nearMe: return "location"
         case .saved: return "heart.fill"
         case .open: return "clock"
         case .outdoor: return "sun.max"
