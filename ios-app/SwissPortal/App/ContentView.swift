@@ -12,41 +12,31 @@ struct ContentView: View {
                 NavigationStack {
                     NewsView()
                 }
-                .tabItem {
-                    Label { Text(tabLabel(.news)) } icon: { tabIcon(AppTab.news.sfSymbol) }
-                }
+                .tabItem { tabIcon(AppTab.news.sfSymbol) }
                 .tag(AppTab.news)
 
                 NavigationStack {
                     ActivitiesView()
                 }
-                .tabItem {
-                    Label { Text(tabLabel(.activities)) } icon: { tabIcon(AppTab.activities.sfSymbol) }
-                }
+                .tabItem { tabIcon(AppTab.activities.sfSymbol) }
                 .tag(AppTab.activities)
 
                 NavigationStack {
                     LunchView()
                 }
-                .tabItem {
-                    Label { Text(tabLabel(.lunch)) } icon: { tabIcon(AppTab.lunch.sfSymbol) }
-                }
+                .tabItem { tabIcon(AppTab.lunch.sfSymbol) }
                 .tag(AppTab.lunch)
 
                 NavigationStack {
                     WeatherTabView()
                 }
-                .tabItem {
-                    Label { Text(tabLabel(.weather)) } icon: { tabIcon(AppTab.weather.sfSymbol) }
-                }
+                .tabItem { tabIcon(AppTab.weather.sfSymbol) }
                 .tag(AppTab.weather)
 
                 NavigationStack {
                     MoreView()
                 }
-                .tabItem {
-                    Label { Text(tabLabel(.more)) } icon: { tabIcon(AppTab.more.sfSymbol) }
-                }
+                .tabItem { tabIcon(AppTab.more.sfSymbol) }
                 .tag(AppTab.more)
             }
             .tint(.brand)
@@ -54,10 +44,6 @@ struct ContentView: View {
             ToastOverlay()
                 .padding(.bottom, 50)
         }
-    }
-
-    private func tabLabel(_ tab: AppTab) -> String {
-        appState.language == .en ? tab.label : tab.labelDE
     }
 
     /// Tab bar icon sized 15% smaller than default (~22pt → 19pt)
