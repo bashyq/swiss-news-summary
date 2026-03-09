@@ -6,5 +6,6 @@ struct TodayInSwitzerlandWidgetBundle: WidgetBundle {
     var body: some Widget {
         TodayWidget()
         SunshineWidget()
+        TransportLiveActivity()
     }
 }

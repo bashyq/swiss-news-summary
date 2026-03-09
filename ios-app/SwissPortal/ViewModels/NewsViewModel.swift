@@ -85,6 +85,12 @@ final class NewsViewModel {
                 selectedCategory = first
             }
 
+            // Update Live Activity with transport data
+            LiveActivityManager.shared.update(
+                transport: response.transport,
+                cityName: response.city.name
+            )
+
             self.error = nil
         } catch {
             // Only set error if we have no cached data to show
