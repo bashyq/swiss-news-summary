@@ -232,18 +232,6 @@ nav { margin: 16px 0; }
 .badge-recurring { background: var(--clr-purple-bg); color: var(--clr-purple); font-size: .68rem; padding: 3px 8px; border-radius: 6px; font-weight: 600; }
 .badge-subcategory { background: var(--accent-dim); color: var(--accent); font-size: .68rem; padding: 3px 8px; border-radius: 6px; font-weight: 600; }
 /* Activity hero image */
-.activity-hero { width: calc(100% + 36px); height: 60px; margin: -16px -16px 12px -20px; border-radius: var(--radius) var(--radius) 0 0; display: flex; align-items: center; justify-content: center; font-size: 2rem; overflow: hidden; }
-.cat-hero-animals { background: linear-gradient(135deg, #fef3c7, #fde68a); }
-.cat-hero-museum { background: linear-gradient(135deg, #ede9fe, #c4b5fd); }
-.cat-hero-playground { background: linear-gradient(135deg, #dcfce7, #86efac); }
-.cat-hero-outdoor { background: linear-gradient(135deg, #d1fae5, #6ee7b7); }
-.cat-hero-nature { background: linear-gradient(135deg, #d1fae5, #a7f3d0); }
-.cat-hero-indoor-play { background: linear-gradient(135deg, #fce7f3, #f9a8d4); }
-.cat-hero-event { background: linear-gradient(135deg, #dbeafe, #93c5fd); }
-.cat-hero-seasonal { background: linear-gradient(135deg, #fee2e2, #fca5a5); }
-.cat-hero-cafe { background: linear-gradient(135deg, #fef3c7, #d97706); }
-.cat-hero-other { background: linear-gradient(135deg, var(--bg2), var(--border)); }
-[data-theme="dark"] .activity-hero { opacity: .85; }
 
 /* Featured / New badges */
 .badge-featured { background: var(--clr-purple-bg); color: var(--clr-purple); }

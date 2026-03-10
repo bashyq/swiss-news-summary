@@ -28,6 +28,7 @@ These features were removed or changed in the PWA and the iOS app should match:
 |--------|---------|
 | **Weekend Brief removed from News** | The `.weekend-brief` card is no longer rendered on the news page. iOS should NOT build `WeekendBriefCard.swift`. The `weekendBrief` field is still in the API response but the PWA ignores it. |
 | **Age filter removed** | Activity age filters (All ages / 2-3 / 4-5) have been removed from the PWA. iOS should NOT implement age filtering in `ActivitiesViewModel`. |
+| **Hero banners removed** | Pastel gradient hero banners on activity cards have been removed. Cards now use colored left-border + emoji in title only. iOS should NOT build hero gradient headers. |
 
 ---
 
@@ -87,26 +88,7 @@ These features were removed or changed in the PWA and the iOS app should match:
 - On app launch, clean up past reminders
 - Model: `ActivityReminder` struct with `activityId`, `name`, `date`, `notificationId`
 
-### 5. Visual Hero Cards (Activity Cards)
-**PWA**: `.activity-hero` gradient + emoji in `renderActivityCard()`
-**iOS target**: `ios-app/SwissPortal/Views/Activities/ActivityCard.swift`
-
-**What to build:**
-- Category-based gradient header at top of each activity card
-- Gradient colors per category:
-  - `animals` → warm gold (#fef3c7 → #fde68a)
-  - `museum` → purple (#ede9fe → #c4b5fd)
-  - `playground` → green (#dcfce7 → #86efac)
-  - `outdoor` → teal (#d1fae5 → #6ee7b7)
-  - `nature` → mint (#d1fae5 → #a7f3d0)
-  - `indoor-play` → pink (#fce7f3 → #f9a8d4)
-  - `event` → blue (#dbeafe → #93c5fd)
-  - `seasonal` → red (#fee2e2 → #fca5a5)
-  - `cafe` → brown (#fef3c7 → #d97706)
-- Large category emoji centered on gradient
-- Skip for `stayhome` category cards
-
-### 6. Featured / NEW Badges
+### 5. Featured / NEW Badges
 **PWA**: Badge rendering in `renderActivityCard()`
 **iOS target**: `ActivityCard.swift` + `BadgeView.swift`
 
@@ -117,7 +99,7 @@ These features were removed or changed in the PWA and the iOS app should match:
 - Green "NEW" / "NEU" badge when `addedDate` is within 30 days
 - In "All" filter, sort featured activities to top (`ActivitiesViewModel`)
 
-### 7. Explore View (Map-First Discovery)
+### 6. Explore View (Map-First Discovery)
 **PWA**: `renderExploreView()`, `initExploreMap()`, `getExploreItems()`
 **iOS target**: New `ExploreView.swift` in `Views/` + `ExploreViewModel.swift`
 
@@ -141,7 +123,7 @@ These features were removed or changed in the PWA and the iOS app should match:
   - Fetch deals from `/deals` endpoint
   - `exploreFilter` published property
 
-### 8. Activity Filter Order
+### 7. Activity Filter Order
 **PWA**: Filter pills in `renderActivitiesView()`
 **iOS target**: `ActivitiesView.swift`
 
@@ -250,9 +232,8 @@ let detail: String?  // 1-sentence expansion, shown on tap
 1. **Daily Pick + Trending** (models + 2 cards) — quick wins, data already in API
 2. **Lunch filter rework** — multi-select pills + cuisine dropdown
 3. **Featured badges** — small change, improves Activities view
-4. **Visual hero cards** — visual polish, self-contained
-5. **Reminders** — requires UNNotificationCenter, most iOS-specific work
-6. **Explore view** — new tab + MapKit, largest effort
+4. **Reminders** — requires UNNotificationCenter, most iOS-specific work
+5. **Explore view** — new tab + MapKit, largest effort
 
 ---
 

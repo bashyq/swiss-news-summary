@@ -638,12 +638,6 @@ function renderActivityCard(a) {
   const hasRemind = activityReminders.some(r => r.activityId === a.id);
   const dist = (userLat && a.lat) ? haversine(userLat, userLon, a.lat, a.lon) : null;
 
-  // Hero image (gradient + emoji for visual richness)
-  let heroHtml = '';
-  if (a.category !== 'stayhome') {
-    heroHtml = `<div class="activity-hero cat-hero-${a.category || 'other'}"><span>${ACTIVITY_EMOJIS[a.category] || '📍'}</span></div>`;
-  }
-
   let badges = '';
   if (a.featured) badges += `<span class="badge badge-featured">${t('featured')}</span>`;
   if (a.addedDate) {
@@ -665,7 +659,6 @@ function renderActivityCard(a) {
   }
 
   return `<div class="activity-card cat-${a.category || 'other'}" id="activity-${a.id}" data-lat="${a.lat || ''}" data-lon="${a.lon || ''}" onclick="activityCardClick('${a.id}', event)">
-    ${heroHtml}
     <button class="activity-save" onclick="event.stopPropagation();toggleSave('${a.id}')">${isSaved ? '❤️' : '🤍'}</button>
     ${isSaved ? `<button class="activity-remind" onclick="event.stopPropagation();showReminderModal('${a.id}')">${hasRemind ? '🔔' : '🔕'}</button>` : ''}
     <div class="activity-name"><span class="activity-emoji">${ACTIVITY_EMOJIS[a.category] || '📍'}</span> ${esc(name)}</div>
