@@ -501,6 +501,16 @@ function renderNewsView() {
 
   let html = '';
 
+  // Trending (right after history/transport in header)
+  if (newsData.trending) {
+    const tr = newsData.trending;
+    const topic = lang === 'de' ? (tr.topicDE || tr.topic) : tr.topic;
+    html += `<div class="trending-banner" onclick="${safeUrl(tr.url) ? `window.open('${esc(tr.url)}','_blank')` : ''}">
+      <div class="trending-label">🔥 ${lang === 'de' ? 'Trending' : 'Trending'}</div>
+      <div class="trending-topic">${esc(topic)}</div>
+    </div>`;
+  }
+
   // Briefing + Daily Pick
   const briefDismissed = localStorage.getItem('briefingDismissed') === new Date().toDateString();
   if (newsData.briefing && !briefDismissed) {
@@ -529,16 +539,6 @@ function renderNewsView() {
   // Weekend Brief
   if (newsData.weekendBrief) {
     html += renderWeekendBriefCard(newsData.weekendBrief);
-  }
-
-  // Trending
-  if (newsData.trending) {
-    const tr = newsData.trending;
-    const topic = lang === 'de' ? (tr.topicDE || tr.topic) : tr.topic;
-    html += `<div class="trending-banner" onclick="${safeUrl(tr.url) ? `window.open('${esc(tr.url)}','_blank')` : ''}">
-      <div class="trending-label">🔥 ${lang === 'de' ? 'Trending' : 'Trending'}</div>
-      <div class="trending-topic">${esc(topic)}</div>
-    </div>`;
   }
 
   // Category sections

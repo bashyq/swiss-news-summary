@@ -156,9 +156,10 @@ nav { margin: 16px 0; }
 .section.active { display: block; }
 
 /* ═══ TRENDING ═══ */
-.trending-banner { background: linear-gradient(135deg,var(--accent-dim),transparent); border: 1px solid rgba(229,62,62,.2); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; cursor: pointer; }
-.trending-label { font-size: .65rem; text-transform: uppercase; letter-spacing: .1em; color: var(--accent); font-weight: 600; margin-bottom: 4px; }
-.trending-topic { font-family: var(--serif); font-size: 1.1rem; font-weight: 600; }
+.trending-banner { background: linear-gradient(135deg,var(--accent-dim),transparent); border-left: 2px solid var(--accent); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 10px 14px; margin-bottom: 12px; cursor: pointer; transition: border-color var(--ease-fast); }
+.trending-banner:hover { border-left-color: var(--text); }
+.trending-label { font-size: .65rem; text-transform: uppercase; letter-spacing: .1em; color: var(--accent); font-weight: 600; margin-bottom: 2px; }
+.trending-topic { font-size: .85rem; font-weight: 600; line-height: 1.4; }
 
 /* ═══ BRIEFING ═══ */
 .briefing-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; position: relative; }
