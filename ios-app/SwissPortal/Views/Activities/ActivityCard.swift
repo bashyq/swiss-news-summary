@@ -50,53 +50,48 @@ struct ActivityCard: View {
     // MARK: - Card Content
 
     private var cardContent: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 8) {
-                // Header: name + category icon + heart button
-                headerRow
+        VStack(alignment: .leading, spacing: 8) {
+            // Header: name + category icon + heart button
+            headerRow
 
-                // Description (2 lines max)
-                Text(activity.localizedDescription(language: language))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
+            // Description (2 lines max)
+            Text(activity.localizedDescription(language: language))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
 
-                // Badges row
-                badgesRow
+            // Badges row
+            badgesRow
 
-                // Distance badge (if location available)
-                if distanceBadgeText != nil {
-                    DistanceBadge(meters: distanceMeters ?? 0)
-                }
-            }
-
-            // Venue photo thumbnail (skip for stay-home and custom activities)
-            if !activity.id.hasPrefix("custom-"),
-               activity.category.lowercased() != "stayhome",
-               let photoURL = APIClient.shared.photoURL(for: activity.id) {
-                AsyncImage(url: photoURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 64, height: 64)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                    case .failure:
-                        EmptyView()
-                    default:
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color(.systemGray5))
-                            .frame(width: 64, height: 64)
-                    }
-                }
+            // Distance badge (if location available)
+            if distanceBadgeText != nil {
+                DistanceBadge(meters: distanceMeters ?? 0)
             }
         }
         .padding(14)
+        .background { venuePhotoBackground }
         .contentShape(Rectangle())
         .onTapGesture {
             openURL()
+        }
+    }
+
+    // MARK: - Venue Photo Background
+
+    @ViewBuilder
+    private var venuePhotoBackground: some View {
+        if !activity.id.hasPrefix("custom-"),
+           activity.category.lowercased() != "stayhome",
+           let photoURL = APIClient.shared.photoURL(for: activity.id) {
+            AsyncImage(url: photoURL) { phase in
+                if case .success(let image) = phase {
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .opacity(0.08)
+                }
+            }
         }
     }
 
