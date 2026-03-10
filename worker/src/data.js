@@ -67,13 +67,13 @@ export const NATIONAL_SOURCES = [
   { name: 'Google News CH', url: 'https://news.google.com/rss/search?q=switzerland+news&hl=en&gl=CH&ceid=CH:en' },
   { name: 'Google Trends CH', url: 'https://trends.google.com/trending/rss?geo=CH', type: 'trends' },
   // Culture & entertainment (ensures culture category is filled)
-  { name: 'NZZ Feuilleton', url: 'https://www.nzz.ch/feuilleton.rss' },
-  { name: 'SRF Kultur', url: 'https://www.srf.ch/kultur/bnf/rss/454' },
-  { name: '20 Minuten People', url: 'https://partner-feeds.20min.ch/rss/20minuten/people' },
+  { name: 'NZZ Feuilleton', url: 'https://www.nzz.ch/feuilleton.rss', type: 'culture' },
+  { name: 'SRF Kultur', url: 'https://www.srf.ch/kultur/bnf/rss/454', type: 'culture' },
+  { name: '20 Minuten People', url: 'https://partner-feeds.20min.ch/rss/20minuten/people', type: 'culture' },
   // Sport & events (ensures events category is filled)
-  { name: 'NZZ Sport', url: 'https://www.nzz.ch/sport.rss' },
-  { name: 'SRF Sport', url: 'https://www.srf.ch/sport/bnf/rss/718' },
-  { name: '20 Minuten Sport', url: 'https://partner-feeds.20min.ch/rss/20minuten/sport' },
+  { name: 'NZZ Sport', url: 'https://www.nzz.ch/sport.rss', type: 'events' },
+  { name: 'SRF Sport', url: 'https://www.srf.ch/sport/bnf/rss/718', type: 'events' },
+  { name: '20 Minuten Sport', url: 'https://partner-feeds.20min.ch/rss/20minuten/sport', type: 'events' },
 ];
 
 export function getCity(id) {

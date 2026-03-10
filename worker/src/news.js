@@ -88,24 +88,41 @@ async function fetchAllFeeds(sources) {
   return all;
 }
 
-function formatHeadlinesForPrompt(allHeadlines) {
-  // Take up to 5 items per source to ensure diversity across all feeds
-  const flat = [];
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+  return arr;
+}
+
+function splitHeadlinesByType(allHeadlines) {
+  const sourceName = (s) => s.source.replace(/^(NZZ|Reddit r\/).*/, m => m.startsWith('NZZ') ? 'NZZ' : 'Reddit').replace(/ Zürich| Schweiz/g, '');
+  const general = [], culture = [], events = [], local = [];
   for (const s of allHeadlines) {
-    const items = s.headlines.slice(0, 5);
-    for (const item of items) {
-      let source = s.source.replace(/^(NZZ|Reddit r\/).*/, m => m.startsWith('NZZ') ? 'NZZ' : 'Reddit').replace(/ Zürich| Schweiz/g, '');
-      if (s.type === 'police') source = `${source} (Police)`;
-      if (s.type === 'trends') source = `${source} (Trending)`;
-      flat.push({ source, ...item });
+    const type = s.type || 'general';
+    const name = sourceName(s);
+    for (const item of s.headlines.slice(0, 8)) {
+      const entry = { source: name, ...item };
+      if (type === 'culture') culture.push(entry);
+      else if (type === 'events') events.push(entry);
+      else if (type === 'police') local.push({ source: `${name} (Police)`, ...item });
+      else if (type !== 'trends') general.push(entry);
     }
   }
-  // Shuffle
-  for (let i = flat.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [flat[i], flat[j]] = [flat[j], flat[i]];
-  }
-  return '\n' + flat.slice(0, 60).map(h => `- [${h.source}] ${h.title}${h.url ? ` [URL: ${h.url}]` : ''}`).join('\n');
+  return { general: shuffle(general), culture: shuffle(culture), events: shuffle(events), local: shuffle(local) };
+}
+
+function formatHeadlinesForPrompt(generalHeadlines) {
+  return '\n' + generalHeadlines.slice(0, 45).map(h => `- [${h.source}] ${h.title}${h.url ? ` [URL: ${h.url}]` : ''}`).join('\n');
+}
+
+function buildPreAssigned(items, maxItems) {
+  return shuffle(items).slice(0, maxItems).map(h => ({
+    headline: h.title,
+    summary: h.description || h.title,
+    detail: '',
+    source: h.source,
+    url: h.url || '',
+    sentiment: 'neutral'
+  }));
 }
 
 /* ── Claude API ── */
@@ -120,52 +137,48 @@ CRITICAL: ALL output must be in ENGLISH. Translate ALL German headlines and summ
 RULES:
 1. Categorize by TOPIC, not source — a story about elections goes to "politics" even if it's the biggest story of the day
 2. TRANSLATE EVERYTHING TO ENGLISH - no German words allowed
-3. EVERY category MUST have at least 5 items. Aim for 8-10 where possible. If a category has fewer than 5, re-examine headlines — lifestyle/food/travel stories go to culture, sports/festivals go to events, city-specific stories go to local.
+3. 5-8 items per category. Spread stories evenly — don't put everything in topStories.
 4. Swiss news only
 5. For each item, assess sentiment: "positive" (good news, progress), "negative" (accidents, crises), or "neutral" (informational)
 6. Identify the single biggest story/trending topic across all headlines. Include the URL of the best-matching article for the trending topic.
-7. For each item, provide "summary" (1 concise sentence)
-8. Items tagged (Police) are police/fire reports — put them in "local"
-9. Items tagged (Trending) are trending search terms — use them to identify the trending topic but don't add them as news items
-10. De-duplicate: if multiple sources report the same story, keep the best version only
+7. For each item, provide "summary" (1 short sentence visible by default) AND "detail" (1 additional sentence with context, shown on tap)
+8. De-duplicate: if multiple sources report the same story, keep the best version only
 
-CATEGORIZATION GUIDE — categorize by primary topic:
-- topStories: The most important BREAKING or UNUSUAL news that doesn't fit other categories. NOT a catch-all — only truly cross-cutting stories belong here.
-- politics: Government, parliament, elections, referendums, voting results, party politics, laws, regulations, diplomacy, bilateral relations, EU negotiations. Election results and campaign news ALWAYS go here.
-- events: Concerts, exhibitions, festivals, sports results, upcoming events
-- culture: Entertainment, celebrities, reviews, lifestyle, arts, food, travel
-- local: ${cityName}-specific news, police reports, local infrastructure, city council
+CATEGORIES — categorize by primary topic:
+- topStories: Breaking or unusual news that doesn't fit other categories. NOT a catch-all.
+- politics: Government, parliament, elections, referendums, voting, party politics, laws, diplomacy. Election news ALWAYS goes here.
+- events: Sports results, concerts, exhibitions, festivals
+- culture: Entertainment, celebrities, lifestyle, arts, food, travel
+- local: ${cityName}-specific news, local infrastructure, city council
 
 Headlines:
 ${headlinesText}
 
 Respond with ONLY this JSON (ALL IN ENGLISH):
-{"trending":{"topic":"short topic","topicDE":"German topic","headline":"dominant headline","url":"best matching article URL"},"topStories":[{"headline":"English headline here","summary":"One sentence summary.","source":"SourceName","url":"url","sentiment":"positive|neutral|negative"}],"politics":[],"events":[],"culture":[],"local":[]}`
+{"trending":{"topic":"short topic","topicDE":"German topic","headline":"dominant headline","url":"best matching article URL"},"topStories":[{"headline":"English headline","summary":"Short summary.","detail":"Extra context sentence.","source":"SourceName","url":"url","sentiment":"positive|neutral|negative"}],"politics":[],"events":[],"culture":[],"local":[]}`
     : `Du bist eine JSON API. Kategorisiere Schweizer Nachrichten und antworte NUR mit gültigem JSON.
 
 REGELN:
 1. Nach THEMA kategorisieren, nicht Quelle — Wahlnachrichten gehören immer zu "politics", auch wenn sie die größte Story sind
-2. JEDE Kategorie MUSS mindestens 5 Einträge haben. Wenn möglich 8-10. Falls weniger als 5, Schlagzeilen nochmals prüfen — Lifestyle/Essen/Reisen → culture, Sport/Festivals → events, stadtspezifische Meldungen → local.
+2. 5-8 Einträge pro Kategorie. Gleichmässig verteilen — nicht alles in topStories.
 3. Nur Schweizer Nachrichten
 4. Für jeden Eintrag die Stimmung bewerten: "positive" (gute Nachrichten), "negative" (Unfälle, Krisen), oder "neutral" (informativ)
-5. Das größte/dominanteste Thema über alle Schlagzeilen identifizieren. Die URL des passendsten Artikels für das Trending-Thema angeben.
-6. Für jeden Eintrag "summary" (1 kurzer Satz) angeben
-7. Einträge mit (Police) sind Polizei-/Feuerwehrmeldungen — in "local" einordnen
-8. Einträge mit (Trending) sind Trendsuchbegriffe — für Trending-Thema nutzen, nicht als Nachricht
-9. Duplikate entfernen: bei gleicher Story aus mehreren Quellen nur die beste Version behalten
+5. Das größte/dominanteste Thema über alle Schlagzeilen identifizieren. Die URL des passendsten Artikels angeben.
+6. Für jeden Eintrag "summary" (1 kurzer Satz) UND "detail" (1 zusätzlicher Satz mit Kontext) angeben
+7. Duplikate entfernen: bei gleicher Story aus mehreren Quellen nur die beste Version behalten
 
-KATEGORISIERUNG — nach Hauptthema:
-- topStories: Wichtigste AKTUELLE oder UNGEWÖHNLICHE Nachrichten, die nicht in andere Kategorien passen. KEIN Sammelbecken.
-- politics: Regierung, Parlament, Wahlen, Abstimmungen, Parteipolitik, Gesetze, Regulierung, Diplomatie, EU-Verhandlungen. Wahlergebnisse und Wahlkampf gehören IMMER hierher.
-- events: Konzerte, Ausstellungen, Festivals, Sport
+KATEGORIEN — nach Hauptthema:
+- topStories: Aktuelle oder ungewöhnliche Nachrichten. KEIN Sammelbecken.
+- politics: Regierung, Wahlen, Abstimmungen, Parteipolitik, Gesetze, Diplomatie. Wahlnachrichten IMMER hierher.
+- events: Sport, Konzerte, Ausstellungen, Festivals
 - culture: Unterhaltung, Prominente, Lifestyle, Kunst, Essen, Reisen
-- local: ${cityName}-spezifische Nachrichten, Polizeimeldungen, lokale Infrastruktur
+- local: ${cityName}-spezifische Nachrichten, lokale Infrastruktur
 
 Schlagzeilen:
 ${headlinesText}
 
 Antworte NUR mit diesem JSON:
-{"trending":{"topic":"Kurzes Thema","topicDE":"Kurzes Thema DE","headline":"Dominante Schlagzeile","url":"URL des passendsten Artikels"},"topStories":[{"headline":"...","summary":"Ein Satz Zusammenfassung.","source":"...","url":"...","sentiment":"positive|neutral|negative"}],"politics":[],"events":[],"culture":[],"local":[]}`;
+{"trending":{"topic":"Kurzes Thema","topicDE":"Kurzes Thema DE","headline":"Dominante Schlagzeile","url":"URL des passendsten Artikels"},"topStories":[{"headline":"...","summary":"Kurze Zusammenfassung.","detail":"Zusätzlicher Kontext.","source":"...","url":"...","sentiment":"positive|neutral|negative"}],"politics":[],"events":[],"culture":[],"local":[]}`;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -346,13 +359,20 @@ export async function handleNews(url, env) {
 
   if (allHeadlines.length === 0) throw new Error('Failed to fetch any news feeds');
 
-  let categories = await getCategorizedNews(formatHeadlinesForPrompt(allHeadlines), lang, env.CLAUDE_API_KEY, city.name);
+  // Split headlines: general → Claude, culture/events/local → pre-assigned
+  const split = splitHeadlinesByType(allHeadlines);
+  let categories = await getCategorizedNews(formatHeadlinesForPrompt(split.general), lang, env.CLAUDE_API_KEY, city.name);
 
   // Retry with fewer headlines if empty
   const totalItems = Object.values(categories).flat().filter(i => i?.headline).length;
   if (totalItems === 0) {
-    categories = await getCategorizedNews(formatHeadlinesForPrompt(allHeadlines.slice(0, 4)), lang, env.CLAUDE_API_KEY, city.name);
+    categories = await getCategorizedNews(formatHeadlinesForPrompt(split.general.slice(0, 20)), lang, env.CLAUDE_API_KEY, city.name);
   }
+
+  // Merge pre-assigned culture/events/local items (from dedicated feeds)
+  categories.culture = [...(categories.culture || []), ...buildPreAssigned(split.culture, 5)].slice(0, 8);
+  categories.events = [...(categories.events || []), ...buildPreAssigned(split.events, 5)].slice(0, 8);
+  categories.local = [...(categories.local || []), ...buildPreAssigned(split.local, 5)].slice(0, 8);
 
   // Build publishedAt map + normalize sentiment
   const pubMap = {};
