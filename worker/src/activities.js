@@ -135,6 +135,12 @@ const WINTERTHUR = [
 
 const CITY_ACTIVITIES = { zurich: ZURICH, basel: BASEL, bern: BERN, geneva: GENEVA, lausanne: LAUSANNE, luzern: LUZERN, winterthur: WINTERTHUR };
 
+const ALL_ACTIVITIES = Object.values(CITY_ACTIVITIES).flat();
+
+export function getActivityById(id) {
+  return ALL_ACTIVITIES.find(a => a.id === id) || null;
+}
+
 /* ── Seasonal activities ── */
 
 function getCurrentSeason() {

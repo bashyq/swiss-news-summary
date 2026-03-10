@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.17.0';
+const APP_VERSION = '2.18.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -1554,10 +1554,16 @@ function showSurpriseModal(item, type) {
     if (item.openForLunch === true) badges += '<span class="badge badge-open">Open</span>';
   }
 
+  // Show venue photo for activities (with emoji fallback), emoji only for lunch
+  const hasPhoto = type === 'activity' && item.id && item.category !== 'stayhome';
+  const photoHtml = hasPhoto
+    ? `<div class="modal-photo"><div class="modal-photo-shimmer"></div><img src="${API}/photo/${item.id}" alt="${esc(name)}" onload="this.parentNode.classList.add('loaded')" onerror="this.parentNode.innerHTML='<div class=\\'modal-emoji\\'>${emoji}</div>'"></div>`
+    : `<div class="modal-emoji">${emoji}</div>`;
+
   const modal = $('modal');
   modal.innerHTML = `<div class="modal-content">
     <button class="modal-close" onclick="closeModal()">&times;</button>
-    <div class="modal-emoji">${emoji}</div>
+    ${photoHtml}
     <div class="modal-title">${esc(name)}</div>
     <div class="modal-desc">${esc(desc || '')}</div>
     <div class="modal-badges">${badges}</div>

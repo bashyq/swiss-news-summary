@@ -13,6 +13,7 @@ import { handleSunshine, VERSION as SUNSHINE_V } from './sunshine.js';
 import { handleDonate, VERSION as DONATE_V } from './donate.js';
 import { handleSnow, VERSION as SNOW_V } from './snow.js';
 import { handleDeals, VERSION as DEALS_V } from './deals.js';
+import { handlePhoto, VERSION as PHOTOS_V } from './photos.js';
 import { VERSION as DATA_V } from './data.js';
 import { VERSION as WEATHER_V } from './weather.js';
 import { VERSION as TRANSPORT_V } from './transport.js';
@@ -59,6 +60,7 @@ function handleVersion(url, env) {
       donate: DONATE_V,
       snow: SNOW_V,
       deals: DEALS_V,
+      photos: PHOTOS_V,
     },
     deployedAt: new Date().toISOString(),
   }, env);
@@ -81,7 +83,7 @@ export default {
     if (request.method === 'OPTIONS') return cors(env);
 
     const url = new URL(request.url);
-    const handler = ROUTES[url.pathname];
+    const handler = ROUTES[url.pathname] || (url.pathname.startsWith('/photo/') ? handlePhoto : null);
     if (!handler) return error('Not found', 404, env);
 
     try {
