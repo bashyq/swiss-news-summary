@@ -359,20 +359,29 @@ export async function handleNews(url, env) {
 
   if (allHeadlines.length === 0) throw new Error('Failed to fetch any news feeds');
 
-  // Split headlines: general → Claude, culture/events/local → pre-assigned
+  // Split headlines: general → Claude, culture/events/local → pre-assigned (DE) or Claude-translated (EN)
   const split = splitHeadlinesByType(allHeadlines);
-  let categories = await getCategorizedNews(formatHeadlinesForPrompt(split.general), lang, env.CLAUDE_API_KEY, city.name);
+
+  // When lang=en, include all headlines in Claude prompt for translation
+  // When lang=de, only send general headlines (pre-assigned German items are fine as-is)
+  const claudeHeadlines = lang === 'de'
+    ? split.general
+    : [...split.general, ...split.culture, ...split.events, ...split.local];
+
+  let categories = await getCategorizedNews(formatHeadlinesForPrompt(claudeHeadlines), lang, env.CLAUDE_API_KEY, city.name);
 
   // Retry with fewer headlines if empty
   const totalItems = Object.values(categories).flat().filter(i => i?.headline).length;
   if (totalItems === 0) {
-    categories = await getCategorizedNews(formatHeadlinesForPrompt(split.general.slice(0, 20)), lang, env.CLAUDE_API_KEY, city.name);
+    categories = await getCategorizedNews(formatHeadlinesForPrompt(claudeHeadlines.slice(0, 20)), lang, env.CLAUDE_API_KEY, city.name);
   }
 
-  // Merge pre-assigned culture/events/local items (from dedicated feeds)
-  categories.culture = [...(categories.culture || []), ...buildPreAssigned(split.culture, 5)].slice(0, 8);
-  categories.events = [...(categories.events || []), ...buildPreAssigned(split.events, 5)].slice(0, 8);
-  categories.local = [...(categories.local || []), ...buildPreAssigned(split.local, 5)].slice(0, 8);
+  // Merge pre-assigned items only for German (English items already went through Claude)
+  if (lang === 'de') {
+    categories.culture = [...(categories.culture || []), ...buildPreAssigned(split.culture, 5)].slice(0, 8);
+    categories.events = [...(categories.events || []), ...buildPreAssigned(split.events, 5)].slice(0, 8);
+    categories.local = [...(categories.local || []), ...buildPreAssigned(split.local, 5)].slice(0, 8);
+  }
 
   // Build publishedAt map + normalize sentiment
   const pubMap = {};
