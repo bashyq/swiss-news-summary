@@ -2,13 +2,14 @@
  * Cities, holidays, history — static data shared across modules.
  */
 
-export const VERSION = '2.1.0';
+export const VERSION = '2.2.0';
 
 export const CITIES = {
   zurich: {
     name: 'Zürich', lat: 47.3769, lon: 8.5417, station: 'Zürich HB',
     sources: [
       { name: 'NZZ Zürich', url: 'https://www.nzz.ch/zuerich.rss' },
+      { name: 'Kantonspolizei Zürich', url: 'https://polizei-zurich.ch/feed/', type: 'police' },
       { name: 'Google Zürich', url: 'https://news.google.com/rss/search?q=zurich+OR+zürich&hl=en&gl=CH&ceid=CH:en' }
     ]
   },
@@ -59,8 +60,11 @@ export const NATIONAL_SOURCES = [
   { name: 'NZZ Schweiz', url: 'https://www.nzz.ch/schweiz.rss' },
   { name: 'SRF News', url: 'https://www.srf.ch/news/bnf/rss/1890' },
   { name: '20 Minuten', url: 'https://partner-feeds.20min.ch/rss/20minuten' },
+  { name: 'Blick Schweiz', url: 'https://www.blick.ch/schweiz/rss.xml' },
+  { name: 'Watson', url: 'https://www.watson.ch/api/2.0/rss/index.xml' },
   { name: 'Inside Paradeplatz', url: 'https://insideparadeplatz.ch/feed/' },
-  { name: 'Google News CH', url: 'https://news.google.com/rss/search?q=switzerland+news&hl=en&gl=CH&ceid=CH:en' }
+  { name: 'Google News CH', url: 'https://news.google.com/rss/search?q=switzerland+news&hl=en&gl=CH&ceid=CH:en' },
+  { name: 'Google Trends CH', url: 'https://trends.google.com/trending/rss?geo=CH', type: 'trends' }
 ];
 
 export function getCity(id) {

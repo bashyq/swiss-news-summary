@@ -2,7 +2,7 @@
  * News — RSS parsing, Claude API categorization, news assembly.
  */
 
-export const VERSION = '2.1.0';
+export const VERSION = '2.2.0';
 
 import { NATIONAL_SOURCES, getCity, getUpcomingHolidays, getThisDayInHistory, getSchoolHolidays } from './data.js';
 import { fetchWeather, fetchWeekendWeather, RAINY_CODES } from './weather.js';
@@ -28,24 +28,31 @@ function stripHTML(html) {
 
 function parseRSSItems(xml) {
   const items = [];
-  const itemRe = /<item>([\s\S]*?)<\/item>/gi;
+  // Match both RSS <item> and Atom <entry> elements
+  const itemRe = /<(?:item|entry)>([\s\S]*?)<\/(?:item|entry)>/gi;
   const field = (tag, str) => {
-    const m = new RegExp(`<${tag}>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/${tag}>`, 'i').exec(str);
+    const m = new RegExp(`<${tag}[^>]*>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/${tag}>`, 'i').exec(str);
     return m ? m[1].trim() : '';
+  };
+  // Atom <link href="..."/> (self-closing)
+  const atomLink = (str) => {
+    const m = /<link[^>]*href="([^"]+)"[^>]*(?:rel="alternate")?/i.exec(str);
+    return m ? m[1] : '';
   };
 
   let m;
-  while ((m = itemRe.exec(xml)) !== null && items.length < 10) {
+  while ((m = itemRe.exec(xml)) !== null && items.length < 15) {
     const x = m[1];
     const title = field('title', x);
     if (!title) continue;
-    const dateStr = field('pubDate', x) || field('dc:date', x);
+    const dateStr = field('pubDate', x) || field('dc:date', x) || field('published', x) || field('updated', x);
     let publishedAt = null;
     if (dateStr) { try { const d = new Date(dateStr); if (!isNaN(d)) publishedAt = d.toISOString(); } catch {} }
+    const url = field('link', x) || atomLink(x);
     items.push({
       title: decodeEntities(title),
-      url: field('link', x),
-      description: stripHTML(decodeEntities(field('description', x))).substring(0, 200),
+      url,
+      description: stripHTML(decodeEntities(field('description', x) || field('summary', x) || field('content', x))).substring(0, 200),
       publishedAt
     });
   }
@@ -72,7 +79,7 @@ async function fetchFeed(source) {
 
 async function fetchAllFeeds(sources) {
   const results = await Promise.allSettled(
-    sources.map(async s => ({ source: s.name, headlines: await fetchFeed(s) }))
+    sources.map(async s => ({ source: s.name, type: s.type || null, headlines: await fetchFeed(s) }))
   );
   const all = [];
   for (const r of results) {
@@ -85,7 +92,11 @@ function formatHeadlinesForPrompt(allHeadlines) {
   const flat = [];
   for (const s of allHeadlines) {
     for (const item of s.headlines) {
-      flat.push({ source: s.source.replace(/^(NZZ|Reddit r\/).*/, m => m.startsWith('NZZ') ? 'NZZ' : 'Reddit').replace(/ Zürich| Schweiz/g, ''), ...item });
+      let source = s.source.replace(/^(NZZ|Reddit r\/).*/, m => m.startsWith('NZZ') ? 'NZZ' : 'Reddit').replace(/ Zürich| Schweiz/g, '');
+      // Tag police/trends sources so Claude can categorize appropriately
+      if (s.type === 'police') source = `${source} (Police)`;
+      if (s.type === 'trends') source = `${source} (Trending)`;
+      flat.push({ source, ...item });
     }
   }
   // Shuffle
@@ -93,7 +104,7 @@ function formatHeadlinesForPrompt(allHeadlines) {
     const j = Math.floor(Math.random() * (i + 1));
     [flat[i], flat[j]] = [flat[j], flat[i]];
   }
-  return '\n' + flat.slice(0, 40).map(h => `- [${h.source}] ${h.title}${h.url ? ` [URL: ${h.url}]` : ''}`).join('\n');
+  return '\n' + flat.slice(0, 60).map(h => `- [${h.source}] ${h.title}${h.url ? ` [URL: ${h.url}]` : ''}`).join('\n');
 }
 
 /* ── Claude API ── */
@@ -106,20 +117,23 @@ async function getCategorizedNews(headlinesText, lang, apiKey, cityName) {
 CRITICAL: ALL output must be in ENGLISH. Translate ALL German headlines and summaries to English.
 
 RULES:
-1. Categorize by TOPIC, not source
+1. Categorize by TOPIC, not source — a story about elections goes to "politics" even if it's the biggest story of the day
 2. TRANSLATE EVERYTHING TO ENGLISH - no German words allowed
-3. 5-8 items per category
+3. 8-10 items per category — aim for 10 where possible to give comprehensive coverage
 4. Swiss news only
 5. For each item, assess sentiment: "positive" (good news, progress), "negative" (accidents, crises), or "neutral" (informational)
 6. Identify the single biggest story/trending topic across all headlines. Include the URL of the best-matching article for the trending topic.
 7. For each item, provide "summary" (1 short sentence) AND "detail" (2-3 sentences with more context and background)
+8. Items tagged (Police) are police/fire reports — put them in "local" with their original detail
+9. Items tagged (Trending) are trending search terms — use them to identify the trending topic but don't add them as news items
+10. De-duplicate: if multiple sources report the same story, keep the best version only
 
-CATEGORIES:
-- topStories: The most important, impactful, or breaking news stories of the day — regardless of topic. Lead with the biggest headline.
-- politics: Government, elections, laws, voting, diplomacy
-- events: Concerts, exhibitions, festivals, sports
-- culture: Entertainment, celebrities, reviews, lifestyle, arts
-- local: ${cityName}-specific news
+CATEGORIZATION GUIDE — categorize by primary topic:
+- topStories: The most important BREAKING or UNUSUAL news that doesn't fit other categories. NOT a catch-all — only truly cross-cutting stories belong here.
+- politics: Government, parliament, elections, referendums, voting results, party politics, laws, regulations, diplomacy, bilateral relations, EU negotiations. Election results and campaign news ALWAYS go here.
+- events: Concerts, exhibitions, festivals, sports results, upcoming events
+- culture: Entertainment, celebrities, reviews, lifestyle, arts, food, travel
+- local: ${cityName}-specific news, police reports, local infrastructure, city council
 
 Headlines:
 ${headlinesText}
@@ -129,19 +143,22 @@ Respond with ONLY this JSON (ALL IN ENGLISH):
     : `Du bist eine JSON API. Kategorisiere Schweizer Nachrichten und antworte NUR mit gültigem JSON.
 
 REGELN:
-1. Nach THEMA kategorisieren, nicht Quelle
-2. 5-8 Einträge pro Kategorie
+1. Nach THEMA kategorisieren, nicht Quelle — Wahlnachrichten gehören immer zu "politics", auch wenn sie die größte Story sind
+2. 8-10 Einträge pro Kategorie — wenn möglich 10, für umfassende Abdeckung
 3. Nur Schweizer Nachrichten
 4. Für jeden Eintrag die Stimmung bewerten: "positive" (gute Nachrichten), "negative" (Unfälle, Krisen), oder "neutral" (informativ)
 5. Das größte/dominanteste Thema über alle Schlagzeilen identifizieren. Die URL des passendsten Artikels für das Trending-Thema angeben.
 6. Für jeden Eintrag "summary" (1 kurzer Satz) UND "detail" (2-3 Sätze mit mehr Kontext und Hintergrund) angeben
+7. Einträge mit (Police) sind Polizei-/Feuerwehrmeldungen — in "local" einordnen
+8. Einträge mit (Trending) sind Trendsuchbegriffe — für Trending-Thema nutzen, nicht als Nachricht
+9. Duplikate entfernen: bei gleicher Story aus mehreren Quellen nur die beste Version behalten
 
-KATEGORIEN:
-- topStories: Die wichtigsten, bedeutendsten oder aktuellsten Nachrichten des Tages — themenübergreifend. Die größte Schlagzeile zuerst.
-- politics: Regierung, Wahlen, Gesetze, Diplomatie
-- events: Konzerte, Ausstellungen, Sport
-- culture: Unterhaltung, Prominente, Lifestyle, Kunst
-- local: ${cityName}-spezifische Nachrichten
+KATEGORISIERUNG — nach Hauptthema:
+- topStories: Wichtigste AKTUELLE oder UNGEWÖHNLICHE Nachrichten, die nicht in andere Kategorien passen. KEIN Sammelbecken.
+- politics: Regierung, Parlament, Wahlen, Abstimmungen, Parteipolitik, Gesetze, Regulierung, Diplomatie, EU-Verhandlungen. Wahlergebnisse und Wahlkampf gehören IMMER hierher.
+- events: Konzerte, Ausstellungen, Festivals, Sport
+- culture: Unterhaltung, Prominente, Lifestyle, Kunst, Essen, Reisen
+- local: ${cityName}-spezifische Nachrichten, Polizeimeldungen, lokale Infrastruktur
 
 Schlagzeilen:
 ${headlinesText}
@@ -152,7 +169,7 @@ Antworte NUR mit diesem JSON:
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: 'claude-3-haiku-20240307', max_tokens: 2048, messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify({ model: 'claude-3-haiku-20240307', max_tokens: 3072, messages: [{ role: 'user', content: prompt }] })
   });
   if (!res.ok) { const e = await res.text(); throw new Error(`Claude API ${res.status}: ${e}`); }
 

@@ -330,12 +330,17 @@ swiss-news-summary/
 
 ## Data Sources
 
-**News:**
+**News (8 national + city-specific sources, 15 items/feed, 60 headlines to Claude):**
 - NZZ (Schweiz, Zürich feeds)
 - SRF News
 - 20 Minuten
+- Blick Schweiz
+- Watson
+- Inside Paradeplatz
 - Google News Switzerland (aggregated)
+- Google Trends CH (trending search terms, used for trending topic detection)
 - City-specific Google News feeds
+- Kantonspolizei Zürich (police/fire reports, Zürich only)
 
 **Weather:**
 - Open Meteo API (primary, Celsius)
