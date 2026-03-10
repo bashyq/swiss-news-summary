@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.16.0';
+const APP_VERSION = '2.17.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -25,7 +25,6 @@ let weekendData = null;
 let eventsCalendarData = [];
 let currentTab = 'topStories';
 let activityFilter = 'all';
-let ageFilter = 'all';
 let eventFilter = 'all';
 let lunchFilters = { nearMe: false, open: false, terrace: false, saved: false };
 let lunchCuisine = 'all';
@@ -94,9 +93,6 @@ const T = {
   daysUntil: { en:'days', de:'Tage' },
   addActivity: { en:'Add your own', de:'Eigene hinzufügen' },
   addLunch: { en:'Add restaurant', de:'Restaurant hinzufügen' },
-  allAges: { en:'All ages', de:'Alle Alter' },
-  age23: { en:'2-3 years', de:'2-3 Jahre' },
-  age45: { en:'4-5 years', de:'4-5 Jahre' },
   materials: { en:'Materials', de:'Material' },
   familyActivities: { en: 'Family-friendly activities for ages 2-5', de: 'Familienfreundliche Aktivitäten für 2-5 Jahre' },
   noResults: { en:'No results found', de:'Keine Ergebnisse gefunden' },
@@ -458,13 +454,13 @@ function renderMenu() {
     <div class="menu-title">${t('settings')}</div>
     <div class="menu-item${view === 'news' ? ' active' : ''}" onclick="switchView('news')"><span class="menu-item-icon">📰</span>${t('news')}</div>
     <div class="menu-item${view === 'activities' ? ' active' : ''}" onclick="switchView('activities')"><span class="menu-item-icon">🎈</span>${t('activities')}</div>
-    <div class="menu-item${view === 'lunch' ? ' active' : ''}" onclick="switchView('lunch')"><span class="menu-item-icon">🍽️</span>${t('lunch')}</div>
-    <div class="menu-item${view === 'events' ? ' active' : ''}" onclick="switchView('events')"><span class="menu-item-icon">📅</span>${t('events')}</div>
-    <div class="menu-item${view === 'weekend' ? ' active' : ''}" onclick="switchView('weekend')"><span class="menu-item-icon">🌤️</span>${t('weekend')}</div>
+    <div class="menu-item${view === 'explore' ? ' active' : ''}" onclick="switchView('explore')"><span class="menu-item-icon">🗺️</span>${t('explore')}</div>
     <div class="menu-item${view === 'sunshine' ? ' active' : ''}" onclick="switchView('sunshine')"><span class="menu-item-icon">☀️</span>${t('sunshine')}</div>
     <div class="menu-item${view === 'snow' ? ' active' : ''}" onclick="switchView('snow')"><span class="menu-item-icon">❄️</span>${t('snow')}</div>
+    <div class="menu-item${view === 'lunch' ? ' active' : ''}" onclick="switchView('lunch')"><span class="menu-item-icon">🍽️</span>${t('lunch')}</div>
+    <div class="menu-item${view === 'weekend' ? ' active' : ''}" onclick="switchView('weekend')"><span class="menu-item-icon">🌤️</span>${t('weekend')}</div>
+    <div class="menu-item${view === 'events' ? ' active' : ''}" onclick="switchView('events')"><span class="menu-item-icon">📅</span>${t('events')}</div>
     <div class="menu-item${view === 'deals' ? ' active' : ''}" onclick="switchView('deals')"><span class="menu-item-icon">🎁</span>${t('deals')}</div>
-    <div class="menu-item${view === 'explore' ? ' active' : ''}" onclick="switchView('explore')"><span class="menu-item-icon">🗺️</span>${t('explore')}</div>
     ${canDonate ? `<div class="menu-item" onclick="openDonateModal()"><span class="menu-item-icon">☕</span>${t('donate')}</div>` : ''}
     <div class="menu-section">
       <div class="menu-section-title">${t('language')}</div>
@@ -597,13 +593,6 @@ function renderActivitiesView() {
   ];
   html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${activityFilter === k ? ' active' : ''}" onclick="filterActivities('${k}')">${v}</button>`).join('')}</div>`;
 
-  // Age filter
-  html += `<div class="age-filter">
-    <button class="age-btn${ageFilter === 'all' ? ' active' : ''}" onclick="setAgeFilter('all')">${t('allAges')}</button>
-    <button class="age-btn${ageFilter === '2-3' ? ' active' : ''}" onclick="setAgeFilter('2-3')">${t('age23')}</button>
-    <button class="age-btn${ageFilter === '4-5' ? ' active' : ''}" onclick="setAgeFilter('4-5')">${t('age45')}</button>
-  </div>`;
-
   // Surprise + playgrounds buttons
   html += `<div class="activities-actions">
     <button class="surprise-btn" onclick="surpriseMe()" id="surprise-btn">🎲 ${t('surpriseMe')}</button>
@@ -698,10 +687,6 @@ function renderActivityCard(a) {
 
 function getFilteredActivities() {
   let items = [...activitiesData, ...customActivities];
-
-  // Age filter
-  if (ageFilter === '2-3') items = items.filter(a => !a.minAge || a.minAge <= 3);
-  else if (ageFilter === '4-5') items = items.filter(a => !a.maxAge || a.maxAge >= 4);
 
   // Category filter
   if (activityFilter === 'all') { items = items.filter(a => a.category !== 'stayhome'); items.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0)); }
@@ -1325,7 +1310,6 @@ function filterActivities(f) {
   afterRender(initActivityMap);
 }
 
-function setAgeFilter(f) { ageFilter = f; renderCurrentView(); afterRender(initActivityMap); }
 function filterEvents(f) { eventFilter = f; renderCurrentView(); }
 function toggleLunchFilter(f) {
   lunchFilters[f] = !lunchFilters[f];

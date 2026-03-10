@@ -55,7 +55,7 @@ a { color: var(--accent); text-decoration: none; }
 
 /* ═══ FOCUS ═══ */
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
-.tab-btn:focus-visible, .filter-btn:focus-visible, .sort-btn:focus-visible, .age-btn:focus-visible, .lang-btn:focus-visible { outline-offset: 0; }
+.tab-btn:focus-visible, .filter-btn:focus-visible, .sort-btn:focus-visible, .lang-btn:focus-visible { outline-offset: 0; }
 .card:focus-visible, .activity-card:focus-visible, .sunshine-card:focus-visible, .snow-card:focus-visible, .event-card:focus-visible { outline-offset: -2px; }
 input:focus-visible, textarea:focus-visible, select:focus-visible { outline-offset: -1px; }
 
@@ -254,13 +254,6 @@ nav { margin: 16px 0; }
 .activity-actions button { padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; background: none; color: var(--text2); font-family: inherit; font-size: .7rem; cursor: pointer; transition: all .2s; }
 .activity-actions button:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
 .materials-info { font-size: .75rem; color: var(--muted); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border2); }
-
-/* Age filter */
-.age-filter { display: flex; gap: 6px; margin-bottom: 14px; align-items: center; }
-.age-filter::before { content: '👶'; font-size: .8rem; margin-right: 2px; }
-.age-btn { padding: 8px 12px; border: 1px solid var(--border); border-radius: 12px; background: none; color: var(--text2); font-family: inherit; font-size: .7rem; cursor: pointer; transition: all .2s; min-height: 36px; }
-.age-btn:hover { border-color: var(--text2); }
-.age-btn.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
 
 /* Surprise + playground buttons */
 .activities-actions { display: flex; gap: 8px; margin-bottom: 16px; }
