@@ -3,12 +3,13 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.14.0';
+const APP_VERSION = '2.15.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
 const ACTIVITY_EMOJIS = { animals:'🦁', museum:'🏛️', playground:'🛝', outdoor:'🌳', nature:'🌿', 'indoor-play':'🎪', event:'📅', seasonal:'🎄', stayhome:'🏠', cafe:'☕', other:'📍' };
 const RAINY_CODES = [51,53,55,56,57,61,63,65,66,67,80,81,82,95,96,99];
+const MAP_COLORS = { green:'#22c55e', purple:'#a855f7', amber:'#f59e0b', blue:'#3b82f6', sky:'#60a5fa', navy:'#1e40af', gray:'#6b7280', slate:'#94a3b8', white:'#fff', muted:'#666' };
 
 // ═══ STATE ═══
 let lang = localStorage.getItem('lang') || 'en';
@@ -1738,7 +1739,7 @@ async function initLunchMap() {
   lunchMarkers = {};
   const spots = getFilteredLunchSpots().filter(s => s.lat);
   for (const s of spots.slice(0, 100)) {
-    const marker = L.circleMarker([s.lat, s.lon], { radius: 5, fillColor: s.openForLunch ? '#22c55e' : '#666', fillOpacity: .8, weight: 1, color: '#fff' }).addTo(lunchMap).bindPopup(`<b>${esc(s.name)}</b><br>${s.cuisine || ''}`);
+    const marker = L.circleMarker([s.lat, s.lon], { radius: 5, fillColor: s.openForLunch ? MAP_COLORS.green : MAP_COLORS.muted, fillOpacity: .8, weight: 1, color: MAP_COLORS.white }).addTo(lunchMap).bindPopup(`<b>${esc(s.name)}</b><br>${s.cuisine || ''}`);
     marker.on('click', () => highlightCard(`lunch-${s.id}`));
     lunchMarkers[s.id] = marker;
   }
@@ -2096,14 +2097,14 @@ async function initSunshineMap() {
     if (d.isBaseline) {
       marker = L.circleMarker([d.lat, d.lon], {
         radius: 12,
-        fillColor: '#a855f7',
+        fillColor: MAP_COLORS.purple,
         fillOpacity: 0.9,
         weight: 3,
-        color: '#fff',
+        color: MAP_COLORS.white,
       }).addTo(sunshineMap).bindPopup(`<b>${esc(name)}</b> (${t('yourCity')})<br>${d.sunshineHoursTotal}${t('sunshineHours')}<br>${getSunshineEmoji(d.sunshineHoursTotal)}`);
     } else {
       const cls = getSunshineClass(d.sunshineHoursTotal);
-      const color = cls === 'sunny' ? '#f59e0b' : cls === 'partly' ? '#60a5fa' : '#6b7280';
+      const color = cls === 'sunny' ? MAP_COLORS.amber : cls === 'partly' ? MAP_COLORS.sky : MAP_COLORS.gray;
       const radius = Math.max(8, Math.min(18, 8 + d.sunshineHoursTotal));
 
       marker = L.circleMarker([d.lat, d.lon], {
@@ -2111,7 +2112,7 @@ async function initSunshineMap() {
         fillColor: color,
         fillOpacity: 0.85,
         weight: 2,
-        color: '#fff',
+        color: MAP_COLORS.white,
       }).addTo(sunshineMap).bindPopup(`<b>${esc(name)}</b><br>${d.sunshineHoursTotal}${t('sunshineHours')}<br>${getSunshineEmoji(d.sunshineHoursTotal)}`);
     }
     marker.on('click', () => highlightCard(`sunshine-${d.id}`));
@@ -2531,7 +2532,7 @@ async function initSnowMap() {
   for (const d of snowData.destinations) {
     const name = lang === 'de' ? (d.nameDE || d.name) : d.name;
     const cls = getSnowClass(d.snowfallWeekTotal);
-    const color = cls === 'heavy' ? '#1e40af' : cls === 'moderate' ? '#60a5fa' : '#94a3b8';
+    const color = cls === 'heavy' ? MAP_COLORS.navy : cls === 'moderate' ? MAP_COLORS.sky : MAP_COLORS.slate;
     const radius = Math.max(8, Math.min(25, 8 + d.snowfallWeekTotal / 2));
 
     const marker = L.circleMarker([d.lat, d.lon], {
@@ -2539,7 +2540,7 @@ async function initSnowMap() {
       fillColor: color,
       fillOpacity: 0.8,
       weight: 2,
-      color: '#fff',
+      color: MAP_COLORS.white,
     }).addTo(snowMap).bindPopup(`<b>${esc(name)}</b><br>${d.snowfallWeekTotal}${t('snowfallCm')}<br>${getSnowEmoji(d.snowfallWeekTotal)}`);
     marker.on('click', () => highlightCard(`snow-${d.id}`));
     snowMarkers[d.id] = marker;
@@ -2827,7 +2828,7 @@ function getExploreItems() {
         type: 'activity', id: a.id, name: lang === 'de' ? (a.nameDE || a.name) : a.name,
         desc: lang === 'de' ? (a.descriptionDE || a.description) : a.description,
         lat: a.lat, lon: a.lon, indoor: a.indoor, category: a.category,
-        emoji: ACTIVITY_EMOJIS[a.category] || '📍', color: '#22c55e',
+        emoji: ACTIVITY_EMOJIS[a.category] || '📍', color: MAP_COLORS.green,
         featured: a.featured, price: a.price
       });
     }
@@ -2849,7 +2850,7 @@ function getExploreItems() {
         type: 'event', id: e.id, name: lang === 'de' ? (e.nameDE || e.name) : e.name,
         desc: lang === 'de' ? (e.descriptionDE || e.description) : e.description,
         lat: coords[0] + (Math.random() - 0.5) * 0.01, lon: coords[1] + (Math.random() - 0.5) * 0.01,
-        emoji: '📅', color: '#a855f7',
+        emoji: '📅', color: MAP_COLORS.purple,
         toddlerFriendly: e.toddlerFriendly, free: e.free,
         startDate: e.startDate, endDate: e.endDate
       });
@@ -2874,7 +2875,7 @@ function getExploreItems() {
         desc: lang === 'de' ? (d.descriptionDE || d.description) : d.description,
         lat: coords[0] + Math.sin(angle) * r, lon: coords[1] + Math.cos(angle) * r,
         emoji: DEAL_CATEGORY_EMOJIS[d.category] || '🎁',
-        color: d.type === 'free' ? '#22c55e' : d.type === 'deal' ? '#3b82f6' : '#f59e0b',
+        color: d.type === 'free' ? MAP_COLORS.green : d.type === 'deal' ? MAP_COLORS.blue : MAP_COLORS.amber,
         dealType: d.type, savings: d.savings, url: d.url
       });
     }
