@@ -11,6 +11,7 @@ These features were added to the Cloudflare Worker and are automatically availab
 | Daily Pick | `GET /` | `briefing.dailyPick` | Weather+time-aware activity recommendation with `reason`/`reasonDE` text |
 | Weekend Brief | `GET /` | `weekendBrief` | Sat+Sun weather + weekend events. `null` on Sundays. |
 | Featured Activities | `GET /activities` | `featured: true` | 13 activities across all cities flagged as featured |
+| News Expansion | `GET /` | `categories.*` | Now 8-10 items per category (was 5-8). Added Blick, Watson, Google Trends, Kantonspolizei ZH sources. Better categorization (elections→politics, police→local). No model changes needed — same JSON shape, just more items. |
 
 The iOS `NewsViewModel` and `ActivitiesViewModel` just need to parse these new fields from the existing JSON responses.
 
