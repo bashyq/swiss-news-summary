@@ -58,46 +58,91 @@ struct LunchSpot: Codable, Identifiable, Sendable {
     }
 }
 
-// MARK: - Lunch Filter
+// MARK: - Lunch Toggle Filters (multi-select)
 
-enum LunchFilter: String, CaseIterable {
-    case all
+enum LunchToggle: String, CaseIterable, Identifiable {
     case nearMe
-    case saved
     case open
-    case outdoor
-    case vegetarian
+    case terrace
+    case saved
+
+    var id: String { rawValue }
 
     var displayName: String {
         switch self {
-        case .all: return "All"
-        case .nearMe: return "Near me"
+        case .nearMe: return "Near Me"
+        case .open: return "Open"
+        case .terrace: return "Terrace"
         case .saved: return "Saved"
-        case .open: return "Open for lunch"
-        case .outdoor: return "Outdoor"
-        case .vegetarian: return "Vegetarian"
         }
     }
 
     var displayNameDE: String {
         switch self {
-        case .all: return "Alle"
         case .nearMe: return "In der Nähe"
+        case .open: return "Offen"
+        case .terrace: return "Terrasse"
         case .saved: return "Gespeichert"
-        case .open: return "Mittagstisch"
-        case .outdoor: return "Terrasse"
-        case .vegetarian: return "Vegetarisch"
         }
     }
 
     var sfSymbol: String {
         switch self {
-        case .all: return "square.grid.2x2"
         case .nearMe: return "location"
-        case .saved: return "heart.fill"
         case .open: return "clock"
-        case .outdoor: return "sun.max"
-        case .vegetarian: return "leaf"
+        case .terrace: return "sun.max"
+        case .saved: return "heart.fill"
+        }
+    }
+}
+
+// MARK: - Cuisine Filter (single-select)
+
+enum CuisineFilter: String, CaseIterable, Identifiable {
+    case all
+    case italian
+    case asian
+    case kebab
+    case cafe
+    case fastfood
+    case international
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .all: return "All cuisines"
+        case .italian: return "Italian"
+        case .asian: return "Asian"
+        case .kebab: return "Kebab"
+        case .cafe: return "Café"
+        case .fastfood: return "Fast Food"
+        case .international: return "International"
+        }
+    }
+
+    var displayNameDE: String {
+        switch self {
+        case .all: return "Alle Küchen"
+        case .italian: return "Italienisch"
+        case .asian: return "Asiatisch"
+        case .kebab: return "Kebab"
+        case .cafe: return "Café"
+        case .fastfood: return "Fast Food"
+        case .international: return "International"
+        }
+    }
+
+    /// Matches against the `cuisineCategory` field from the API
+    var apiValue: String? {
+        switch self {
+        case .all: return nil
+        case .italian: return "Italian"
+        case .asian: return "Asian"
+        case .kebab: return "Kebab"
+        case .cafe: return "Cafe"
+        case .fastfood: return "Fastfood"
+        case .international: return "International"
         }
     }
 }

@@ -1,54 +1,102 @@
 import SwiftUI
 
-/// Horizontal scrollable filter bar for the Lunch view.
+/// Filter bar for the Lunch view — multi-select toggle pills + cuisine dropdown.
 ///
-/// Displays all `LunchFilter` cases as tappable chips with localized labels,
-/// SF Symbol icons, and count badges. Updates `viewModel.filter` on selection.
+/// Toggle pills (Near Me, Open, Terrace, Saved) can be freely combined with AND logic.
+/// The cuisine picker is a single-select Menu that filters by `cuisineCategory`.
 struct LunchFilterBar: View {
     @Bindable var viewModel: LunchViewModel
     let language: AppLanguage
     var savedIDs: Set<String> = []
 
     var body: some View {
-        FilterBar(
-            filters: LunchFilter.allCases,
-            selected: viewModel.filter,
-            label: { filter in
-                localizedLabel(for: filter)
-            },
-            icon: { filter in
-                filter.sfSymbol
-            },
-            count: { filter in
-                filterCount(for: filter)
-            },
-            onSelect: { filter in
-                withAnimation(AppAnimation.standardEase) {
-                    viewModel.filter = filter
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                // Toggle pills (multi-select)
+                ForEach(LunchToggle.allCases) { toggle in
+                    FilterChip(
+                        label: localizedLabel(for: toggle),
+                        isSelected: viewModel.activeToggles.contains(toggle),
+                        icon: toggle.sfSymbol,
+                        action: {
+                            withAnimation(AppAnimation.standardEase) {
+                                if viewModel.activeToggles.contains(toggle) {
+                                    viewModel.activeToggles.remove(toggle)
+                                } else {
+                                    viewModel.activeToggles.insert(toggle)
+                                }
+                            }
+                        }
+                    )
                 }
+
+                // Cuisine dropdown (single-select)
+                cuisineMenu
             }
-        )
-    }
-
-    // MARK: - Localized Label
-
-    private func localizedLabel(for filter: LunchFilter) -> String {
-        switch language {
-        case .en: return filter.displayName
-        case .de: return filter.displayNameDE
+            .padding(.horizontal)
         }
     }
 
-    // MARK: - Filter Count
+    // MARK: - Cuisine Menu
 
-    private func filterCount(for filter: LunchFilter) -> Int? {
-        guard let spots = viewModel.lunchData?.spots else { return nil }
-        switch filter {
-        case .all, .nearMe: return nil // Don't show count for All/Near Me
-        case .saved: return spots.filter { savedIDs.contains($0.id) }.count
-        case .open: return spots.filter { $0.openForLunch == true }.count
-        case .outdoor: return spots.filter { $0.outdoorSeating == true }.count
-        case .vegetarian: return spots.filter { $0.vegetarian == "yes" }.count
+    private var cuisineMenu: some View {
+        Menu {
+            ForEach(CuisineFilter.allCases) { cuisine in
+                Button {
+                    withAnimation(AppAnimation.standardEase) {
+                        viewModel.cuisineFilter = cuisine
+                    }
+                } label: {
+                    HStack {
+                        Text(localizedCuisineLabel(for: cuisine))
+                        if viewModel.cuisineFilter == cuisine {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "fork.knife")
+                    .font(.caption2)
+                Text(viewModel.cuisineFilter == .all
+                     ? localizedCuisineLabel(for: .all)
+                     : localizedCuisineLabel(for: viewModel.cuisineFilter))
+                    .font(.caption)
+                    .fontWeight(viewModel.cuisineFilter != .all ? .semibold : .regular)
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background {
+                if viewModel.cuisineFilter != .all {
+                    LinearGradient.brand
+                } else {
+                    LinearGradient(colors: [Color(.systemGray6)], startPoint: .leading, endPoint: .trailing)
+                }
+            }
+            .foregroundStyle(viewModel.cuisineFilter != .all ? .white : .primary)
+            .clipShape(Capsule())
+            .scaleEffect(viewModel.cuisineFilter != .all ? AppAnimation.selectedScale : 1.0)
+            .animation(AppAnimation.spring, value: viewModel.cuisineFilter)
+        }
+    }
+
+    // MARK: - Localized Labels
+
+    private func localizedLabel(for toggle: LunchToggle) -> String {
+        switch language {
+        case .en: return toggle.displayName
+        case .de: return toggle.displayNameDE
+        }
+    }
+
+    private func localizedCuisineLabel(for cuisine: CuisineFilter) -> String {
+        switch language {
+        case .en: return cuisine.displayName
+        case .de: return cuisine.displayNameDE
         }
     }
 }

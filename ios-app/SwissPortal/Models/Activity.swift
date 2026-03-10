@@ -172,10 +172,10 @@ enum ActivityFilter: String, CaseIterable {
     case nearMe
     case indoor
     case outdoor
-    case free
-    case saved
-    case seasonal
     case stayHome
+    case free
+    case seasonal
+    case saved
 
     var displayName: String {
         switch self {

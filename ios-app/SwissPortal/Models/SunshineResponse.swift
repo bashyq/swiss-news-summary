@@ -30,6 +30,7 @@ struct SunshineDestination: Codable, Identifiable, Sendable {
     let forecast: [SunshineDayForecast]
     let sunshineHoursTotal: Double
     let isBaseline: Bool?
+    let highlights: [DestinationHighlight]?
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: lat, longitude: lon)
@@ -159,8 +160,8 @@ enum SunshineSort: String, CaseIterable {
 // MARK: - Destination Highlights
 
 /// Curated toddler-friendly attractions per sunshine destination
-struct DestinationHighlight: Identifiable {
-    let id = UUID()
+struct DestinationHighlight: Codable, Identifiable, Sendable {
+    var id: String { "\(name)-\(lat)-\(lon)" }
     let name: String
     let nameDE: String
     let type: String  // "playground", "museum", "nature", "restaurant"
@@ -195,5 +196,9 @@ struct DestinationHighlight: Identifiable {
         case "restaurant": return "fork.knife"
         default: return "mappin"
         }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case name, nameDE, type, description, descriptionDE, lat, lon
     }
 }

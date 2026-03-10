@@ -1,5 +1,12 @@
 import Foundation
 
+// MARK: - Deals Response
+
+/// Response from GET /deals?lang={en|de}&city={cityId}
+struct DealsResponse: Codable, Sendable {
+    let deals: [Deal]
+}
+
 // MARK: - Deal
 
 struct Deal: Codable, Identifiable {

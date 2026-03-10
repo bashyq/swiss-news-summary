@@ -60,6 +60,19 @@ final class APIClient: @unchecked Sendable {
         return try await fetch("/sunshine", queryParams: params)
     }
 
+    /// Fetch deals for a city
+    func fetchDeals(city: City, language: AppLanguage) async throws -> DealsResponse {
+        try await fetch("/deals", queryParams: [
+            "lang": language.rawValue,
+            "city": city.rawValue
+        ])
+    }
+
+    /// Photo URL for a venue
+    func photoURL(for activityId: String) -> URL? {
+        URL(string: "\(baseURL)/photo/\(activityId)")
+    }
+
     /// Fetch snow forecast (always Zürich-based)
     func fetchSnow(language: AppLanguage, forceRefresh: Bool = false) async throws -> SnowResponse {
         var params = ["lang": language.rawValue]
@@ -249,7 +262,8 @@ final class APIClient: @unchecked Sendable {
                 driveMinutes: config.driveMinutes,
                 forecast: forecasts,
                 sunshineHoursTotal: totalHours,
-                isBaseline: config.isBaseline
+                isBaseline: config.isBaseline,
+                highlights: nil
             ))
         }
 

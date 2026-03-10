@@ -96,7 +96,8 @@ import CoreLocation
         driveMinutes: 150,
         forecast: [],
         sunshineHoursTotal: 15.7,
-        isBaseline: false
+        isBaseline: false,
+        highlights: nil
     )
 
     VStack {

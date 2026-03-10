@@ -25,8 +25,8 @@ struct LunchView: View {
                     language: appState.language
                 )
             }
-            .onChange(of: viewModel.filter) { _, newFilter in
-                if newFilter == .nearMe {
+            .onChange(of: viewModel.activeToggles) { _, newToggles in
+                if newToggles.contains(.nearMe) {
                     locationManager.requestLocation()
                 }
             }
@@ -201,7 +201,7 @@ struct LunchView: View {
                         spots: spots,
                         city: appState.city,
                         language: appState.language,
-                        userFocusLocation: viewModel.filter == .nearMe ? locationManager.location : nil,
+                        userFocusLocation: viewModel.activeToggles.contains(.nearMe) ? locationManager.location : nil,
                         focusedSpot: $focusedSpot
                     )
                     .frame(height: AppSpacing.mapHeight)
@@ -284,10 +284,13 @@ struct LunchView: View {
     // MARK: - Current Spots
 
     private var currentSpots: [LunchSpot] {
-        var spots = viewModel.filteredSpots(savedIDs: appState.savedLunchIDs)
+        var spots = viewModel.filteredSpots(
+            savedIDs: appState.savedLunchIDs,
+            userLocation: locationManager.location
+        )
 
-        // Sort by distance only when "Near me" filter is active
-        if viewModel.filter == .nearMe, let userLocation = locationManager.location {
+        // Sort by distance when "Near Me" toggle is active
+        if viewModel.activeToggles.contains(.nearMe), let userLocation = locationManager.location {
             spots.sort { a, b in
                 a.distance(from: userLocation) < b.distance(from: userLocation)
             }
@@ -308,7 +311,7 @@ struct LunchView: View {
             .font(.subheadline)
             .foregroundStyle(.secondary)
 
-            if viewModel.filter == .saved {
+            if viewModel.activeToggles.contains(.saved) {
                 Text(appState.localized(
                     en: "Save restaurants by tapping the heart icon",
                     de: "Speichere Restaurants mit dem Herz-Symbol"

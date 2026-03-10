@@ -23,12 +23,13 @@ actor CacheManager {
         case sunshine
         case snow
         case weekend
+        case deals
 
         var seconds: TimeInterval {
             switch self {
             case .news, .activities: return 7200   // 2 hours
             case .lunch, .sunshine, .snow: return 1800  // 30 min
-            case .weekend: return 3600             // 1 hour
+            case .weekend, .deals: return 3600     // 1 hour
             }
         }
     }
@@ -126,6 +127,10 @@ enum CacheKey {
 
     static func weekend(city: City) -> String {
         "weekend-\(city.rawValue)"
+    }
+
+    static func deals(city: City) -> String {
+        "deals-\(city.rawValue)"
     }
 
     static let sunshine = "sunshine-v2"

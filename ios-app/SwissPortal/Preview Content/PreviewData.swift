@@ -169,7 +169,8 @@ enum PreviewData {
             SunshineDayForecast(date: "2026-02-22", weatherCode: 3, tempMax: 9, tempMin: 4, sunshineHours: 3.5, precipMm: 2, sunnyHours: [10,11,12,13], description: "Overcast"),
         ],
         sunshineHoursTotal: 16.7,
-        isBaseline: false
+        isBaseline: false,
+        highlights: nil
     )
 
     // MARK: - Snow

@@ -49,7 +49,7 @@ struct SunshineHighlightsSection: View {
 
     @ViewBuilder
     private var highlightsContent: some View {
-        let highlights = DestinationHighlights.forDestination(destination.id)
+        let highlights = destination.highlights ?? DestinationHighlights.forDestination(destination.id)
         if !highlights.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 Text(language == .de ? "Highlights" : "Things to do")

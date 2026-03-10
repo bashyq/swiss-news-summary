@@ -2,8 +2,8 @@ import SwiftUI
 
 /// The Deals & Free view — curated list of free entry spots, family passes, and money-saving tips.
 ///
-/// Uses static data from `DealsData.all` (no API call). Supports filtering by type
-/// (All, Free, Deals, Tips) and shows only deals relevant to the selected city and current month.
+/// Fetches deals from the `/deals` API endpoint with cache and bundled fallback.
+/// Supports filtering by type (All, Free, Deals, Tips) and city + month relevance.
 struct DealsView: View {
     @Environment(AppState.self) private var appState
 
@@ -13,6 +13,12 @@ struct DealsView: View {
         content
             .navigationTitle(navigationTitle)
             .navigationBarTitleDisplayMode(.large)
+            .task(id: "\(appState.city.id)-\(appState.language)") {
+                await viewModel.loadDeals(
+                    city: appState.city,
+                    language: appState.language
+                )
+            }
     }
 
     // MARK: - Navigation Title

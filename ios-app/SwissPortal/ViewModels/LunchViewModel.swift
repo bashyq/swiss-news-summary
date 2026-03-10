@@ -1,4 +1,5 @@
 import Foundation
+import CoreLocation
 
 /// ViewModel for the Lunch view — manages fetching, filtering, and the "Surprise me!" feature
 /// for restaurant recommendations with map and list display.
@@ -10,8 +11,13 @@ final class LunchViewModel {
     /// The full lunch response from the API (spots list, city info)
     var lunchData: LunchResponse?
 
-    /// Current filter for lunch spots
-    var filter: LunchFilter = .all {
+    /// Active toggle filters (multi-select, combine freely)
+    var activeToggles: Set<LunchToggle> = [] {
+        didSet { showingAll = false }
+    }
+
+    /// Current cuisine filter (single-select)
+    var cuisineFilter: CuisineFilter = .all {
         didSet { showingAll = false }
     }
 
@@ -32,28 +38,36 @@ final class LunchViewModel {
 
     // MARK: - Filtering
 
-    /// Returns lunch spots filtered by the current `filter`.
+    /// Returns lunch spots filtered by all active toggles and cuisine filter.
+    /// Toggles stack (AND logic): e.g. Near Me + Open + Italian = open Italian restaurants within 2km.
     ///
-    /// The `savedIDs` parameter is passed in from `AppState.savedLunchIDs` since
-    /// the saved set is owned by the app-level state, not this view model.
-    ///
-    /// - Parameter savedIDs: Set of saved lunch spot IDs from app state.
+    /// - Parameters:
+    ///   - savedIDs: Set of saved lunch spot IDs from app state.
+    ///   - userLocation: User's current location for "Near Me" filtering.
     /// - Returns: Filtered array of lunch spots.
-    func filteredSpots(savedIDs: Set<String>) -> [LunchSpot] {
-        guard let spots = lunchData?.spots else { return [] }
+    func filteredSpots(savedIDs: Set<String>, userLocation: CLLocation? = nil) -> [LunchSpot] {
+        guard var spots = lunchData?.spots else { return [] }
 
-        switch filter {
-        case .all, .nearMe:
-            return spots
-        case .saved:
-            return spots.filter { savedIDs.contains($0.id) }
-        case .open:
-            return spots.filter { $0.openForLunch == true }
-        case .outdoor:
-            return spots.filter { $0.outdoorSeating == true }
-        case .vegetarian:
-            return spots.filter { $0.vegetarian == "yes" }
+        // Apply toggle filters (AND logic)
+        if activeToggles.contains(.nearMe), let location = userLocation {
+            spots = spots.filter { $0.distance(from: location) <= 2000 }
         }
+        if activeToggles.contains(.open) {
+            spots = spots.filter { $0.openForLunch == true }
+        }
+        if activeToggles.contains(.terrace) {
+            spots = spots.filter { $0.outdoorSeating == true }
+        }
+        if activeToggles.contains(.saved) {
+            spots = spots.filter { savedIDs.contains($0.id) }
+        }
+
+        // Apply cuisine filter
+        if let cuisineValue = cuisineFilter.apiValue {
+            spots = spots.filter { $0.cuisineCategory?.caseInsensitiveCompare(cuisineValue) == .orderedSame }
+        }
+
+        return spots
     }
 
     /// Returns a limited slice of spots for display. All spots remain available for map/filtering.

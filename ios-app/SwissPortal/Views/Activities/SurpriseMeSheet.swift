@@ -17,8 +17,8 @@ struct SurpriseMeSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
-                    // Large category icon
-                    categoryEmoji
+                    // Venue photo or category icon
+                    venueImage
                         .padding(.top, 16)
 
                     // Activity name
@@ -76,7 +76,36 @@ struct SurpriseMeSheet: View {
         }
     }
 
-    // MARK: - Category Emoji / Icon
+    // MARK: - Venue Image / Category Icon
+
+    @ViewBuilder
+    private var venueImage: some View {
+        if activity.category.lowercased() != "stayhome",
+           let photoURL = APIClient.shared.photoURL(for: activity.id) {
+            AsyncImage(url: photoURL) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 120, height: 120)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                case .failure:
+                    categoryEmoji
+                default:
+                    // Loading placeholder
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color(.systemGray5))
+                        .frame(width: 120, height: 120)
+                        .overlay {
+                            ProgressView()
+                        }
+                }
+            }
+        } else {
+            categoryEmoji
+        }
+    }
 
     private var categoryEmoji: some View {
         ZStack {
