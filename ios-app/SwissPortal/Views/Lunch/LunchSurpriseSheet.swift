@@ -15,36 +15,39 @@ struct LunchSurpriseSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 16) {
-                    // Cuisine icon
-                    cuisineIcon
-                        .padding(.top, 16)
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(spacing: 16) {
+                        // Cuisine icon
+                        cuisineIcon
+                            .padding(.top, 16)
 
-                    // Spot name
-                    Text(spot.name)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
+                        // Spot name
+                        Text(spot.name)
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
 
-                    // Cuisine display
-                    Text(spot.cuisineDisplay)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        // Cuisine display
+                        Text(spot.cuisineDisplay)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
 
-                    // Badges
-                    badgesRow
+                        // Badges
+                        badgesRow
+                    }
+                    .padding(.bottom, 8)
+                }
 
+                // Action buttons pinned at bottom
+                VStack(spacing: 0) {
                     Divider()
-                        .padding(.horizontal, 32)
-
-                    // Action buttons
                     actionButtons
                         .padding(.horizontal, 24)
-
-                    Spacer(minLength: 16)
+                        .padding(.vertical, 12)
                 }
+                .background(.regularMaterial)
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

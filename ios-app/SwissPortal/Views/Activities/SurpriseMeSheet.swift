@@ -15,51 +15,54 @@ struct SurpriseMeSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 16) {
-                    // Venue photo or category icon
-                    venueImage
-                        .padding(.top, 16)
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(spacing: 16) {
+                        // Venue photo or category icon
+                        venueImage
+                            .padding(.top, 16)
 
-                    // Activity name
-                    Text(activity.localizedName(language: appState.language))
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
+                        // Activity name
+                        Text(activity.localizedName(language: appState.language))
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
 
-                    // Description
-                    Text(activity.localizedDescription(language: appState.language))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 24)
+                        // Description
+                        Text(activity.localizedDescription(language: appState.language))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 24)
 
-                    // Badges + price inline
-                    VStack(spacing: 8) {
-                        badgesRow
+                        // Badges + price inline
+                        VStack(spacing: 8) {
+                            badgesRow
 
-                        if let price = activity.localizedPrice(language: appState.language) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "banknote")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Text(price)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                            if let price = activity.localizedPrice(language: appState.language) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "banknote")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Text(price)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                         }
                     }
+                    .padding(.bottom, 8)
+                }
 
+                // Action buttons pinned at bottom
+                VStack(spacing: 0) {
                     Divider()
-                        .padding(.horizontal, 32)
-
-                    // Action buttons
                     actionButtons
                         .padding(.horizontal, 24)
-
-                    Spacer(minLength: 16)
+                        .padding(.vertical, 12)
                 }
+                .background(.regularMaterial)
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
