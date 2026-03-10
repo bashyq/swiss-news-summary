@@ -524,11 +524,6 @@ function renderNewsView() {
     html += '</div>';
   }
 
-  // Weekend Brief
-  if (newsData.weekendBrief) {
-    html += renderWeekendBriefCard(newsData.weekendBrief);
-  }
-
   // Category sections
   const cats = ['topStories', 'politics', 'events', 'culture', 'local'];
   for (const cat of cats) {

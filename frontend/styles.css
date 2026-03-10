@@ -28,6 +28,9 @@
   --clr-gray: #6b7280; --clr-gray-bg: rgba(107,114,128,.12);
   --clr-amber: #f59e0b; --clr-amber-bg: rgba(245,158,11,.12);
   --clr-navy: #1e40af; --clr-navy-bg: rgba(30,64,175,.12);
+  --clr-emerald: #10b981; --clr-emerald-bg: rgba(16,185,129,.12);
+  --clr-teal: #34d399; --clr-teal-bg: rgba(52,211,153,.12);
+  --clr-pink: #f472b6; --clr-pink-bg: rgba(244,114,182,.12);
 }
 [data-theme="light"] {
   --bg: #fff; --bg2: #f5f5f5; --card: #fff; --card-hover: #fafafa;
@@ -191,30 +194,30 @@ nav { margin: 16px 0; }
 
 /* ═══ ACTIVITIES ═══ */
 .subtitle { font-size: .8rem; color: var(--text2); margin-bottom: 16px; }
-.filter-bar { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0; margin-bottom: 16px; scrollbar-width: none; }
+.filter-bar { display: flex; gap: var(--sp-2); overflow-x: auto; padding: var(--sp-1) 0; margin-bottom: var(--sp-4); scrollbar-width: none; }
 .filter-bar::-webkit-scrollbar { display: none; }
-.filter-btn { padding: 10px 14px; border: 1px solid var(--border); border-radius: 16px; background: none; color: var(--text2); font-family: inherit; font-size: .75rem; cursor: pointer; white-space: nowrap; transition: all .2s; min-height: 44px; }
+.filter-btn { padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: none; color: var(--text2); font-family: inherit; font-size: var(--fs-sm); cursor: pointer; white-space: nowrap; transition: all var(--ease-fast); min-height: 44px; }
 .filter-btn:hover { border-color: var(--text2); }
 .filter-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
 
-.activity-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--sp-4); margin-bottom: 10px; border-left: 4px solid var(--border); cursor: pointer; transition: border-color .2s, transform .2s, box-shadow .2s; position: relative; }
+.activity-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--sp-4); margin-bottom: var(--sp-3); border-left: 4px solid var(--border); cursor: pointer; transition: border-color var(--ease-fast), transform var(--ease-fast), box-shadow var(--ease-fast); position: relative; }
 .activity-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.12); }
 [data-theme="light"] .activity-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); }
 .activity-card.cat-animals { border-left-color: var(--clr-amber); }
 .activity-card.cat-museum { border-left-color: var(--clr-purple); }
 .activity-card.cat-playground { border-left-color: var(--clr-green); }
-.activity-card.cat-outdoor { border-left-color: #10b981; }
-.activity-card.cat-nature { border-left-color: #34d399; }
-.activity-card.cat-indoor-play { border-left-color: #f472b6; }
+.activity-card.cat-outdoor { border-left-color: var(--clr-emerald); }
+.activity-card.cat-nature { border-left-color: var(--clr-teal); }
+.activity-card.cat-indoor-play { border-left-color: var(--clr-pink); }
 .activity-card.cat-event { border-left-color: var(--clr-blue); }
 .activity-card.cat-seasonal { border-left-color: var(--clr-red); }
 .activity-card.cat-stayhome { border-left-color: var(--clr-gray); }
 .activity-card.cat-cafe { border-left-color: var(--clr-orange); }
 .activity-card.cat-other { border-left-color: var(--muted); }
-.activity-name { font-family: var(--serif); font-size: 1rem; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; padding-right: 36px; }
+.activity-name { font-family: var(--serif); font-size: var(--fs-md); font-weight: 600; margin-bottom: var(--sp-1); display: flex; align-items: center; gap: var(--sp-2); padding-right: 36px; }
 .activity-emoji { font-size: 1.4rem; line-height: 1; flex-shrink: 0; }
-.activity-desc { font-size: .82rem; color: var(--text2); margin-bottom: 8px; line-height: 1.5; }
-.activity-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.activity-desc { font-size: var(--fs-base); color: var(--text2); margin-bottom: var(--sp-2); line-height: 1.5; }
+.activity-badges { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
 .badge { padding: 3px 8px; border-radius: 6px; font-size: .68rem; font-weight: 600; letter-spacing: .02em; }
 .badge-indoor { background: var(--clr-blue-bg); color: var(--clr-blue); }
 .badge-outdoor { background: var(--clr-green-bg); color: var(--clr-green); }
@@ -246,38 +249,38 @@ nav { margin: 16px 0; }
 .badge-featured { background: var(--clr-purple-bg); color: var(--clr-purple); }
 .badge-new { background: var(--clr-green-bg); color: var(--clr-green); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 
-.activity-save { position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 4px; line-height: 1; transition: transform .2s; z-index: 1; }
+.activity-save { position: absolute; top: var(--sp-3); right: var(--sp-3); background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: var(--sp-1); line-height: 1; transition: transform var(--ease-fast); z-index: 1; }
 .activity-save:hover { transform: scale(1.2); }
-.activity-remind { position: absolute; top: 12px; right: 42px; background: none; border: none; font-size: 1rem; cursor: pointer; padding: 4px; line-height: 1; transition: transform .2s; z-index: 1; }
+.activity-remind { position: absolute; top: var(--sp-3); right: 42px; background: none; border: none; font-size: 1rem; cursor: pointer; padding: var(--sp-1); line-height: 1; transition: transform var(--ease-fast); z-index: 1; }
 .activity-remind:hover { transform: scale(1.2); }
-.activity-actions { display: flex; gap: 6px; margin-top: 10px; }
-.activity-actions button { padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; background: none; color: var(--text2); font-family: inherit; font-size: .7rem; cursor: pointer; transition: all .2s; }
+.activity-actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-3); }
+.activity-actions button { padding: 5px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: none; color: var(--text2); font-family: inherit; font-size: var(--fs-xs); cursor: pointer; transition: all var(--ease-fast); }
 .activity-actions button:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
-.materials-info { font-size: .75rem; color: var(--muted); margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border2); }
+.materials-info { font-size: var(--fs-sm); color: var(--muted); margin-top: var(--sp-2); padding-top: var(--sp-2); border-top: 1px solid var(--border2); }
 
 /* Surprise + playground buttons */
 .activities-actions { display: flex; gap: 8px; margin-bottom: 16px; }
 .activities-actions .surprise-btn { margin-bottom: 0; }
-.surprise-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px; border: none; border-radius: var(--radius); background: linear-gradient(135deg, var(--accent-dim) 0%, rgba(168,85,247,.12) 100%); color: var(--accent); font-family: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; margin-bottom: 16px; transition: all .25s; }
-.surprise-btn:hover { background: linear-gradient(135deg, var(--accent) 0%, var(--clr-purple) 100%); color: #fff; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(229,62,62,.2); }
+.surprise-btn { display: flex; align-items: center; justify-content: center; gap: var(--sp-2); width: 100%; padding: 14px; border: none; border-radius: var(--radius); background: linear-gradient(135deg, var(--accent-dim) 0%, var(--clr-purple-bg) 100%); color: var(--accent); font-family: inherit; font-size: var(--fs-md); font-weight: 600; cursor: pointer; margin-bottom: var(--sp-4); transition: all var(--ease-base); }
+.surprise-btn:hover { background: linear-gradient(135deg, var(--accent) 0%, var(--clr-purple) 100%); color: #fff; transform: translateY(-1px); box-shadow: var(--shadow-lg); }
 .surprise-btn:active { transform: translateY(0); }
 .surprise-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
 
 /* Map */
-.map-container { height: 300px; border-radius: var(--radius); overflow: hidden; margin-bottom: 16px; border: 1px solid var(--border); position: relative; z-index: 0; }
+.map-container { height: 300px; border-radius: var(--radius); overflow: hidden; margin-bottom: var(--sp-4); border: 1px solid var(--border); position: relative; z-index: 0; }
 .map-container.compact { height: 180px; pointer-events: none; }
 .map-container.expanded { height: 400px; pointer-events: auto; }
 
 /* Custom activity form */
-.add-form { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; display: none; }
+.add-form { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--sp-4); margin-bottom: var(--sp-4); display: none; }
 .add-form.active { display: block; }
-.add-form input, .add-form textarea, .add-form select { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-family: inherit; font-size: .85rem; margin-bottom: 8px; }
+.add-form input, .add-form textarea, .add-form select { width: 100%; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); font-family: inherit; font-size: var(--fs-base); margin-bottom: var(--sp-2); }
 .add-form textarea { min-height: 60px; resize: vertical; }
 .form-row { display: flex; gap: 8px; }
 .form-row > * { flex: 1; }
 .btn-primary { padding: 8px 16px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-family: inherit; font-size: .85rem; font-weight: 600; cursor: pointer; }
 .btn-secondary { padding: 8px 16px; background: var(--bg2); color: var(--text2); border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: .85rem; cursor: pointer; }
-.btn-add { padding: 8px 16px; border: 1px dashed var(--border); border-radius: 6px; background: none; color: var(--text2); font-family: inherit; font-size: .8rem; cursor: pointer; width: 100%; margin-top: 8px; }
+.btn-add { padding: var(--sp-2) var(--sp-4); border: 1px dashed var(--border); border-radius: var(--radius-sm); background: none; color: var(--text2); font-family: inherit; font-size: var(--fs-sm); cursor: pointer; width: 100%; margin-top: var(--sp-2); }
 .btn-add:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ═══ EVENTS CALENDAR ═══ */
