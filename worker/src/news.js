@@ -89,11 +89,12 @@ async function fetchAllFeeds(sources) {
 }
 
 function formatHeadlinesForPrompt(allHeadlines) {
+  // Take up to 5 items per source to ensure diversity across all feeds
   const flat = [];
   for (const s of allHeadlines) {
-    for (const item of s.headlines) {
+    const items = s.headlines.slice(0, 5);
+    for (const item of items) {
       let source = s.source.replace(/^(NZZ|Reddit r\/).*/, m => m.startsWith('NZZ') ? 'NZZ' : 'Reddit').replace(/ Zürich| Schweiz/g, '');
-      // Tag police/trends sources so Claude can categorize appropriately
       if (s.type === 'police') source = `${source} (Police)`;
       if (s.type === 'trends') source = `${source} (Trending)`;
       flat.push({ source, ...item });
@@ -119,12 +120,12 @@ CRITICAL: ALL output must be in ENGLISH. Translate ALL German headlines and summ
 RULES:
 1. Categorize by TOPIC, not source — a story about elections goes to "politics" even if it's the biggest story of the day
 2. TRANSLATE EVERYTHING TO ENGLISH - no German words allowed
-3. 8-10 items per category — aim for 10 where possible to give comprehensive coverage
+3. EVERY category MUST have at least 5 items. Aim for 8-10 where possible. If a category has fewer than 5, re-examine headlines — lifestyle/food/travel stories go to culture, sports/festivals go to events, city-specific stories go to local.
 4. Swiss news only
 5. For each item, assess sentiment: "positive" (good news, progress), "negative" (accidents, crises), or "neutral" (informational)
 6. Identify the single biggest story/trending topic across all headlines. Include the URL of the best-matching article for the trending topic.
-7. For each item, provide "summary" (1 short sentence) AND "detail" (2-3 sentences with more context and background)
-8. Items tagged (Police) are police/fire reports — put them in "local" with their original detail
+7. For each item, provide "summary" (1 concise sentence)
+8. Items tagged (Police) are police/fire reports — put them in "local"
 9. Items tagged (Trending) are trending search terms — use them to identify the trending topic but don't add them as news items
 10. De-duplicate: if multiple sources report the same story, keep the best version only
 
@@ -139,16 +140,16 @@ Headlines:
 ${headlinesText}
 
 Respond with ONLY this JSON (ALL IN ENGLISH):
-{"trending":{"topic":"short topic","topicDE":"German topic","headline":"dominant headline","url":"best matching article URL"},"topStories":[{"headline":"English headline here","summary":"One sentence summary","detail":"2-3 sentences with more context and background","source":"SourceName","url":"url","sentiment":"positive|neutral|negative"}],"politics":[],"events":[],"culture":[],"local":[]}`
+{"trending":{"topic":"short topic","topicDE":"German topic","headline":"dominant headline","url":"best matching article URL"},"topStories":[{"headline":"English headline here","summary":"One sentence summary.","source":"SourceName","url":"url","sentiment":"positive|neutral|negative"}],"politics":[],"events":[],"culture":[],"local":[]}`
     : `Du bist eine JSON API. Kategorisiere Schweizer Nachrichten und antworte NUR mit gültigem JSON.
 
 REGELN:
 1. Nach THEMA kategorisieren, nicht Quelle — Wahlnachrichten gehören immer zu "politics", auch wenn sie die größte Story sind
-2. 8-10 Einträge pro Kategorie — wenn möglich 10, für umfassende Abdeckung
+2. JEDE Kategorie MUSS mindestens 5 Einträge haben. Wenn möglich 8-10. Falls weniger als 5, Schlagzeilen nochmals prüfen — Lifestyle/Essen/Reisen → culture, Sport/Festivals → events, stadtspezifische Meldungen → local.
 3. Nur Schweizer Nachrichten
 4. Für jeden Eintrag die Stimmung bewerten: "positive" (gute Nachrichten), "negative" (Unfälle, Krisen), oder "neutral" (informativ)
 5. Das größte/dominanteste Thema über alle Schlagzeilen identifizieren. Die URL des passendsten Artikels für das Trending-Thema angeben.
-6. Für jeden Eintrag "summary" (1 kurzer Satz) UND "detail" (2-3 Sätze mit mehr Kontext und Hintergrund) angeben
+6. Für jeden Eintrag "summary" (1 kurzer Satz) angeben
 7. Einträge mit (Police) sind Polizei-/Feuerwehrmeldungen — in "local" einordnen
 8. Einträge mit (Trending) sind Trendsuchbegriffe — für Trending-Thema nutzen, nicht als Nachricht
 9. Duplikate entfernen: bei gleicher Story aus mehreren Quellen nur die beste Version behalten
@@ -164,12 +165,12 @@ Schlagzeilen:
 ${headlinesText}
 
 Antworte NUR mit diesem JSON:
-{"trending":{"topic":"Kurzes Thema","topicDE":"Kurzes Thema DE","headline":"Dominante Schlagzeile","url":"URL des passendsten Artikels"},"topStories":[{"headline":"...","summary":"Ein Satz Zusammenfassung","detail":"2-3 Sätze mit mehr Kontext und Hintergrund","source":"...","url":"...","sentiment":"positive|neutral|negative"}],"politics":[],"events":[],"culture":[],"local":[]}`;
+{"trending":{"topic":"Kurzes Thema","topicDE":"Kurzes Thema DE","headline":"Dominante Schlagzeile","url":"URL des passendsten Artikels"},"topStories":[{"headline":"...","summary":"Ein Satz Zusammenfassung.","source":"...","url":"...","sentiment":"positive|neutral|negative"}],"politics":[],"events":[],"culture":[],"local":[]}`;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: 'claude-3-haiku-20240307', max_tokens: 3072, messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify({ model: 'claude-3-haiku-20240307', max_tokens: 4096, messages: [{ role: 'user', content: prompt }] })
   });
   if (!res.ok) { const e = await res.text(); throw new Error(`Claude API ${res.status}: ${e}`); }
 

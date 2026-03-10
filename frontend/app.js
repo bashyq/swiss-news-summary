@@ -551,7 +551,7 @@ function renderNewsView() {
       html += `<div class="card" onclick="toggleDetail('${cardId}')">
         <div class="card-headline"><a href="${esc(item.url)}" target="_blank" onclick="event.stopPropagation()">${esc(item.headline)}</a></div>
         <div class="card-summary">${esc(item.summary)}</div>
-        <div class="card-detail" id="${cardId}">${esc(item.detail || '')}</div>
+        <div class="card-detail" id="${cardId}"></div>
         <div class="card-meta">
           <span class="card-source">${esc(item.source)}</span>
           <span class="sentiment-badge sentiment-${item.sentiment || 'neutral'}">${item.sentiment || 'neutral'}</span>
