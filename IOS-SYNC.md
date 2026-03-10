@@ -15,6 +15,7 @@ These features were added to the Cloudflare Worker and are automatically availab
 | Sunshine Highlights | `GET /sunshine` | `destinations[].highlights[]` | Each destination now includes `highlights` array with toddler-friendly attractions. iOS can drop `DestinationHighlights.swift` and use API data directly. |
 | Activities Expanded | `GET /activities` | `activities[]` | Now 94 base activities (was 52). 20km radius per city. No model changes — same JSON shape, just more items. |
 | Transport Multi-Station | `GET /` | `transport` | Zürich now fetches from Stadelhofen + Hardbrücke (was HB only). Deduplicated. Other cities unchanged. No model change — same JSON shape. |
+| Venue Photos | `GET /photo/:activityId` | image bytes | Returns JPEG photo of the venue via Google Places. Cached in R2. 404 if no photo found. Use `AsyncImage` with emoji fallback. |
 
 The iOS `NewsViewModel` and `ActivitiesViewModel` just need to parse these new fields from the existing JSON responses.
 
@@ -88,7 +89,17 @@ These features were removed or changed in the PWA and the iOS app should match:
 - On app launch, clean up past reminders
 - Model: `ActivityReminder` struct with `activityId`, `name`, `date`, `notificationId`
 
-### 5. Featured / NEW Badges
+### 5. Venue Photos in Surprise Modal
+**PWA**: `showSurpriseModal()` in `app.js` — loads `<img>` from `/photo/:activityId`
+**iOS target**: `SurpriseView.swift` or equivalent modal
+
+**What to build:**
+- Use `AsyncImage(url: URL(string: "\(apiBase)/photo/\(activity.id)"))` in the surprise modal
+- Show shimmer/placeholder while loading
+- Fall back to category emoji if image returns 404 (venue not found on Google Places)
+- Skip photo for `stayhome` category (no venue)
+
+### 6. Featured / NEW Badges
 **PWA**: Badge rendering in `renderActivityCard()`
 **iOS target**: `ActivityCard.swift` + `BadgeView.swift`
 
@@ -99,7 +110,7 @@ These features were removed or changed in the PWA and the iOS app should match:
 - Green "NEW" / "NEU" badge when `addedDate` is within 30 days
 - In "All" filter, sort featured activities to top (`ActivitiesViewModel`)
 
-### 6. Explore View (Map-First Discovery)
+### 7. Explore View (Map-First Discovery)
 **PWA**: `renderExploreView()`, `initExploreMap()`, `getExploreItems()`
 **iOS target**: New `ExploreView.swift` in `Views/` + `ExploreViewModel.swift`
 
@@ -123,7 +134,7 @@ These features were removed or changed in the PWA and the iOS app should match:
   - Fetch deals from `/deals` endpoint
   - `exploreFilter` published property
 
-### 7. Activity Filter Order
+### 8. Activity Filter Order
 **PWA**: Filter pills in `renderActivitiesView()`
 **iOS target**: `ActivitiesView.swift`
 
