@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.15.0';
+const APP_VERSION = '2.16.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -27,7 +27,8 @@ let currentTab = 'topStories';
 let activityFilter = 'all';
 let ageFilter = 'all';
 let eventFilter = 'all';
-let lunchFilter = 'all';
+let lunchFilters = { nearMe: false, open: false, terrace: false, saved: false };
+let lunchCuisine = 'all';
 let savedActivities = JSON.parse(localStorage.getItem('savedActivities') || '[]');
 let customActivities = JSON.parse(localStorage.getItem('customActivities') || '[]');
 let savedLunch = JSON.parse(localStorage.getItem('savedLunch') || '[]');
@@ -901,9 +902,22 @@ function renderWeekendView() {
 function renderLunchView() {
   let html = `<div class="subtitle">${lang === 'de' ? 'Restaurants in der Nähe von' : 'Restaurants near'} ${CITIES[city]}</div>`;
 
-  // Filters
-  const filters = [['all', t('all')], ['saved', t('saved')], ['open', lang === 'de' ? 'Offen' : 'Open'], ['outdoor', 'Terrasse'], ['veg', 'Vegi']];
-  html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${lunchFilter === k ? ' active' : ''}" onclick="filterLunch('${k}')">${v}</button>`).join('')}</div>`;
+  // Toggle filters (multi-select)
+  const pills = [
+    ['nearMe', t('nearMe')],
+    ['open', lang === 'de' ? 'Offen' : 'Open'],
+    ['terrace', 'Terrasse'],
+    ['saved', t('saved')],
+  ];
+  html += '<div class="filter-bar">';
+  html += pills.map(([k, v]) => `<button class="filter-btn${lunchFilters[k] ? ' active' : ''}" onclick="toggleLunchFilter('${k}')">${v}</button>`).join('');
+  // Cuisine dropdown
+  const cuisines = [['all', t('all')], ['italian','🍕 Italian'], ['asian','🥢 Asian'], ['kebab','🥙 Kebab'], ['cafe','☕ Café'], ['fastfood','🍔 Fast Food'], ['international','🌍 International']];
+  html += `<select class="lunch-cuisine-select" onchange="setLunchCuisine(this.value)">
+    <option value="all"${lunchCuisine === 'all' ? ' selected' : ''}>${lang === 'de' ? 'Alle Küchen' : 'All cuisines'}</option>
+    ${cuisines.slice(1).map(([k, v]) => `<option value="${k}"${lunchCuisine === k ? ' selected' : ''}>${v}</option>`).join('')}
+  </select>`;
+  html += '</div>';
 
   // Surprise
   html += `<button class="surprise-btn" onclick="surpriseLunch()" id="surprise-lunch-btn">🎲 ${t('surpriseMe')}</button>`;
@@ -917,7 +931,7 @@ function renderLunchView() {
   if (spots.length === 0) {
     if (lunchData.length === 0) {
       html += renderSkeleton(3);
-    } else if (lunchFilter === 'saved') {
+    } else if (lunchFilters.saved) {
       html += renderEmptyState('💛', 'emptySavedLunch', 'emptySavedLunchHint');
     } else {
       html += renderEmptyState('🔍', 'emptyFilterLunch', 'emptyFilterHint');
@@ -974,10 +988,11 @@ function renderLunchCard(s) {
 
 function getFilteredLunchSpots() {
   let items = [...lunchData, ...customLunch];
-  if (lunchFilter === 'saved') items = items.filter(s => savedLunch.includes(s.id));
-  else if (lunchFilter === 'open') items = items.filter(s => s.openForLunch === true);
-  else if (lunchFilter === 'outdoor') items = items.filter(s => s.outdoorSeating);
-  else if (lunchFilter === 'veg') items = items.filter(s => s.vegetarian || s.vegan || s.cuisineCategory === 'vegetarian');
+  if (lunchFilters.saved) items = items.filter(s => savedLunch.includes(s.id));
+  if (lunchFilters.open) items = items.filter(s => s.openForLunch === true);
+  if (lunchFilters.terrace) items = items.filter(s => s.outdoorSeating);
+  if (lunchFilters.nearMe && userLat) items = items.filter(s => s.lat && haversine(userLat, userLon, s.lat, s.lon) < 2);
+  if (lunchCuisine !== 'all') items = items.filter(s => s.cuisineCategory === lunchCuisine);
 
   if (userLat) items.sort((a, b) => {
     if (!a.lat) return 1; if (!b.lat) return -1;
@@ -1312,8 +1327,14 @@ function filterActivities(f) {
 
 function setAgeFilter(f) { ageFilter = f; renderCurrentView(); afterRender(initActivityMap); }
 function filterEvents(f) { eventFilter = f; renderCurrentView(); }
-function filterLunch(f) {
-  lunchFilter = f;
+function toggleLunchFilter(f) {
+  lunchFilters[f] = !lunchFilters[f];
+  if (f === 'nearMe' && lunchFilters.nearMe && !userLat) { requestLocation().then(() => { renderCurrentView(); afterRender(initLunchMap); }); return; }
+  renderCurrentView();
+  afterRender(initLunchMap);
+}
+function setLunchCuisine(c) {
+  lunchCuisine = c;
   renderCurrentView();
   afterRender(initLunchMap);
 }
