@@ -7,14 +7,14 @@ import SwiftUI
 struct PowderAlertBanner: View {
     let resort: SnowDestination
     let language: AppLanguage
+    var onTap: (() -> Void)?
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 12) {
             // Snowflake icon
-            Image(systemName: "snowflake")
-                .font(.title2)
-                .foregroundStyle(.white)
-                .symbolEffect(.bounce, options: .repeating.speed(0.3))
+            snowflakeIcon
 
             // Text content
             VStack(alignment: .leading, spacing: 2) {
@@ -69,6 +69,35 @@ struct PowderAlertBanner: View {
             )
         )
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTap?()
+        }
+        .accessibilityLabel(language == .en
+            ? "Fresh powder at \(resort.localizedName(language: language)), \(String(format: "%.0f", resort.snowfallWeekTotal)) centimeters"
+            : "Frischer Pulverschnee bei \(resort.localizedName(language: language)), \(String(format: "%.0f", resort.snowfallWeekTotal)) Zentimeter"
+        )
+        .accessibilityAddTraits(.isButton)
+    }
+
+    @ViewBuilder
+    private var snowflakeIcon: some View {
+        if reduceMotion {
+            Image(systemName: "snowflake")
+                .font(.title2)
+                .foregroundStyle(.white)
+        } else {
+            if #available(iOS 18.0, *) {
+                Image(systemName: "snowflake")
+                    .font(.title2)
+                    .foregroundStyle(.white)
+                    .symbolEffect(.bounce, options: .repeating.speed(0.3))
+            } else {
+                Image(systemName: "snowflake")
+                    .font(.title2)
+                    .foregroundStyle(.white)
+            }
+        }
     }
 }
 

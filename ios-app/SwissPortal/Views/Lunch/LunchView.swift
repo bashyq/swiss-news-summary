@@ -134,8 +134,13 @@ struct LunchView: View {
 
         return ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
+                // 0. Hero banner
+                HeroBanner(style: .lunch)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+
                 // 1. Filter bar
-                LunchFilterBar(viewModel: viewModel, language: appState.language)
+                LunchFilterBar(viewModel: viewModel, language: appState.language, savedIDs: appState.savedLunchIDs)
                     .padding(.top, 8)
 
                 // 1.5 Results count
@@ -276,9 +281,7 @@ struct LunchView: View {
 
     private var emptyState: some View {
         VStack(spacing: 12) {
-            Image(systemName: "fork.knife")
-                .font(.system(size: 40))
-                .foregroundStyle(.secondary)
+            EmojiScene(["🍽️", "🧀", "🫕", "🍫", "🥐"])
             Text(appState.localized(
                 en: "No restaurants found",
                 de: "Keine Restaurants gefunden"

@@ -37,49 +37,60 @@ actor CacheManager {
 
     /// Get cached data if it exists and hasn't expired
     func get<T: Codable>(_ type: T.Type, key: String, ttl: CacheTTL) -> T? {
-        let fileURL = cacheDirectory.appendingPathComponent(sanitize(key) + ".json")
+        let sanitized = sanitize(key)
+        let dataURL = cacheDirectory.appendingPathComponent(sanitized + ".json")
+        let metaURL = cacheDirectory.appendingPathComponent(sanitized + ".meta")
 
-        guard fileManager.fileExists(atPath: fileURL.path),
-              let data = try? Data(contentsOf: fileURL) else {
+        guard fileManager.fileExists(atPath: dataURL.path),
+              let rawData = try? Data(contentsOf: dataURL) else {
             return nil
         }
 
-        guard let wrapper = try? JSONDecoder().decode(CacheWrapper<T>.self, from: data) else {
-            return nil
+        // Check TTL using metadata file (timestamp stored as TimeInterval)
+        if let metaData = try? Data(contentsOf: metaURL),
+           let timestampString = String(data: metaData, encoding: .utf8),
+           let timestamp = TimeInterval(timestampString) {
+            let cachedAt = Date(timeIntervalSince1970: timestamp)
+            if Date().timeIntervalSince(cachedAt) > ttl.seconds {
+                return nil
+            }
+        } else {
+            return nil // No metadata means we can't verify freshness
         }
 
-        // Check TTL — expired data stays on disk for getStale() fallback
-        if Date().timeIntervalSince(wrapper.cachedAt) > ttl.seconds {
-            return nil
-        }
-
-        return wrapper.data
+        return try? JSONDecoder().decode(T.self, from: rawData)
     }
 
     /// Get cached data regardless of TTL — used as fallback when network fails
     func getStale<T: Codable>(_ type: T.Type, key: String) -> T? {
-        let fileURL = cacheDirectory.appendingPathComponent(sanitize(key) + ".json")
-        guard let data = try? Data(contentsOf: fileURL),
-              let wrapper = try? JSONDecoder().decode(CacheWrapper<T>.self, from: data) else {
+        let dataURL = cacheDirectory.appendingPathComponent(sanitize(key) + ".json")
+        guard let rawData = try? Data(contentsOf: dataURL) else {
             return nil
         }
-        return wrapper.data
+        return try? JSONDecoder().decode(T.self, from: rawData)
     }
 
     /// Store data in cache
     func set<T: Codable>(_ data: T, key: String) {
-        let wrapper = CacheWrapper(data: data, cachedAt: Date())
-        let fileURL = cacheDirectory.appendingPathComponent(sanitize(key) + ".json")
+        let sanitized = sanitize(key)
+        let dataURL = cacheDirectory.appendingPathComponent(sanitized + ".json")
+        let metaURL = cacheDirectory.appendingPathComponent(sanitized + ".meta")
 
-        if let encoded = try? JSONEncoder().encode(wrapper) {
-            try? encoded.write(to: fileURL)
+        if let encoded = try? JSONEncoder().encode(data) {
+            try? encoded.write(to: dataURL)
         }
+        // Store timestamp as plain text TimeInterval
+        let timestamp = "\(Date().timeIntervalSince1970)"
+        try? timestamp.data(using: .utf8)?.write(to: metaURL)
     }
 
     /// Remove a specific cache entry
     func remove(key: String) {
-        let fileURL = cacheDirectory.appendingPathComponent(sanitize(key) + ".json")
-        try? fileManager.removeItem(at: fileURL)
+        let sanitized = sanitize(key)
+        let dataURL = cacheDirectory.appendingPathComponent(sanitized + ".json")
+        let metaURL = cacheDirectory.appendingPathComponent(sanitized + ".meta")
+        try? fileManager.removeItem(at: dataURL)
+        try? fileManager.removeItem(at: metaURL)
     }
 
     /// Clear all cached data
@@ -96,12 +107,6 @@ actor CacheManager {
            .replacingOccurrences(of: "&", with: "_")
            .replacingOccurrences(of: "=", with: "_")
     }
-}
-
-/// Wrapper that stores cached data with a timestamp
-private struct CacheWrapper<T: Codable>: Codable {
-    let data: T
-    let cachedAt: Date
 }
 
 // MARK: - Cache Keys

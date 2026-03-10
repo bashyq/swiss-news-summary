@@ -83,6 +83,20 @@ struct ActivityMapView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .overlay {
+            if activitiesWithCoordinates.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "map")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                    Text(language == .en ? "No activities on map" : "Keine Aktivitäten auf der Karte")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(.systemBackground).opacity(0.6))
+            }
+        }
     }
 
     // MARK: - Activities with Coordinates
@@ -140,6 +154,7 @@ struct ActivityMapView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(language == .en ? "Dismiss" : "Schließen")
             }
 
             Text(activity.localizedDescription(language: language))
@@ -167,7 +182,7 @@ struct ActivityMapView: View {
                 if let urlString = activity.url, let url = URL(string: urlString) {
                     Link(destination: url) {
                         HStack(spacing: 4) {
-                            Text(language == .en ? "Open" : "Offnen")
+                            Text(language == .en ? "Open" : "Öffnen")
                                 .font(.caption)
                                 .fontWeight(.medium)
                             Image(systemName: "arrow.up.right")
@@ -179,7 +194,7 @@ struct ActivityMapView: View {
             }
         }
         .padding(14)
-        .background(.regularMaterial)
+        .background(Color(.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: -2)
         .padding(.horizontal, 12)
@@ -189,7 +204,7 @@ struct ActivityMapView: View {
 
 // MARK: - Activity + Hashable for Map Selection
 
-extension Activity: @retroactive Hashable {
+extension Activity: Hashable {
     static func == (lhs: Activity, rhs: Activity) -> Bool {
         lhs.id == rhs.id
     }

@@ -1,7 +1,9 @@
 import Foundation
 
-/// Central API client for all Cloudflare Worker endpoints
-actor APIClient {
+/// Central API client for all Cloudflare Worker endpoints.
+/// Uses a final class instead of actor since URLSession and JSONDecoder are thread-safe
+/// and all stored properties are immutable.
+final class APIClient: @unchecked Sendable {
     static let shared = APIClient()
 
     private let baseURL = "https://swiss-news-worker.swissnews.workers.dev"

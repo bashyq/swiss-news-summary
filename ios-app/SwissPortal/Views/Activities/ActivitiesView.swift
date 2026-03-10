@@ -143,6 +143,11 @@ struct ActivitiesView: View {
 
         return ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
+                // 0. Hero banner
+                HeroBanner(style: .activities)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+
                 // 1. Filter bar
                 ActivityFilterBar(viewModel: viewModel, language: appState.language)
                     .padding(.top, 8)
@@ -265,9 +270,7 @@ struct ActivitiesView: View {
 
     private var emptyState: some View {
         VStack(spacing: 12) {
-            Image(systemName: "figure.play")
-                .font(.system(size: 40))
-                .foregroundStyle(.secondary)
+            EmojiScene(["🎪", "🧸", "🎨", "🌈", "⭐"])
             Text(appState.localized(
                 en: "No activities found",
                 de: "Keine Aktivitäten gefunden"

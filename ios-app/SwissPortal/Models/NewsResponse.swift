@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Top-Level News Response
 
 /// Response from GET /?lang={en|de}&city={cityId}
-struct NewsResponse: Codable {
+struct NewsResponse: Codable, Sendable {
     let weather: Weather
     let transport: Transport
     let holidays: [Holiday]
@@ -18,7 +18,7 @@ struct NewsResponse: Codable {
 
 // MARK: - Weather
 
-struct Weather: Codable {
+struct Weather: Codable, Sendable {
     let temperature: Double
     let description: String
     let weatherCode: Int
@@ -29,18 +29,28 @@ struct Weather: Codable {
     var sfSymbol: String {
         switch weatherCode {
         case 0: return "sun.max.fill"
-        case 1, 2: return "cloud.sun.fill"
+        case 1: return "sun.min.fill"
+        case 2: return "cloud.sun.fill"
         case 3: return "cloud.fill"
-        case 45, 48: return "cloud.fog.fill"
-        case 51, 53, 55: return "cloud.drizzle.fill"
+        case 45: return "cloud.fog.fill"
+        case 48: return "cloud.fog.fill"
+        case 51: return "cloud.drizzle.fill"
+        case 53, 55: return "cloud.drizzle.fill"
         case 56, 57: return "cloud.sleet.fill"
-        case 61, 63, 65: return "cloud.rain.fill"
+        case 61: return "cloud.rain.fill"
+        case 63: return "cloud.rain.fill"
+        case 65: return "cloud.heavyrain.fill"
         case 66, 67: return "cloud.sleet.fill"
-        case 71, 73, 75: return "cloud.snow.fill"
+        case 71: return "cloud.snow.fill"
+        case 73: return "cloud.snow.fill"
+        case 75: return "snowflake"
         case 77: return "snowflake"
-        case 80, 81, 82: return "cloud.heavyrain.fill"
-        case 85, 86: return "cloud.snow.fill"
-        case 95: return "cloud.bolt.fill"
+        case 80: return "cloud.sun.rain.fill"
+        case 81: return "cloud.rain.fill"
+        case 82: return "cloud.heavyrain.fill"
+        case 85: return "cloud.snow.fill"
+        case 86: return "cloud.snow.fill"
+        case 95: return "cloud.bolt.rain.fill"
         case 96, 99: return "cloud.bolt.rain.fill"
         default: return "cloud.fill"
         }
@@ -52,7 +62,7 @@ struct Weather: Codable {
     }
 }
 
-struct HourlyWeather: Codable, Identifiable {
+struct HourlyWeather: Codable, Identifiable, Sendable {
     let time: String
     let temperature: Double
     let weatherCode: Int
@@ -60,20 +70,35 @@ struct HourlyWeather: Codable, Identifiable {
     var id: String { time }
 
     var hour: Int? {
-        // time format: "2026-02-21T14:00"
-        guard let tIndex = time.lastIndex(of: "T") else { return nil }
-        let hourStr = time[time.index(after: tIndex)...].prefix(2)
-        return Int(hourStr)
+        // Handles both "2026-02-21T14:00" and "14:00" formats
+        if let tIndex = time.lastIndex(of: "T") {
+            let hourStr = time[time.index(after: tIndex)...].prefix(2)
+            return Int(hourStr)
+        }
+        // Plain "HH:MM" format
+        return Int(time.prefix(2))
     }
 
     var sfSymbol: String {
-        Weather(temperature: temperature, description: "", weatherCode: weatherCode, windSpeed: 0, hourly: nil).sfSymbol
+        let base = Weather(temperature: temperature, description: "", weatherCode: weatherCode, windSpeed: 0, hourly: nil).sfSymbol
+        // Use night variants for hours outside daylight (before 7 or after 20)
+        guard let h = hour else { return base }
+        let isNight = h < 7 || h >= 21
+        if isNight {
+            switch base {
+            case "sun.max.fill", "sun.min.fill": return "moon.stars.fill"
+            case "cloud.sun.fill": return "cloud.moon.fill"
+            case "cloud.sun.rain.fill": return "cloud.moon.rain.fill"
+            default: return base
+            }
+        }
+        return base
     }
 }
 
 // MARK: - Transport
 
-struct Transport: Codable {
+struct Transport: Codable, Sendable {
     let delays: [TrainDelay]
     let summary: TransportSummary
 
@@ -98,7 +123,7 @@ struct Transport: Codable {
     }
 }
 
-struct TrainDelay: Codable, Identifiable {
+struct TrainDelay: Codable, Identifiable, Sendable {
     let line: String
     let destination: String
     let delay: Int
@@ -107,7 +132,7 @@ struct TrainDelay: Codable, Identifiable {
     var id: String { "\(line)-\(scheduledTime)" }
 }
 
-struct TransportSummary: Codable {
+struct TransportSummary: Codable, Sendable {
     let totalDelayed: Int
     let maxDelay: Int
     let status: String // "none", "minor", "major"
@@ -124,7 +149,7 @@ struct TransportSummary: Codable {
 
 // MARK: - Holidays
 
-struct Holiday: Codable, Identifiable {
+struct Holiday: Codable, Identifiable, Sendable {
     let name: String
     let nameDE: String?
     let daysUntil: Int
@@ -143,7 +168,7 @@ struct Holiday: Codable, Identifiable {
     }
 }
 
-struct SchoolHoliday: Codable, Identifiable {
+struct SchoolHoliday: Codable, Identifiable, Sendable {
     let name: String
     let nameDE: String
     let startDate: String
@@ -165,7 +190,7 @@ struct SchoolHoliday: Codable, Identifiable {
 
 // MARK: - History
 
-struct HistoryFact: Codable {
+struct HistoryFact: Codable, Sendable {
     let year: Int
     let event: String
     let eventDE: String?
@@ -180,7 +205,7 @@ struct HistoryFact: Codable {
 
 // MARK: - News Categories
 
-struct NewsCategories: Codable {
+struct NewsCategories: Codable, Sendable {
     let topStories: [NewsItem]?
     let disruptions: [NewsItem]?
     let events: [NewsItem]?
@@ -224,7 +249,7 @@ struct NewsCategories: Codable {
     }
 }
 
-struct NewsItem: Codable, Identifiable {
+struct NewsItem: Codable, Identifiable, Sendable {
     let headline: String
     let headlineDE: String?
     let summary: String
@@ -284,7 +309,7 @@ struct NewsItem: Codable, Identifiable {
 
 // MARK: - Trending & Briefing
 
-struct TrendingTopic: Codable {
+struct TrendingTopic: Codable, Sendable {
     let topic: String?
     let topicDE: String?
     let headline: String?
@@ -299,7 +324,7 @@ struct TrendingTopic: Codable {
     }
 }
 
-struct Briefing: Codable {
+struct Briefing: Codable, Sendable {
     let topStory: BriefingItem?
     let suggestedActivity: BriefingActivity?
 
@@ -315,7 +340,7 @@ struct Briefing: Codable {
     }
 }
 
-struct BriefingItem: Codable {
+struct BriefingItem: Codable, Sendable {
     let headline: String
     let summary: String
     let source: String
@@ -323,7 +348,7 @@ struct BriefingItem: Codable {
     let sentiment: String
 }
 
-struct BriefingActivity: Codable {
+struct BriefingActivity: Codable, Sendable {
     var id: String? = nil
     var name: String? = nil
     var nameDE: String? = nil
@@ -339,7 +364,7 @@ struct BriefingActivity: Codable {
 
 // MARK: - City Info
 
-struct CityInfo: Codable {
+struct CityInfo: Codable, Sendable {
     let id: String
     let name: String
 }

@@ -98,6 +98,20 @@ struct LunchMapView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .overlay {
+            if spots.isEmpty {
+                VStack(spacing: 8) {
+                    Image(systemName: "map")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                    Text(language == .en ? "No restaurants on map" : "Keine Restaurants auf der Karte")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(.systemBackground).opacity(0.6))
+            }
+        }
     }
 
     // MARK: - Marker Color
@@ -139,6 +153,7 @@ struct LunchMapView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(language == .en ? "Dismiss" : "Schließen")
             }
 
             Text(spot.cuisineDisplay)
@@ -188,7 +203,7 @@ struct LunchMapView: View {
             }
         }
         .padding(14)
-        .background(.regularMaterial)
+        .background(Color(.secondarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: -2)
         .padding(.horizontal, 12)
@@ -205,7 +220,7 @@ struct LunchMapView: View {
 
 // MARK: - LunchSpot + Hashable for Map Selection
 
-extension LunchSpot: @retroactive Hashable {
+extension LunchSpot: Hashable {
     static func == (lhs: LunchSpot, rhs: LunchSpot) -> Bool {
         lhs.id == rhs.id
     }

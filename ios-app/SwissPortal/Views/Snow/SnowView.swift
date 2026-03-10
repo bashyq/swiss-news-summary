@@ -54,13 +54,25 @@ struct SnowView: View {
     // MARK: - Snow Content
 
     private var snowContent: some View {
+        ScrollViewReader { proxy in
         ScrollView {
             LazyVStack(spacing: 0) {
+                // 0. Hero banner
+                HeroBanner(style: .snow)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+
                 // 1. Powder alert banner
                 if viewModel.hasPowderAlert, let topResort = topResort {
                     PowderAlertBanner(
                         resort: topResort,
-                        language: appState.language
+                        language: appState.language,
+                        onTap: {
+                            withAnimation {
+                                viewModel.toggleExpanded(topResort.id)
+                                proxy.scrollTo(topResort.id, anchor: .top)
+                            }
+                        }
                     )
                     .padding(.horizontal)
                     .padding(.top, 8)
@@ -126,6 +138,7 @@ struct SnowView: View {
                 .padding(.bottom, 24)
             }
         }
+        } // ScrollViewReader
     }
 
     // MARK: - Week Dates Header

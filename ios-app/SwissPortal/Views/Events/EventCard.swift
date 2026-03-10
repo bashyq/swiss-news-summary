@@ -48,7 +48,7 @@ struct EventCard: View {
                 .frame(width: 20, height: 20)
 
             Text(event.localizedName(language: appState.language))
-                .font(.subheadline)
+                .font(.system(.subheadline, design: .serif))
                 .fontWeight(.semibold)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)

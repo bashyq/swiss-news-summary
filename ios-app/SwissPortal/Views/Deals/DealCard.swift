@@ -27,7 +27,7 @@ struct DealCard: View {
 
             // Deal name
             Text(deal.localizedName(language: language))
-                .font(.subheadline)
+                .font(.system(.subheadline, design: .serif))
                 .fontWeight(.semibold)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)

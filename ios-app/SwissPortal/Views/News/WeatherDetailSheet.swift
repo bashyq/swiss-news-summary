@@ -40,37 +40,42 @@ struct WeatherDetailSheet: View {
     // MARK: - Current Conditions
 
     private var currentConditions: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             // Large weather icon
             Image(systemName: weather.sfSymbol)
-                .font(.system(size: 56))
+                .font(.system(size: 64))
                 .symbolRenderingMode(.multicolor)
+                .shadow(color: .primary.opacity(0.08), radius: 8, y: 4)
 
             // Temperature
             Text("\(Int(weather.temperature.rounded()))\u{00B0}")
-                .font(.system(size: 52, weight: .thin))
+                .font(.system(size: 56, weight: .ultraLight, design: .rounded))
                 .monospacedDigit()
 
             // Description
             Text(weather.description)
                 .font(.title3)
+                .fontWeight(.medium)
                 .foregroundStyle(.secondary)
 
-            // Wind speed
+            // Wind speed pill
             HStack(spacing: 6) {
                 Image(systemName: "wind")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Text(appState.localized(
-                    en: "\(Int(weather.windSpeed.rounded())) km/h",
-                    de: "\(Int(weather.windSpeed.rounded())) km/h"
-                ))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+                    .font(.caption)
+                Text("\(Int(weather.windSpeed.rounded())) km/h")
+                    .font(.caption)
+                    .fontWeight(.medium)
             }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(Color(.tertiarySystemFill))
+            )
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
+        .padding(.vertical, 12)
     }
 
     // MARK: - Hourly Forecast
@@ -113,11 +118,16 @@ struct WeatherDetailSheet: View {
     // MARK: - Hour Column
 
     private func hourColumn(_ entry: HourlyWeather) -> some View {
-        VStack(spacing: 8) {
+        hourColumnContent(entry: entry, isCurrent: isCurrentHour(entry))
+    }
+
+    private func hourColumnContent(entry: HourlyWeather, isCurrent: Bool) -> some View {
+        VStack(spacing: 6) {
             // Hour label
             Text(hourLabel(entry))
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .fontWeight(isCurrent ? .bold : .regular)
+                .foregroundStyle(isCurrent ? .primary : .secondary)
 
             // Weather icon
             Image(systemName: entry.sfSymbol)
@@ -131,11 +141,17 @@ struct WeatherDetailSheet: View {
                 .fontWeight(.medium)
                 .monospacedDigit()
         }
-        .frame(width: 44)
-        .padding(.vertical, 8)
-        .padding(.horizontal, 4)
-        .background(isCurrentHour(entry) ? Color.brand.opacity(0.1) : Color.clear)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .frame(width: 50)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 2)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(isCurrent ? Color.brand.opacity(0.12) : Color(.tertiarySystemFill).opacity(0.5))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(isCurrent ? Color.brand.opacity(0.3) : .clear, lineWidth: 1)
+        )
     }
 
     private func hourLabel(_ entry: HourlyWeather) -> String {

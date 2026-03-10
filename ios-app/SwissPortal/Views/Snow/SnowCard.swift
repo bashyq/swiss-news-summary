@@ -221,8 +221,8 @@ struct SnowCard: View {
             .fontWeight(.medium)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
-            .background(Color.snowColor(cm: resort.snowfallWeekTotal).opacity(0.12))
-            .foregroundStyle(Color.snowColor(cm: resort.snowfallWeekTotal))
+            .background(Color.brand.opacity(0.12))
+            .foregroundStyle(.brand)
             .clipShape(RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.plain)

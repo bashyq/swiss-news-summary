@@ -22,6 +22,9 @@ struct CalendarGrid: View {
 
             // Calendar day grid
             calendarDays
+
+            // Dot color legend
+            dotLegend
         }
         .padding(12)
         .background(Color(.secondarySystemGroupedBackground))
@@ -135,6 +138,29 @@ struct CalendarGrid: View {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - Dot Legend
+
+    private var dotLegend: some View {
+        HStack(spacing: 16) {
+            legendItem(color: .red, label: appState.localized(en: "Holiday", de: "Feiertag"))
+            legendItem(color: .brand, label: appState.localized(en: "Festival", de: "Festival"))
+            legendItem(color: .orange, label: appState.localized(en: "School", de: "Schulferien"))
+            legendItem(color: .blue, label: appState.localized(en: "Recurring", de: "Wiederkehrend"))
+        }
+        .padding(.top, 4)
+    }
+
+    private func legendItem(color: Color, label: String) -> some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
     }
 

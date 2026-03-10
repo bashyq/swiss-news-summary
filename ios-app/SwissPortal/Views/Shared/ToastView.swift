@@ -41,7 +41,7 @@ final class ToastManager {
         }
 
         Task { @MainActor in
-            try? await Task.sleep(for: .seconds(2.5))
+            try? await Task.sleep(for: .seconds(4))
             withAnimation(.spring(duration: 0.3)) {
                 self.isShowing = false
             }

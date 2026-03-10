@@ -161,11 +161,11 @@ enum AppTab: String, CaseIterable {
 
     var sfSymbol: String {
         switch self {
-        case .news: return "newspaper"
-        case .activities: return "figure.play"
-        case .lunch: return "fork.knife"
-        case .weather: return "sun.max"
-        case .more: return "ellipsis.circle"
+        case .news: return "newspaper.fill"
+        case .activities: return "sparkles"
+        case .lunch: return "fork.knife.circle.fill"
+        case .weather: return "cloud.sun.fill"
+        case .more: return "square.grid.2x2.fill"
         }
     }
 }

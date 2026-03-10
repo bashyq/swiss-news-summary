@@ -33,6 +33,31 @@ struct WidgetDataProvider {
         }
     }
 
+    /// Fetch headlines for the news widget
+    static func fetchHeadlines(city: String, language: String) async -> WidgetHeadlinesEntry? {
+        guard let url = URL(string: "\(baseURL)/?lang=\(language)&city=\(city)") else { return nil }
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let response = try JSONDecoder().decode(WidgetNewsResponse.self, from: data)
+
+            let allItems = response.categories.allHeadlines
+            let headlines = Array(allItems.prefix(5))
+
+            return WidgetHeadlinesEntry(
+                date: Date(),
+                headlines: headlines,
+                cityName: response.city.name,
+                temperature: response.weather.temperature,
+                weatherCode: response.weather.weatherCode,
+                weatherDescription: response.weather.description,
+                language: language
+            )
+        } catch {
+            return nil
+        }
+    }
+
     /// Fetch sunshine summary for widget
     static func fetchSunshine(language: String) async -> WidgetSunshineEntry? {
         guard let url = URL(string: "\(baseURL)/sunshine?lang=\(language)") else { return nil }
@@ -96,6 +121,43 @@ struct WidgetNewsEntry: TimelineEntry {
     )
 }
 
+struct WidgetHeadlinesEntry: TimelineEntry {
+    let date: Date
+    let headlines: [WidgetNewsItem]
+    let cityName: String
+    let temperature: Double
+    let weatherCode: Int
+    let weatherDescription: String
+    let language: String
+
+    var weatherSFSymbol: String {
+        switch weatherCode {
+        case 0: return "sun.max.fill"
+        case 1, 2: return "cloud.sun.fill"
+        case 3: return "cloud.fill"
+        case 45, 48: return "cloud.fog.fill"
+        case 51, 53, 55, 61, 63, 65, 80, 81, 82: return "cloud.rain.fill"
+        case 71, 73, 75, 85, 86: return "cloud.snow.fill"
+        case 95, 96, 99: return "cloud.bolt.fill"
+        default: return "cloud.fill"
+        }
+    }
+
+    static let placeholder = WidgetHeadlinesEntry(
+        date: Date(),
+        headlines: [
+            WidgetNewsItem(headline: "Swiss parliament debates new energy policy", headlineDE: "Schweizer Parlament debattiert neue Energiepolitik", source: "NZZ", summary: nil, summaryDE: nil),
+            WidgetNewsItem(headline: "Zurich plans major transit expansion", headlineDE: "Zürich plant grosse Nahverkehrserweiterung", source: "SRF", summary: nil, summaryDE: nil),
+            WidgetNewsItem(headline: "Weekend weather: Snow expected in Alps", headlineDE: "Wochenendwetter: Schnee in den Alpen erwartet", source: "20 Minuten", summary: nil, summaryDE: nil),
+        ],
+        cityName: "Zürich",
+        temperature: 8,
+        weatherCode: 2,
+        weatherDescription: "Partly cloudy",
+        language: "en"
+    )
+}
+
 struct WidgetSunshineEntry: TimelineEntry {
     let date: Date
     let baselineSunshineHours: Double
@@ -145,10 +207,41 @@ struct WidgetTransportSummary: Codable {
 struct WidgetCategories: Codable {
     let topStories: [WidgetNewsItem]?
     let politics: [WidgetNewsItem]?
+    let disruptions: [WidgetNewsItem]?
+    let events: [WidgetNewsItem]?
+    let culture: [WidgetNewsItem]?
+    let local: [WidgetNewsItem]?
+
+    /// Collect all headlines across categories (deduped, preserving order)
+    var allHeadlines: [WidgetNewsItem] {
+        var seen = Set<String>()
+        var result: [WidgetNewsItem] = []
+        let all: [[WidgetNewsItem]?] = [topStories, politics, disruptions, events, culture, local]
+        for category in all {
+            for item in category ?? [] {
+                if seen.insert(item.headline).inserted {
+                    result.append(item)
+                }
+            }
+        }
+        return result
+    }
 }
 
 struct WidgetNewsItem: Codable {
     let headline: String
+    let headlineDE: String?
+    let source: String?
+    let summary: String?
+    let summaryDE: String?
+
+    func localizedHeadline(_ language: String) -> String {
+        language == "de" ? (headlineDE ?? headline) : headline
+    }
+
+    func localizedSummary(_ language: String) -> String? {
+        language == "de" ? (summaryDE ?? summary) : summary
+    }
 }
 
 struct WidgetCityInfo: Codable {

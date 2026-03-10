@@ -139,3 +139,52 @@ extension Color {
         }
     }
 }
+
+// MARK: - Spacing Constants
+
+/// App-wide spacing constants for consistent layout.
+enum AppSpacing {
+    /// Standard card inner padding (14pt)
+    static let cardPadding: CGFloat = 14
+    /// Standard horizontal section padding
+    static let sectionHorizontal: CGFloat = 16
+    /// Standard vertical gap between cards in a list
+    static let cardGap: CGFloat = 12
+    /// Standard corner radius for cards
+    static let cardRadius: CGFloat = 12
+    /// Standard border strip width on cards
+    static let borderStripWidth: CGFloat = 4
+    /// Standard shadow radius for cards
+    static let cardShadowRadius: CGFloat = 8
+    /// Map height in inline views
+    static let mapHeight: CGFloat = 240
+}
+
+// MARK: - Card Style ViewModifier
+
+/// Reusable modifier for standard card styling (background, corner radius, shadow).
+struct CardStyle: ViewModifier {
+    var borderColor: Color? = nil
+
+    func body(content: Content) -> some View {
+        content
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
+            .overlay(alignment: .leading) {
+                if let borderColor {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(borderColor)
+                        .frame(width: AppSpacing.borderStripWidth)
+                        .padding(.vertical, 6)
+                }
+            }
+            .shadow(color: .black.opacity(0.1), radius: AppSpacing.cardShadowRadius, x: 0, y: 4)
+    }
+}
+
+extension View {
+    /// Applies standard card styling with optional left border color.
+    func cardStyle(borderColor: Color? = nil) -> some View {
+        modifier(CardStyle(borderColor: borderColor))
+    }
+}

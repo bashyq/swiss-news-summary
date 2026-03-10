@@ -118,7 +118,12 @@ struct NewsView: View {
     private var newsContent: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                // 0. Briefing card (dismissible, daily)
+                // 0. Hero banner
+                HeroBanner(style: .news)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+
+                // 0.5. Briefing card (dismissible, daily)
                 if let briefing = viewModel.newsData?.briefing, !briefingDismissedToday {
                     BriefingCard(briefing: briefing, onDismiss: dismissBriefing)
                         .padding(.horizontal)
@@ -152,7 +157,7 @@ struct NewsView: View {
                 // 4. Trending banner
                 if let trending = viewModel.newsData?.trending,
                    let topic = trending.localizedTopic(language: appState.language) {
-                    TrendingBanner(text: topic)
+                    TrendingBanner(text: topic, url: trending.url)
                         .padding(.horizontal)
                         .padding(.top, 12)
                 }
@@ -201,10 +206,8 @@ struct NewsView: View {
     // MARK: - Empty State
 
     private var emptyCategory: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "newspaper")
-                .font(.title)
-                .foregroundStyle(.secondary)
+        VStack(spacing: 12) {
+            EmojiScene(["📰", "🇨🇭", "🏔️", "📡"])
             Text(appState.localized(
                 en: "No articles in this category",
                 de: "Keine Artikel in dieser Kategorie"
@@ -245,9 +248,11 @@ struct NewsView: View {
 
 // MARK: - Trending Banner
 
-/// A small banner showing the current trending topic
+/// A small banner showing the current trending topic.
+/// Taps open the trending URL in the browser if available.
 private struct TrendingBanner: View {
     let text: String
+    let url: String?
 
     var body: some View {
         HStack(spacing: 6) {
@@ -259,11 +264,22 @@ private struct TrendingBanner: View {
                 .fontWeight(.medium)
                 .lineLimit(1)
             Spacer()
+            if url != nil {
+                Image(systemName: "arrow.up.right")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(Color.orange.opacity(0.08))
         .clipShape(RoundedRectangle(cornerRadius: 8))
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if let urlString = url, let link = URL(string: urlString) {
+                UIApplication.shared.open(link)
+            }
+        }
     }
 }
 

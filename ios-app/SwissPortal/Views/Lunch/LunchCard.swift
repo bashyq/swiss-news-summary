@@ -17,6 +17,8 @@ struct LunchCard: View {
     let location: CLLocation?
     var onTap: (() -> Void)?
 
+    @State private var showDeleteConfirmation = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             cardContent
@@ -30,6 +32,24 @@ struct LunchCard: View {
                 .padding(.vertical, 6)
         }
         .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+        .confirmationDialog(
+            appState.localized(en: "Delete Restaurant", de: "Restaurant löschen"),
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(appState.localized(en: "Delete", de: "Löschen"), role: .destructive) {
+                appState.deleteCustomLunch(spot.id)
+                toastManager.show(
+                    appState.localized(en: "Restaurant deleted", de: "Restaurant gelöscht"),
+                    type: .success
+                )
+            }
+        } message: {
+            Text(appState.localized(
+                en: "Are you sure you want to delete this restaurant?",
+                de: "Möchtest du dieses Restaurant wirklich löschen?"
+            ))
+        }
     }
 
     // MARK: - Card Content
@@ -90,17 +110,16 @@ struct LunchCard: View {
             // Delete button for custom lunch spots
             if spot.id.hasPrefix("custom-") {
                 Button {
-                    appState.deleteCustomLunch(spot.id)
-                    toastManager.show(
-                        appState.localized(en: "Restaurant deleted", de: "Restaurant gelöscht"),
-                        type: .success
-                    )
+                    showDeleteConfirmation = true
                 } label: {
                     Image(systemName: "trash")
                         .font(.body)
                         .foregroundStyle(.red.opacity(0.7))
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(appState.localized(en: "Delete restaurant", de: "Restaurant löschen"))
             }
 
             // Website button
@@ -109,7 +128,10 @@ struct LunchCard: View {
                     Image(systemName: "safari")
                         .font(.body)
                         .foregroundStyle(.brand)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
+                .accessibilityLabel(appState.localized(en: "Open website", de: "Webseite öffnen"))
             }
 
             // Heart button
@@ -124,9 +146,15 @@ struct LunchCard: View {
                 Image(systemName: isSaved ? "heart.fill" : "heart")
                     .font(.body)
                     .foregroundStyle(isSaved ? .red : .secondary)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .sensoryFeedback(.impact(flexibility: .soft), trigger: isSaved)
+            .accessibilityLabel(appState.localized(
+                en: isSaved ? "Remove from saved" : "Save restaurant",
+                de: isSaved ? "Aus Gespeicherten entfernen" : "Restaurant speichern"
+            ))
         }
     }
 
@@ -224,10 +252,13 @@ struct LunchCard: View {
                     )
                 } label: {
                     Image(systemName: star <= currentRating ? "star.fill" : "star")
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundStyle(star <= currentRating ? .orange : .secondary.opacity(0.4))
+                        .frame(minWidth: 32, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("\(star) \(star == 1 ? (language == .en ? "star" : "Stern") : (language == .en ? "stars" : "Sterne"))")
             }
 
             if currentRating > 0 {

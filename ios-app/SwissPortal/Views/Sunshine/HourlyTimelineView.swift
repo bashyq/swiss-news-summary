@@ -52,7 +52,7 @@ struct HourlyTimelineView: View {
                         let offset = CGFloat(hour - startHour) * segmentWidth + segmentWidth / 2
 
                         Text("\(hour)")
-                            .font(.system(size: 8))
+                            .font(.system(size: 10))
                             .foregroundStyle(.tertiary)
                             .position(x: offset, y: 6)
                     }

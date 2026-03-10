@@ -4,7 +4,7 @@ import CoreLocation
 // MARK: - Activities Response
 
 /// Response from GET /activities?lang={en|de}&city={cityId}
-struct ActivitiesResponse: Codable {
+struct ActivitiesResponse: Codable, Sendable {
     let activities: [Activity]
     let cityEvents: [CityEvent]
     let weather: Weather
@@ -14,7 +14,7 @@ struct ActivitiesResponse: Codable {
 
 // MARK: - Activity
 
-struct Activity: Codable, Identifiable {
+struct Activity: Codable, Identifiable, Sendable {
     let id: String
     let name: String
     let nameDE: String
@@ -206,7 +206,7 @@ enum ActivityFilter: String, CaseIterable {
 
 // MARK: - City Event
 
-struct CityEvent: Codable, Identifiable {
+struct CityEvent: Codable, Identifiable, Sendable {
     let id: String
     let name: String
     let nameDE: String

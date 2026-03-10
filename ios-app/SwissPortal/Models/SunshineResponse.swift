@@ -4,13 +4,13 @@ import CoreLocation
 // MARK: - Sunshine Response
 
 /// Response from GET /sunshine?lang={en|de}
-struct SunshineResponse: Codable {
+struct SunshineResponse: Codable, Sendable {
     let destinations: [SunshineDestination]
     let weekendDates: WeekendDates
     let timestamp: String
 }
 
-struct WeekendDates: Codable {
+struct WeekendDates: Codable, Sendable {
     let friday: String
     let saturday: String
     let sunday: String
@@ -18,7 +18,7 @@ struct WeekendDates: Codable {
 
 // MARK: - Sunshine Destination
 
-struct SunshineDestination: Codable, Identifiable {
+struct SunshineDestination: Codable, Identifiable, Sendable {
     let id: String
     let name: String
     let nameDE: String?
@@ -67,7 +67,7 @@ struct SunshineDestination: Codable, Identifiable {
     }
 }
 
-struct SunshineDayForecast: Codable, Identifiable {
+struct SunshineDayForecast: Codable, Identifiable, Sendable {
     let date: String
     let weatherCode: Int
     let tempMax: Double

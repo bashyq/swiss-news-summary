@@ -14,6 +14,8 @@ struct ActivityCard: View {
     let language: AppLanguage
     let location: CLLocation?
 
+    @State private var showDeleteConfirmation = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             cardContent
@@ -27,6 +29,24 @@ struct ActivityCard: View {
                 .padding(.vertical, 6)
         }
         .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+        .confirmationDialog(
+            appState.localized(en: "Delete Activity", de: "Aktivität löschen"),
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(appState.localized(en: "Delete", de: "Löschen"), role: .destructive) {
+                appState.deleteCustomActivity(activity.id)
+                toastManager.show(
+                    appState.localized(en: "Activity deleted", de: "Aktivität gelöscht"),
+                    type: .success
+                )
+            }
+        } message: {
+            Text(appState.localized(
+                en: "Are you sure you want to delete this activity?",
+                de: "Möchtest du diese Aktivität wirklich löschen?"
+            ))
+        }
     }
 
     // MARK: - Card Content
@@ -80,17 +100,16 @@ struct ActivityCard: View {
             // Delete button for custom activities
             if activity.id.hasPrefix("custom-") {
                 Button {
-                    appState.deleteCustomActivity(activity.id)
-                    toastManager.show(
-                        appState.localized(en: "Activity deleted", de: "Aktivität gelöscht"),
-                        type: .success
-                    )
+                    showDeleteConfirmation = true
                 } label: {
                     Image(systemName: "trash")
                         .font(.body)
                         .foregroundStyle(.red.opacity(0.7))
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(appState.localized(en: "Delete activity", de: "Aktivität löschen"))
             }
 
             // Heart button
@@ -105,9 +124,15 @@ struct ActivityCard: View {
                 Image(systemName: isSaved ? "heart.fill" : "heart")
                     .font(.body)
                     .foregroundStyle(isSaved ? .red : .secondary)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .sensoryFeedback(.impact(flexibility: .soft), trigger: isSaved)
+            .accessibilityLabel(appState.localized(
+                en: isSaved ? "Remove from saved" : "Save activity",
+                de: isSaved ? "Aus Gespeicherten entfernen" : "Aktivität speichern"
+            ))
 
             // External link indicator
             if activity.url != nil {

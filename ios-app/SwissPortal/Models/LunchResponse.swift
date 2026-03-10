@@ -4,13 +4,13 @@ import CoreLocation
 // MARK: - Lunch Response
 
 /// Response from GET /lunch?lang={en|de}&city={cityId}
-struct LunchResponse: Codable {
+struct LunchResponse: Codable, Sendable {
     let spots: [LunchSpot]
 }
 
 // MARK: - Lunch Spot
 
-struct LunchSpot: Codable, Identifiable {
+struct LunchSpot: Codable, Identifiable, Sendable {
     let id: String
     let name: String
     let lat: Double

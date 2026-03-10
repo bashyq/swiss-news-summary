@@ -58,6 +58,11 @@ struct SunshineView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
+                    // 0. Hero banner
+                    HeroBanner(style: .sunshine)
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+
                     // 1. Sunny escape banner
                     if let escape = viewModel.nearestSunnyEscape(userLocation: locationManager.location) {
                         SunnyEscapeBanner(

@@ -11,29 +11,43 @@ struct WeatherCompactView: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 12) {
-                // Weather icon
+                // Weather icon with subtle background circle
                 Image(systemName: weather.sfSymbol)
                     .font(.title2)
                     .symbolRenderingMode(.multicolor)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        Circle()
+                            .fill(Color(.tertiarySystemFill))
+                    )
 
-                // Temperature (large)
-                Text(temperatureText)
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                    .monospacedDigit()
+                VStack(alignment: .leading, spacing: 2) {
+                    // Temperature (large)
+                    Text(temperatureText)
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .monospacedDigit()
 
-                // Description
-                Text(weather.description)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    // Description
+                    Text(weather.description)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
 
                 Spacer()
 
-                // Expand hint
-                Image(systemName: "chevron.down.circle")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                // Hourly hint
+                if weather.hourly != nil {
+                    HStack(spacing: 4) {
+                        Text("Hourly")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Image(systemName: "chevron.right")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)

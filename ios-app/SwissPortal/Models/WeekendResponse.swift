@@ -3,21 +3,21 @@ import Foundation
 // MARK: - Weekend Response
 
 /// Response from GET /weekend?lang={en|de}&city={cityId}
-struct WeekendResponse: Codable {
+struct WeekendResponse: Codable, Sendable {
     let saturday: WeekendDay
     let sunday: WeekendDay
     let city: CityInfo
     let timestamp: String
 }
 
-struct WeekendDay: Codable {
+struct WeekendDay: Codable, Sendable {
     let date: String
     let weather: DayWeather?
     let plan: DayPlan
     var holidays: [Holiday]? = nil
 }
 
-struct DayWeather: Codable {
+struct DayWeather: Codable, Sendable {
     let date: String?
     let weatherCode: Int
     let tempMax: Double
@@ -33,12 +33,12 @@ struct DayWeather: Codable {
     }
 }
 
-struct DayPlan: Codable {
+struct DayPlan: Codable, Sendable {
     let morning: PlannedActivity?
     let afternoon: PlannedActivity?
 }
 
-struct PlannedActivity: Codable, Identifiable {
+struct PlannedActivity: Codable, Identifiable, Sendable {
     let id: String
     let name: String
     var nameDE: String? = nil

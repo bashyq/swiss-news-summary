@@ -1,20 +1,20 @@
 import Foundation
 
-/// Date parsing and formatting helpers
-enum DateHelpers {
-    private static let isoFormatter: ISO8601DateFormatter = {
+/// Date parsing and formatting helpers — nonisolated so it can be called from any actor
+enum DateHelpers: Sendable {
+    nonisolated(unsafe) private static let isoFormatter: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withFullDate]
         return f
     }()
 
-    private static let isoDateTimeFormatter: ISO8601DateFormatter = {
+    nonisolated(unsafe) private static let isoDateTimeFormatter: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime]
         return f
     }()
 
-    private static let isoDateTimeFractionalFormatter: ISO8601DateFormatter = {
+    nonisolated(unsafe) private static let isoDateTimeFractionalFormatter: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f
