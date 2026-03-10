@@ -65,7 +65,6 @@ struct NewsView: View {
             HStack(spacing: 14) {
                 weatherButton
                 cityMenuButton
-                shareButton
             }
         }
     }
@@ -251,31 +250,6 @@ struct NewsView: View {
         }
     }
 
-    // MARK: - Share Button
-
-    private var shareButton: some View {
-        Group {
-            if let topItem = viewModel.currentItems.first {
-                let shareText = buildShareText(topItem: topItem)
-                ShareLink(item: shareText) {
-                    Image(systemName: "square.and.arrow.up")
-                }
-            } else {
-                EmptyView()
-            }
-        }
-    }
-
-    private func buildShareText(topItem: NewsItem) -> String {
-        let cityName = appState.city.localizedName(language: appState.language)
-        let headline = topItem.localizedHeadline(language: appState.language)
-        let summary = topItem.localizedSummary(language: appState.language)
-
-        return appState.localized(
-            en: "Today in \(cityName): \(headline) -- \(summary)",
-            de: "Heute in \(cityName): \(headline) -- \(summary)"
-        )
-    }
 }
 
 // MARK: - Trending Banner

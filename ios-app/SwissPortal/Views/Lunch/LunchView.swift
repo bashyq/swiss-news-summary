@@ -103,9 +103,9 @@ struct LunchView: View {
     private var heroBanner: some View {
         HeroBanner(style: .lunch, title: navigationTitle) {
             HStack(spacing: 14) {
-                cityMenuButton
-                mapToggleButton
                 addButton
+                mapToggleButton
+                cityMenuButton
             }
         }
     }

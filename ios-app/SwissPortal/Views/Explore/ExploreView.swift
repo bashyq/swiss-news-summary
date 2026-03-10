@@ -59,8 +59,8 @@ struct ExploreView: View {
     private var heroBanner: some View {
         HeroBanner(style: .explore, title: appState.localized(en: "Explore", de: "Entdecken")) {
             HStack(spacing: 14) {
-                cityMenu
                 mapToggleButton
+                cityMenu
             }
         }
     }

@@ -102,9 +102,9 @@ struct ActivitiesView: View {
     private var heroBanner: some View {
         HeroBanner(style: .activities, title: navigationTitle) {
             HStack(spacing: 14) {
-                cityMenuButton
-                mapToggleButton
                 addButton
+                mapToggleButton
+                cityMenuButton
             }
         }
     }
