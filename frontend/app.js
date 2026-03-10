@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.11.0';
+const APP_VERSION = '2.12.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -43,6 +43,8 @@ let snowFilter = 'all';
 let snowExpanded = false;
 let dealsFilter = 'all';
 let activityReminders = JSON.parse(localStorage.getItem('activityReminders') || '[]');
+let exploreFilter = 'all';
+let exploreMap = null;
 let snowMap = null;
 let snowMarkers = {};
 let userLat = null, userLon = null;
@@ -229,6 +231,13 @@ const T = {
   reminderRemove: { en:'Remove reminder', de:'Erinnerung entfernen' },
   featured: { en:'Featured', de:'Empfohlen' },
   newBadge: { en:'NEW', de:'NEU' },
+  explore: { en:'Explore', de:'Entdecken' },
+  exploreTitle: { en:'near you', de:'in der Nähe' },
+  exploreSubtitle: { en:'Activities, events & deals on the map', de:'Aktivitäten, Events & Deals auf der Karte' },
+  exploreAll: { en:'All', de:'Alle' },
+  exploreActivities: { en:'Activities', de:'Aktivitäten' },
+  exploreEvents: { en:'Events', de:'Events' },
+  exploreDeals: { en:'Deals', de:'Deals' },
 };
 const t = k => T[k]?.[lang] || k;
 
@@ -447,6 +456,7 @@ function getPageTitle() {
   if (view === 'sunshine') return `${t('whereSun')}<br><span class="accent">${t('sunTitle')}</span>`;
   if (view === 'snow') return `${t('whereSnow')}<br><span class="accent">${t('snowTitle')}</span>`;
   if (view === 'deals') return `${t('bestDeals')}<br><span class="accent">${t('dealsTitle')}</span>`;
+  if (view === 'explore') return `${t('explore')}<br><span class="accent">${t('exploreTitle')}</span>`;
   return '';
 }
 
@@ -460,10 +470,10 @@ function renderNav() {
   }).join('')}</div>`;
 }
 
-const VIEW_RENDERERS = { news: renderNewsView, activities: renderActivitiesView, lunch: renderLunchView, events: renderEventsView, weekend: renderWeekendView, sunshine: renderSunshineView, snow: renderSnowView, deals: renderDealsView };
+const VIEW_RENDERERS = { news: renderNewsView, activities: renderActivitiesView, lunch: renderLunchView, events: renderEventsView, weekend: renderWeekendView, sunshine: renderSunshineView, snow: renderSnowView, deals: renderDealsView, explore: renderExploreView };
 
 function renderMain() {
-  const views = ['news', 'activities', 'lunch', 'events', 'weekend', 'sunshine', 'snow', 'deals'];
+  const views = ['news', 'activities', 'lunch', 'events', 'weekend', 'sunshine', 'snow', 'deals', 'explore'];
   $('main').innerHTML = views.map(v => `<div class="app-view${view === v ? ' active' : ''}" id="view-${v}"></div>`).join('');
   renderCurrentView();
 }
@@ -486,6 +496,7 @@ function renderMenu() {
     <div class="menu-item${view === 'sunshine' ? ' active' : ''}" onclick="switchView('sunshine')"><span class="menu-item-icon">☀️</span>${t('sunshine')}</div>
     <div class="menu-item${view === 'snow' ? ' active' : ''}" onclick="switchView('snow')"><span class="menu-item-icon">❄️</span>${t('snow')}</div>
     <div class="menu-item${view === 'deals' ? ' active' : ''}" onclick="switchView('deals')"><span class="menu-item-icon">🎁</span>${t('deals')}</div>
+    <div class="menu-item${view === 'explore' ? ' active' : ''}" onclick="switchView('explore')"><span class="menu-item-icon">🗺️</span>${t('explore')}</div>
     ${canDonate ? `<div class="menu-item" onclick="openDonateModal()"><span class="menu-item-icon">☕</span>${t('donate')}</div>` : ''}
     <div class="menu-section">
       <div class="menu-section-title">${t('language')}</div>
@@ -1245,7 +1256,8 @@ function switchView(v) {
   else if (v === 'weekend') loadWeekendPlanner();
   else if (v === 'sunshine') loadSunshine();
   else if (v === 'snow') loadSnow();
-  // deals view uses static data — no async load needed
+  else if (v === 'explore') loadExplore();
+  // deals and explore views use static/cached data — no async load needed
 }
 
 function setTab(tab) {
@@ -1267,6 +1279,7 @@ function setCity(id) {
   else if (view === 'weekend') loadWeekendPlanner();
   else if (view === 'sunshine') loadSunshine();
   else if (view === 'snow') loadSnow();
+  else if (view === 'explore') loadExplore();
 }
 
 function setLanguage(l) {
@@ -1516,6 +1529,7 @@ function refreshCurrentView() {
   else if (view === 'weekend') loadWeekendPlanner(true);
   else if (view === 'sunshine') loadSunshine(true);
   else if (view === 'snow') loadSnow(true);
+  else if (view === 'explore') loadExplore(true);
 }
 
 async function shareSummary() {
@@ -2907,6 +2921,209 @@ function renderDayDetail(dateStr) {
   return html;
 }
 
+// ═══ EXPLORE VIEW ═══
+
+function renderExploreView() {
+  const filters = [
+    ['all', t('exploreAll')],
+    ['activities', t('exploreActivities')],
+    ['events', t('exploreEvents')],
+    ['deals', t('exploreDeals')]
+  ];
+  let html = `<div class="subtitle">${t('exploreSubtitle')}</div>`;
+  html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${exploreFilter === k ? ' active' : ''}" onclick="setExploreFilter('${k}')">${v}</button>`).join('')}</div>`;
+  html += '<div class="explore-map-container" id="explore-map"></div>';
+  html += '<div id="explore-list" class="explore-list"></div>';
+  return html;
+}
+
+function setExploreFilter(f) {
+  exploreFilter = f;
+  renderCurrentView();
+  afterRender(() => initExploreMap());
+}
+
+function getExploreItems() {
+  const items = [];
+  const today = new Date().toISOString().split('T')[0];
+  const currentMonth = new Date().getMonth() + 1;
+
+  // Activities (with coordinates)
+  if (exploreFilter === 'all' || exploreFilter === 'activities') {
+    const acts = [...activitiesData, ...customActivities].filter(a => a.lat && a.category !== 'stayhome');
+    for (const a of acts) {
+      items.push({
+        type: 'activity', id: a.id, name: lang === 'de' ? (a.nameDE || a.name) : a.name,
+        desc: lang === 'de' ? (a.descriptionDE || a.description) : a.description,
+        lat: a.lat, lon: a.lon, indoor: a.indoor, category: a.category,
+        emoji: ACTIVITY_EMOJIS[a.category] || '📍', color: '#22c55e',
+        featured: a.featured, price: a.price
+      });
+    }
+  }
+
+  // City events (with dates overlapping today or upcoming 7 days)
+  if (exploreFilter === 'all' || exploreFilter === 'events') {
+    const weekFromNow = new Date();
+    weekFromNow.setDate(weekFromNow.getDate() + 7);
+    const weekStr = weekFromNow.toISOString().split('T')[0];
+    for (const e of cityEventsData) {
+      if (!e.startDate) continue;
+      const end = e.endDate || e.startDate;
+      if (end < today || e.startDate > weekStr) continue;
+      // Events don't have coordinates in the data — use city center
+      const coords = CITY_COORDS[e.city || city] || CITY_COORDS[city];
+      if (!coords) continue;
+      items.push({
+        type: 'event', id: e.id, name: lang === 'de' ? (e.nameDE || e.name) : e.name,
+        desc: lang === 'de' ? (e.descriptionDE || e.description) : e.description,
+        lat: coords[0] + (Math.random() - 0.5) * 0.01, lon: coords[1] + (Math.random() - 0.5) * 0.01,
+        emoji: '📅', color: '#a855f7',
+        toddlerFriendly: e.toddlerFriendly, free: e.free,
+        startDate: e.startDate, endDate: e.endDate
+      });
+    }
+  }
+
+  // Deals (city-relevant, no coordinates — use city center with offset)
+  if (exploreFilter === 'all' || exploreFilter === 'deals') {
+    const coords = CITY_COORDS[city] || CITY_COORDS.zurich;
+    const relevant = DEALS.filter(d => {
+      if (d.city !== 'all' && d.city !== city) return false;
+      if (d.validMonths && !d.validMonths.includes(currentMonth)) return false;
+      return true;
+    });
+    for (let i = 0; i < relevant.length; i++) {
+      const d = relevant[i];
+      // Spread deals in a circle around city center
+      const angle = (i / relevant.length) * Math.PI * 2;
+      const r = 0.005 + Math.random() * 0.008;
+      items.push({
+        type: 'deal', id: d.id, name: lang === 'de' ? (d.nameDE || d.name) : d.name,
+        desc: lang === 'de' ? (d.descriptionDE || d.description) : d.description,
+        lat: coords[0] + Math.sin(angle) * r, lon: coords[1] + Math.cos(angle) * r,
+        emoji: DEAL_CATEGORY_EMOJIS[d.category] || '🎁',
+        color: d.type === 'free' ? '#22c55e' : d.type === 'deal' ? '#3b82f6' : '#f59e0b',
+        dealType: d.type, savings: d.savings, url: d.url
+      });
+    }
+  }
+
+  // Sort by distance if location available
+  if (userLat) {
+    items.sort((a, b) => haversine(userLat, userLon, a.lat, a.lon) - haversine(userLat, userLon, b.lat, b.lon));
+  }
+
+  return items;
+}
+
+async function initExploreMap() {
+  const el = $('explore-map');
+  if (!el || !el.offsetParent) return;
+  await loadLeaflet();
+  if (!window.L) return;
+
+  const center = userLat ? [userLat, userLon] : (CITY_COORDS[city] || CITY_COORDS.zurich);
+
+  if (exploreMap) exploreMap.remove();
+  exploreMap = L.map(el).setView(center, 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(exploreMap);
+
+  const items = getExploreItems();
+  const listEl = $('explore-list');
+  let listHtml = '';
+
+  for (const item of items) {
+    // Map marker
+    const marker = L.circleMarker([item.lat, item.lon], {
+      radius: item.featured ? 10 : 7,
+      fillColor: item.color,
+      fillOpacity: .85,
+      weight: item.featured ? 2 : 1,
+      color: '#fff'
+    }).addTo(exploreMap);
+
+    const popupContent = `<b>${item.emoji} ${esc(item.name)}</b><br><span style="font-size:.85em;color:#666">${esc(item.desc?.substring(0, 80) || '')}${item.desc?.length > 80 ? '...' : ''}</span>`;
+    marker.bindPopup(popupContent);
+    marker.on('click', () => highlightCard(`explore-${item.id}`));
+
+    // List card
+    const dist = userLat ? haversine(userLat, userLon, item.lat, item.lon) : null;
+    let badges = `<span class="badge" style="background:${item.color}20;color:${item.color}">${item.type === 'activity' ? (item.indoor ? 'Indoor' : 'Outdoor') : item.type === 'event' ? 'Event' : item.dealType || 'Deal'}</span>`;
+    if (item.featured) badges += `<span class="badge badge-featured">${t('featured')}</span>`;
+    if (item.free) badges += `<span class="badge badge-free">Free</span>`;
+    if (dist !== null) badges += `<span class="badge badge-distance">${formatDist(dist)}</span>`;
+    if (item.price) badges += `<span class="badge badge-price">${item.price}</span>`;
+    if (item.savings) badges += `<span class="badge badge-price">${item.savings}</span>`;
+
+    let onclick = '';
+    if (item.type === 'activity') onclick = `onclick="switchView('activities')"`;
+    else if (item.type === 'event') onclick = `onclick="switchView('events')"`;
+    else if (item.url) onclick = `onclick="window.open('${esc(item.url)}','_blank')"`;
+
+    listHtml += `<div class="explore-card" id="explore-${item.id}" ${onclick}>
+      <div class="explore-card-header">
+        <span class="explore-card-emoji">${item.emoji}</span>
+        <div class="explore-card-info">
+          <div class="explore-card-name">${esc(item.name)}</div>
+          <div class="explore-card-desc">${esc(item.desc?.substring(0, 100) || '')}${item.desc?.length > 100 ? '...' : ''}</div>
+        </div>
+      </div>
+      <div class="explore-card-badges">${badges}</div>
+    </div>`;
+  }
+
+  if (!items.length) {
+    listHtml = renderEmptyState('🗺️', 'noResults', 'emptyFilterHint');
+  }
+  if (listEl) listEl.innerHTML = listHtml;
+
+  // User location marker
+  if (userLat) {
+    L.marker([userLat, userLon], { icon: L.divIcon({ html: '📍', className: '', iconSize: [20, 20] }) }).addTo(exploreMap);
+  }
+}
+
+async function loadExplore(force = false) {
+  // Need activities data for the map
+  if (!activitiesData.length || force) {
+    const cacheKey = `activitiesCache-${city}`;
+    if (!force) {
+      const cached = cache.get(cacheKey);
+      if (cached) {
+        activitiesData = cached.activities || [];
+        cityEventsData = cached.cityEvents || [];
+      }
+    }
+    if (!activitiesData.length) {
+      showLoading();
+      try {
+        const res = await fetch(`${API}/activities?city=${city}&lang=${lang}`);
+        const data = await res.json();
+        activitiesData = data.activities || [];
+        cityEventsData = data.cityEvents || [];
+        cache.set(cacheKey, data);
+      } catch (e) {
+        console.error('Explore load error:', e);
+      } finally {
+        hideLoading();
+      }
+    }
+  }
+
+  // Request location for distance sorting
+  if (!userLat && navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      userLat = pos.coords.latitude;
+      userLon = pos.coords.longitude;
+      if (view === 'explore') afterRender(() => initExploreMap());
+    }, () => {}, { enableHighAccuracy: true });
+  }
+
+  renderCurrentView();
+  afterRender(() => initExploreMap());
+}
+
 // ═══ SWIPE NAVIGATION ═══
 
 function setupSwipe() {
@@ -2980,7 +3197,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Check URL params (override persisted view if present)
   const params = new URLSearchParams(window.location.search);
   const viewParam = params.get('view');
-  if (viewParam && ['activities', 'lunch', 'events', 'weekend', 'sunshine', 'snow', 'deals'].includes(viewParam)) {
+  if (viewParam && ['activities', 'lunch', 'events', 'weekend', 'sunshine', 'snow', 'deals', 'explore'].includes(viewParam)) {
     switchView(viewParam);
   } else if (view === 'news') {
     fetchNews();

@@ -63,7 +63,7 @@ swiss-news-summary/
 │   ├── styles.css      # Design system + all component styles
 │   ├── app.js          # Full JS app: state, views, components, utils (~2800 lines)
 │   ├── widget.html     # Compact widget page
-│   ├── sw.js           # Service worker (cache v41)
+│   ├── sw.js           # Service worker (cache v42)
 │   ├── manifest.json   # PWA manifest with shortcuts
 │   └── icon.svg        # App icon
 ├── worker/
@@ -192,6 +192,17 @@ swiss-news-summary/
 - **Free filter in Activities**: Activities with `free: true` (auto-tagged from `price` field) shown via "Free" filter tab
 - `filterDeals(f)` function, `dealsFilter` state variable
 - `renderDealsView()`, `renderDealCard(d)` renderers
+
+### Explore View ("Explore")
+- Map-first view showing all activities, events, and deals near the user
+- **Full-screen Leaflet map**: Circle markers colored by type (green=activities, purple=events, blue/amber=deals)
+- **Filters**: All / Activities / Events / Deals
+- **Geolocation**: Auto-requests location, sorts items by distance, shows user marker
+- **Card list below map**: Compact cards with emoji, name, description, badges
+- **Cross-linking**: Tapping activity cards goes to Activities view, event cards to Events view, deal cards open URL
+- **Data sources**: Activities from worker API, city events from cached data, deals from static DEALS array
+- `renderExploreView()`, `initExploreMap()`, `getExploreItems()`, `loadExplore()`
+- `exploreFilter` state variable, `exploreMap` Leaflet instance
 
 ### Widget Page (`/widget.html`)
 - Compact view: weather, top headline, transport status
@@ -426,6 +437,11 @@ Each city has:
 | `confirmReminder(activityId)` | Save reminder + request notification permission |
 | `removeReminder(activityId)` | Remove activity reminder |
 | `checkReminders()` | Check/fire due reminders on page load |
+| `renderExploreView()` | Render explore map view with filter bar |
+| `initExploreMap()` | Init Leaflet map with all explore markers |
+| `getExploreItems()` | Aggregate activities + events + deals for map |
+| `loadExplore(forceRefresh)` | Load activities data for explore view |
+| `setExploreFilter(filter)` | Filter explore by all/activities/events/deals |
 | `buildDailyPick(activities, weather, lang)` | Worker: weather-aware activity recommendation |
 | `buildWeekendBrief(weekendWeather, cityEvents, cityId)` | Worker: weekend weather + events summary |
 | `showLoading()` | Show animated loading bar at top of page |
@@ -437,7 +453,7 @@ Each city has:
 - `lang` - Language preference (en/de)
 - `city` - Selected city
 - `theme` - Theme preference (light/dark)
-- `view` - Active view (news/activities/lunch/events/weekend/sunshine/snow/deals), persisted across refresh
+- `view` - Active view (news/activities/lunch/events/weekend/sunshine/snow/deals/explore), persisted across refresh
 - `savedActivities` - Array of saved activity IDs
 - `customActivities` - Array of user-created activities
 - `installDismissed` - PWA install prompt dismissed

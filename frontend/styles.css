@@ -654,6 +654,24 @@ nav { margin: 16px 0; }
 .deal-recurring-badge { font-size: .7rem; padding: 3px 10px; border-radius: 12px; background: var(--bg2); color: var(--text2); }
 [data-theme="light"] .deal-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); border-color: rgba(0,0,0,.15); }
 
+/* ═══ EXPLORE MAP VIEW ═══ */
+.explore-map-container { width: 100%; height: 300px; border-radius: var(--radius); overflow: hidden; margin-bottom: 16px; border: 1px solid var(--border); }
+.explore-list { display: flex; flex-direction: column; gap: 8px; }
+.explore-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; cursor: pointer; transition: border-color .2s, transform .2s; }
+.explore-card:hover { transform: translateY(-1px); border-color: rgba(255,255,255,.15); }
+[data-theme="light"] .explore-card:hover { border-color: rgba(0,0,0,.15); }
+.explore-card-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
+.explore-card-emoji { font-size: 1.4rem; flex-shrink: 0; line-height: 1.2; }
+.explore-card-info { flex: 1; min-width: 0; }
+.explore-card-name { font-family: var(--serif); font-size: .9rem; font-weight: 600; margin-bottom: 2px; }
+.explore-card-desc { font-size: .78rem; color: var(--text2); line-height: 1.4; }
+.explore-card-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+.explore-card.card-highlight { animation: explore-pulse .6s ease; }
+@keyframes explore-pulse { 0%, 100% { border-color: var(--border); } 50% { border-color: var(--accent); } }
+@media (min-width: 768px) {
+  .explore-map-container { height: 400px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
   .skeleton { animation: none; background: var(--bg2); }
