@@ -593,7 +593,7 @@ function renderActivitiesView() {
   // Filters
   const filters = [
     ['all', t('all')], ['near', t('nearMe')], ['indoor', t('indoor')], ['outdoor', t('outdoor')],
-    ['free', '🆓 ' + t('freeFilter')], ['saved', t('saved')], ['seasonal', t('seasonal')], ['stayhome', t('stayHome')]
+    ['stayhome', t('stayHome')], ['free', '🆓 ' + t('freeFilter')], ['seasonal', t('seasonal')], ['saved', t('saved')]
   ];
   html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${activityFilter === k ? ' active' : ''}" onclick="filterActivities('${k}')">${v}</button>`).join('')}</div>`;
 
