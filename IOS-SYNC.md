@@ -9,14 +9,25 @@ These features were added to the Cloudflare Worker and are automatically availab
 | Feature | Endpoint | Field | Notes |
 |---------|----------|-------|-------|
 | Daily Pick | `GET /` | `briefing.dailyPick` | Weather+time-aware activity recommendation with `reason`/`reasonDE` text |
-| Weekend Brief | `GET /` | `weekendBrief` | Sat+Sun weather + weekend events. `null` on Sundays. |
 | Featured Activities | `GET /activities` | `featured: true` | 13 activities across all cities flagged as featured |
-| News Expansion | `GET /` | `categories.*` | 8-10 items per category. Pre-assigned culture/events/local from dedicated feeds + Claude for topStories/politics. Each item has `detail` field (1 sentence, shown on tap). |
+| News Expansion | `GET /` | `categories.*` | 8-10 items per category. When `lang=en`, all items (including local/culture/events from German feeds) are translated via Claude. Each item has `detail` field (1 sentence, shown on tap). |
 | Deals API | `GET /deals` | `deals[]` | Deals/free entry data now served from worker endpoint. iOS should fetch from `/deals` instead of hardcoding `DealsData.swift`. Same JSON shape as before. |
 | Sunshine Highlights | `GET /sunshine` | `destinations[].highlights[]` | Each destination now includes `highlights` array with toddler-friendly attractions. iOS can drop `DestinationHighlights.swift` and use API data directly. |
 | Activities Expanded | `GET /activities` | `activities[]` | Now 94 base activities (was 52). 20km radius per city. No model changes — same JSON shape, just more items. |
+| Transport Multi-Station | `GET /` | `transport` | Zürich now fetches from Stadelhofen + Hardbrücke (was HB only). Deduplicated. Other cities unchanged. No model change — same JSON shape. |
 
 The iOS `NewsViewModel` and `ActivitiesViewModel` just need to parse these new fields from the existing JSON responses.
+
+---
+
+## ⚠️ PWA Changes — iOS Should NOT Implement
+
+These features were removed or changed in the PWA and the iOS app should match:
+
+| Change | Details |
+|--------|---------|
+| **Weekend Brief removed from News** | The `.weekend-brief` card is no longer rendered on the news page. iOS should NOT build `WeekendBriefCard.swift`. The `weekendBrief` field is still in the API response but the PWA ignores it. |
+| **Age filter removed** | Activity age filters (All ages / 2-3 / 4-5) have been removed from the PWA. iOS should NOT implement age filtering in `ActivitiesViewModel`. |
 
 ---
 
@@ -35,21 +46,7 @@ The iOS `NewsViewModel` and `ActivitiesViewModel` just need to parse these new f
   - Tap → navigate to Activities tab
 - Replace old `briefing.suggestedActivity` handling (field no longer sent)
 
-### 2. Weekend Brief Card (News View)
-**PWA**: `renderWeekendBriefCard()` in `app.js` — `.weekend-brief` card
-**iOS target**: New `WeekendBriefCard.swift` in `Views/News/`
-
-**What to build:**
-- Parse `weekendBrief` from news API response (add to `NewsResponse.swift`)
-- Fields: `saturday { date, weatherCode, tempMax, tempMin }`, `sunday { ... }`, `events[]`, `satDate`, `sunDate`
-- Card with:
-  - "This Weekend" / "Dieses Wochenende" header (purple)
-  - Two weather badges (Sat + Sun with icon + temps)
-  - Up to 3 weekend events with toddler-friendly/free badges
-  - Tap → navigate to Events tab
-- Hide when `weekendBrief` is `null` (Sundays)
-
-### 3. News View Layout: Trending Below History
+### 2. News View Layout: Trending Below History
 **PWA**: Trending banner renders in header, right after "This Day in History"
 **iOS target**: `NewsView.swift`
 
@@ -60,7 +57,7 @@ The iOS `NewsViewModel` and `ActivitiesViewModel` just need to parse these new f
 - Tap → open URL in Safari
 - Only visible on News view
 
-### 4. Lunch Filter Rework (Multi-Select + Cuisine Dropdown)
+### 3. Lunch Filter Rework (Multi-Select + Cuisine Dropdown)
 **PWA**: `renderLunchView()` in `app.js` — multi-toggle pills + `<select>` dropdown
 **iOS target**: `LunchView.swift` + `LunchViewModel.swift`
 
@@ -77,7 +74,7 @@ The iOS `NewsViewModel` and `ActivitiesViewModel` just need to parse these new f
 - Filters stack: e.g. Near Me + Open + Italian = open Italian restaurants within 2km
 - SwiftUI: Use `Toggle`-style buttons or `Chip` pattern for pills, `Picker`/`Menu` for cuisine
 
-### 5. Activity Reminders
+### 4. Activity Reminders
 **PWA**: `showReminderModal()`, `checkReminders()` in `app.js`
 **iOS target**: New functionality in `ActivitiesViewModel.swift` + `ActivityCard.swift`
 
@@ -90,7 +87,7 @@ The iOS `NewsViewModel` and `ActivitiesViewModel` just need to parse these new f
 - On app launch, clean up past reminders
 - Model: `ActivityReminder` struct with `activityId`, `name`, `date`, `notificationId`
 
-### 6. Visual Hero Cards (Activity Cards)
+### 5. Visual Hero Cards (Activity Cards)
 **PWA**: `.activity-hero` gradient + emoji in `renderActivityCard()`
 **iOS target**: `ios-app/SwissPortal/Views/Activities/ActivityCard.swift`
 
@@ -109,7 +106,7 @@ The iOS `NewsViewModel` and `ActivitiesViewModel` just need to parse these new f
 - Large category emoji centered on gradient
 - Skip for `stayhome` category cards
 
-### 7. Featured / NEW Badges
+### 6. Featured / NEW Badges
 **PWA**: Badge rendering in `renderActivityCard()`
 **iOS target**: `ActivityCard.swift` + `BadgeView.swift`
 
@@ -120,7 +117,7 @@ The iOS `NewsViewModel` and `ActivitiesViewModel` just need to parse these new f
 - Green "NEW" / "NEU" badge when `addedDate` is within 30 days
 - In "All" filter, sort featured activities to top (`ActivitiesViewModel`)
 
-### 8. Explore View (Map-First Discovery)
+### 7. Explore View (Map-First Discovery)
 **PWA**: `renderExploreView()`, `initExploreMap()`, `getExploreItems()`
 **iOS target**: New `ExploreView.swift` in `Views/` + `ExploreViewModel.swift`
 
@@ -144,6 +141,22 @@ The iOS `NewsViewModel` and `ActivitiesViewModel` just need to parse these new f
   - Fetch deals from `/deals` endpoint
   - `exploreFilter` published property
 
+### 8. Activity Filter Order
+**PWA**: Filter pills in `renderActivitiesView()`
+**iOS target**: `ActivitiesView.swift`
+
+**What to build:**
+- Filter pill order: All, Near Me, Indoor, Outdoor, Stay Home, Free, Seasonal, Saved
+- No age filter (removed from PWA)
+
+### 9. Menu / Tab Order
+**PWA**: Hamburger menu in `renderHeader()`
+**iOS target**: `ContentView.swift` tab bar
+
+**Recommended tab order:**
+- News, What to do, Explore, Sunshine, Snow, Where to eat, Weekend, Events, Deals
+- Consider bottom tab bar with 5 primary items + "More" for overflow
+
 ---
 
 ## Design System — Color Tokens for iOS
@@ -161,6 +174,22 @@ struct MapColors {
     static let navy = Color(hex: "#1e40af")     // Snow heavy
     static let gray = Color(hex: "#6b7280")     // Cloudy, snow light
     static let slate = Color(hex: "#94a3b8")    // Snow light alt
+}
+```
+
+### Category Border Colors
+```swift
+struct CategoryColors {
+    static let animals = Color(hex: "#f59e0b")   // amber
+    static let museum = Color(hex: "#a855f7")    // purple
+    static let playground = Color(hex: "#22c55e") // green
+    static let outdoor = Color(hex: "#10b981")   // emerald
+    static let nature = Color(hex: "#34d399")    // teal
+    static let indoorPlay = Color(hex: "#f472b6") // pink
+    static let event = Color(hex: "#3b82f6")     // blue
+    static let seasonal = Color(hex: "#ef4444")  // red
+    static let stayhome = Color(hex: "#6b7280")  // gray
+    static let cafe = Color(hex: "#f97316")      // orange
 }
 ```
 
@@ -193,31 +222,6 @@ struct DailyPick: Codable {
     let category: String
 }
 
-struct WeekendBriefDay: Codable {
-    let date: String
-    let weatherCode: Int
-    let tempMax: Int
-    let tempMin: Int
-    let description: String?
-}
-
-struct WeekendBriefEvent: Codable {
-    let name: String
-    let nameDE: String?
-    let startDate: String
-    let endDate: String?
-    let toddlerFriendly: Bool?
-    let free: Bool?
-}
-
-struct WeekendBrief: Codable {
-    let saturday: WeekendBriefDay?
-    let sunday: WeekendBriefDay?
-    let events: [WeekendBriefEvent]
-    let satDate: String
-    let sunDate: String
-}
-
 struct Trending: Codable {
     let topic: String
     let topicDE: String?
@@ -229,8 +233,8 @@ let dailyPick: DailyPick?
 // Remove: let suggestedActivity (no longer sent)
 
 // Add to NewsResponse:
-let weekendBrief: WeekendBrief?
 let trending: Trending?
+// Note: weekendBrief field still exists in API but PWA no longer renders it — skip in iOS
 ```
 
 ### `Activity.swift`
@@ -238,6 +242,7 @@ let trending: Trending?
 // Add optional fields:
 let featured: Bool?
 let addedDate: String?
+// Note: No age filter — minAge/maxAge fields exist but are not used for filtering
 ```
 
 ### `NewsItem.swift`
@@ -250,21 +255,22 @@ let detail: String?  // 1-sentence expansion, shown on tap
 
 ## Priority Order
 
-1. **Daily Pick + Weekend Brief + Trending** (models + 3 cards) — quick wins, data already in API
+1. **Daily Pick + Trending** (models + 2 cards) — quick wins, data already in API
 2. **Lunch filter rework** — multi-select pills + cuisine dropdown
 3. **Featured badges** — small change, improves Activities view
 4. **Visual hero cards** — visual polish, self-contained
 5. **Reminders** — requires UNNotificationCenter, most iOS-specific work
 6. **Explore view** — new tab + MapKit, largest effort
+7. **Menu/filter order alignment** — cosmetic, do alongside other work
 
 ---
 
 ## Testing Notes
 
 - Test Daily Pick with different weather conditions (use `?refresh=true` to get fresh data)
-- Weekend Brief is `null` on Sundays — verify it hides correctly
 - Featured activities: zoo-zurich, kindercity, wildnispark (Zürich), basel-zoo, basel-lange-erlen, bern-barenpark, bern-gurten, geneva-jardin-botanique, lausanne-aquatis, luzern-verkehrshaus, winterthur-technorama, winterthur-wildpark-bruderhaus
 - Explore view: verify events within 7 days show up, deals filter by city + month
 - Lunch filters: test combining Near Me + Open, verify cuisine filter matches `cuisineCategory` values
 - Activities: 94 base activities now (was 52), verify all render correctly
 - Trending: verify it shows below history and only on news view
+- Local news tab: should be in English when `lang=en` (worker now translates German RSS via Claude)
