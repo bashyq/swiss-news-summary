@@ -149,14 +149,6 @@ These features were removed or changed in the PWA and the iOS app should match:
 - Filter pill order: All, Near Me, Indoor, Outdoor, Stay Home, Free, Seasonal, Saved
 - No age filter (removed from PWA)
 
-### 9. Menu / Tab Order
-**PWA**: Hamburger menu in `renderHeader()`
-**iOS target**: `ContentView.swift` tab bar
-
-**Recommended tab order:**
-- News, What to do, Explore, Sunshine, Snow, Where to eat, Weekend, Events, Deals
-- Consider bottom tab bar with 5 primary items + "More" for overflow
-
 ---
 
 ## Design System — Color Tokens for iOS
@@ -261,7 +253,6 @@ let detail: String?  // 1-sentence expansion, shown on tap
 4. **Visual hero cards** — visual polish, self-contained
 5. **Reminders** — requires UNNotificationCenter, most iOS-specific work
 6. **Explore view** — new tab + MapKit, largest effort
-7. **Menu/filter order alignment** — cosmetic, do alongside other work
 
 ---
 
