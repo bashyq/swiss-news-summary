@@ -11,9 +11,10 @@ These features were added to the Cloudflare Worker and are automatically availab
 | Daily Pick | `GET /` | `briefing.dailyPick` | Weather+time-aware activity recommendation with `reason`/`reasonDE` text |
 | Weekend Brief | `GET /` | `weekendBrief` | Sat+Sun weather + weekend events. `null` on Sundays. |
 | Featured Activities | `GET /activities` | `featured: true` | 13 activities across all cities flagged as featured |
-| News Expansion | `GET /` | `categories.*` | Now 8-10 items per category (was 5-8). Added Blick, Watson, Google Trends, Kantonspolizei ZH sources. Better categorization (elections→politics, police→local). No model changes needed — same JSON shape, just more items. |
+| News Expansion | `GET /` | `categories.*` | 8-10 items per category. Pre-assigned culture/events/local from dedicated feeds + Claude for topStories/politics. Each item has `detail` field (1 sentence, shown on tap). |
 | Deals API | `GET /deals` | `deals[]` | Deals/free entry data now served from worker endpoint. iOS should fetch from `/deals` instead of hardcoding `DealsData.swift`. Same JSON shape as before. |
 | Sunshine Highlights | `GET /sunshine` | `destinations[].highlights[]` | Each destination now includes `highlights` array with toddler-friendly attractions. iOS can drop `DestinationHighlights.swift` and use API data directly. |
+| Activities Expanded | `GET /activities` | `activities[]` | Now 94 base activities (was 52). 20km radius per city. No model changes — same JSON shape, just more items. |
 
 The iOS `NewsViewModel` and `ActivitiesViewModel` just need to parse these new fields from the existing JSON responses.
 
@@ -48,7 +49,35 @@ The iOS `NewsViewModel` and `ActivitiesViewModel` just need to parse these new f
   - Tap → navigate to Events tab
 - Hide when `weekendBrief` is `null` (Sundays)
 
-### 3. Activity Reminders
+### 3. News View Layout: Trending Below History
+**PWA**: Trending banner renders in header, right after "This Day in History"
+**iOS target**: `NewsView.swift`
+
+**What to build:**
+- `trending` object from news API: `{ topic, topicDE, url }`
+- Show as compact card right below "This Day in History" (before briefing card)
+- Left-border accent style with subtle gradient background
+- Tap → open URL in Safari
+- Only visible on News view
+
+### 4. Lunch Filter Rework (Multi-Select + Cuisine Dropdown)
+**PWA**: `renderLunchView()` in `app.js` — multi-toggle pills + `<select>` dropdown
+**iOS target**: `LunchView.swift` + `LunchViewModel.swift`
+
+**What to build:**
+- **Toggle pills** (multi-select, combine freely):
+  - Near Me — uses CoreLocation, filters to within 2km
+  - Open — filters `openForLunch === true`
+  - Terrace — filters `outdoorSeating === true`
+  - Saved — filters to saved restaurants
+- **Cuisine picker** (single-select, replaces old Vegi filter):
+  - All cuisines (default)
+  - Italian, Asian, Kebab, Café, Fast Food, International
+  - Filters on `cuisineCategory` field from API
+- Filters stack: e.g. Near Me + Open + Italian = open Italian restaurants within 2km
+- SwiftUI: Use `Toggle`-style buttons or `Chip` pattern for pills, `Picker`/`Menu` for cuisine
+
+### 5. Activity Reminders
 **PWA**: `showReminderModal()`, `checkReminders()` in `app.js`
 **iOS target**: New functionality in `ActivitiesViewModel.swift` + `ActivityCard.swift`
 
@@ -61,7 +90,7 @@ The iOS `NewsViewModel` and `ActivitiesViewModel` just need to parse these new f
 - On app launch, clean up past reminders
 - Model: `ActivityReminder` struct with `activityId`, `name`, `date`, `notificationId`
 
-### 4. Visual Hero Cards (Activity Cards)
+### 6. Visual Hero Cards (Activity Cards)
 **PWA**: `.activity-hero` gradient + emoji in `renderActivityCard()`
 **iOS target**: `ios-app/SwissPortal/Views/Activities/ActivityCard.swift`
 
@@ -80,7 +109,7 @@ The iOS `NewsViewModel` and `ActivitiesViewModel` just need to parse these new f
 - Large category emoji centered on gradient
 - Skip for `stayhome` category cards
 
-### 5. Featured / NEW Badges
+### 7. Featured / NEW Badges
 **PWA**: Badge rendering in `renderActivityCard()`
 **iOS target**: `ActivityCard.swift` + `BadgeView.swift`
 
@@ -91,7 +120,7 @@ The iOS `NewsViewModel` and `ActivitiesViewModel` just need to parse these new f
 - Green "NEW" / "NEU" badge when `addedDate` is within 30 days
 - In "All" filter, sort featured activities to top (`ActivitiesViewModel`)
 
-### 6. Explore View (Map-First Discovery)
+### 8. Explore View (Map-First Discovery)
 **PWA**: `renderExploreView()`, `initExploreMap()`, `getExploreItems()`
 **iOS target**: New `ExploreView.swift` in `Views/` + `ExploreViewModel.swift`
 
@@ -112,8 +141,39 @@ The iOS `NewsViewModel` and `ActivitiesViewModel` just need to parse these new f
 - User location annotation on map
 - `ExploreViewModel`:
   - Reuse `ActivitiesViewModel` data (activities + cityEvents)
-  - Filter `DealsData` by city + month
+  - Fetch deals from `/deals` endpoint
   - `exploreFilter` published property
+
+---
+
+## Design System — Color Tokens for iOS
+
+The PWA now uses a centralized color system. iOS should match:
+
+### Map Marker Colors (`MAP_COLORS`)
+```swift
+struct MapColors {
+    static let green = Color(hex: "#22c55e")    // Activities
+    static let purple = Color(hex: "#a855f7")   // Events, Zürich baseline
+    static let amber = Color(hex: "#f59e0b")    // Sunshine, deals
+    static let blue = Color(hex: "#3b82f6")     // Deals
+    static let sky = Color(hex: "#60a5fa")      // Partly sunny, snow moderate
+    static let navy = Color(hex: "#1e40af")     // Snow heavy
+    static let gray = Color(hex: "#6b7280")     // Cloudy, snow light
+    static let slate = Color(hex: "#94a3b8")    // Snow light alt
+}
+```
+
+### Badge Colors
+```swift
+// Type badges
+static let badgeFree = Color(hex: "#22c55e")       // green — free entry
+static let badgeDeal = Color(hex: "#3b82f6")       // blue — deals
+static let badgeTip = Color(hex: "#f59e0b")        // amber — tips
+static let badgeFeatured = Color(hex: "#a855f7")   // purple — featured
+static let badgeNew = Color(hex: "#22c55e")        // green — new (< 30 days)
+static let badgeSchoolHoliday = Color(hex: "#f59e0b") // amber
+```
 
 ---
 
@@ -158,12 +218,19 @@ struct WeekendBrief: Codable {
     let sunDate: String
 }
 
+struct Trending: Codable {
+    let topic: String
+    let topicDE: String?
+    let url: String?
+}
+
 // Add to Briefing:
 let dailyPick: DailyPick?
 // Remove: let suggestedActivity (no longer sent)
 
 // Add to NewsResponse:
 let weekendBrief: WeekendBrief?
+let trending: Trending?
 ```
 
 ### `Activity.swift`
@@ -173,15 +240,22 @@ let featured: Bool?
 let addedDate: String?
 ```
 
+### `NewsItem.swift`
+```swift
+// Add optional field:
+let detail: String?  // 1-sentence expansion, shown on tap
+```
+
 ---
 
 ## Priority Order
 
-1. **Daily Pick + Weekend Brief** (models + 2 cards) — quick wins, data already in API
-2. **Featured badges** — small change, improves Activities view
-3. **Visual hero cards** — visual polish, self-contained
-4. **Reminders** — requires UNNotificationCenter, most iOS-specific work
-5. **Explore view** — new tab + MapKit, largest effort
+1. **Daily Pick + Weekend Brief + Trending** (models + 3 cards) — quick wins, data already in API
+2. **Lunch filter rework** — multi-select pills + cuisine dropdown
+3. **Featured badges** — small change, improves Activities view
+4. **Visual hero cards** — visual polish, self-contained
+5. **Reminders** — requires UNNotificationCenter, most iOS-specific work
+6. **Explore view** — new tab + MapKit, largest effort
 
 ---
 
@@ -191,3 +265,6 @@ let addedDate: String?
 - Weekend Brief is `null` on Sundays — verify it hides correctly
 - Featured activities: zoo-zurich, kindercity, wildnispark (Zürich), basel-zoo, basel-lange-erlen, bern-barenpark, bern-gurten, geneva-jardin-botanique, lausanne-aquatis, luzern-verkehrshaus, winterthur-technorama, winterthur-wildpark-bruderhaus
 - Explore view: verify events within 7 days show up, deals filter by city + month
+- Lunch filters: test combining Near Me + Open, verify cuisine filter matches `cuisineCategory` values
+- Activities: 94 base activities now (was 52), verify all render correctly
+- Trending: verify it shows below history and only on news view
