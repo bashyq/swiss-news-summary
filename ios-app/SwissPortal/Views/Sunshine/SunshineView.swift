@@ -58,8 +58,8 @@ struct SunshineView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    // 0. Hero banner
-                    HeroBanner(style: .sunshine)
+                    // 0. Hero banner with title
+                    HeroBanner(style: .sunshine, title: appState.localized(en: "Weekend Sunshine", de: "Wochenend-Sonne"))
                         .padding(.horizontal)
                         .padding(.top, 8)
 
@@ -106,8 +106,8 @@ struct SunshineView: View {
                             }
                         }
                     )
-                    .frame(height: 280)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .frame(height: AppSpacing.mapHeight)
+                    .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
                     .padding(.horizontal)
                     .padding(.top, 12)
 
@@ -120,7 +120,7 @@ struct SunshineView: View {
                             userLocation: locationManager.location,
                             highlightID: scrollToID
                         ) {
-                            withAnimation(.easeInOut(duration: 0.3)) {
+                            withAnimation(AppAnimation.expandEase) {
                                 viewModel.toggleExpanded(destination.id)
                             }
                         }

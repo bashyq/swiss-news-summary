@@ -12,31 +12,31 @@ struct ContentView: View {
                 NavigationStack {
                     NewsView()
                 }
-                .tabItem { tabIcon(AppTab.news.sfSymbol) }
+                .tabItem { tabLabel(.news) }
                 .tag(AppTab.news)
 
                 NavigationStack {
                     ActivitiesView()
                 }
-                .tabItem { tabIcon(AppTab.activities.sfSymbol) }
+                .tabItem { tabLabel(.activities) }
                 .tag(AppTab.activities)
 
                 NavigationStack {
-                    LunchView()
+                    ExploreView()
                 }
-                .tabItem { tabIcon(AppTab.lunch.sfSymbol) }
-                .tag(AppTab.lunch)
+                .tabItem { tabLabel(.explore) }
+                .tag(AppTab.explore)
 
                 NavigationStack {
                     WeatherTabView()
                 }
-                .tabItem { tabIcon(AppTab.weather.sfSymbol) }
+                .tabItem { tabLabel(.weather) }
                 .tag(AppTab.weather)
 
                 NavigationStack {
                     MoreView()
                 }
-                .tabItem { tabIcon(AppTab.more.sfSymbol) }
+                .tabItem { tabLabel(.more) }
                 .tag(AppTab.more)
             }
             .tint(.brand)
@@ -46,13 +46,62 @@ struct ContentView: View {
         }
     }
 
-    /// Tab bar icon sized 15% smaller than default (~22pt → 19pt)
-    private func tabIcon(_ systemName: String) -> Image {
-        let config = UIImage.SymbolConfiguration(pointSize: 19, weight: .medium)
-        if let uiImage = UIImage(systemName: systemName, withConfiguration: config) {
-            return Image(uiImage: uiImage)
+    /// Tab bar label with icon + text
+    private func tabLabel(_ tab: AppTab) -> some View {
+        Label(
+            appState.language == .en ? tab.label : tab.labelDE,
+            systemImage: tab.sfSymbol
+        )
+    }
+}
+
+/// More tab — hub for Lunch, Weekend, Events, Deals, Settings
+struct MoreView: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        List {
+            Section {
+                NavigationLink {
+                    LunchView()
+                } label: {
+                    Label(appState.localized(en: "Lunch", de: "Mittagessen"), systemImage: "fork.knife.circle.fill")
+                        .foregroundStyle(.primary)
+                }
+
+                NavigationLink {
+                    WeekendView()
+                } label: {
+                    Label(appState.localized(en: "Weekend Planner", de: "Wochenendplaner"), systemImage: "sun.max.circle.fill")
+                        .foregroundStyle(.primary)
+                }
+
+                NavigationLink {
+                    EventsView()
+                } label: {
+                    Label(appState.localized(en: "Events", de: "Events"), systemImage: "party.popper.fill")
+                        .foregroundStyle(.primary)
+                }
+
+                NavigationLink {
+                    DealsView()
+                } label: {
+                    Label(appState.localized(en: "Deals & Free", de: "Angebote & Gratis"), systemImage: "tag.circle.fill")
+                        .foregroundStyle(.primary)
+                }
+            }
+
+            Section {
+                NavigationLink {
+                    SettingsView()
+                } label: {
+                    Label(appState.localized(en: "Settings", de: "Einstellungen"), systemImage: "gearshape.circle.fill")
+                        .foregroundStyle(.primary)
+                }
+            }
         }
-        return Image(systemName: systemName)
+        .navigationTitle(appState.localized(en: "More", de: "Mehr"))
+        .navigationBarTitleDisplayMode(.large)
     }
 }
 
@@ -107,45 +156,8 @@ struct WeatherTabView: View {
                 SnowView()
             }
         }
-        .navigationTitle(appState.localized(en: "Where to go?", de: "Wohin?"))
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
     }
 }
 
-/// More tab — links to Weekend, Lunch, Deals, Settings
-struct MoreView: View {
-    @Environment(AppState.self) private var appState
-
-    var body: some View {
-        List {
-            Section {
-                NavigationLink {
-                    WeekendView()
-                } label: {
-                    Label(appState.localized(en: "Weekend Planner", de: "Wochenendplaner"), systemImage: "calendar.badge.clock")
-                }
-
-                NavigationLink {
-                    EventsView()
-                } label: {
-                    Label(appState.localized(en: "Events", de: "Events"), systemImage: "calendar")
-                }
-
-                NavigationLink {
-                    DealsView()
-                } label: {
-                    Label(appState.localized(en: "Deals & Free", de: "Angebote & Gratis"), systemImage: "tag")
-                }
-            }
-
-            Section {
-                NavigationLink {
-                    SettingsView()
-                } label: {
-                    Label(appState.localized(en: "Settings", de: "Einstellungen"), systemImage: "gear")
-                }
-            }
-        }
-        .navigationTitle(appState.localized(en: "More", de: "Mehr"))
-    }
-}

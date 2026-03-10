@@ -133,7 +133,7 @@ struct CalendarGrid: View {
                     isSelected: isSelected(date),
                     dots: viewModel.dotColors(for: date)
                 ) {
-                    withAnimation(.easeInOut(duration: 0.15)) {
+                    withAnimation(AppAnimation.standardEase) {
                         viewModel.selectDate(date)
                     }
                 }

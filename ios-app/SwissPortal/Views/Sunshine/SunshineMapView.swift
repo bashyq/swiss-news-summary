@@ -122,5 +122,5 @@ struct SunshineMapView: View {
         destinations: [],
         language: .en
     )
-    .frame(height: 300)
+    .frame(height: AppSpacing.mapHeight)
 }

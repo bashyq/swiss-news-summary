@@ -12,27 +12,8 @@ struct NewsView: View {
 
     var body: some View {
         content
-            .navigationTitle(navigationTitle)
-            .navigationBarTitleDisplayMode(.large)
-            .toolbarTitleMenu {
-                ForEach(City.allCases) { city in
-                    Button {
-                        appState.city = city
-                    } label: {
-                        HStack {
-                            Text(city.localizedName(language: appState.language))
-                            if city == appState.city {
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    shareButton
-                }
-            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
             .task(id: "\(appState.city.id)-\(appState.language)") {
                 await viewModel.loadNews(
                     city: appState.city,
@@ -42,6 +23,7 @@ struct NewsView: View {
             .sheet(isPresented: $showWeatherDetail) {
                 if let weather = viewModel.newsData?.weather {
                     WeatherDetailSheet(weather: weather)
+                        .presentationDetents([.medium, .large])
                 }
             }
             .onAppear {
@@ -76,28 +58,64 @@ struct NewsView: View {
         )
     }
 
+    // MARK: - Hero Banner
+
+    private var heroBanner: some View {
+        HeroBanner(style: .news, title: navigationTitle) {
+            HStack(spacing: 14) {
+                weatherButton
+                cityMenuButton
+                shareButton
+            }
+        }
+    }
+
+    private var weatherButton: some View {
+        Button {
+            showWeatherDetail = true
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: viewModel.newsData?.weather.sfSymbol ?? "cloud.sun.fill")
+                    .symbolRenderingMode(.multicolor)
+                if let weather = viewModel.newsData?.weather {
+                    Text("\(Int(weather.temperature))°")
+                        .font(.callout)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
     // MARK: - Content
 
     @ViewBuilder
     private var content: some View {
         if viewModel.isLoading && viewModel.newsData == nil {
             ScrollView {
-                LazyVStack(spacing: 12) {
+                VStack(spacing: 12) {
+                    heroBanner
+                        .padding(.horizontal)
+                        .padding(.top, 8)
                     ForEach(0..<5, id: \.self) { _ in
                         SkeletonNewsCard()
                     }
+                    .padding(.horizontal)
                 }
-                .padding(.horizontal)
-                .padding(.top, 12)
             }
         } else if let error = viewModel.error, viewModel.newsData == nil {
-            ErrorView(message: error) {
-                Task {
-                    await viewModel.loadNews(
-                        city: appState.city,
-                        language: appState.language,
-                        forceRefresh: true
-                    )
+            VStack(spacing: 0) {
+                heroBanner
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+                ErrorView(message: error) {
+                    Task {
+                        await viewModel.loadNews(
+                            city: appState.city,
+                            language: appState.language,
+                            forceRefresh: true
+                        )
+                    }
                 }
             }
         } else {
@@ -118,8 +136,8 @@ struct NewsView: View {
     private var newsContent: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                // 0. Hero banner
-                HeroBanner(style: .news)
+                // 0. Hero banner with title + city picker + share
+                heroBanner
                     .padding(.horizontal)
                     .padding(.top, 8)
 
@@ -130,14 +148,7 @@ struct NewsView: View {
                         .padding(.top, 8)
                 }
 
-                // 1. Compact weather (tappable)
-                if let weather = viewModel.newsData?.weather {
-                    WeatherCompactView(weather: weather) {
-                        showWeatherDetail = true
-                    }
-                    .padding(.horizontal)
-                    .padding(.top, 8)
-                }
+
 
                 // 2. History banner
                 if let history = viewModel.newsData?.history {
@@ -217,6 +228,27 @@ struct NewsView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
+    }
+
+    // MARK: - City Menu Button
+
+    private var cityMenuButton: some View {
+        Menu {
+            ForEach(City.allCases) { city in
+                Button {
+                    appState.city = city
+                } label: {
+                    HStack {
+                        Text(city.localizedName(language: appState.language))
+                        if city == appState.city {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "building.2")
+        }
     }
 
     // MARK: - Share Button

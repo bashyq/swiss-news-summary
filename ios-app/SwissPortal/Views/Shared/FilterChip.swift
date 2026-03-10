@@ -6,6 +6,7 @@ struct FilterChip: View {
     let isSelected: Bool
     var icon: String?
     var count: Int?
+    var expandsToFill: Bool = false
     let action: () -> Void
 
     var body: some View {
@@ -18,6 +19,8 @@ struct FilterChip: View {
                 Text(label)
                     .font(.caption)
                     .fontWeight(isSelected ? .semibold : .regular)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 if let count, count > 0 {
                     Text("\(count)")
                         .font(.caption2)
@@ -30,6 +33,7 @@ struct FilterChip: View {
                         .animation(.default, value: count)
                 }
             }
+            .frame(maxWidth: expandsToFill ? .infinity : nil)
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
             .background {
@@ -41,8 +45,8 @@ struct FilterChip: View {
             }
             .foregroundStyle(isSelected ? .white : .primary)
             .clipShape(Capsule())
-            .scaleEffect(isSelected ? 1.02 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
+            .scaleEffect(isSelected ? AppAnimation.selectedScale : 1.0)
+            .animation(AppAnimation.spring, value: isSelected)
         }
         .buttonStyle(.plain)
     }

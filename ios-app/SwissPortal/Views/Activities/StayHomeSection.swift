@@ -189,8 +189,8 @@ struct StayHomeCard: View {
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .shadow(color: .black.opacity(0.04), radius: 3, x: 0, y: 1)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
+        .shadow(color: AppShadow.subtle.color, radius: AppShadow.subtle.radius, x: AppShadow.subtle.x, y: AppShadow.subtle.y)
     }
 }
 
@@ -220,7 +220,9 @@ struct StayHomeCard: View {
             availableMonths: nil,
             subcategory: "sensory",
             materials: "Play dough, Cookie cutters, Rolling pin",
-            materialsDE: "Knete, Ausstechformen, Nudelholz"
+            materialsDE: "Knete, Ausstechformen, Nudelholz",
+            featured: nil,
+            addedDate: nil
         ),
         Activity(
             id: "art-1",
@@ -246,7 +248,9 @@ struct StayHomeCard: View {
             availableMonths: nil,
             subcategory: "art",
             materials: "Finger paints, Large paper, Old clothes",
-            materialsDE: "Fingerfarben, Grosses Papier, Alte Kleidung"
+            materialsDE: "Fingerfarben, Grosses Papier, Alte Kleidung",
+            featured: nil,
+            addedDate: nil
         )
     ]
 

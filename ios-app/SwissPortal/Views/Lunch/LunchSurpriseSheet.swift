@@ -16,10 +16,10 @@ struct LunchSurpriseSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 24) {
-                    // Large cuisine icon
+                VStack(spacing: 16) {
+                    // Cuisine icon
                     cuisineIcon
-                        .padding(.top, 24)
+                        .padding(.top, 16)
 
                     // Spot name
                     Text(spot.name)
@@ -30,7 +30,7 @@ struct LunchSurpriseSheet: View {
 
                     // Cuisine display
                     Text(spot.cuisineDisplay)
-                        .font(.body)
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
 
                     // Badges
@@ -43,7 +43,7 @@ struct LunchSurpriseSheet: View {
                     actionButtons
                         .padding(.horizontal, 24)
 
-                    Spacer(minLength: 24)
+                    Spacer(minLength: 16)
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -65,10 +65,10 @@ struct LunchSurpriseSheet: View {
         ZStack {
             Circle()
                 .fill(Color.brand.opacity(0.12))
-                .frame(width: 96, height: 96)
+                .frame(width: 72, height: 72)
 
             Image(systemName: spot.cuisineSFSymbol)
-                .font(.system(size: 40))
+                .font(.system(size: 30))
                 .foregroundStyle(.brand)
         }
     }
@@ -103,20 +103,7 @@ struct LunchSurpriseSheet: View {
 
     private var actionButtons: some View {
         VStack(spacing: 12) {
-            // "Try another" button
-            Button(action: onTryAnother) {
-                HStack(spacing: 8) {
-                    Image(systemName: "shuffle")
-                    Text(appState.localized(en: "Try another", de: "Nochmal"))
-                        .fontWeight(.medium)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(LinearGradient.brand)
-                .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-
+            // Primary row: Directions + Save
             HStack(spacing: 12) {
                 // Directions button (Apple Maps)
                 Button {
@@ -131,7 +118,7 @@ struct LunchSurpriseSheet: View {
                     .padding(.vertical, 14)
                     .background(Color(.systemGray6))
                     .foregroundStyle(.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
                 }
 
                 // Save / heart button
@@ -149,8 +136,23 @@ struct LunchSurpriseSheet: View {
                     .padding(.vertical, 14)
                     .background(Color(.systemGray6))
                     .foregroundStyle(.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
                 }
+            }
+
+            // "Try another" button
+            Button(action: onTryAnother) {
+                HStack(spacing: 8) {
+                    Image(systemName: "shuffle")
+                    Text(appState.localized(en: "Try another", de: "Nochmal"))
+                        .fontWeight(.medium)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(LinearGradient.brand)
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
             }
         }
     }

@@ -9,26 +9,20 @@ import CoreLocation
 struct ActivityCard: View {
     @Environment(AppState.self) private var appState
     @Environment(ToastManager.self) private var toastManager
+    @Environment(ReminderManager.self) private var reminderManager
 
     let activity: Activity
     let language: AppLanguage
     let location: CLLocation?
 
     @State private var showDeleteConfirmation = false
+    @State private var showReminderSheet = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             cardContent
         }
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(Color.activityBorderColor(indoor: activity.indoor, isFree: activity.isFree))
-                .frame(width: 4)
-                .padding(.vertical, 6)
-        }
-        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+        .cardStyle(borderColor: Color.activityBorderColor(indoor: activity.indoor, isFree: activity.isFree))
         .confirmationDialog(
             appState.localized(en: "Delete Activity", de: "Aktivität löschen"),
             isPresented: $showDeleteConfirmation,
@@ -46,6 +40,10 @@ struct ActivityCard: View {
                 en: "Are you sure you want to delete this activity?",
                 de: "Möchtest du diese Aktivität wirklich löschen?"
             ))
+        }
+        .sheet(isPresented: $showReminderSheet) {
+            ReminderSheet(activity: activity)
+                .presentationDetents([.medium, .large])
         }
     }
 
@@ -112,6 +110,28 @@ struct ActivityCard: View {
                 .accessibilityLabel(appState.localized(en: "Delete activity", de: "Aktivität löschen"))
             }
 
+            // Bell button (reminder — only on saved activities)
+            if isSaved {
+                Button {
+                    if reminderManager.hasReminder(for: activity.id) {
+                        reminderManager.removeReminder(for: activity.id)
+                        toastManager.show(
+                            appState.localized(en: "Reminder removed", de: "Erinnerung entfernt"),
+                            type: .success
+                        )
+                    } else {
+                        showReminderSheet = true
+                    }
+                } label: {
+                    Image(systemName: reminderManager.hasReminder(for: activity.id) ? "bell.fill" : "bell")
+                        .font(.body)
+                        .foregroundStyle(reminderManager.hasReminder(for: activity.id) ? .orange : .secondary)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+
             // Heart button
             Button {
                 appState.toggleSavedActivity(activity.id)
@@ -148,6 +168,16 @@ struct ActivityCard: View {
     private var badgesRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
+                // Featured badge
+                if activity.isFeatured {
+                    FeaturedBadge()
+                }
+
+                // NEW badge
+                if activity.isNew {
+                    NewBadge()
+                }
+
                 // Indoor/Outdoor badge
                 BadgeView(
                     text: activity.indoor
@@ -256,4 +286,5 @@ struct ActivityCard: View {
     .padding()
     .environment(AppState())
     .environment(ToastManager())
+    .environment(ReminderManager())
 }

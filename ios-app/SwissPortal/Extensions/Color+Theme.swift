@@ -157,7 +157,35 @@ enum AppSpacing {
     /// Standard shadow radius for cards
     static let cardShadowRadius: CGFloat = 8
     /// Map height in inline views
-    static let mapHeight: CGFloat = 240
+    static let mapHeight: CGFloat = 280
+}
+
+// MARK: - Shadow Tokens
+
+/// Reusable shadow presets for visual hierarchy.
+enum AppShadow {
+    /// Primary card shadow — prominent cards (News, Activity, Lunch, Sunshine, Snow)
+    static let card: (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) = (
+        .black.opacity(0.1), 8, 0, 4
+    )
+    /// Subtle shadow — secondary/lightweight cards (Event, Deal, Weekend, Skeleton, Explore)
+    static let subtle: (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) = (
+        .black.opacity(0.06), 4, 0, 2
+    )
+}
+
+// MARK: - Animation Tokens
+
+/// Standardised animation presets for consistent motion.
+enum AppAnimation {
+    /// Standard ease for state transitions (filters, toggles, selections)
+    static let standardEase: Animation = .easeInOut(duration: 0.2)
+    /// Slower ease for card expand/collapse
+    static let expandEase: Animation = .easeInOut(duration: 0.3)
+    /// Spring for interactive elements (chips, annotations, map focus)
+    static let spring: Animation = .spring(response: 0.3, dampingFraction: 0.7)
+    /// Scale applied to selected chips and map annotations
+    static let selectedScale: CGFloat = 1.02
 }
 
 // MARK: - Card Style ViewModifier
@@ -178,7 +206,17 @@ struct CardStyle: ViewModifier {
                         .padding(.vertical, 6)
                 }
             }
-            .shadow(color: .black.opacity(0.1), radius: AppSpacing.cardShadowRadius, x: 0, y: 4)
+            .shadow(color: AppShadow.card.color, radius: AppShadow.card.radius, x: AppShadow.card.x, y: AppShadow.card.y)
+    }
+}
+
+/// Lighter card style for secondary cards (events, deals, weekend, explore).
+struct SubtleCardStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
+            .shadow(color: AppShadow.subtle.color, radius: AppShadow.subtle.radius, x: AppShadow.subtle.x, y: AppShadow.subtle.y)
     }
 }
 
@@ -186,5 +224,10 @@ extension View {
     /// Applies standard card styling with optional left border color.
     func cardStyle(borderColor: Color? = nil) -> some View {
         modifier(CardStyle(borderColor: borderColor))
+    }
+
+    /// Applies subtle card styling for secondary cards.
+    func subtleCardStyle() -> some View {
+        modifier(SubtleCardStyle())
     }
 }

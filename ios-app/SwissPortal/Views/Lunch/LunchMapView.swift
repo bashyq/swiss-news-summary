@@ -202,10 +202,10 @@ struct LunchMapView: View {
                 }
             }
         }
-        .padding(14)
+        .padding(AppSpacing.cardPadding)
         .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: -2)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
+        .shadow(color: AppShadow.card.color, radius: AppShadow.card.radius, x: AppShadow.card.x, y: -AppShadow.card.y)
         .padding(.horizontal, 12)
         .padding(.bottom, 8)
     }
@@ -236,5 +236,5 @@ extension LunchSpot: Hashable {
         city: .zurich,
         language: .en
     )
-    .frame(height: 240)
+    .frame(height: AppSpacing.mapHeight)
 }

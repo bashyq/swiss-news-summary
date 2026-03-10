@@ -23,7 +23,7 @@ struct LunchFilterBar: View {
                 filterCount(for: filter)
             },
             onSelect: { filter in
-                withAnimation(.easeInOut(duration: 0.2)) {
+                withAnimation(AppAnimation.standardEase) {
                     viewModel.filter = filter
                 }
             }

@@ -122,3 +122,21 @@ struct ToddlerFriendlyBadge: View {
         BadgeView(text: appState.localized(en: "Toddler-friendly", de: "Kleinkindfreundlich"), icon: "figure.and.child.holdinghands", color: .brand)
     }
 }
+
+/// Featured activity badge (purple)
+struct FeaturedBadge: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        BadgeView(text: appState.localized(en: "Featured", de: "Empfohlen"), icon: "star.fill", color: .purple)
+    }
+}
+
+/// NEW activity badge (green)
+struct NewBadge: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        BadgeView(text: appState.localized(en: "NEW", de: "NEU"), icon: "sparkle", color: .green)
+    }
+}

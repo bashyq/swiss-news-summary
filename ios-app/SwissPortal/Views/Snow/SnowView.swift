@@ -57,8 +57,8 @@ struct SnowView: View {
         ScrollViewReader { proxy in
         ScrollView {
             LazyVStack(spacing: 0) {
-                // 0. Hero banner
-                HeroBanner(style: .snow)
+                // 0. Hero banner with title
+                HeroBanner(style: .snow, title: appState.localized(en: "Snow Report", de: "Schneebericht"))
                     .padding(.horizontal)
                     .padding(.top, 8)
 
@@ -100,13 +100,13 @@ struct SnowView: View {
                     language: appState.language,
                     userFocusLocation: viewModel.sort == .distance ? locationManager.location : nil,
                     onResortTapped: { resort in
-                        withAnimation(.easeInOut(duration: 0.3)) {
+                        withAnimation(AppAnimation.expandEase) {
                             viewModel.toggleExpanded(resort.id)
                         }
                     }
                 )
-                .frame(height: 280)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .frame(height: AppSpacing.mapHeight)
+                .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
                 .padding(.horizontal)
                 .padding(.top, 12)
 
@@ -118,7 +118,7 @@ struct SnowView: View {
                         isExpanded: viewModel.expandedResortID == resort.id,
                         userLocation: locationManager.location
                     ) {
-                        withAnimation(.easeInOut(duration: 0.3)) {
+                        withAnimation(AppAnimation.expandEase) {
                             viewModel.toggleExpanded(resort.id)
                         }
                     }

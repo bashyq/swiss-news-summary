@@ -16,10 +16,10 @@ struct SurpriseMeSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing: 16) {
                     // Large category icon
                     categoryEmoji
-                        .padding(.top, 24)
+                        .padding(.top, 16)
 
                     // Activity name
                     Text(activity.localizedName(language: appState.language))
@@ -30,23 +30,24 @@ struct SurpriseMeSheet: View {
 
                     // Description
                     Text(activity.localizedDescription(language: appState.language))
-                        .font(.body)
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 24)
 
-                    // Badges
-                    badgesRow
+                    // Badges + price inline
+                    VStack(spacing: 8) {
+                        badgesRow
 
-                    // Price info
-                    if let price = activity.localizedPrice(language: appState.language) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "banknote")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                            Text(price)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                        if let price = activity.localizedPrice(language: appState.language) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "banknote")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Text(price)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
 
@@ -57,7 +58,7 @@ struct SurpriseMeSheet: View {
                     actionButtons
                         .padding(.horizontal, 24)
 
-                    Spacer(minLength: 24)
+                    Spacer(minLength: 16)
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -81,10 +82,10 @@ struct SurpriseMeSheet: View {
         ZStack {
             Circle()
                 .fill(Color.brand.opacity(0.12))
-                .frame(width: 96, height: 96)
+                .frame(width: 72, height: 72)
 
             Image(systemName: categoryIcon)
-                .font(.system(size: 40))
+                .font(.system(size: 30))
                 .foregroundStyle(.brand)
         }
     }
@@ -139,27 +140,14 @@ struct SurpriseMeSheet: View {
 
     private var actionButtons: some View {
         VStack(spacing: 12) {
-            // "Try another" button
-            Button(action: onTryAnother) {
-                HStack(spacing: 8) {
-                    Image(systemName: "shuffle")
-                    Text(appState.localized(en: "Try another", de: "Nochmal"))
-                        .fontWeight(.medium)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(LinearGradient.brand)
-                .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-
+            // Primary row: Open + Save
             HStack(spacing: 12) {
                 // "Open" button (opens URL)
                 if let urlString = activity.url, let url = URL(string: urlString) {
                     Link(destination: url) {
                         HStack(spacing: 6) {
                             Image(systemName: "safari")
-                            Text(appState.localized(en: "Open", de: "Öffnen"))
+                            Text(appState.localized(en: "Website", de: "Webseite"))
                                 .fontWeight(.medium)
                         }
                         .frame(maxWidth: .infinity)
@@ -187,6 +175,21 @@ struct SurpriseMeSheet: View {
                     .foregroundStyle(.primary)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
+            }
+
+            // "Try another" button
+            Button(action: onTryAnother) {
+                HStack(spacing: 8) {
+                    Image(systemName: "shuffle")
+                    Text(appState.localized(en: "Try another", de: "Nochmal"))
+                        .fontWeight(.medium)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(LinearGradient.brand)
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
         }
     }

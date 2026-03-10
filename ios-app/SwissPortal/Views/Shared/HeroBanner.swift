@@ -1,9 +1,20 @@
 import SwiftUI
 
-/// A gradient hero banner with layered SF Symbols for visual branding.
-/// Used at the top of each main tab to give the app a distinct identity.
-struct HeroBanner: View {
+/// A gradient hero banner with title text overlaid and decorative SF Symbols.
+/// Replaces both the navigation title and header banner in one compact element.
+/// Optionally accepts trailing toolbar content (buttons) displayed on the right side.
+struct HeroBanner<Trailing: View>: View {
     let style: Style
+    let title: String
+    let subtitle: String?
+    let trailing: Trailing
+
+    init(style: Style, title: String, subtitle: String? = nil, @ViewBuilder trailing: () -> Trailing) {
+        self.style = style
+        self.title = title
+        self.subtitle = subtitle
+        self.trailing = trailing()
+    }
 
     enum Style {
         case news
@@ -11,6 +22,7 @@ struct HeroBanner: View {
         case lunch
         case sunshine
         case snow
+        case explore
 
         var gradient: [Color] {
             switch self {
@@ -19,6 +31,7 @@ struct HeroBanner: View {
             case .lunch: return [Color(red: 0.2, green: 0.7, blue: 0.4), .teal]
             case .sunshine: return [.orange, .yellow]
             case .snow: return [Color(red: 0.3, green: 0.5, blue: 0.9), Color(red: 0.6, green: 0.8, blue: 1.0)]
+            case .explore: return [.indigo, .purple]
             }
         }
 
@@ -30,6 +43,7 @@ struct HeroBanner: View {
             case .lunch: return "fork.knife"
             case .sunshine: return "sun.max.fill"
             case .snow: return "snowflake"
+            case .explore: return "map.fill"
             }
         }
 
@@ -41,16 +55,7 @@ struct HeroBanner: View {
             case .lunch: return ["leaf.fill", "cup.and.saucer.fill", "star.fill"]
             case .sunshine: return ["cloud.fill", "mountain.2.fill", "car.fill"]
             case .snow: return ["mountain.2.fill", "figure.skiing.downhill", "snowflake"]
-            }
-        }
-
-        var tagline: (en: String, de: String) {
-            switch self {
-            case .news: return ("Your daily Swiss briefing", "Dein tägliches Schweiz-Briefing")
-            case .activities: return ("Fun for little explorers", "Spass für kleine Entdecker")
-            case .lunch: return ("Discover local flavors", "Lokale Geschmäcker entdecken")
-            case .sunshine: return ("Chase the weekend sun", "Der Wochenendsonne entgegen")
-            case .snow: return ("Fresh powder awaits", "Frischer Pulverschnee wartet")
+            case .explore: return ["mappin.circle.fill", "binoculars.fill", "flag.fill"]
             }
         }
     }
@@ -66,56 +71,47 @@ struct HeroBanner: View {
 
             // Large background symbol — faded, offset right
             Image(systemName: style.backgroundSymbol)
-                .font(.system(size: 80, weight: .ultraLight))
+                .font(.system(size: 64, weight: .ultraLight))
                 .foregroundStyle(.white.opacity(0.15))
-                .offset(x: 100, y: -5)
+                .offset(x: 110, y: 0)
                 .rotationEffect(.degrees(-10))
 
             // Scattered small symbols
             scatteredSymbols
 
-            // Foreground content
+            // Title + trailing content overlaid
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    // Main icon
-                    Image(systemName: style.backgroundSymbol)
-                        .font(.title2)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.title3.weight(.bold))
                         .foregroundStyle(.white)
-
-                    // Swiss cross flag element
-                    swissCross
-                        .padding(.top, 2)
+                        .lineLimit(1)
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.75))
+                            .lineLimit(1)
+                    }
                 }
                 Spacer()
+                trailing
+                    .foregroundStyle(.white)
+                    .font(.body)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
         }
-        .frame(height: 72)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-    }
-
-    // MARK: - Swiss Cross
-
-    private var swissCross: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(.white)
-                .frame(width: 12, height: 4)
-            RoundedRectangle(cornerRadius: 2)
-                .fill(.white)
-                .frame(width: 4, height: 12)
-        }
-        .opacity(0.6)
+        .frame(height: 56)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: - Scattered Symbols
 
     private var scatteredSymbols: some View {
         let positions: [(x: CGFloat, y: CGFloat, size: CGFloat, rotation: Double, opacity: Double)] = [
-            (x: -40, y: -12, size: 14, rotation: -15, opacity: 0.2),
-            (x: 30, y: 18, size: 11, rotation: 20, opacity: 0.15),
-            (x: 70, y: -20, size: 13, rotation: -8, opacity: 0.18),
+            (x: -40, y: -8, size: 12, rotation: -15, opacity: 0.15),
+            (x: 40, y: 10, size: 10, rotation: 20, opacity: 0.12),
+            (x: 80, y: -10, size: 11, rotation: -8, opacity: 0.14),
         ]
 
         return ZStack {
@@ -130,6 +126,32 @@ struct HeroBanner: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Convenience init (no trailing buttons → shows Swiss cross)
+
+extension HeroBanner where Trailing == SwissCrossBadge {
+    init(style: Style, title: String, subtitle: String? = nil) {
+        self.style = style
+        self.title = title
+        self.subtitle = subtitle
+        self.trailing = SwissCrossBadge()
+    }
+}
+
+/// Small Swiss cross badge used as default trailing content in HeroBanner.
+struct SwissCrossBadge: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(.white)
+                .frame(width: 12, height: 4)
+            RoundedRectangle(cornerRadius: 2)
+                .fill(.white)
+                .frame(width: 4, height: 12)
+        }
+        .opacity(0.4)
     }
 }
 
@@ -201,11 +223,18 @@ struct EmojiScene: View {
 
 #Preview("Hero Banners") {
     VStack(spacing: 12) {
-        HeroBanner(style: .news)
-        HeroBanner(style: .activities)
-        HeroBanner(style: .lunch)
-        HeroBanner(style: .sunshine)
-        HeroBanner(style: .snow)
+        HeroBanner(style: .news, title: "Today in Zürich") {
+            Image(systemName: "square.and.arrow.up")
+        }
+        HeroBanner(style: .activities, title: "What to do?") {
+            HStack(spacing: 12) {
+                Image(systemName: "map")
+                Image(systemName: "plus")
+            }
+        }
+        HeroBanner(style: .lunch, title: "Lunch")
+        HeroBanner(style: .sunshine, title: "Weekend Sunshine")
+        HeroBanner(style: .snow, title: "Snow Report")
     }
     .padding()
 }

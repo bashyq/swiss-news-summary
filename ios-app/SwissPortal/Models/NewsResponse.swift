@@ -12,6 +12,7 @@ struct NewsResponse: Codable, Sendable {
     let categories: NewsCategories
     let trending: TrendingTopic?
     let briefing: Briefing?
+    let weekendBrief: WeekendBrief?
     let city: CityInfo
     let timestamp: String
 }
@@ -326,17 +327,10 @@ struct TrendingTopic: Codable, Sendable {
 
 struct Briefing: Codable, Sendable {
     let topStory: BriefingItem?
-    let suggestedActivity: BriefingActivity?
+    let dailyPick: DailyPick?
 
     func localizedStory(language: AppLanguage) -> String? {
         topStory?.headline
-    }
-
-    func localizedActivity(language: AppLanguage) -> String? {
-        switch language {
-        case .en: return suggestedActivity?.name
-        case .de: return suggestedActivity?.nameDE ?? suggestedActivity?.name
-        }
     }
 }
 
@@ -348,18 +342,63 @@ struct BriefingItem: Codable, Sendable {
     let sentiment: String
 }
 
-struct BriefingActivity: Codable, Sendable {
-    var id: String? = nil
-    var name: String? = nil
-    var nameDE: String? = nil
-    var description: String? = nil
-    var descriptionDE: String? = nil
-    var indoor: Bool? = nil
-    var ageRange: String? = nil
-    var category: String? = nil
-    var duration: String? = nil
-    var price: String? = nil
-    var url: String? = nil
+/// Weather+time-aware activity recommendation from the API
+struct DailyPick: Codable, Sendable {
+    let activityId: String
+    let name: String
+    let nameDE: String
+    let reason: String
+    let reasonDE: String
+    let emoji: String
+    let indoor: Bool
+    let category: String
+
+    func localizedName(language: AppLanguage) -> String {
+        language == .de ? nameDE : name
+    }
+
+    func localizedReason(language: AppLanguage) -> String {
+        language == .de ? reasonDE : reason
+    }
+}
+
+// MARK: - Weekend Brief
+
+/// Weekend weather + events summary, null on Sundays
+struct WeekendBrief: Codable, Sendable {
+    let saturday: WeekendBriefDay?
+    let sunday: WeekendBriefDay?
+    let events: [WeekendBriefEvent]
+    let satDate: String
+    let sunDate: String
+}
+
+struct WeekendBriefDay: Codable, Sendable {
+    let date: String
+    let weatherCode: Int
+    let tempMax: Int
+    let tempMin: Int
+    let description: String?
+
+    /// WMO weather code -> SF Symbol
+    var sfSymbol: String {
+        Weather(temperature: Double(tempMax), description: description ?? "", weatherCode: weatherCode, windSpeed: 0, hourly: nil).sfSymbol
+    }
+}
+
+struct WeekendBriefEvent: Codable, Identifiable, Sendable {
+    let name: String
+    let nameDE: String?
+    let startDate: String
+    let endDate: String?
+    let toddlerFriendly: Bool?
+    let free: Bool?
+
+    var id: String { name }
+
+    func localizedName(language: AppLanguage) -> String {
+        language == .de ? (nameDE ?? name) : name
+    }
 }
 
 // MARK: - City Info

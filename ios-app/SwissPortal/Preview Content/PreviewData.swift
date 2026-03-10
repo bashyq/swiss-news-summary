@@ -72,7 +72,8 @@ enum PreviewData {
         history: HistoryFact(year: 1958, event: "The Swiss Pavilion opened at Expo 58 in Brussels", eventDE: "Der Schweizer Pavillon wurde an der Expo 58 in Brüssel eröffnet"),
         categories: categories,
         trending: TrendingTopic(topic: "SNB Interest Rates", topicDE: "SNB Leitzins", headline: nil, headlineDE: nil, url: nil),
-        briefing: Briefing(topStory: BriefingItem(headline: "SNB holds rates", summary: "Summary of top story", source: "NZZ", url: "https://www.nzz.ch", sentiment: "neutral"), suggestedActivity: BriefingActivity(id: nil, name: "Visit the Money Museum", nameDE: "Besuchen Sie das Geldmuseum", description: nil, descriptionDE: nil, indoor: nil)),
+        briefing: Briefing(topStory: BriefingItem(headline: "SNB holds rates", summary: "Summary of top story", source: "NZZ", url: "https://www.nzz.ch", sentiment: "neutral"), dailyPick: DailyPick(activityId: "zoo-zurich", name: "Visit Zoo Zürich", nameDE: "Zoo Zürich besuchen", reason: "Perfect weather for a walk among the animals", reasonDE: "Perfektes Wetter für einen Spaziergang bei den Tieren", emoji: "🦁", indoor: false, category: "animals")),
+        weekendBrief: WeekendBrief(saturday: WeekendBriefDay(date: "2026-02-21", weatherCode: 1, tempMax: 8, tempMin: 2, description: "Mostly sunny"), sunday: WeekendBriefDay(date: "2026-02-22", weatherCode: 3, tempMax: 6, tempMin: 1, description: "Overcast"), events: [WeekendBriefEvent(name: "Fasnacht", nameDE: "Fasnacht", startDate: "2026-02-20", endDate: "2026-02-22", toddlerFriendly: true, free: true)], satDate: "2026-02-21", sunDate: "2026-02-22"),
         city: CityInfo(id: "zurich", name: "Zürich"),
         timestamp: "2026-02-21T12:00:00Z"
     )
@@ -103,7 +104,9 @@ enum PreviewData {
         availableMonths: nil,
         subcategory: nil,
         materials: nil,
-        materialsDE: nil
+        materialsDE: nil,
+        featured: true,
+        addedDate: nil
     )
 
     static let stayHomeActivity = Activity(
@@ -130,7 +133,9 @@ enum PreviewData {
         availableMonths: nil,
         subcategory: "sensory",
         materials: "Rice or pasta, Small toys, Container",
-        materialsDE: "Reis oder Nudeln, Kleine Spielzeuge, Behälter"
+        materialsDE: "Reis oder Nudeln, Kleine Spielzeuge, Behälter",
+        featured: nil,
+        addedDate: nil
     )
 
     static let cityEvent = CityEvent(

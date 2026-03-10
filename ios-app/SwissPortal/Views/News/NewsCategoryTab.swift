@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Horizontal scrollable category tabs with item counts.
+/// Wrapping grid of category tabs with item counts.
 ///
+/// All categories are visible at once — no horizontal scrolling needed.
 /// Each tab is rendered as a `FilterChip` with the category's localized display name
 /// and the number of items in that category.
 struct NewsCategoryTab: View {
@@ -11,24 +12,29 @@ struct NewsCategoryTab: View {
     @Binding var selectedCategory: String
     let itemCount: (String) -> Int
 
+    private let columns = [
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8)
+    ]
+
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(categoryKeys, id: \.self) { key in
-                    FilterChip(
-                        label: NewsCategories.displayName(for: key, language: appState.language),
-                        isSelected: selectedCategory == key,
-                        icon: iconName(for: key),
-                        count: itemCount(key)
-                    ) {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            selectedCategory = key
-                        }
+        LazyVGrid(columns: columns, spacing: 8) {
+            ForEach(categoryKeys, id: \.self) { key in
+                FilterChip(
+                    label: NewsCategories.displayName(for: key, language: appState.language),
+                    isSelected: selectedCategory == key,
+                    icon: iconName(for: key),
+                    count: itemCount(key),
+                    expandsToFill: true
+                ) {
+                    withAnimation(AppAnimation.standardEase) {
+                        selectedCategory = key
                     }
                 }
             }
-            .padding(.horizontal)
         }
+        .padding(.horizontal)
     }
 
     // MARK: - Category Icons

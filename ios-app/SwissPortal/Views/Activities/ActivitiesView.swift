@@ -16,30 +16,8 @@ struct ActivitiesView: View {
 
     var body: some View {
         content
-            .navigationTitle(navigationTitle)
-            .navigationBarTitleDisplayMode(.large)
-            .toolbarTitleMenu {
-                ForEach(City.allCases) { city in
-                    Button {
-                        appState.city = city
-                    } label: {
-                        HStack {
-                            Text(city.localizedName(language: appState.language))
-                            if city == appState.city {
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 12) {
-                        mapToggleButton
-                        addButton
-                    }
-                }
-            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
             .task(id: "\(appState.city.id)-\(appState.language)") {
                 await viewModel.loadActivities(
                     city: appState.city,
@@ -78,11 +56,32 @@ struct ActivitiesView: View {
         appState.localized(en: "What to do?", de: "Was tun?")
     }
 
+    // MARK: - City Menu Button
+
+    private var cityMenuButton: some View {
+        Menu {
+            ForEach(City.allCases) { city in
+                Button {
+                    appState.city = city
+                } label: {
+                    HStack {
+                        Text(city.localizedName(language: appState.language))
+                        if city == appState.city {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "building.2")
+        }
+    }
+
     // MARK: - Toolbar Buttons
 
     private var mapToggleButton: some View {
         Button {
-            withAnimation(.easeInOut(duration: 0.25)) {
+            withAnimation(AppAnimation.standardEase) {
                 viewModel.showMap.toggle()
             }
         } label: {
@@ -98,27 +97,46 @@ struct ActivitiesView: View {
         }
     }
 
+    // MARK: - Hero Banner
+
+    private var heroBanner: some View {
+        HeroBanner(style: .activities, title: navigationTitle) {
+            HStack(spacing: 14) {
+                cityMenuButton
+                mapToggleButton
+                addButton
+            }
+        }
+    }
+
     // MARK: - Content
 
     @ViewBuilder
     private var content: some View {
         if viewModel.isLoading && viewModel.activitiesData == nil {
             ScrollView {
-                LazyVStack(spacing: 12) {
+                VStack(spacing: 12) {
+                    heroBanner
+                        .padding(.horizontal)
+                        .padding(.top, 8)
                     ForEach(0..<5, id: \.self) { _ in
                         SkeletonActivityCard()
                     }
+                    .padding(.horizontal)
                 }
-                .padding(.horizontal)
-                .padding(.top, 12)
             }
         } else if let error = viewModel.error, viewModel.activitiesData == nil {
-            ErrorView(message: error) {
-                Task {
-                    await viewModel.loadActivities(
-                        city: appState.city,
-                        language: appState.language
-                    )
+            VStack(spacing: 0) {
+                heroBanner
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+                ErrorView(message: error) {
+                    Task {
+                        await viewModel.loadActivities(
+                            city: appState.city,
+                            language: appState.language
+                        )
+                    }
                 }
             }
         } else {
@@ -143,8 +161,8 @@ struct ActivitiesView: View {
 
         return ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
-                // 0. Hero banner
-                HeroBanner(style: .activities)
+                // 0. Hero banner with title + city picker + map/add buttons
+                heroBanner
                     .padding(.horizontal)
                     .padding(.top, 8)
 
@@ -152,12 +170,7 @@ struct ActivitiesView: View {
                 ActivityFilterBar(viewModel: viewModel, language: appState.language)
                     .padding(.top, 8)
 
-                // 2. Find playgrounds / restaurants
-                findNearbyButtons
-                    .padding(.horizontal)
-                    .padding(.top, 8)
-
-                // 2.6 Results count
+                // 2. Results count
                 HStack {
                     Text(appState.localized(
                         en: "\(activities.count) results",
@@ -315,54 +328,7 @@ struct ActivitiesView: View {
         surpriseActivity = viewModel.surpriseMe(weather: weather, savedIDs: appState.savedActivityIDs)
     }
 
-    // MARK: - Find Nearby Buttons
 
-    private var findNearbyButtons: some View {
-        HStack(spacing: 8) {
-            Button {
-                searchNearby(query: "playground", city: appState.city)
-            } label: {
-                Label(
-                    appState.localized(en: "Find playgrounds", de: "Spielplätze"),
-                    systemImage: "figure.play"
-                )
-                .font(.caption)
-                .fontWeight(.medium)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(Color(.systemGray6))
-                .foregroundStyle(.primary)
-                .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                searchNearby(query: "restaurant", city: appState.city)
-            } label: {
-                Label(
-                    appState.localized(en: "Find restaurants", de: "Restaurants"),
-                    systemImage: "fork.knife"
-                )
-                .font(.caption)
-                .fontWeight(.medium)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(Color(.systemGray6))
-                .foregroundStyle(.primary)
-                .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    private func searchNearby(query: String, city: City) {
-        let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
-        let coord = city.coordinate
-        let urlString = "maps://?q=\(encoded)&sll=\(coord.latitude),\(coord.longitude)&z=14"
-        if let url = URL(string: urlString) {
-            UIApplication.shared.open(url)
-        }
-    }
 }
 
 #Preview {

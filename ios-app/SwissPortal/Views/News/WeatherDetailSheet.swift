@@ -14,15 +14,14 @@ struct WeatherDetailSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing: 16) {
                     currentConditions
                     Divider()
+                        .padding(.horizontal, 32)
                     hourlyForecast
                 }
                 .padding()
             }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle(appState.localized(en: "Weather", de: "Wetter"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -30,6 +29,7 @@ struct WeatherDetailSheet: View {
                         dismiss()
                     } label: {
                         Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -40,21 +40,25 @@ struct WeatherDetailSheet: View {
     // MARK: - Current Conditions
 
     private var currentConditions: some View {
-        VStack(spacing: 12) {
-            // Large weather icon
-            Image(systemName: weather.sfSymbol)
-                .font(.system(size: 64))
-                .symbolRenderingMode(.multicolor)
-                .shadow(color: .primary.opacity(0.08), radius: 8, y: 4)
+        VStack(spacing: 8) {
+            // Weather icon
+            ZStack {
+                Circle()
+                    .fill(Color.brand.opacity(0.12))
+                    .frame(width: 72, height: 72)
+                Image(systemName: weather.sfSymbol)
+                    .font(.system(size: 30))
+                    .symbolRenderingMode(.multicolor)
+            }
 
             // Temperature
             Text("\(Int(weather.temperature.rounded()))\u{00B0}")
-                .font(.system(size: 56, weight: .ultraLight, design: .rounded))
+                .font(.system(size: 44, weight: .ultraLight, design: .rounded))
                 .monospacedDigit()
 
             // Description
             Text(weather.description)
-                .font(.title3)
+                .font(.subheadline)
                 .fontWeight(.medium)
                 .foregroundStyle(.secondary)
 
@@ -75,7 +79,7 @@ struct WeatherDetailSheet: View {
             )
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
+        .padding(.vertical, 8)
     }
 
     // MARK: - Hourly Forecast
@@ -145,11 +149,11 @@ struct WeatherDetailSheet: View {
         .padding(.vertical, 10)
         .padding(.horizontal, 2)
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: AppSpacing.cardRadius)
                 .fill(isCurrent ? Color.brand.opacity(0.12) : Color(.tertiarySystemFill).opacity(0.5))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: AppSpacing.cardRadius)
                 .strokeBorder(isCurrent ? Color.brand.opacity(0.3) : .clear, lineWidth: 1)
         )
     }

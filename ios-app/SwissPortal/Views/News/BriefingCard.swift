@@ -62,43 +62,45 @@ struct BriefingCard: View {
                 }
             }
 
-            // Suggested activity
-            if let activity = briefing.suggestedActivity, let name = activity.name {
+            // Daily Pick
+            if let pick = briefing.dailyPick {
                 Divider()
 
-                HStack(spacing: 8) {
-                    Image(systemName: categoryIcon(for: activity.category))
-                        .font(.caption)
-                        .foregroundStyle(.brand)
-                        .frame(width: 20)
+                Button {
+                    appState.selectedTab = .activities
+                } label: {
+                    HStack(spacing: 10) {
+                        Text(pick.emoji)
+                            .font(.title2)
 
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(appState.localized(
-                            en: "Suggested activity",
-                            de: "Vorgeschlagene Aktivität"
-                        ))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(appState.localized(
+                                en: "Today's Pick",
+                                de: "Tipp des Tages"
+                            ))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
 
-                        Text(appState.language == .de ? (activity.nameDE ?? name) : name)
-                            .font(.caption)
-                            .fontWeight(.medium)
-                    }
-
-                    Spacer()
-
-                    if let urlString = activity.url, let url = URL(string: urlString) {
-                        Button {
-                            UIApplication.shared.open(url)
-                        } label: {
-                            Image(systemName: "arrow.up.right.square")
+                            Text(pick.localizedName(language: appState.language))
                                 .font(.caption)
-                                .foregroundStyle(.brand)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.primary)
+
+                            Text(pick.localizedReason(language: appState.language))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
                         }
-                        .buttonStyle(.plain)
+
+                        Spacer()
+
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
                     }
                 }
+                .buttonStyle(.plain)
             }
         }
         .padding(14)
@@ -123,15 +125,4 @@ struct BriefingCard: View {
         }
     }
 
-    private func categoryIcon(for category: String?) -> String {
-        switch category?.lowercased() {
-        case "animals": return "pawprint.fill"
-        case "playground": return "figure.play"
-        case "museum": return "building.columns.fill"
-        case "nature": return "leaf.fill"
-        case "water": return "drop.fill"
-        case "creative": return "paintpalette.fill"
-        default: return "star.fill"
-        }
-    }
 }

@@ -17,30 +17,8 @@ struct LunchView: View {
 
     var body: some View {
         content
-            .navigationTitle(navigationTitle)
-            .navigationBarTitleDisplayMode(.large)
-            .toolbarTitleMenu {
-                ForEach(City.allCases) { city in
-                    Button {
-                        appState.city = city
-                    } label: {
-                        HStack {
-                            Text(city.localizedName(language: appState.language))
-                            if city == appState.city {
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 12) {
-                        mapToggleButton
-                        addButton
-                    }
-                }
-            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
             .task(id: "\(appState.city.id)-\(appState.language)") {
                 await viewModel.loadLunch(
                     city: appState.city,
@@ -79,11 +57,32 @@ struct LunchView: View {
         appState.localized(en: "Lunch", de: "Mittagessen")
     }
 
+    // MARK: - City Menu Button
+
+    private var cityMenuButton: some View {
+        Menu {
+            ForEach(City.allCases) { city in
+                Button {
+                    appState.city = city
+                } label: {
+                    HStack {
+                        Text(city.localizedName(language: appState.language))
+                        if city == appState.city {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "building.2")
+        }
+    }
+
     // MARK: - Toolbar Buttons
 
     private var mapToggleButton: some View {
         Button {
-            withAnimation(.easeInOut(duration: 0.25)) {
+            withAnimation(AppAnimation.standardEase) {
                 viewModel.showMap.toggle()
             }
         } label: {
@@ -99,27 +98,46 @@ struct LunchView: View {
         }
     }
 
+    // MARK: - Hero Banner
+
+    private var heroBanner: some View {
+        HeroBanner(style: .lunch, title: navigationTitle) {
+            HStack(spacing: 14) {
+                cityMenuButton
+                mapToggleButton
+                addButton
+            }
+        }
+    }
+
     // MARK: - Content
 
     @ViewBuilder
     private var content: some View {
         if viewModel.isLoading && viewModel.lunchData == nil {
             ScrollView {
-                LazyVStack(spacing: 12) {
+                VStack(spacing: 12) {
+                    heroBanner
+                        .padding(.horizontal)
+                        .padding(.top, 8)
                     ForEach(0..<5, id: \.self) { _ in
                         SkeletonLunchCard()
                     }
+                    .padding(.horizontal)
                 }
-                .padding(.horizontal)
-                .padding(.top, 12)
             }
         } else if let error = viewModel.error, viewModel.lunchData == nil {
-            ErrorView(message: error) {
-                Task {
-                    await viewModel.loadLunch(
-                        city: appState.city,
-                        language: appState.language
-                    )
+            VStack(spacing: 0) {
+                heroBanner
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+                ErrorView(message: error) {
+                    Task {
+                        await viewModel.loadLunch(
+                            city: appState.city,
+                            language: appState.language
+                        )
+                    }
                 }
             }
         } else {
@@ -134,8 +152,8 @@ struct LunchView: View {
 
         return ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
-                // 0. Hero banner
-                HeroBanner(style: .lunch)
+                // 0. Hero banner with title + city picker + map/add buttons
+                heroBanner
                     .padding(.horizontal)
                     .padding(.top, 8)
 
@@ -186,8 +204,8 @@ struct LunchView: View {
                         userFocusLocation: viewModel.filter == .nearMe ? locationManager.location : nil,
                         focusedSpot: $focusedSpot
                     )
-                    .frame(height: 240)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .frame(height: AppSpacing.mapHeight)
+                    .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
                     .padding(.horizontal)
                     .padding(.top, 8)
                 }
@@ -221,7 +239,7 @@ struct LunchView: View {
                                 language: appState.language,
                                 location: locationManager.location,
                                 onTap: {
-                                    withAnimation(.easeInOut(duration: 0.25)) {
+                                    withAnimation(AppAnimation.standardEase) {
                                         viewModel.showMap = true
                                     }
                                     focusedSpot = spot
@@ -243,10 +261,11 @@ struct LunchView: View {
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
                                 .background(Color.brand.opacity(0.08))
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
                             }
                             .buttonStyle(.plain)
                         }
+
                     }
                     .padding(.horizontal)
                     .padding(.top, 12)

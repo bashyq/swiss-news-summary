@@ -23,15 +23,7 @@ struct LunchCard: View {
         VStack(alignment: .leading, spacing: 0) {
             cardContent
         }
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(Color.cuisineBorderColor(spot.cuisineCategory))
-                .frame(width: 4)
-                .padding(.vertical, 6)
-        }
-        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+        .cardStyle(borderColor: Color.cuisineBorderColor(spot.cuisineCategory))
         .confirmationDialog(
             appState.localized(en: "Delete Restaurant", de: "Restaurant löschen"),
             isPresented: $showDeleteConfirmation,

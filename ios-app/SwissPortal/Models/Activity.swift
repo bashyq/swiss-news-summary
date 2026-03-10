@@ -39,6 +39,8 @@ struct Activity: Codable, Identifiable, Sendable {
     let subcategory: String?
     let materials: String?
     let materialsDE: String?
+    let featured: Bool?
+    let addedDate: String?
 
     func localizedName(language: AppLanguage) -> String {
         switch language {
@@ -66,6 +68,17 @@ struct Activity: Codable, Identifiable, Sendable {
         case .en: return materials
         case .de: return materialsDE ?? materials
         }
+    }
+
+    /// Whether this activity is marked as featured by the API
+    var isFeatured: Bool {
+        featured == true
+    }
+
+    /// Whether this activity was added within the last 30 days
+    var isNew: Bool {
+        guard let addedDate, let date = DateHelpers.parseISO(addedDate) else { return false }
+        return Date().timeIntervalSince(date) < 30 * 24 * 3600
     }
 
     /// Whether this is a stay-home activity (detected from category field or stayHome bool)
