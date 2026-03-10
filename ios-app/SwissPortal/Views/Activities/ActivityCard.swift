@@ -50,23 +50,47 @@ struct ActivityCard: View {
     // MARK: - Card Content
 
     private var cardContent: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Header: name + category icon + heart button
-            headerRow
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 8) {
+                // Header: name + category icon + heart button
+                headerRow
 
-            // Description (2 lines max)
-            Text(activity.localizedDescription(language: language))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
+                // Description (2 lines max)
+                Text(activity.localizedDescription(language: language))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
 
-            // Badges row
-            badgesRow
+                // Badges row
+                badgesRow
 
-            // Distance badge (if location available)
-            if distanceBadgeText != nil {
-                DistanceBadge(meters: distanceMeters ?? 0)
+                // Distance badge (if location available)
+                if distanceBadgeText != nil {
+                    DistanceBadge(meters: distanceMeters ?? 0)
+                }
+            }
+
+            // Venue photo thumbnail (skip for stay-home and custom activities)
+            if !activity.id.hasPrefix("custom-"),
+               activity.category.lowercased() != "stayhome",
+               let photoURL = APIClient.shared.photoURL(for: activity.id) {
+                AsyncImage(url: photoURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 64, height: 64)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    case .failure:
+                        EmptyView()
+                    default:
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(.systemGray5))
+                            .frame(width: 64, height: 64)
+                    }
+                }
             }
         }
         .padding(14)

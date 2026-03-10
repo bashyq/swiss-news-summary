@@ -131,6 +131,9 @@ struct SnowCard: View {
 
     private var expandedContent: some View {
         VStack(alignment: .leading, spacing: 16) {
+            // Resort photo banner
+            resortPhoto
+
             // 7-day forecast section
             dailyForecastSection
 
@@ -139,6 +142,33 @@ struct SnowCard: View {
         }
         .padding(14)
         .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    // MARK: - Resort Photo
+
+    @ViewBuilder
+    private var resortPhoto: some View {
+        if let photoURL = APIClient.shared.photoURL(for: resort.id) {
+            AsyncImage(url: photoURL) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 140)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                case .failure:
+                    EmptyView()
+                default:
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(.systemGray5))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 140)
+                        .overlay { ProgressView() }
+                }
+            }
+        }
     }
 
     // MARK: - Daily Forecast

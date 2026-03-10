@@ -142,6 +142,9 @@ struct SunshineCard: View {
 
     private var expandedContent: some View {
         VStack(alignment: .leading, spacing: 16) {
+            // Destination photo banner
+            destinationPhoto
+
             // Daily forecast rows
             dailyForecastSection
 
@@ -153,6 +156,33 @@ struct SunshineCard: View {
         }
         .padding(14)
         .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    // MARK: - Destination Photo
+
+    @ViewBuilder
+    private var destinationPhoto: some View {
+        if let photoURL = APIClient.shared.photoURL(for: destination.id) {
+            AsyncImage(url: photoURL) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 140)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                case .failure:
+                    EmptyView()
+                default:
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(.systemGray5))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 140)
+                        .overlay { ProgressView() }
+                }
+            }
+        }
     }
 
     // MARK: - Daily Forecast
