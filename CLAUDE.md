@@ -63,7 +63,7 @@ swiss-news-summary/
 │   ├── styles.css      # Design system + all component styles
 │   ├── app.js          # Full JS app: state, views, components, utils (~2800 lines)
 │   ├── widget.html     # Compact widget page
-│   ├── sw.js           # Service worker (cache v40)
+│   ├── sw.js           # Service worker (cache v41)
 │   ├── manifest.json   # PWA manifest with shortcuts
 │   └── icon.svg        # App icon
 ├── worker/
@@ -91,6 +91,8 @@ swiss-news-summary/
 - **Compact Weather**: In header, tap to expand with hourly forecast
 - **Transport Widget**: Real-time delays from Swiss Transport API
 - **History Widget**: "This Day in Swiss History" inline under title
+- **Daily Pick**: Weather- and time-aware activity recommendation with reasoning text ("Rainy afternoon? Zoo Zürich is the perfect indoor escape.")
+- **Weekend Brief**: Sat+Sun weather forecast + upcoming weekend events card (visible Mon-Sat)
 - **Holidays**: In hamburger menu (less prominent)
 - **Category tabs**: With item counts
 - **Pull-to-refresh**: Mobile gesture support
@@ -107,6 +109,9 @@ swiss-news-summary/
 - **Seasonal activities**: Christmas markets, ice skating, swimming pools, pumpkin farms
 - **"Surprise me!" button**: Random weather-appropriate activity picker
 - **Age filter**: Toggle between All ages, 2-3 years, or 4-5 years
+- **Visual hero cards**: Category-based gradient headers with emoji on activity cards
+- **Featured activities**: Curated top picks sorted to front with "Featured" badge
+- **Reminders**: Set date reminders on saved activities (browser Notification API + toast fallback)
 
 ### Events View ("What's On")
 - Combined calendar + daily digest — merged from separate Events Calendar and What's On views
@@ -416,6 +421,13 @@ Each city has:
 | `renderDealCard(d)` | Render single deal card |
 | `filterDeals(f)` | Filter deals by type (all/free/deal/tip) |
 | `getSchoolHolidays()` | Worker: return Zürich 2026 school holiday dates |
+| `renderWeekendBriefCard(wb)` | Render weekend brief card on news view |
+| `showReminderModal(activityId)` | Show reminder date picker modal |
+| `confirmReminder(activityId)` | Save reminder + request notification permission |
+| `removeReminder(activityId)` | Remove activity reminder |
+| `checkReminders()` | Check/fire due reminders on page load |
+| `buildDailyPick(activities, weather, lang)` | Worker: weather-aware activity recommendation |
+| `buildWeekendBrief(weekendWeather, cityEvents, cityId)` | Worker: weekend weather + events summary |
 | `showLoading()` | Show animated loading bar at top of page |
 | `hideLoading()` | Hide loading bar with completion animation |
 
@@ -434,6 +446,7 @@ Each city has:
 - `activitiesCache-{city}` - Cached activities data per city
 - `sunshineCache-v2` - Cached sunshine data with Zürich baseline (30min TTL)
 - `snowCache-v1` - Cached snow/ski resort data (30min TTL)
+- `activityReminders` - Array of `{ activityId, name, date, createdAt }` for activity reminders
 
 **Cloudflare KV:**
 - Key format: `activities-{cityId}`

@@ -2,12 +2,13 @@
  * News — RSS parsing, Claude API categorization, news assembly.
  */
 
-export const VERSION = '2.0.0';
+export const VERSION = '2.1.0';
 
 import { NATIONAL_SOURCES, getCity, getUpcomingHolidays, getThisDayInHistory, getSchoolHolidays } from './data.js';
-import { fetchWeather, RAINY_CODES } from './weather.js';
+import { fetchWeather, fetchWeekendWeather, RAINY_CODES } from './weather.js';
 import { fetchTransportDisruptions } from './transport.js';
 import { getCuratedActivities } from './activities.js';
+import { getCityEvents } from './events.js';
 
 /* ── RSS helpers ── */
 
@@ -188,6 +189,105 @@ function recoverPartialJSON(str) {
   return result;
 }
 
+/* ── Daily Pick — weather-aware activity recommendation ── */
+
+const PICK_EMOJIS = { animals:'🦁', museum:'🏛️', playground:'🛝', outdoor:'🌳', nature:'🌿', 'indoor-play':'🎪', event:'📅', seasonal:'🎄', cafe:'☕' };
+
+function buildDailyPick(activities, weather, lang) {
+  if (!activities?.length) return null;
+  const cands = activities.filter(a => a.category !== 'stayhome');
+  if (!cands.length) return null;
+
+  const hour = new Date().getHours();
+  const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+  const isRainy = weather && RAINY_CODES.includes(weather.weatherCode);
+  const isCold = weather && weather.temperature < 5;
+  const isHot = weather && weather.temperature > 28;
+  const weatherType = isRainy ? 'rainy' : isCold ? 'cold' : isHot ? 'hot' : 'nice';
+
+  // Score activities
+  const scored = cands.map(a => {
+    let score = 0;
+    if ((isRainy || isCold) && a.indoor) score += 3;
+    if (!isRainy && !isCold && !a.indoor) score += 2;
+    if (a.featured) score += 2;
+    if (timeOfDay === 'evening' && a.duration && a.duration.includes('1')) score += 1;
+    if (timeOfDay === 'morning' && !a.indoor) score += 1;
+    score += Math.random(); // tiebreak
+    return { activity: a, score };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  const pick = scored[0].activity;
+
+  const reasons = {
+    rainy_morning: { en: `Rainy morning? ${pick.name} is the perfect indoor escape.`, de: `Regnerischer Morgen? ${pick.nameDE || pick.name} ist das perfekte Indoor-Ziel.` },
+    rainy_afternoon: { en: `Rainy afternoon — head to ${pick.name} and stay dry!`, de: `Regnerischer Nachmittag — ab zu ${pick.nameDE || pick.name}!` },
+    rainy_evening: { en: `Rainy evening? Cosy up at ${pick.name}.`, de: `Regnerischer Abend? Gemütlich in ${pick.nameDE || pick.name}.` },
+    cold_morning: { en: `Cold outside! Warm up at ${pick.name}.`, de: `Kalt draussen! Aufwärmen in ${pick.nameDE || pick.name}.` },
+    cold_afternoon: { en: `Bundle up or stay warm at ${pick.name}.`, de: `Warm einpacken oder aufwärmen in ${pick.nameDE || pick.name}.` },
+    cold_evening: { en: `Cold evening — ${pick.name} is a great indoor choice.`, de: `Kalter Abend — ${pick.nameDE || pick.name} ist eine tolle Indoor-Wahl.` },
+    hot_morning: { en: `Hot day ahead! Cool off at ${pick.name}.`, de: `Heisser Tag! Abkühlen in ${pick.nameDE || pick.name}.` },
+    hot_afternoon: { en: `Beat the heat at ${pick.name}.`, de: `Der Hitze entfliehen in ${pick.nameDE || pick.name}.` },
+    hot_evening: { en: `Warm evening — enjoy ${pick.name}.`, de: `Warmer Abend — geniesse ${pick.nameDE || pick.name}.` },
+    nice_morning: { en: `Beautiful morning — head to ${pick.name}!`, de: `Schöner Morgen — ab zu ${pick.nameDE || pick.name}!` },
+    nice_afternoon: { en: `Perfect afternoon for ${pick.name}.`, de: `Perfekter Nachmittag für ${pick.nameDE || pick.name}.` },
+    nice_evening: { en: `Lovely evening — why not ${pick.name}?`, de: `Schöner Abend — wie wäre es mit ${pick.nameDE || pick.name}?` },
+  };
+  const key = `${weatherType}_${timeOfDay}`;
+  const r = reasons[key] || reasons[`nice_${timeOfDay}`];
+
+  return {
+    activityId: pick.id,
+    name: pick.name,
+    nameDE: pick.nameDE || pick.name,
+    reason: r.en,
+    reasonDE: r.de,
+    emoji: PICK_EMOJIS[pick.category] || '📍',
+    indoor: pick.indoor,
+    category: pick.category
+  };
+}
+
+/* ── Weekend Brief — Sat+Sun weather + events ── */
+
+function buildWeekendBrief(weekendWeather, cityEvents, cityId) {
+  if (!weekendWeather?.length) return null;
+  // Don't show on Sunday (ambiguous "this weekend")
+  const dow = new Date().getDay();
+  if (dow === 0) return null;
+
+  const today = new Date();
+  // Find next Saturday and Sunday
+  const daysUntilSat = (6 - today.getDay() + 7) % 7 || 7;
+  const satDate = new Date(today);
+  satDate.setDate(today.getDate() + daysUntilSat);
+  const sunDate = new Date(satDate);
+  sunDate.setDate(satDate.getDate() + 1);
+
+  const satStr = satDate.toISOString().split('T')[0];
+  const sunStr = sunDate.toISOString().split('T')[0];
+
+  const satWeather = weekendWeather.find(d => d.date === satStr);
+  const sunWeather = weekendWeather.find(d => d.date === sunStr);
+
+  if (!satWeather && !sunWeather) return null;
+
+  // Find weekend events
+  const weekendEvents = (cityEvents || []).filter(e => {
+    const start = e.startDate;
+    const end = e.endDate || e.startDate;
+    return start <= sunStr && end >= satStr;
+  }).slice(0, 3);
+
+  return {
+    saturday: satWeather || null,
+    sunday: sunWeather || null,
+    events: weekendEvents,
+    satDate: satStr,
+    sunDate: sunStr
+  };
+}
+
 /* ── Main handler ── */
 
 export async function handleNews(url, env) {
@@ -219,10 +319,11 @@ export async function handleNews(url, env) {
   const schoolHolidays = getSchoolHolidays();
   const historyFact = getThisDayInHistory();
 
-  const [weather, transport, allHeadlines] = await Promise.all([
+  const [weather, transport, allHeadlines, weekendWeather] = await Promise.all([
     fetchWeather(city.lat, city.lon),
     fetchTransportDisruptions(city.station),
-    fetchAllFeeds(allSources)
+    fetchAllFeeds(allSources),
+    fetchWeekendWeather(city.lat, city.lon)
   ]);
 
   if (allHeadlines.length === 0) throw new Error('Failed to fetch any news feeds');
@@ -249,31 +350,28 @@ export async function handleNews(url, env) {
   const trending = categories.trending || null;
   delete categories.trending;
 
-  // Morning briefing
+  // Morning briefing + daily pick
   let briefing = null;
   try {
     let topStory = null;
     for (const cat of ['topStories', 'politics', 'events']) {
       if (categories[cat]?.length > 0) { topStory = { ...categories[cat][0], category: cat }; break; }
     }
-    let suggestedActivity = null;
+    let dailyPick = null;
     try {
       const activities = await getCuratedActivities(env, cityId);
-      if (activities?.length) {
-        let cands = activities.filter(a => a.category !== 'stayhome');
-        if (weather) {
-          const bad = RAINY_CODES.includes(weather.weatherCode) || weather.temperature < 5;
-          if (bad) { const indoor = cands.filter(a => a.indoor); if (indoor.length) cands = indoor; }
-        }
-        suggestedActivity = cands[Math.floor(Math.random() * cands.length)];
-      }
+      dailyPick = buildDailyPick(activities, weather, lang);
     } catch {}
-    if (topStory || suggestedActivity) briefing = { topStory, suggestedActivity };
+    if (topStory || dailyPick) briefing = { topStory, dailyPick };
   } catch {}
+
+  // Weekend brief
+  const cityEvents = getCityEvents(cityId);
+  const weekendBrief = buildWeekendBrief(weekendWeather, cityEvents, cityId);
 
   const body = JSON.stringify({
     categories, weather, holidays, schoolHolidays, history: historyFact,
-    transport, trending, briefing,
+    transport, trending, briefing, weekendBrief,
     city: { id: cityId, name: city.name },
     timestamp: new Date().toISOString()
   });

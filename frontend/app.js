@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.10.0';
+const APP_VERSION = '2.11.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -42,6 +42,7 @@ let snowSort = 'snowfall';
 let snowFilter = 'all';
 let snowExpanded = false;
 let dealsFilter = 'all';
+let activityReminders = JSON.parse(localStorage.getItem('activityReminders') || '[]');
 let snowMap = null;
 let snowMarkers = {};
 let userLat = null, userLon = null;
@@ -217,6 +218,17 @@ const T = {
   savingsLabel: { en:'Savings', de:'Ersparnis' },
   emptyDeals: { en:'No deals match this filter', de:'Keine Deals für diesen Filter' },
   emptyDealsHint: { en:'Try "All" to see every deal', de:'Wähle "Alle" um alle Deals zu sehen' },
+  todaysPick: { en:"Today's Pick", de:'Tipp des Tages' },
+  seeActivity: { en:'See activity', de:'Aktivität ansehen' },
+  thisWeekend: { en:'This Weekend', de:'Dieses Wochenende' },
+  noWeekendEvents: { en:'No special events', de:'Keine besonderen Events' },
+  setReminder: { en:'Set reminder', de:'Erinnerung setzen' },
+  reminderSet: { en:'Reminder set!', de:'Erinnerung gesetzt!' },
+  reminderDue: { en:'Reminder: Time to visit', de:'Erinnerung: Zeit für' },
+  reminderDate: { en:'When?', de:'Wann?' },
+  reminderRemove: { en:'Remove reminder', de:'Erinnerung entfernen' },
+  featured: { en:'Featured', de:'Empfohlen' },
+  newBadge: { en:'NEW', de:'NEU' },
 };
 const t = k => T[k]?.[lang] || k;
 
@@ -512,7 +524,7 @@ function renderNewsView() {
 
   let html = '';
 
-  // Briefing
+  // Briefing + Daily Pick
   const briefDismissed = localStorage.getItem('briefingDismissed') === new Date().toDateString();
   if (newsData.briefing && !briefDismissed) {
     const b = newsData.briefing;
@@ -525,11 +537,21 @@ function renderNewsView() {
         <div class="briefing-story-summary">${esc(b.topStory.summary)}</div>
       </div>`;
     }
-    if (b.suggestedActivity) {
-      const a = b.suggestedActivity;
-      html += `<div class="briefing-activity">${lang === 'de' ? '💡 Vorschlag: ' : '💡 Suggestion: '}${esc(lang === 'de' ? (a.nameDE || a.name) : a.name)}</div>`;
+    if (b.dailyPick) {
+      const dp = b.dailyPick;
+      const reason = lang === 'de' ? dp.reasonDE : dp.reason;
+      html += `<div class="briefing-pick" onclick="switchView('activities')">
+        <div class="briefing-pick-label">${dp.emoji} ${t('todaysPick')}</div>
+        <div class="briefing-pick-text">${esc(reason)}</div>
+        <div class="briefing-pick-cta">${t('seeActivity')} &rarr;</div>
+      </div>`;
     }
     html += '</div>';
+  }
+
+  // Weekend Brief
+  if (newsData.weekendBrief) {
+    html += renderWeekendBriefCard(newsData.weekendBrief);
   }
 
   // Trending
@@ -566,6 +588,31 @@ function renderNewsView() {
   }
 
   return html;
+}
+
+function renderWeekendBriefCard(wb) {
+  const WI = WEATHER_ICONS;
+  let dayHtml = '';
+  if (wb.saturday) {
+    dayHtml += `<div class="weekend-brief-day"><div class="weekend-brief-day-name">${t('saturday')}</div><div>${WI[wb.saturday.weatherCode] || '🌤️'} ${wb.saturday.tempMax}° / ${wb.saturday.tempMin}°</div></div>`;
+  }
+  if (wb.sunday) {
+    dayHtml += `<div class="weekend-brief-day"><div class="weekend-brief-day-name">${t('sunday')}</div><div>${WI[wb.sunday.weatherCode] || '🌤️'} ${wb.sunday.tempMax}° / ${wb.sunday.tempMin}°</div></div>`;
+  }
+  let eventsHtml = '';
+  if (wb.events?.length) {
+    eventsHtml = wb.events.map(e => {
+      const name = lang === 'de' ? (e.nameDE || e.name) : e.name;
+      return `<div class="weekend-brief-event">${e.toddlerFriendly ? '👶 ' : ''}${esc(name)}${e.free ? ' <span class="badge badge-free">Free</span>' : ''}</div>`;
+    }).join('');
+  } else {
+    eventsHtml = `<div class="weekend-brief-event" style="color:var(--muted)">${t('noWeekendEvents')}</div>`;
+  }
+  return `<div class="weekend-brief" onclick="switchView('events')">
+    <div class="weekend-brief-title">${t('thisWeekend')}</div>
+    <div class="weekend-brief-weather">${dayHtml}</div>
+    <div class="weekend-brief-events">${eventsHtml}</div>
+  </div>`;
 }
 
 // ═══ ACTIVITIES VIEW ═══
@@ -635,9 +682,21 @@ function renderActivityCard(a) {
   const name = lang === 'de' ? (a.nameDE || a.name) : a.name;
   const desc = lang === 'de' ? (a.descriptionDE || a.description) : a.description;
   const isSaved = savedActivities.includes(a.id);
+  const hasRemind = activityReminders.some(r => r.activityId === a.id);
   const dist = (userLat && a.lat) ? haversine(userLat, userLon, a.lat, a.lon) : null;
 
+  // Hero image (gradient + emoji for visual richness)
+  let heroHtml = '';
+  if (a.category !== 'stayhome') {
+    heroHtml = `<div class="activity-hero cat-hero-${a.category || 'other'}"><span>${ACTIVITY_EMOJIS[a.category] || '📍'}</span></div>`;
+  }
+
   let badges = '';
+  if (a.featured) badges += `<span class="badge badge-featured">${t('featured')}</span>`;
+  if (a.addedDate) {
+    const daysSince = Math.floor((Date.now() - new Date(a.addedDate).getTime()) / 86400000);
+    if (daysSince <= 30) badges += `<span class="badge badge-new">${t('newBadge')}</span>`;
+  }
   badges += `<span class="badge ${a.indoor ? 'badge-indoor' : 'badge-outdoor'}">${a.indoor ? 'Indoor' : 'Outdoor'}</span>`;
   if (a.duration) badges += `<span class="badge badge-duration">${a.duration}</span>`;
   if (a.price) badges += `<span class="badge badge-price">${a.price}</span>`;
@@ -653,7 +712,9 @@ function renderActivityCard(a) {
   }
 
   return `<div class="activity-card cat-${a.category || 'other'}" id="activity-${a.id}" data-lat="${a.lat || ''}" data-lon="${a.lon || ''}" onclick="activityCardClick('${a.id}', event)">
+    ${heroHtml}
     <button class="activity-save" onclick="event.stopPropagation();toggleSave('${a.id}')">${isSaved ? '❤️' : '🤍'}</button>
+    ${isSaved ? `<button class="activity-remind" onclick="event.stopPropagation();showReminderModal('${a.id}')">${hasRemind ? '🔔' : '🔕'}</button>` : ''}
     <div class="activity-name"><span class="activity-emoji">${ACTIVITY_EMOJIS[a.category] || '📍'}</span> ${esc(name)}</div>
     <div class="activity-desc">${esc(desc)}</div>
     <div class="activity-badges">${badges}</div>
@@ -674,7 +735,7 @@ function getFilteredActivities() {
   else if (ageFilter === '4-5') items = items.filter(a => !a.maxAge || a.maxAge >= 4);
 
   // Category filter
-  if (activityFilter === 'all') items = items.filter(a => a.category !== 'stayhome');
+  if (activityFilter === 'all') { items = items.filter(a => a.category !== 'stayhome'); items.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0)); }
   else if (activityFilter === 'near') { items = items.filter(a => a.category !== 'stayhome' && a.lat); if (userLat) items.sort((a, b) => haversine(userLat, userLon, a.lat, a.lon) - haversine(userLat, userLon, b.lat, b.lon)); }
   else if (activityFilter === 'indoor') items = items.filter(a => a.indoor && a.category !== 'stayhome');
   else if (activityFilter === 'outdoor') items = items.filter(a => !a.indoor && a.category !== 'stayhome');
@@ -1278,6 +1339,84 @@ function toggleSave(id) {
   showToast(removing ? 'toastRemoved' : 'toastSaved', removing ? 'info' : 'success');
   renderCurrentView();
   afterRender(initActivityMap);
+}
+
+// ═══ REMINDERS ═══
+
+function showReminderModal(activityId) {
+  const allActs = [...activitiesData, ...customActivities];
+  const act = allActs.find(a => a.id === activityId);
+  if (!act) return;
+  const name = lang === 'de' ? (act.nameDE || act.name) : act.name;
+  const existing = activityReminders.find(r => r.activityId === activityId);
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const minDate = tomorrow.toISOString().split('T')[0];
+
+  const modal = $('modal');
+  modal.innerHTML = `<div class="modal-content">
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <div class="modal-emoji">🔔</div>
+    <div class="modal-title">${t('setReminder')}</div>
+    <div class="modal-desc">${esc(name)}</div>
+    ${existing ? `<div style="margin:8px 0;font-size:.8rem;color:var(--accent)">${t('reminderDate')}: ${existing.date}</div>` : ''}
+    <input type="date" id="reminder-date-input" min="${minDate}" value="${existing?.date || minDate}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;margin:12px 0;font-size:1rem;background:var(--bg);color:var(--text)">
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="confirmReminder('${activityId}')">${t('save')}</button>
+      ${existing ? `<button class="btn-secondary" onclick="removeReminder('${activityId}');closeModal()">${t('reminderRemove')}</button>` : ''}
+      <button class="btn-secondary" onclick="closeModal()">${t('cancel')}</button>
+    </div>
+  </div>`;
+  modal.classList.add('active');
+}
+
+function confirmReminder(activityId) {
+  const dateStr = $('reminder-date-input')?.value;
+  if (!dateStr) return;
+  const allActs = [...activitiesData, ...customActivities];
+  const act = allActs.find(a => a.id === activityId);
+  const name = act ? (lang === 'de' ? (act.nameDE || act.name) : act.name) : activityId;
+
+  // Remove existing reminder for this activity
+  activityReminders = activityReminders.filter(r => r.activityId !== activityId);
+  activityReminders.push({ activityId, name, date: dateStr, createdAt: new Date().toISOString() });
+  localStorage.setItem('activityReminders', JSON.stringify(activityReminders));
+
+  // Request notification permission
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+
+  closeModal();
+  showToast('reminderSet', 'success');
+  renderCurrentView();
+  afterRender(initActivityMap);
+}
+
+function removeReminder(activityId) {
+  activityReminders = activityReminders.filter(r => r.activityId !== activityId);
+  localStorage.setItem('activityReminders', JSON.stringify(activityReminders));
+  showToast('toastRemoved', 'info');
+  renderCurrentView();
+  afterRender(initActivityMap);
+}
+
+function checkReminders() {
+  const today = new Date().toISOString().split('T')[0];
+  const due = activityReminders.filter(r => r.date <= today);
+  if (!due.length) return;
+
+  for (const r of due) {
+    const msg = `${t('reminderDue')} ${r.name}`;
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try { new Notification('Today in Switzerland', { body: msg, icon: '/icon.svg' }); } catch {}
+    }
+    showToast('reminderDue', 'info');
+  }
+
+  // Remove due reminders
+  activityReminders = activityReminders.filter(r => r.date > today);
+  localStorage.setItem('activityReminders', JSON.stringify(activityReminders));
 }
 
 function toggleSaveLunch(id) {
@@ -2854,6 +2993,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   }
+
+  // Check reminders
+  checkReminders();
 
   // Check Apple Pay donate availability
   checkDonateAvailability();
