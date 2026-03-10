@@ -409,6 +409,7 @@ function renderHeader() {
     </div>
     <div id="weather-dropdown" class="weather-dropdown"></div>
     <div id="history-inline" class="history-inline"></div>
+    <div id="trending-inline" class="trending-banner" style="display:none"></div>
     <div id="transport-widget"></div>
   `;
 }
@@ -500,16 +501,6 @@ function renderNewsView() {
   if (!newsData) return `<div class="loading-msg">${t('loading')}</div><div class="loading-skeleton">${'<div class="skeleton skeleton-line"></div>'.repeat(6)}</div>`;
 
   let html = '';
-
-  // Trending (right after history/transport in header)
-  if (newsData.trending) {
-    const tr = newsData.trending;
-    const topic = lang === 'de' ? (tr.topicDE || tr.topic) : tr.topic;
-    html += `<div class="trending-banner" onclick="${safeUrl(tr.url) ? `window.open('${esc(tr.url)}','_blank')` : ''}">
-      <div class="trending-label">🔥 ${lang === 'de' ? 'Trending' : 'Trending'}</div>
-      <div class="trending-topic">${esc(topic)}</div>
-    </div>`;
-  }
 
   // Briefing + Daily Pick
   const briefDismissed = localStorage.getItem('briefingDismissed') === new Date().toDateString();
@@ -1029,6 +1020,7 @@ async function fetchNews(force = false) {
     if (data.holidays) renderHolidays(data.holidays);
     if (data.weather) renderWeather(data.weather);
     if (data.history) renderHistory(data.history);
+    renderTrending(data.trending);
     if (data.transport) renderTransport(data.transport);
   } catch (e) {
     console.error('Fetch news error:', e);
@@ -1178,6 +1170,16 @@ function renderHistory(h) {
   if (view === 'news') el.classList.add('active');
 }
 
+function renderTrending(tr) {
+  const el = $('trending-inline');
+  if (!el) return;
+  if (!tr) { el.style.display = 'none'; return; }
+  const topic = lang === 'de' ? (tr.topicDE || tr.topic) : tr.topic;
+  el.style.display = view === 'news' ? 'block' : 'none';
+  el.setAttribute('onclick', safeUrl(tr.url) ? `window.open('${esc(tr.url)}','_blank')` : '');
+  el.innerHTML = `<div class="trending-label">🔥 Trending</div><div class="trending-topic">${esc(topic)}</div>`;
+}
+
 function renderTransport(tr) {
   const el = $('transport-widget');
   if (!el) return;
@@ -1216,6 +1218,12 @@ function switchView(v) {
   renderNav();
   renderMenu();
   closeMenu();
+  if (newsData) {
+    if (newsData.history) renderHistory(newsData.history);
+    renderTrending(newsData.trending);
+    if (newsData.weather) renderWeather(newsData.weather);
+    if (newsData.transport) renderTransport(newsData.transport);
+  }
   if (v === 'activities') loadActivities();
   else if (v === 'lunch') loadLunchSpots();
   else if (v === 'events') loadEventsCalendar();
