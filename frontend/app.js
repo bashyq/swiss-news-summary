@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.13.0';
+const APP_VERSION = '2.14.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -246,43 +246,8 @@ function getSubcategoryLabel(sub) {
   return labels[sub]?.[lang] || sub;
 }
 
-// ═══ DEALS DATA ═══
-const DEALS = [
-  // Museum Free Days
-  { id: 'kunsthaus-free', name: 'Kunsthaus Zürich — Free Wednesdays', nameDE: 'Kunsthaus Zürich — Mittwochs gratis', description: 'Free entry every Wednesday. World-class art collection.', descriptionDE: 'Jeden Mittwoch gratis Eintritt. Weltklasse-Kunstsammlung.', category: 'museum', type: 'free', city: 'zurich', url: 'https://www.kunsthaus.ch', recurring: 'Wednesdays', savings: 'Free' },
-  { id: 'landesmuseum-free', name: 'Swiss National Museum — Kids free', nameDE: 'Landesmuseum — Kinder gratis', description: 'Free for under 16. First Saturday of month free for everyone.', descriptionDE: 'Gratis für unter 16. Erster Samstag im Monat gratis für alle.', category: 'museum', type: 'free', city: 'zurich', url: 'https://www.landesmuseum.ch', recurring: '1st Saturday / Always (kids)', savings: 'Free' },
-  { id: 'zoologisches-museum', name: 'Zoological Museum — Always free', nameDE: 'Zoologisches Museum — Immer gratis', description: 'Free entry always. Dinosaur skeletons, animal exhibits kids love.', descriptionDE: 'Immer gratis. Dinosaurierskelette und Tierausstellungen.', category: 'museum', type: 'free', city: 'zurich', url: 'https://www.zm.uzh.ch', recurring: 'Always', savings: 'Free' },
-  { id: 'botanischer-garten-free', name: 'Botanical Garden Zürich — Always free', nameDE: 'Botanischer Garten Zürich — Immer gratis', description: 'Free tropical greenhouses, turtles, and space to run.', descriptionDE: 'Kostenlose Tropenhäuser, Schildkröten und Platz zum Spielen.', category: 'museum', type: 'free', city: 'zurich', url: 'https://www.bg.uzh.ch', recurring: 'Always', savings: 'Free' },
-  { id: 'fifa-museum-kids', name: 'FIFA Museum — Kids under 6 free', nameDE: 'FIFA Museum — Kinder unter 6 gratis', description: 'Interactive football museum. Free for toddlers.', descriptionDE: 'Interaktives Fussball-Museum. Gratis für Kleinkinder.', category: 'museum', type: 'free', city: 'zurich', url: 'https://www.fifamuseum.com', recurring: 'Always (under 6)', savings: 'Free' },
-  { id: 'rietberg-permanent', name: 'Museum Rietberg — Free permanent collection', nameDE: 'Museum Rietberg — Dauerausstellung gratis', description: 'Free entry to the permanent collection. Beautiful park.', descriptionDE: 'Gratis Eintritt zur Dauerausstellung. Schöner Park.', category: 'museum', type: 'free', city: 'zurich', url: 'https://rietberg.ch', recurring: 'Always', savings: 'Free' },
-  { id: 'basel-zoo-kids', name: 'Zoo Basel — Kids under 6 free', nameDE: 'Zoo Basel — Kinder unter 6 gratis', description: 'One of the oldest zoos in Switzerland. Free for toddlers.', descriptionDE: 'Einer der ältesten Zoos der Schweiz. Gratis für Kleinkinder.', category: 'museum', type: 'free', city: 'basel', url: 'https://www.zoobasel.ch', recurring: 'Always (under 6)', savings: 'Free' },
-  { id: 'basel-lange-erlen-free', name: 'Lange Erlen Animal Park — Always free', nameDE: 'Tierpark Lange Erlen — Immer gratis', description: 'Free animal park with deer, wild boar, birds, and playground.', descriptionDE: 'Gratis Tierpark mit Hirschen, Wildschweinen, Vögeln und Spielplatz.', category: 'museum', type: 'free', city: 'basel', recurring: 'Always', savings: 'Free' },
-  { id: 'bern-barenpark-free', name: 'BärenPark Bern — Always free', nameDE: 'BärenPark Bern — Immer gratis', description: 'See the famous Bern bears for free. Right by the old town.', descriptionDE: 'Die berühmten Berner Bären gratis sehen. Direkt bei der Altstadt.', category: 'museum', type: 'free', city: 'bern', url: 'https://www.baerenpark-bern.ch', recurring: 'Always', savings: 'Free' },
-  { id: 'geneva-natural-history', name: 'Natural History Museum Geneva — Always free', nameDE: 'Naturhistorisches Museum Genf — Immer gratis', description: 'Huge dinosaur and animal collection. Always free entry.', descriptionDE: 'Riesige Dinosaurier- und Tiersammlung. Immer gratis.', category: 'museum', type: 'free', city: 'geneva', url: 'https://www.museum-geneve.ch', recurring: 'Always', savings: 'Free' },
-  // Free Outdoor
-  { id: 'wildnispark-free', name: 'Wildnispark Zürich — Always free', nameDE: 'Wildnispark Zürich — Immer gratis', description: 'Free nature park with native Swiss animals and forest trails.', descriptionDE: 'Gratis Naturpark mit einheimischen Tieren und Waldwegen.', category: 'outdoor', type: 'free', city: 'zurich', url: 'https://www.wildnispark.ch', recurring: 'Always', savings: 'Free' },
-  { id: 'uetliberg-free', name: 'Uetliberg Hiking — Free', nameDE: 'Uetliberg Wandern — Gratis', description: 'Free hiking with amazing views of Zürich and the Alps.', descriptionDE: 'Gratis Wandern mit Aussicht auf Zürich und die Alpen.', category: 'outdoor', type: 'free', city: 'zurich', recurring: 'Always', savings: 'Free' },
-  { id: 'irchelpark-free', name: 'Irchelpark Playground — Free', nameDE: 'Spielplatz Irchelpark — Gratis', description: 'Large natural playground with climbing, sand pit, and water play.', descriptionDE: 'Grosser Naturspielplatz mit Klettergerüsten und Wasserspiel.', category: 'outdoor', type: 'free', city: 'zurich', recurring: 'Always', savings: 'Free' },
-  { id: 'sauvabelin-free', name: 'Sauvabelin Park Lausanne — Free', nameDE: 'Sauvabelin Park Lausanne — Gratis', description: 'Forest park with animals, playground, and wooden observation tower.', descriptionDE: 'Waldpark mit Tieren, Spielplatz und Holzturm.', category: 'outdoor', type: 'free', city: 'lausanne', recurring: 'Always', savings: 'Free' },
-  { id: 'bruderhaus-free', name: 'Wildpark Bruderhaus — Free', nameDE: 'Wildpark Bruderhaus — Gratis', description: 'Free forest animal park with deer, wild boar, and wolves.', descriptionDE: 'Gratis Waldtierpark mit Hirschen, Wildschweinen und Wölfen.', category: 'outdoor', type: 'free', city: 'winterthur', url: 'https://www.wildpark.ch', recurring: 'Always', savings: 'Free' },
-  // Transport Deals
-  { id: 'junior-card', name: 'SBB Junior Card — CHF 30/year', nameDE: 'SBB Junior-Karte — CHF 30/Jahr', description: 'Kids travel free on all Swiss trains when accompanied by a parent. Best deal in Switzerland!', descriptionDE: 'Kinder fahren gratis auf allen Schweizer Zügen in Begleitung eines Elternteils. Bester Deal der Schweiz!', category: 'transport', type: 'deal', city: 'all', url: 'https://www.sbb.ch/en/travelcards-and-tickets/railpasses/junior-card.html', recurring: 'Annual', savings: 'Kids ride free' },
-  { id: 'zvv-9oclock', name: 'ZVV 9 o\'clock Pass', nameDE: 'ZVV 9-Uhr-Pass', description: 'Unlimited travel in Zürich zone after 9am for CHF 28.80/month.', descriptionDE: 'Unbegrenzte Fahrten in der Zone Zürich nach 9 Uhr für CHF 28.80/Monat.', category: 'transport', type: 'deal', city: 'zurich', url: 'https://www.zvv.ch', recurring: 'Monthly', savings: '~50% off' },
-  { id: 'sbb-supersaver', name: 'SBB Supersaver Tickets', nameDE: 'SBB Spartageskarten', description: 'Up to 70% off train tickets when booked in advance online.', descriptionDE: 'Bis zu 70% Rabatt auf Zugtickets bei Online-Vorbuchung.', category: 'transport', type: 'tip', city: 'all', url: 'https://www.sbb.ch/en/travelcards-and-tickets/tickets-for-switzerland/supersaver-tickets.html', recurring: 'Always', savings: 'Up to 70% off' },
-  // Family Passes
-  { id: 'zurich-card', name: 'Zürich Card — Free transport + museums', nameDE: 'Zürich Card — Gratis Transport + Museen', description: 'Free public transport, free or reduced museum entry. CHF 27/24h.', descriptionDE: 'Gratis ÖV, gratis oder reduzierter Museums-Eintritt. CHF 27/24h.', category: 'family', type: 'deal', city: 'zurich', url: 'https://www.zuerich.com/en/zurichcard', recurring: 'Per visit', savings: 'CHF 27/24h' },
-  { id: 'swiss-museum-pass', name: 'Swiss Museum Pass — 500+ museums', nameDE: 'Schweizer Museumspass — 500+ Museen', description: 'Free entry to 500+ Swiss museums for one year. CHF 166/year.', descriptionDE: 'Gratis Eintritt in 500+ Schweizer Museen für ein Jahr. CHF 166/Jahr.', category: 'family', type: 'deal', city: 'all', url: 'https://www.museumspass.ch', recurring: 'Annual', savings: 'CHF 166/year' },
-  { id: 'raiffeisen-member', name: 'Raiffeisen Member Discounts', nameDE: 'Raiffeisen Mitglieder-Rabatte', description: 'Reduced entry to zoos, museums, and attractions with Raiffeisen membership.', descriptionDE: 'Reduzierter Eintritt in Zoos, Museen und Attraktionen mit Raiffeisen-Mitgliedschaft.', category: 'family', type: 'tip', city: 'all', url: 'https://www.raiffeisen.ch/memberplus', recurring: 'Annual', savings: '20-50% off' },
-  { id: 'family-card-sbb', name: 'SBB Family Card — Free', nameDE: 'SBB Family Card — Gratis', description: 'Free card: kids 6-16 travel free with a parent holding a valid ticket.', descriptionDE: 'Gratis Karte: Kinder 6-16 fahren gratis mit einem Elternteil.', category: 'family', type: 'free', city: 'all', url: 'https://www.sbb.ch', recurring: 'Always', savings: 'Free' },
-  // Seasonal
-  { id: 'summer-badi-free', name: 'Free Badi Days', nameDE: 'Gratis Badi-Tage', description: 'Many public pools offer free entry days in summer. Check local listings.', descriptionDE: 'Viele Freibäder bieten im Sommer Gratis-Tage an. Lokale Veranstaltungen prüfen.', category: 'seasonal', type: 'free', city: 'all', recurring: 'Summer', validMonths: [6, 7, 8], savings: 'Free' },
-  { id: 'christmas-markets-free', name: 'Christmas Markets — Free entry', nameDE: 'Weihnachtsmärkte — Gratis Eintritt', description: 'All Swiss Christmas markets are free to enter. Food and drinks for purchase.', descriptionDE: 'Alle Schweizer Weihnachtsmärkte haben freien Eintritt. Essen und Getränke zum Kaufen.', category: 'seasonal', type: 'free', city: 'all', recurring: 'Nov-Dec', validMonths: [11, 12], savings: 'Free' },
-  { id: 'open-air-cinemas', name: 'Open-air Cinemas', nameDE: 'Open-Air Kinos', description: 'Summer outdoor cinemas in most Swiss cities. Family screenings available.', descriptionDE: 'Sommer-Open-Air-Kinos in den meisten Schweizer Städten. Familienvorstellungen verfügbar.', category: 'seasonal', type: 'deal', city: 'all', recurring: 'Jul-Aug', validMonths: [7, 8], savings: 'From CHF 10' },
-  // Tips
-  { id: 'gz-play-free', name: 'GZ Play Afternoons — Free', nameDE: 'GZ Spielnachmittage — Gratis', description: 'Free drop-in play sessions at Zürich community centers (Gemeinschaftszentren).', descriptionDE: 'Kostenlose Spielnachmittage in Zürcher Gemeinschaftszentren.', category: 'outdoor', type: 'free', city: 'zurich', url: 'https://gz-zh.ch', recurring: 'Various days', savings: 'Free' },
-  { id: 'library-story-time', name: 'Library Story Times — Free', nameDE: 'Bibliothek Geschichtenzeit — Gratis', description: 'Free story readings for toddlers at public libraries across Switzerland.', descriptionDE: 'Kostenlose Geschichten für Kleinkinder in öffentlichen Bibliotheken.', category: 'outdoor', type: 'free', city: 'all', recurring: 'Various days', savings: 'Free' },
-  { id: 'migros-kulturprozent', name: 'Migros Kulturprozent — Free events', nameDE: 'Migros Kulturprozent — Gratis Events', description: 'Free family workshops, concerts, and cultural events funded by Migros.', descriptionDE: 'Gratis Familien-Workshops, Konzerte und Kulturveranstaltungen von Migros.', category: 'family', type: 'free', city: 'all', url: 'https://www.migros-kulturprozent.ch', recurring: 'Various', savings: 'Free' },
-];
+// Deals fetched from worker API — cached locally
+let dealsData = [];
 
 const DEAL_CATEGORY_EMOJIS = { museum: '🏛️', outdoor: '🌳', transport: '🚂', family: '👨‍👩‍👧', seasonal: '🎄' };
 
@@ -1257,7 +1222,7 @@ function switchView(v) {
   else if (v === 'sunshine') loadSunshine();
   else if (v === 'snow') loadSnow();
   else if (v === 'explore') loadExplore();
-  // deals and explore views use static/cached data — no async load needed
+  else if (v === 'deals') loadDeals();
 }
 
 function setTab(tab) {
@@ -1998,121 +1963,7 @@ const SUNSHINE_DESTS = [
   { id:'rapperswil',name:'Rapperswil',nameDE:'Rapperswil',lat:47.2267,lon:8.8184,region:'Lake Zurich',regionDE:'Zürichsee',driveMinutes:25 },
 ];
 
-const DEST_HIGHLIGHTS = {
-  lugano: [
-    { name:'Parco Ciani', nameDE:'Parco Ciani', desc:'Lakeside park with large playground and duck pond', descDE:'Park am See mit grossem Spielplatz und Ententeich', indoor:false, cat:'playground', lat:46.0053, lon:8.9580 },
-    { name:'Swissminiatur', nameDE:'Swissminiatur', desc:'Miniature Switzerland park with 120+ scale models', descDE:'Miniatur-Schweiz-Park mit über 120 Modellen', indoor:false, cat:'outdoor', lat:45.9553, lon:8.9468 },
-    { name:'Lido di Lugano', nameDE:'Lido di Lugano', desc:'Sandy beach with kids pool and playground', descDE:'Sandstrand mit Kinderplanschbecken und Spielplatz', indoor:false, cat:'outdoor', lat:46.0005, lon:8.9625 },
-  ],
-  locarno: [
-    { name:'Lido Locarno', nameDE:'Lido Locarno', desc:'Family pool complex with slides and sandy beach', descDE:'Familien-Schwimmbad mit Rutschen und Sandstrand', indoor:false, cat:'outdoor', lat:46.1660, lon:8.7935 },
-    { name:'Cardada Playground', nameDE:'Spielplatz Cardada', desc:'Mountain playground at 1340m with cable car ride', descDE:'Bergspielplatz auf 1340m mit Seilbahnfahrt', indoor:false, cat:'playground', lat:46.1835, lon:8.7640 },
-  ],
-  bellinzona: [
-    { name:'Castelgrande', nameDE:'Castelgrande', desc:'UNESCO castle with grassy courtyards, lift access', descDE:'UNESCO-Burg mit Grünflächen und Liftanschluss', indoor:false, cat:'outdoor', lat:46.1944, lon:9.0168 },
-    { name:'Castello Montebello', nameDE:'Castello Montebello', desc:'Medieval castle with playground and picnic area', descDE:'Mittelalterliche Burg mit Spielplatz und Picknick', indoor:false, cat:'playground', lat:46.1943, lon:9.0244 },
-  ],
-  ascona: [
-    { name:'Lakefront Playground', nameDE:'Spielplatz Seepromenade', desc:'Lakefront playground with trampolines and swings', descDE:'Spielplatz am See mit Trampolinen und Schaukeln', indoor:false, cat:'playground', lat:46.1570, lon:8.7730 },
-    { name:'Brissago Islands', nameDE:'Brissago-Inseln', desc:'Botanical island with treasure hunt, boat ride over', descDE:'Botanische Insel mit Schatzsuche, per Boot erreichbar', indoor:false, cat:'nature', lat:46.1317, lon:8.7344 },
-  ],
-  chur: [
-    { name:'Brambrüesch Playground', nameDE:'Spielplatz Brambrüesch', desc:'Mountain playground with cable car and theme trail', descDE:'Bergspielplatz mit Seilbahn und Themenweg', indoor:false, cat:'playground', lat:46.8670, lon:9.5025 },
-    { name:'Bündner Naturmuseum', nameDE:'Bündner Naturmuseum', desc:'Interactive alpine animal exhibits for kids', descDE:'Interaktive Ausstellung alpiner Tiere für Kinder', indoor:true, cat:'museum', lat:46.8494, lon:9.5362 },
-  ],
-  davos: [
-    { name:'Schatzalp Alpine Garden', nameDE:'Alpengarten Schatzalp', desc:'Alpine garden at 1864m with funicular ride up', descDE:'Alpengarten auf 1864m mit Standseilbahn', indoor:false, cat:'nature', lat:46.7927, lon:9.8204 },
-    { name:'Rinerhorn Petting Zoo', nameDE:'Rinerhorn Streichelzoo', desc:'Free alpine petting zoo with goats and alpacas', descDE:'Gratis Streichelzoo mit Ziegen und Alpakas', indoor:false, cat:'animals', lat:46.7560, lon:9.8630 },
-  ],
-  stmoritz: [
-    { name:'Muottas Muragl Playground', nameDE:'Spielplatz Muottas Muragl', desc:'Mountain playground at 2456m with epic Engadin view', descDE:'Bergspielplatz auf 2456m mit Engadin-Panorama', indoor:false, cat:'playground', lat:46.5237, lon:9.9092 },
-    { name:'Lake St. Moritz Promenade', nameDE:'St. Moritzer See Promenade', desc:'Flat lakeside walk with playground and duck feeding', descDE:'Flacher Seeweg mit Spielplatz und Enten füttern', indoor:false, cat:'outdoor', lat:46.4935, lon:9.8410 },
-  ],
-  flims: [
-    { name:'Caumasee', nameDE:'Caumasee', desc:'Turquoise alpine lake with playground and paddleboats', descDE:'Türkiser Bergsee mit Spielplatz und Tretbooten', indoor:false, cat:'outdoor', lat:46.8188, lon:9.2908 },
-    { name:'Spielplatz Prau la Selva', nameDE:'Spielplatz Prau la Selva', desc:'Large forest playground with water play features', descDE:'Grosser Waldspielplatz mit Wasserspiel', indoor:false, cat:'playground', lat:46.8340, lon:9.2810 },
-  ],
-  sion: [
-    { name:'Domaine des Îles', nameDE:'Domaine des Îles', desc:'Huge park with playground, mini-golf and mini train', descDE:'Grosser Park mit Spielplatz, Minigolf und Bähnli', indoor:false, cat:'playground', lat:46.2131, lon:7.3332 },
-    { name:'Musée de la Nature', nameDE:'Naturmuseum Wallis', desc:'Interactive alpine exhibits, free first Sunday', descDE:'Interaktive Alpen-Ausstellung, 1. Sonntag gratis', indoor:true, cat:'museum', lat:46.2330, lon:7.3601 },
-  ],
-  brig: [
-    { name:'Stockalperschloss Garden', nameDE:'Stockalperschloss Garten', desc:'Castle garden with playground, free courtyard access', descDE:'Schlossgarten mit Spielplatz, Hof frei zugänglich', indoor:false, cat:'playground', lat:46.3150, lon:7.9873 },
-    { name:'Brigerbad Thermal Baths', nameDE:'Thermalbad Brigerbad', desc:'Thermal pools with toddler area and water slides', descDE:'Therme mit Kleinkinderbereich und Wasserrutschen', indoor:false, cat:'indoor-play', lat:46.3025, lon:7.9240 },
-  ],
-  zermatt: [
-    { name:'Wolli Park Sunnegga', nameDE:'Wolli Park Sunnegga', desc:'Mountain playground with lake beach, by funicular', descDE:'Bergspielplatz mit Seestrand, per Standseilbahn', indoor:false, cat:'playground', lat:46.0300, lon:7.7701 },
-    { name:'Obere Matten Playground', nameDE:'Spielplatz Obere Matten', desc:'Village playground near shops and restaurants', descDE:'Spielplatz im Dorf nahe Läden und Restaurants', indoor:false, cat:'playground', lat:46.0207, lon:7.7480 },
-  ],
-  luzern: [
-    { name:'Verkehrshaus', nameDE:'Verkehrshaus der Schweiz', desc:'Transport museum with hands-on exhibits and playground', descDE:'Verkehrsmuseum mit Mitmach-Stationen und Spielplatz', indoor:true, cat:'museum', lat:47.0531, lon:8.3356 },
-    { name:'Vögeligärtli Park', nameDE:'Vögeligärtli', desc:'Central playground near train station with sandbox', descDE:'Zentraler Spielplatz beim Bahnhof mit Sandkasten', indoor:false, cat:'playground', lat:47.0485, lon:8.3068 },
-  ],
-  interlaken: [
-    { name:'Harder Kulm Playground', nameDE:'Spielplatz Harder Kulm', desc:'Alpine playground at 1322m with Jungfrau panorama', descDE:'Bergspielplatz auf 1322m mit Jungfrau-Panorama', indoor:false, cat:'playground', lat:46.6974, lon:7.8519 },
-    { name:'Höhematte Park', nameDE:'Spielplatz Höhematte', desc:'Free central park playground with mountain views', descDE:'Gratis Spielplatz im Zentrum mit Bergpanorama', indoor:false, cat:'playground', lat:46.6859, lon:7.8598 },
-  ],
-  engelberg: [
-    { name:'Globi Playground Ristis', nameDE:'Globi Spielplatz Ristis', desc:'Alpine playground with rope park and bouncy castle', descDE:'Bergspielplatz mit Seilpark und Hüpfburg', indoor:false, cat:'playground', lat:46.8130, lon:8.3820 },
-    { name:'Trübsee Playground', nameDE:'Spielplatz Trübsee', desc:'Smuggler-themed playground by mountain lake', descDE:'Schmuggler-Spielplatz am Bergsee', indoor:false, cat:'playground', lat:46.7890, lon:8.3920 },
-  ],
-  schwyz: [
-    { name:'Swiss Knife Valley Center', nameDE:'Swiss Knife Valley Besucherzentrum', desc:'Victorinox museum where kids can build a knife', descDE:'Victorinox-Museum, Kinder bauen ein Messer', indoor:true, cat:'museum', lat:46.9944, lon:8.6054 },
-    { name:'Swiss Holiday Park', nameDE:'Swiss Holiday Park', desc:'Indoor waterpark with slides and toddler pool', descDE:'Erlebnisbad mit Rutschen und Kleinkinderbecken', indoor:true, cat:'indoor-play', lat:46.9830, lon:8.6160 },
-  ],
-  altdorf: [
-    { name:'Tell Monument Square', nameDE:'Telldenkmal', desc:'Iconic William Tell statue with playground nearby', descDE:'Ikonisches Telldenkmal mit Spielplatz in der Nähe', indoor:false, cat:'outdoor', lat:46.8802, lon:8.6393 },
-    { name:'Schwimmbad Altdorf', nameDE:'Schwimmbad Altdorf', desc:'Indoor/outdoor pool with slides and paddling pool', descDE:'Hallen-/Freibad mit Rutschen und Planschbecken', indoor:false, cat:'indoor-play', lat:46.8760, lon:8.6500 },
-  ],
-  lausanne: [
-    { name:'Olympic Museum', nameDE:'Olympisches Museum', desc:'Interactive sports museum with lakeside park', descDE:'Interaktives Sportmuseum mit Seeuferpark', indoor:true, cat:'museum', lat:46.5088, lon:6.6340 },
-    { name:'Ouchy Playground', nameDE:'Spielplatz Ouchy', desc:'Lakefront playground with paddleboats and ducks', descDE:'Spielplatz am See mit Tretbooten und Enten', indoor:false, cat:'playground', lat:46.5075, lon:6.6282 },
-  ],
-  montreux: [
-    { name:'Château de Chillon', nameDE:'Schloss Chillon', desc:'Fairy-tale lakeside castle with kids activity booklet', descDE:'Märchenschloss am See mit Kinder-Aktivheft', indoor:true, cat:'museum', lat:46.4142, lon:6.9276 },
-    { name:'Lakefront Playground', nameDE:'Spielplatz Seepromenade', desc:'Flower-lined lakefront promenade with playground', descDE:'Blumengesäumte Seepromenade mit Spielplatz', indoor:false, cat:'playground', lat:46.4340, lon:6.9120 },
-  ],
-  vevey: [
-    { name:'Alimentarium', nameDE:'Alimentarium', desc:'Interactive food museum with hands-on kids exhibits', descDE:'Interaktives Ernährungsmuseum mit Kinderstationen', indoor:true, cat:'museum', lat:46.4583, lon:6.8464 },
-    { name:'Lakefront Playground', nameDE:'Spielplatz am See', desc:'Large jungle gym by lake with swing sets', descDE:'Grosses Klettergerüst am See mit Schaukeln', indoor:false, cat:'playground', lat:46.4610, lon:6.8430 },
-  ],
-  basel: [
-    { name:'Zoo Basel (Zolli)', nameDE:'Zoo Basel (Zolli)', desc:'Historic zoo with petting area and kids playground', descDE:'Historischer Zoo mit Streichelzoo und Spielplatz', indoor:false, cat:'animals', lat:47.5472, lon:7.5789 },
-    { name:'Tierpark Lange Erlen', nameDE:'Tierpark Lange Erlen', desc:'Free animal park with deer, ponies and playground', descDE:'Gratis Tierpark mit Hirschen, Ponys und Spielplatz', indoor:false, cat:'animals', lat:47.5760, lon:7.6230 },
-  ],
-  solothurn: [
-    { name:'Naturmuseum Solothurn', nameDE:'Naturmuseum Solothurn', desc:'Regional nature exhibits for families', descDE:'Regionale Naturausstellung für Familien', indoor:true, cat:'museum', lat:47.2078, lon:7.5372 },
-    { name:'Verenaschlucht', nameDE:'Verenaschlucht', desc:'Atmospheric gorge walk to hermitage, stroller-friendly', descDE:'Stimmungsvolle Schluchtwanderung, kinderwagentauglich', indoor:false, cat:'nature', lat:47.2200, lon:7.5415 },
-  ],
-  delemont: [
-    { name:'Préhisto-Parc', nameDE:'Préhisto-Parc', desc:'Dinosaur park with 45 life-size models in forest', descDE:'Dinosaurierpark mit 45 lebensgrossen Modellen', indoor:false, cat:'outdoor', lat:47.3013, lon:7.0532 },
-    { name:'Parc du Château', nameDE:'Parc du Château', desc:'Castle park with playground and shaded picnic area', descDE:'Schlosspark mit Spielplatz und schattigem Picknick', indoor:false, cat:'playground', lat:47.3650, lon:7.3450 },
-  ],
-  konstanz: [
-    { name:'SEA LIFE Konstanz', nameDE:'SEA LIFE Konstanz', desc:'Aquarium with underwater tunnel and touch pools', descDE:'Aquarium mit Unterwassertunnel und Streichelbecken', indoor:true, cat:'museum', lat:47.6605, lon:9.1770 },
-    { name:'Stadtgarten Playground', nameDE:'Spielplatz Stadtgarten', desc:'Large lakeside playground with water play area', descDE:'Grosser Seespielplatz mit Wasserspielbereich', indoor:false, cat:'playground', lat:47.6615, lon:9.1790 },
-  ],
-  lindau: [
-    { name:'Harbour Playground', nameDE:'Spielplatz am Hafen', desc:'Harbour playground with slides and lake views', descDE:'Hafenspielplatz mit Rutschen und Seeblick', indoor:false, cat:'playground', lat:47.5450, lon:9.6840 },
-    { name:'Lindenhofpark', nameDE:'Lindenhofpark', desc:'Lakeside park with paddleboats and shaded playground', descDE:'Seepark mit Tretbooten und schattigem Spielplatz', indoor:false, cat:'outdoor', lat:47.5510, lon:9.6920 },
-  ],
-  como: [
-    { name:'Villa Olmo Park', nameDE:'Park Villa Olmo', desc:'Grand lakefront park with playground, free entry', descDE:'Grosser Seeuferpark mit Spielplatz, Eintritt frei', indoor:false, cat:'outdoor', lat:45.8180, lon:9.0598 },
-    { name:'Harbour Playground', nameDE:'Spielplatz am Hafen', desc:'Modern playground by boat dock with lake views', descDE:'Moderner Spielplatz beim Anleger mit Seeblick', indoor:false, cat:'playground', lat:45.8110, lon:9.0720 },
-  ],
-  schaffhausen: [
-    { name:'Rhine Falls', nameDE:'Rheinfall', desc:'Europe\'s largest waterfall with playground and boat rides', descDE:'Grösster Wasserfall Europas mit Spielplatz und Boot', indoor:false, cat:'nature', lat:47.6778, lon:8.6152 },
-    { name:'Munot Fortress', nameDE:'Munot Festung', desc:'Circular fortress with playground and deer park', descDE:'Runde Festung mit Spielplatz und Hirschgehege', indoor:false, cat:'outdoor', lat:47.6965, lon:8.6390 },
-  ],
-  frauenfeld: [
-    { name:'Plättli Zoo', nameDE:'Plättli Zoo', desc:'Small zoo with petting area and pony rides', descDE:'Kleiner Zoo mit Streichelzoo und Ponyreiten', indoor:false, cat:'animals', lat:47.5605, lon:8.9157 },
-    { name:'Schloss Frauenfeld', nameDE:'Schloss Frauenfeld', desc:'Historic castle with nature museum and park', descDE:'Historisches Schloss mit Naturmuseum und Park', indoor:true, cat:'museum', lat:47.5565, lon:8.8980 },
-  ],
-  rapperswil: [
-    { name:'Knies Kinderzoo', nameDE:'Knies Kinderzoo', desc:'Children\'s zoo with camel rides and adventure playground', descDE:'Kinderzoo mit Kamelreiten und Abenteuerspielplatz', indoor:false, cat:'animals', lat:47.2290, lon:8.8210 },
-    { name:'Castle Playground', nameDE:'Spielplatz Lindenhof', desc:'Lakefront playground below castle with climbing tower', descDE:'Seespielplatz unter dem Schloss mit Kletterturm', indoor:false, cat:'playground', lat:47.2267, lon:8.8180 },
-  ],
-};
+// Highlights now come from sunshine API response (d.highlights array per destination)
 
 // Mirrors getWeekendDates() in worker/src/sunshine.js — keep in sync
 function getSunshineWeekendDates() {
@@ -2270,7 +2121,7 @@ async function initSunshineMap() {
 
 function renderSunshineHighlights(d) {
   if (d.isBaseline) return '';
-  const highlights = DEST_HIGHLIGHTS[d.id] || [];
+  const highlights = d.highlights || [];
   const isActivityCity = ['basel', 'lausanne', 'luzern'].includes(d.id);
   if (!highlights.length && !isActivityCity) return '';
   const name = lang === 'de' ? (d.nameDE || d.name) : d.name;
@@ -2697,6 +2548,26 @@ async function initSnowMap() {
 
 // ═══ DEALS VIEW ═══
 
+async function loadDeals() {
+  if (dealsData.length > 0) return;
+  try {
+    const cached = localStorage.getItem('dealsCache');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed.deals?.length) { dealsData = parsed.deals; renderCurrentView(); }
+    }
+    const res = await fetch(`${API}/deals`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.deals?.length) {
+        dealsData = data.deals;
+        localStorage.setItem('dealsCache', JSON.stringify(data));
+        renderCurrentView();
+      }
+    }
+  } catch {}
+}
+
 function renderDealsView() {
   const currentMonth = new Date().getMonth() + 1;
   let html = `<div class="subtitle">${t('dealsSubtitle')}</div>`;
@@ -2708,7 +2579,7 @@ function renderDealsView() {
   html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${dealsFilter === k ? ' active' : ''}" onclick="filterDeals('${k}')">${v}</button>`).join('')}</div>`;
 
   // Filter deals
-  let items = DEALS.filter(d => {
+  let items = dealsData.filter(d => {
     // Filter by valid months
     if (d.validMonths && !d.validMonths.includes(currentMonth)) return false;
     // Filter by city
@@ -2988,7 +2859,7 @@ function getExploreItems() {
   // Deals (city-relevant, no coordinates — use city center with offset)
   if (exploreFilter === 'all' || exploreFilter === 'deals') {
     const coords = CITY_COORDS[city] || CITY_COORDS.zurich;
-    const relevant = DEALS.filter(d => {
+    const relevant = dealsData.filter(d => {
       if (d.city !== 'all' && d.city !== city) return false;
       if (d.validMonths && !d.validMonths.includes(currentMonth)) return false;
       return true;
@@ -3110,6 +2981,9 @@ async function loadExplore(force = false) {
       }
     }
   }
+
+  // Ensure deals are loaded for explore map
+  if (!dealsData.length) loadDeals();
 
   // Request location for distance sorting
   if (!userLat && navigator.geolocation) {

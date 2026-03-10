@@ -52,6 +52,10 @@ Cloudflare Worker (worker/src/)
 1. Fetch weekly (Mon–Sun) snowfall forecasts for 22 ski resorts
 2. Single multi-location Open-Meteo API call (snowfall_sum, snow_depth)
 3. Return resorts ranked by weekly snowfall total
+
+    ↓ HTTP GET /deals
+1. Return curated deals, free entry spots, and money-saving tips
+2. Static data, cached 24h on CDN
 ```
 
 ## File Structure
@@ -78,7 +82,8 @@ swiss-news-summary/
 │   │   ├── weekend.js    # Weekend planner logic
 │   │   ├── lunch.js      # Overpass API + lunch handler
 │   │   ├── sunshine.js   # Weekend sunshine forecast (29 destinations, Zürich baseline)
-│   │   └── snow.js       # Weekly snowfall forecast (22 ski resorts)
+│   │   ├── snow.js       # Weekly snowfall forecast (22 ski resorts)
+│   │   └── deals.js      # Deals & free entry data
 │   └── wrangler.toml   # Worker config (main = "src/index.js")
 ├── CLAUDE.md
 └── README.md
@@ -163,7 +168,7 @@ swiss-news-summary/
 - **Client-side fallback**: If worker is rate-limited, fetches directly from Open-Meteo
 - Always Zürich-based (not affected by city selector)
 - **Expandable cards**: Tap to expand with "Things to do" section (accordion, one at a time)
-- **Destination highlights**: `DEST_HIGHLIGHTS` in app.js — 2-3 curated toddler-friendly attractions per destination (57 total)
+- **Destination highlights**: `DEST_HIGHLIGHTS` in worker/src/sunshine.js — 2-3 toddler-friendly attractions per destination, included in API response
 - **Overlap cities** (Basel, Lausanne, Luzern): Show "See all activities →" link to Activities view
 - **Google Maps links**: "Find playgrounds" / "Find restaurants" near destination coordinates
 
@@ -183,7 +188,7 @@ swiss-news-summary/
 
 ### Deals & Free View ("Best deals?")
 - Curated list of free entry spots, family passes, and money-saving tips
-- **DEALS array**: ~30 static entries in app.js (no worker endpoint)
+- **DEALS**: ~30 curated entries served from `GET /deals` worker endpoint
 - **Categories**: Museums, Outdoor, Transport, Family Passes, Seasonal
 - **Types**: Free (green badge), Deal (blue badge), Tip (amber badge)
 - **Filters**: All / Free / Deals / Tips
@@ -433,6 +438,7 @@ Each city has:
 | `setSnowSort(sort)` | Sort by 'snowfall' or 'distance' |
 | `setSnowFilter(filter)` | Filter by 'all'/'heavy'/'moderate'/'light' |
 | `fetchSnowClientSide()` | Client-side Open-Meteo fallback for snow |
+| `loadDeals()` | Fetch deals from worker API, cache in localStorage |
 | `renderDealsView()` | Render deals & free view with filter bar |
 | `renderDealCard(d)` | Render single deal card |
 | `filterDeals(f)` | Filter deals by type (all/free/deal/tip) |
@@ -467,6 +473,7 @@ Each city has:
 - `activitiesCache-{city}` - Cached activities data per city
 - `sunshineCache-v2` - Cached sunshine data with Zürich baseline (30min TTL)
 - `snowCache-v1` - Cached snow/ski resort data (30min TTL)
+- `dealsCache` - Cached deals data from worker API
 - `activityReminders` - Array of `{ activityId, name, date, createdAt }` for activity reminders
 
 **Cloudflare KV:**

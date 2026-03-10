@@ -12,6 +12,8 @@ These features were added to the Cloudflare Worker and are automatically availab
 | Weekend Brief | `GET /` | `weekendBrief` | Sat+Sun weather + weekend events. `null` on Sundays. |
 | Featured Activities | `GET /activities` | `featured: true` | 13 activities across all cities flagged as featured |
 | News Expansion | `GET /` | `categories.*` | Now 8-10 items per category (was 5-8). Added Blick, Watson, Google Trends, Kantonspolizei ZH sources. Better categorization (elections→politics, police→local). No model changes needed — same JSON shape, just more items. |
+| Deals API | `GET /deals` | `deals[]` | Deals/free entry data now served from worker endpoint. iOS should fetch from `/deals` instead of hardcoding `DealsData.swift`. Same JSON shape as before. |
+| Sunshine Highlights | `GET /sunshine` | `destinations[].highlights[]` | Each destination now includes `highlights` array with toddler-friendly attractions. iOS can drop `DestinationHighlights.swift` and use API data directly. |
 
 The iOS `NewsViewModel` and `ActivitiesViewModel` just need to parse these new fields from the existing JSON responses.
 
