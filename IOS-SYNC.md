@@ -15,7 +15,7 @@ These features were added to the Cloudflare Worker and are automatically availab
 | Sunshine Highlights | `GET /sunshine` | `destinations[].highlights[]` | Each destination now includes `highlights` array with toddler-friendly attractions. iOS can drop `DestinationHighlights.swift` and use API data directly. |
 | Activities Expanded | `GET /activities` | `activities[]` | Now 94 base activities (was 52). 20km radius per city. No model changes — same JSON shape, just more items. |
 | Transport Multi-Station | `GET /` | `transport` | Zürich now fetches from Stadelhofen + Hardbrücke (was HB only). Deduplicated. Other cities unchanged. No model change — same JSON shape. |
-| Venue Photos | `GET /photo/:activityId` | image bytes | Returns JPEG photo of the venue via Google Places. Cached in R2. 404 if no photo found. Use `AsyncImage` with emoji fallback. |
+| Venue Photos | `GET /photo/:id` | image bytes | Returns JPEG photo via Google Places. Works for activity IDs, sunshine destination IDs, and snow resort IDs. Cached in R2. 404 if no photo found. Use `AsyncImage` with fallback. |
 
 The iOS `NewsViewModel` and `ActivitiesViewModel` just need to parse these new fields from the existing JSON responses.
 
@@ -89,15 +89,18 @@ These features were removed or changed in the PWA and the iOS app should match:
 - On app launch, clean up past reminders
 - Model: `ActivityReminder` struct with `activityId`, `name`, `date`, `notificationId`
 
-### 5. Venue Photos in Surprise Modal
-**PWA**: `showSurpriseModal()` in `app.js` — loads `<img>` from `/photo/:activityId`
-**iOS target**: `SurpriseView.swift` or equivalent modal
+### 5. Venue Photos (Activities, Sunshine, Snow)
+**PWA**: `/photo/:id` endpoint used across multiple views
+**iOS target**: `ActivityCard.swift`, `SunshineCard.swift`, `SnowCard.swift`, surprise modal
 
 **What to build:**
-- Use `AsyncImage(url: URL(string: "\(apiBase)/photo/\(activity.id)"))` in the surprise modal
-- Show shimmer/placeholder while loading
-- Fall back to category emoji if image returns 404 (venue not found on Google Places)
-- Skip photo for `stayhome` category (no venue)
+- **Activity cards**: 64px rounded thumbnail on right side of card using `AsyncImage(url: URL(string: "\(apiBase)/photo/\(activity.id)"))`
+- **Surprise modal**: Full-width photo at top of modal with shimmer loading state
+- **Sunshine cards**: Destination photo banner in expanded card body
+- **Snow cards**: Resort photo banner in expanded card body
+- Skip photo for `stayhome` category and custom activities
+- Fall back gracefully on 404 (hide image, show emoji in modal)
+- All photos are lazy loaded; R2-cached after first fetch so subsequent loads are instant
 
 ### 6. Featured / NEW Badges
 **PWA**: Badge rendering in `renderActivityCard()`
