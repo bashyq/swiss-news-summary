@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.18.0';
+const APP_VERSION = '2.19.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -658,12 +658,19 @@ function renderActivityCard(a) {
     extra = `<div class="materials-info">📦 ${t('materials')}: ${esc(mat)}</div>`;
   }
 
+  const thumbHtml = (a.category !== 'stayhome' && a.id && !a.custom) ? `<img class="activity-thumb" src="${API}/photo/${a.id}" alt="" loading="lazy" onerror="this.style.display='none'">` : '';
+
   return `<div class="activity-card cat-${a.category || 'other'}" id="activity-${a.id}" data-lat="${a.lat || ''}" data-lon="${a.lon || ''}" onclick="activityCardClick('${a.id}', event)">
     <button class="activity-save" onclick="event.stopPropagation();toggleSave('${a.id}')">${isSaved ? '❤️' : '🤍'}</button>
     ${isSaved ? `<button class="activity-remind" onclick="event.stopPropagation();showReminderModal('${a.id}')">${hasRemind ? '🔔' : '🔕'}</button>` : ''}
-    <div class="activity-name"><span class="activity-emoji">${ACTIVITY_EMOJIS[a.category] || '📍'}</span> ${esc(name)}</div>
-    <div class="activity-desc">${esc(desc)}</div>
-    <div class="activity-badges">${badges}</div>
+    <div class="activity-card-row">
+      <div class="activity-card-text">
+        <div class="activity-name"><span class="activity-emoji">${ACTIVITY_EMOJIS[a.category] || '📍'}</span> ${esc(name)}</div>
+        <div class="activity-desc">${esc(desc)}</div>
+        <div class="activity-badges">${badges}</div>
+      </div>
+      ${thumbHtml}
+    </div>
     ${extra}
     <div class="activity-actions">
       ${a.url ? `<button onclick="event.stopPropagation();window.open('${esc(a.url)}','_blank')">${t('website')}</button>` : ''}
@@ -1932,6 +1939,7 @@ function renderSunshineCard(d, rank) {
       </div>
     </div>
     <div class="sunshine-card-body">
+      <div class="dest-photo"><img src="${API}/photo/${d.id}" alt="${esc(name)}" loading="lazy" onerror="this.parentNode.style.display='none'"></div>
       <div class="sunshine-badges">${badges}</div>
       ${forecastHtml}
     </div>
@@ -2390,6 +2398,7 @@ function renderSnowCard(d, rank) {
       </div>
     </div>
     <div class="snow-card-body">
+      <div class="dest-photo"><img src="${API}/photo/${d.id}" alt="${esc(name)}" loading="lazy" onerror="this.parentNode.style.display='none'"></div>
       <div class="snow-badges">${badges}</div>
       ${forecastHtml}
     </div>

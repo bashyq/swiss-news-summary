@@ -6,6 +6,8 @@
 export const VERSION = '1.0.0';
 
 import { getActivityById } from './activities.js';
+import { getSunshineDestById } from './sunshine.js';
+import { getSnowResortById } from './snow.js';
 
 const PHOTO_MAX_WIDTH = 600;
 
@@ -59,10 +61,10 @@ export async function handlePhoto(url, env) {
     }
   }
 
-  // Look up activity
-  const activity = getActivityById(activityId);
+  // Look up place from activities, sunshine destinations, or snow resorts
+  const activity = getActivityById(activityId) || getSunshineDestById(activityId) || getSnowResortById(activityId);
   if (!activity || !activity.lat || !activity.lon) {
-    return new Response(JSON.stringify({ error: 'Activity not found' }), {
+    return new Response(JSON.stringify({ error: 'Place not found' }), {
       status: 404, headers: { 'Content-Type': 'application/json', ...corsHeader }
     });
   }

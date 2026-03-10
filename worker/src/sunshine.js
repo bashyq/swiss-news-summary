@@ -123,6 +123,10 @@ const DEST_HIGHLIGHTS = {
   ],
 };
 
+export function getSunshineDestById(id) {
+  return DESTINATIONS.find(d => d.id === id) || null;
+}
+
 const DESTINATIONS = [
   // Baseline (Zürich — always pinned first)
   { id: 'zurich', name: 'Zürich', nameDE: 'Zürich', lat: 47.3769, lon: 8.5417, region: 'Zürich', regionDE: 'Zürich', driveMinutes: 0, isBaseline: true },
