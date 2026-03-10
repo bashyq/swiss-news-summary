@@ -6,7 +6,7 @@ export const VERSION = '2.2.0';
 
 export const CITIES = {
   zurich: {
-    name: 'Zürich', lat: 47.3769, lon: 8.5417, station: 'Zürich HB',
+    name: 'Zürich', lat: 47.3769, lon: 8.5417, station: ['Zürich Stadelhofen', 'Zürich Hardbrücke'],
     sources: [
       { name: 'NZZ Zürich', url: 'https://www.nzz.ch/zuerich.rss' },
       { name: 'Kantonspolizei Zürich', url: 'https://polizei-zurich.ch/feed/', type: 'police' },
