@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════
-// Today in Switzerland — PWA Frontend
+// Znüni — PWA Frontend
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
@@ -109,8 +109,8 @@ const T = {
   cancel: { en:'Cancel', de:'Abbrechen' },
   name: { en:'Name', de:'Name' },
   description: { en:'Description', de:'Beschreibung' },
-  todayInSwitzerland: { en:'Today in', de:'Heute in der' },
-  switzerland: { en:'Switzerland', de:'Schweiz' },
+  todayInSwitzerland: { en:'Znüni', de:'Znüni' },
+  switzerland: { en:'Your local guide', de:'Dein lokaler Guide' },
   whatToDo: { en:'What to do', de:'Was tun' },
   todayQ: { en:'today?', de:'heute?' },
   whereToEat: { en:'Where to', de:'Wo essen' },
@@ -1425,7 +1425,7 @@ function checkReminders() {
   for (const r of due) {
     const msg = `${t('reminderDue')} ${r.name}`;
     if ('Notification' in window && Notification.permission === 'granted') {
-      try { new Notification('Today in Switzerland', { body: msg, icon: '/icon.svg' }); } catch {}
+      try { new Notification('Znüni', { body: msg, icon: '/icon.svg' }); } catch {}
     }
     showToast('reminderDue', 'info');
   }
@@ -1532,7 +1532,7 @@ function refreshCurrentView() {
 async function shareSummary() {
   if (!navigator.share) return;
   try {
-    await navigator.share({ title: 'Today in Switzerland', text: `Today in ${CITIES[city]}`, url: window.location.href });
+    await navigator.share({ title: 'Znüni', text: `Znüni — ${CITIES[city]}`, url: window.location.href });
     showToast('toastShared', 'success');
   } catch {}
 }
@@ -1682,7 +1682,7 @@ async function mountApplePayButton(amount) {
   const stripe = await getStripe();
   const pr = stripe.paymentRequest({
     country: 'CH', currency: 'chf',
-    total: { label: 'Today in Switzerland', amount },
+    total: { label: 'Znüni', amount },
     requestPayerName: false, requestPayerEmail: false,
   });
 

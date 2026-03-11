@@ -1,7 +1,7 @@
 {
-  "name": "Today in Switzerland",
-  "short_name": "Today CH",
-  "description": "Daily news, weather, activities for families in Switzerland",
+  "name": "Znüni",
+  "short_name": "Znüni",
+  "description": "Your local Swiss family guide — discover activities, restaurants, events, deals, and news in your area",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1B2B4D",

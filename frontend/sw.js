@@ -1,4 +1,4 @@
-const CACHE_NAME = 'today-switzerland-v57';
+const CACHE_NAME = 'znuni-v1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -144,7 +144,7 @@ async function staleWhileRevalidate(request) {
 
 // Push notification handler
 self.addEventListener('push', (event) => {
-  let data = { title: 'Today in Switzerland', body: 'Your daily briefing is ready!' };
+  let data = { title: 'Znüni', body: 'Your daily briefing is ready!' };
 
   if (event.data) {
     try {
