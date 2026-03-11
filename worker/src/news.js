@@ -141,8 +141,16 @@ RULES:
 4. Swiss news only
 5. For each item, assess sentiment: "positive" (good news, progress), "negative" (accidents, crises), or "neutral" (informational)
 6. Identify the single biggest story/trending topic across all headlines. Include the URL of the best-matching article for the trending topic.
-7. For each item, provide "summary" (1 short sentence visible by default) AND "detail" (1 additional sentence with context, shown on tap)
-8. De-duplicate: if multiple sources report the same story, keep the best version only
+7. De-duplicate: if multiple sources report the same story, keep the best version only
+
+WRITING STYLE — CRITICAL:
+- "summary": 1 punchy sentence. State the fact directly. NEVER start with "An article about", "This reports", "An overview of". Just say what happened.
+  BAD: "An article about criticism of the coach's decision to substitute the goalkeeper."
+  GOOD: "Tottenham's coach faces backlash for substituting the goalkeeper mid-match."
+- "detail": 2-3 sentences expanding with specifics — names, numbers, consequences, context. No filler. No meta-language. Write like a journalist, not a librarian.
+  BAD: "The article provides an overview of the criticism surrounding the decision."
+  GOOD: "Manager Ange Postecoglou pulled keeper Guglielmo Vicario at half-time despite a 1-0 lead. Former players called the move 'disrespectful' and fans booed the decision."
+- "headline": Sharp, concise. Active voice. No source attribution in the headline.
 
 CATEGORIES — categorize by primary topic:
 - topStories: Breaking or unusual news that doesn't fit other categories. NOT a catch-all.
@@ -155,7 +163,7 @@ Headlines:
 ${headlinesText}
 
 Respond with ONLY this JSON (ALL IN ENGLISH):
-{"trending":{"topic":"short topic","topicDE":"German topic","headline":"dominant headline","url":"best matching article URL"},"topStories":[{"headline":"English headline","summary":"Short summary.","detail":"Extra context sentence.","source":"SourceName","url":"url","sentiment":"positive|neutral|negative"}],"politics":[],"events":[],"culture":[],"local":[]}`
+{"trending":{"topic":"short topic","topicDE":"German topic","headline":"dominant headline","url":"best matching article URL"},"topStories":[{"headline":"English headline","summary":"Direct fact, no fluff.","detail":"2-3 sentences with specifics.","source":"SourceName","url":"url","sentiment":"positive|neutral|negative"}],"politics":[],"events":[],"culture":[],"local":[]}`
     : `Du bist eine JSON API. Kategorisiere Schweizer Nachrichten und antworte NUR mit gültigem JSON.
 
 REGELN:
@@ -164,8 +172,16 @@ REGELN:
 3. Nur Schweizer Nachrichten
 4. Für jeden Eintrag die Stimmung bewerten: "positive" (gute Nachrichten), "negative" (Unfälle, Krisen), oder "neutral" (informativ)
 5. Das größte/dominanteste Thema über alle Schlagzeilen identifizieren. Die URL des passendsten Artikels angeben.
-6. Für jeden Eintrag "summary" (1 kurzer Satz) UND "detail" (1 zusätzlicher Satz mit Kontext) angeben
-7. Duplikate entfernen: bei gleicher Story aus mehreren Quellen nur die beste Version behalten
+6. Duplikate entfernen: bei gleicher Story aus mehreren Quellen nur die beste Version behalten
+
+SCHREIBSTIL — WICHTIG:
+- "summary": 1 knapper Satz. Direkt die Fakten nennen. NIEMALS mit "Ein Artikel über", "Es wird berichtet", "Ein Überblick über" beginnen. Einfach sagen was passiert ist.
+  SCHLECHT: "Ein Artikel über die Kritik an der Entscheidung des Trainers."
+  GUT: "Tottenham-Trainer steht nach Torhüter-Auswechslung in der Kritik."
+- "detail": 2-3 Sätze mit konkreten Details — Namen, Zahlen, Konsequenzen, Hintergrund. Kein Fülltext. Keine Meta-Sprache. Wie ein Journalist schreiben.
+  SCHLECHT: "Der Artikel gibt einen Überblick über die Kritik an der Entscheidung."
+  GUT: "Trainer Postecoglou nahm Keeper Vicario trotz 1:0-Führung zur Halbzeit vom Platz. Ex-Spieler nannten die Aktion 'respektlos', Fans buhten."
+- "headline": Kurz, prägnant, aktiv formuliert. Keine Quellennennung in der Schlagzeile.
 
 KATEGORIEN — nach Hauptthema:
 - topStories: Aktuelle oder ungewöhnliche Nachrichten. KEIN Sammelbecken.
@@ -178,7 +194,7 @@ Schlagzeilen:
 ${headlinesText}
 
 Antworte NUR mit diesem JSON:
-{"trending":{"topic":"Kurzes Thema","topicDE":"Kurzes Thema DE","headline":"Dominante Schlagzeile","url":"URL des passendsten Artikels"},"topStories":[{"headline":"...","summary":"Kurze Zusammenfassung.","detail":"Zusätzlicher Kontext.","source":"...","url":"...","sentiment":"positive|neutral|negative"}],"politics":[],"events":[],"culture":[],"local":[]}`;
+{"trending":{"topic":"Kurzes Thema","topicDE":"Kurzes Thema DE","headline":"Dominante Schlagzeile","url":"URL des passendsten Artikels"},"topStories":[{"headline":"Prägnante Schlagzeile","summary":"Direkte Fakten, kein Fülltext.","detail":"2-3 Sätze mit konkreten Details.","source":"...","url":"...","sentiment":"positive|neutral|negative"}],"politics":[],"events":[],"culture":[],"local":[]}`;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
