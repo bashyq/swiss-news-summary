@@ -15,6 +15,7 @@ const MAP_COLORS = { green:'#22c55e', purple:'#a855f7', amber:'#f59e0b', blue:'#
 let lang = localStorage.getItem('lang') || 'en';
 let city = localStorage.getItem('city') || 'zurich';
 let theme = localStorage.getItem('theme') || 'dark';
+let brand = localStorage.getItem('brand') || 'classic';
 let view = localStorage.getItem('view') || 'news';
 if (view === 'whatson') view = 'events'; // merged into events
 let newsData = null;
@@ -80,6 +81,9 @@ const T = {
   language: { en:'Language', de:'Sprache' },
   darkMode: { en:'Dark mode', de:'Dunkelmodus' },
   lightMode: { en:'Light mode', de:'Hellmodus' },
+  brandTheme: { en:'Theme', de:'Design' },
+  brandClassic: { en:'Classic', de:'Klassisch' },
+  brandAlpine: { en:'Alpine', de:'Alpin' },
   holidays: { en:'Upcoming Holidays', de:'Feiertage' },
   share: { en:'Share', de:'Teilen' },
   refresh: { en:'Refresh', de:'Aktualisieren' },
@@ -385,6 +389,10 @@ function renderHeader() {
     <div class="header-top">
       <div class="date-display">${dateStr}</div>
       <div class="header-controls">
+        <div class="header-lang-toggle">
+          <button class="header-lang-btn${lang === 'en' ? ' active' : ''}" onclick="setLanguage('en')">EN</button>
+          <button class="header-lang-btn${lang === 'de' ? ' active' : ''}" onclick="setLanguage('de')">DE</button>
+        </div>
         <div class="city-selector">
           <button class="icon-btn" onclick="toggleCityDropdown()">
             ${CITIES[city]} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
@@ -461,10 +469,10 @@ function renderMenu() {
     <div class="menu-item${view === 'deals' ? ' active' : ''}" onclick="switchView('deals')"><span class="menu-item-icon">🎁</span>${t('deals')}</div>
     ${canDonate ? `<div class="menu-item" onclick="openDonateModal()"><span class="menu-item-icon">☕</span>${t('donate')}</div>` : ''}
     <div class="menu-section">
-      <div class="menu-section-title">${t('language')}</div>
-      <div class="lang-toggle">
-        <button class="lang-btn${lang === 'en' ? ' active' : ''}" onclick="setLanguage('en')">EN</button>
-        <button class="lang-btn${lang === 'de' ? ' active' : ''}" onclick="setLanguage('de')">DE</button>
+      <div class="menu-section-title">${t('brandTheme')}</div>
+      <div class="brand-toggle">
+        <button class="brand-btn${brand === 'classic' ? ' active' : ''}" onclick="setBrand('classic')">${t('brandClassic')}</button>
+        <button class="brand-btn${brand === 'alpine' ? ' active' : ''}" onclick="setBrand('alpine')">${t('brandAlpine')}</button>
       </div>
       <button class="theme-toggle" onclick="toggleTheme()">${theme === 'dark' ? '☀️ ' + t('lightMode') : '🌙 ' + t('darkMode')}</button>
     </div>
@@ -1265,7 +1273,24 @@ function toggleTheme() {
   theme = theme === 'dark' ? 'light' : 'dark';
   localStorage.setItem('theme', theme);
   document.documentElement.setAttribute('data-theme', theme);
+  updateThemeColor();
   renderMenu();
+}
+
+function setBrand(b) {
+  brand = b;
+  localStorage.setItem('brand', b);
+  if (b === 'alpine') document.documentElement.setAttribute('data-brand', 'alpine');
+  else document.documentElement.removeAttribute('data-brand');
+  updateThemeColor();
+  renderMenu();
+}
+
+function updateThemeColor() {
+  const meta = document.getElementById('meta-theme-color');
+  if (!meta) return;
+  if (brand === 'alpine') meta.content = theme === 'dark' ? '#1B2B4D' : '#FFFFFF';
+  else meta.content = theme === 'dark' ? '#0a0a0a' : '#ffffff';
 }
 
 function toggleCityDropdown() {
@@ -3062,8 +3087,10 @@ function updateFreshnessTimes() {
 // ═══ INIT ═══
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Theme
+  // Theme + brand
   document.documentElement.setAttribute('data-theme', theme);
+  if (brand === 'alpine') document.documentElement.setAttribute('data-brand', 'alpine');
+  updateThemeColor();
 
   // Render
   renderAll();
