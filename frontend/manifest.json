@@ -1,7 +1,7 @@
 {
   "name": "Znüni",
   "short_name": "Znüni",
-  "description": "Your local Swiss family guide — discover activities, restaurants, events, deals, and news in your area",
+  "description": "Znüni — Was lauft hüt? News, weather, activities, events, deals and more for Swiss families.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1B2B4D",
