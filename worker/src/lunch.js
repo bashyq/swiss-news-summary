@@ -134,52 +134,43 @@ async function fetchGoogleRating(name, lat, lon, apiKey) {
   };
 }
 
-async function enrichWithRatings(spots, env) {
+async function enrichWithRatings(spots, cityId, env) {
   if (!env.GOOGLE_PLACES_KEY || !env.PHOTOS_BUCKET) return spots;
 
-  const results = new Map();
-  const uncached = [];
+  // Single R2 object per city holds all ratings — avoids 1000s of individual R2 reads
+  const r2Key = `ratings/city-${cityId}.json`;
+  let cache = {};
+  try {
+    const obj = await env.PHOTOS_BUCKET.get(r2Key);
+    if (obj) cache = JSON.parse(await obj.text());
+  } catch {}
 
-  // Phase 1: Check R2 cache for all spots (batch R2 reads)
-  const CACHE_BATCH = 15;
-  for (let i = 0; i < spots.length; i += CACHE_BATCH) {
-    const batch = spots.slice(i, i + CACHE_BATCH);
-    const checks = batch.map(async (s) => {
-      const r2Key = `ratings/${s.id}`;
-      try {
-        const cached = await env.PHOTOS_BUCKET.get(r2Key);
-        if (cached) {
-          const data = JSON.parse(await cached.text());
-          if (Date.now() - data.cachedAt < RATING_CACHE_DAYS * 86400000) {
-            results.set(s.id, data);
-            return;
-          }
-        }
-      } catch {}
-      uncached.push(s);
-    });
-    await Promise.allSettled(checks);
-  }
+  const now = Date.now();
+  const expired = RATING_CACHE_DAYS * 86400000;
+  const uncached = spots.filter(s => {
+    const c = cache[s.id];
+    return !c || (now - c.cachedAt > expired);
+  });
 
-  // Phase 2: Fetch from Google for uncached (limit to 10 per invocation to stay under subrequest limit)
-  const MAX_GOOGLE = 10;
+  // Fetch up to 20 uncached ratings per request (each = 1 Google subrequest)
+  const MAX_GOOGLE = 20;
   const toFetch = uncached.slice(0, MAX_GOOGLE);
   if (toFetch.length > 0) {
     const fetches = toFetch.map(async (s) => {
       const rating = await fetchGoogleRating(s.name, s.lat, s.lon, env.GOOGLE_PLACES_KEY);
-      if (rating) {
-        results.set(s.id, rating);
-        await env.PHOTOS_BUCKET.put(`ratings/${s.id}`, JSON.stringify(rating), {
-          httpMetadata: { contentType: 'application/json' }
-        });
-      }
+      cache[s.id] = rating || { rating: null, ratingCount: 0, closed: false, cachedAt: now };
     });
     await Promise.allSettled(fetches);
+
+    // Write updated cache back to R2
+    await env.PHOTOS_BUCKET.put(r2Key, JSON.stringify(cache), {
+      httpMetadata: { contentType: 'application/json' }
+    });
   }
 
   return spots.map(s => {
-    const r = results.get(s.id);
-    return r ? { ...s, rating: r.rating, ratingCount: r.ratingCount, permanentlyClosed: r.closed || false } : s;
+    const r = cache[s.id];
+    return r && r.rating ? { ...s, rating: r.rating, ratingCount: r.ratingCount, permanentlyClosed: r.closed || false } : s;
   });
 }
 
@@ -188,9 +179,10 @@ export async function handleLunch(url, env) {
   const city = getCity(cityId);
 
   const cache = caches.default;
-  const cacheKey = new Request(`https://cache.local/lunch-v2-${cityId}`, { method: 'GET' });
+  const cacheKey = new Request(`https://cache.local/lunch-v3-${cityId}`, { method: 'GET' });
+  const forceRefresh = url.searchParams.has('refresh');
 
-  let cached = await cache.match(cacheKey);
+  let cached = !forceRefresh && await cache.match(cacheKey);
   if (cached) {
     const body = await cached.text();
     return new Response(body, {
@@ -200,7 +192,7 @@ export async function handleLunch(url, env) {
 
   const elements = await fetchOverpass(city.lat, city.lon);
   let spots = normalize(elements);
-  spots = await enrichWithRatings(spots, env);
+  spots = await enrichWithRatings(spots, cityId, env);
 
   const body = JSON.stringify({
     spots, center: { lat: city.lat, lon: city.lon },
