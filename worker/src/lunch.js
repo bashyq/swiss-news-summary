@@ -2,9 +2,11 @@
  * Lunch — Overpass API integration for nearby restaurants.
  */
 
-export const VERSION = '2.0.0';
+export const VERSION = '2.1.0';
 
 import { getCity } from './data.js';
+
+const RATING_CACHE_DAYS = 30;
 
 const CUISINE_MAP = {
   swiss: 'swiss', schweizer: 'swiss', fondue: 'swiss', raclette: 'swiss',
@@ -117,12 +119,76 @@ function normalize(elements) {
   });
 }
 
+async function fetchGoogleRating(name, lat, lon, apiKey) {
+  const searchUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(name)}&inputtype=textquery&locationbias=point:${lat},${lon}&fields=rating,user_ratings_total,business_status&key=${apiKey}`;
+  const res = await fetch(searchUrl);
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (data.status !== 'OK' || !data.candidates?.length) return null;
+  const c = data.candidates[0];
+  return {
+    rating: c.rating || null,
+    ratingCount: c.user_ratings_total || 0,
+    closed: c.business_status === 'CLOSED_PERMANENTLY',
+    cachedAt: Date.now()
+  };
+}
+
+async function enrichWithRatings(spots, env) {
+  if (!env.GOOGLE_PLACES_KEY || !env.PHOTOS_BUCKET) return spots;
+
+  const results = new Map();
+  const uncached = [];
+
+  // Phase 1: Check R2 cache for all spots (batch R2 reads)
+  const CACHE_BATCH = 15;
+  for (let i = 0; i < spots.length; i += CACHE_BATCH) {
+    const batch = spots.slice(i, i + CACHE_BATCH);
+    const checks = batch.map(async (s) => {
+      const r2Key = `ratings/${s.id}`;
+      try {
+        const cached = await env.PHOTOS_BUCKET.get(r2Key);
+        if (cached) {
+          const data = JSON.parse(await cached.text());
+          if (Date.now() - data.cachedAt < RATING_CACHE_DAYS * 86400000) {
+            results.set(s.id, data);
+            return;
+          }
+        }
+      } catch {}
+      uncached.push(s);
+    });
+    await Promise.allSettled(checks);
+  }
+
+  // Phase 2: Fetch from Google for uncached (limit to 10 per invocation to stay under subrequest limit)
+  const MAX_GOOGLE = 10;
+  const toFetch = uncached.slice(0, MAX_GOOGLE);
+  if (toFetch.length > 0) {
+    const fetches = toFetch.map(async (s) => {
+      const rating = await fetchGoogleRating(s.name, s.lat, s.lon, env.GOOGLE_PLACES_KEY);
+      if (rating) {
+        results.set(s.id, rating);
+        await env.PHOTOS_BUCKET.put(`ratings/${s.id}`, JSON.stringify(rating), {
+          httpMetadata: { contentType: 'application/json' }
+        });
+      }
+    });
+    await Promise.allSettled(fetches);
+  }
+
+  return spots.map(s => {
+    const r = results.get(s.id);
+    return r ? { ...s, rating: r.rating, ratingCount: r.ratingCount, permanentlyClosed: r.closed || false } : s;
+  });
+}
+
 export async function handleLunch(url, env) {
   const cityId = url.searchParams.get('city') || 'zurich';
   const city = getCity(cityId);
 
   const cache = caches.default;
-  const cacheKey = new Request(`https://cache.local/lunch-${cityId}`, { method: 'GET' });
+  const cacheKey = new Request(`https://cache.local/lunch-v2-${cityId}`, { method: 'GET' });
 
   let cached = await cache.match(cacheKey);
   if (cached) {
@@ -133,7 +199,8 @@ export async function handleLunch(url, env) {
   }
 
   const elements = await fetchOverpass(city.lat, city.lon);
-  const spots = normalize(elements);
+  let spots = normalize(elements);
+  spots = await enrichWithRatings(spots, env);
 
   const body = JSON.stringify({
     spots, center: { lat: city.lat, lon: city.lon },

@@ -257,7 +257,6 @@ function buildDailyPick(activities, weather, lang) {
     let score = 0;
     if ((isRainy || isCold) && a.indoor) score += 3;
     if (!isRainy && !isCold && !a.indoor) score += 2;
-    if (a.featured) score += 2;
     if (timeOfDay === 'evening' && a.duration && a.duration.includes('1')) score += 1;
     if (timeOfDay === 'morning' && !a.indoor) score += 1;
     score += Math.random(); // tiebreak

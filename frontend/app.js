@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.19.0';
+const APP_VERSION = '2.20.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -32,7 +32,6 @@ let savedActivities = JSON.parse(localStorage.getItem('savedActivities') || '[]'
 let customActivities = JSON.parse(localStorage.getItem('customActivities') || '[]');
 let savedLunch = JSON.parse(localStorage.getItem('savedLunch') || '[]');
 let customLunch = JSON.parse(localStorage.getItem('customLunch') || '[]');
-let lunchRatings = JSON.parse(localStorage.getItem('lunchRatings') || '{}');
 let sunshineData = null;
 // whatsOnData removed — merged into Events view
 let sunshineSort = 'sunshine';
@@ -227,7 +226,6 @@ const T = {
   reminderDue: { en:'Reminder: Time to visit', de:'Erinnerung: Zeit für' },
   reminderDate: { en:'When?', de:'Wann?' },
   reminderRemove: { en:'Remove reminder', de:'Erinnerung entfernen' },
-  featured: { en:'Featured', de:'Empfohlen' },
   newBadge: { en:'NEW', de:'NEU' },
   explore: { en:'Explore', de:'Entdecken' },
   exploreTitle: { en:'near you', de:'in der Nähe' },
@@ -639,7 +637,6 @@ function renderActivityCard(a) {
   const dist = (userLat && a.lat) ? haversine(userLat, userLon, a.lat, a.lon) : null;
 
   let badges = '';
-  if (a.featured) badges += `<span class="badge badge-featured">${t('featured')}</span>`;
   if (a.addedDate) {
     const daysSince = Math.floor((Date.now() - new Date(a.addedDate).getTime()) / 86400000);
     if (daysSince <= 30) badges += `<span class="badge badge-new">${t('newBadge')}</span>`;
@@ -658,11 +655,16 @@ function renderActivityCard(a) {
     extra = `<div class="materials-info">📦 ${t('materials')}: ${esc(mat)}</div>`;
   }
 
-  const thumbHtml = (a.category !== 'stayhome' && a.id && !a.custom) ? `<img class="activity-thumb" src="${API}/photo/${a.id}" alt="" loading="lazy" onerror="this.style.display='none'">` : '';
+  const hasThumb = a.category !== 'stayhome' && a.id && !a.custom;
+  const saveBtn = `<button class="activity-save" onclick="event.stopPropagation();toggleSave('${a.id}')">${isSaved ? '❤️' : '🤍'}</button>`;
+  const remindBtn = isSaved ? `<button class="activity-remind" onclick="event.stopPropagation();showReminderModal('${a.id}')">${hasRemind ? '🔔' : '🔕'}</button>` : '';
+
+  const thumbHtml = hasThumb
+    ? `<div class="activity-thumb-wrap"><img class="activity-thumb" src="${API}/photo/${a.id}" alt="" loading="lazy" onerror="this.parentNode.classList.add('no-img')">${saveBtn}${remindBtn}</div>`
+    : '';
 
   return `<div class="activity-card cat-${a.category || 'other'}" id="activity-${a.id}" data-lat="${a.lat || ''}" data-lon="${a.lon || ''}" onclick="activityCardClick('${a.id}', event)">
-    <button class="activity-save" onclick="event.stopPropagation();toggleSave('${a.id}')">${isSaved ? '❤️' : '🤍'}</button>
-    ${isSaved ? `<button class="activity-remind" onclick="event.stopPropagation();showReminderModal('${a.id}')">${hasRemind ? '🔔' : '🔕'}</button>` : ''}
+    ${hasThumb ? '' : `${saveBtn}${remindBtn}`}
     <div class="activity-card-row">
       <div class="activity-card-text">
         <div class="activity-name"><span class="activity-emoji">${ACTIVITY_EMOJIS[a.category] || '📍'}</span> ${esc(name)}</div>
@@ -684,7 +686,7 @@ function getFilteredActivities() {
   let items = [...activitiesData, ...customActivities];
 
   // Category filter
-  if (activityFilter === 'all') { items = items.filter(a => a.category !== 'stayhome'); items.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0)); }
+  if (activityFilter === 'all') { items = items.filter(a => a.category !== 'stayhome'); for (let i = items.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [items[i], items[j]] = [items[j], items[i]]; } }
   else if (activityFilter === 'near') { items = items.filter(a => a.category !== 'stayhome' && a.lat); if (userLat) items.sort((a, b) => haversine(userLat, userLon, a.lat, a.lon) - haversine(userLat, userLon, b.lat, b.lon)); }
   else if (activityFilter === 'indoor') items = items.filter(a => a.indoor && a.category !== 'stayhome');
   else if (activityFilter === 'outdoor') items = items.filter(a => !a.indoor && a.category !== 'stayhome');
@@ -937,25 +939,27 @@ function renderLunchView() {
 
 function renderLunchCard(s) {
   const isSaved = savedLunch.includes(s.id);
-  const rating = lunchRatings[s.id] || 0;
   const dist = (userLat && s.lat) ? haversine(userLat, userLon, s.lat, s.lon) : null;
 
   let badges = '';
-  if (s.openForLunch === true) badges += '<span class="badge badge-open">Open</span>';
+  if (s.permanentlyClosed) badges += '<span class="badge badge-closed">Permanently Closed</span>';
+  else if (s.openForLunch === true) badges += '<span class="badge badge-open">Open</span>';
   else if (s.openForLunch === false) badges += '<span class="badge badge-closed">Closed</span>';
   if (s.outdoorSeating) badges += '<span class="badge badge-outdoor-seat">🪑 Terrace</span>';
   if (s.wheelchair === 'yes') badges += '<span class="badge badge-wheelchair">♿</span>';
   if (s.takeaway) badges += '<span class="badge badge-takeaway">📦</span>';
   if (dist !== null) badges += `<span class="badge badge-distance">${formatDist(dist)}</span>`;
 
-  const stars = [1, 2, 3, 4, 5].map(n => `<span class="star${n <= rating ? ' filled' : ''}" onclick="rateLunch('${s.id}',${n})">★</span>`).join('');
+  const ratingHtml = s.rating
+    ? `<div class="google-rating"><span class="google-stars">${'★'.repeat(Math.round(s.rating))}${'☆'.repeat(5 - Math.round(s.rating))}</span> <span class="google-score">${s.rating}</span><span class="google-count">(${s.ratingCount || 0})</span></div>`
+    : '';
 
-  return `<div class="lunch-spot" id="lunch-${s.id}" onclick="lunchCardClick('${s.id}', event)">
+  return `<div class="lunch-spot${s.permanentlyClosed ? ' closed' : ''}" id="lunch-${s.id}" onclick="lunchCardClick('${s.id}', event)">
     <div>
       <div class="lunch-name">${esc(s.name)}</div>
       <div class="lunch-cuisine">${esc(s.cuisine || s.cuisineCategory || s.amenity || '')}</div>
+      ${ratingHtml}
       <div class="lunch-badges">${badges}</div>
-      <div class="star-rating" style="margin-top:4px;">${stars}</div>
     </div>
     <div class="lunch-actions">
       <button class="${isSaved ? 'saved' : ''}" onclick="toggleSaveLunch('${s.id}')" style="${isSaved ? 'color:var(--accent);border-color:var(--accent)' : ''}">${isSaved ? '❤️' : '🤍'}</button>
@@ -1416,12 +1420,6 @@ function toggleSaveLunch(id) {
   afterRender(initLunchMap);
 }
 
-function rateLunch(id, stars) {
-  lunchRatings[id] = stars;
-  localStorage.setItem('lunchRatings', JSON.stringify(lunchRatings));
-  renderCurrentView();
-  afterRender(initLunchMap);
-}
 
 function showAddForm(type) { $(`add-${type}-form`)?.classList.add('active'); }
 function hideAddForm(type) { $(`add-${type}-form`)?.classList.remove('active'); }
@@ -2186,7 +2184,7 @@ function activityCardClick(id, event) {
 }
 
 function lunchCardClick(id, event) {
-  if (event.target.closest('.lunch-actions') || event.target.closest('.star-rating')) return;
+  if (event.target.closest('.lunch-actions')) return;
   panToMarker(lunchMarkers, id, lunchMap, 16);
   $('lunch-map')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
@@ -2845,7 +2843,7 @@ function getExploreItems() {
         desc: lang === 'de' ? (a.descriptionDE || a.description) : a.description,
         lat: a.lat, lon: a.lon, indoor: a.indoor, category: a.category,
         emoji: ACTIVITY_EMOJIS[a.category] || '📍', color: MAP_COLORS.green,
-        featured: a.featured, price: a.price
+        price: a.price
       });
     }
   }
@@ -2924,10 +2922,10 @@ async function initExploreMap() {
   for (const item of items) {
     // Map marker
     const marker = L.circleMarker([item.lat, item.lon], {
-      radius: item.featured ? 10 : 7,
+      radius: 7,
       fillColor: item.color,
       fillOpacity: .85,
-      weight: item.featured ? 2 : 1,
+      weight: 1,
       color: '#fff'
     }).addTo(exploreMap);
 
@@ -2938,7 +2936,6 @@ async function initExploreMap() {
     // List card
     const dist = userLat ? haversine(userLat, userLon, item.lat, item.lon) : null;
     let badges = `<span class="badge" style="background:${item.color}20;color:${item.color}">${item.type === 'activity' ? (item.indoor ? 'Indoor' : 'Outdoor') : item.type === 'event' ? 'Event' : item.dealType || 'Deal'}</span>`;
-    if (item.featured) badges += `<span class="badge badge-featured">${t('featured')}</span>`;
     if (item.free) badges += `<span class="badge badge-free">Free</span>`;
     if (dist !== null) badges += `<span class="badge badge-distance">${formatDist(dist)}</span>`;
     if (item.price) badges += `<span class="badge badge-price">${item.price}</span>`;

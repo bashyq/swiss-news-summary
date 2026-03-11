@@ -9,7 +9,7 @@ These features were added to the Cloudflare Worker and are automatically availab
 | Feature | Endpoint | Field | Notes |
 |---------|----------|-------|-------|
 | Daily Pick | `GET /` | `briefing.dailyPick` | Weather+time-aware activity recommendation with `reason`/`reasonDE` text |
-| Featured Activities | `GET /activities` | `featured: true` | 13 activities across all cities flagged as featured |
+| Lunch Google Ratings | `GET /lunch` | `spots[].rating`, `ratingCount`, `permanentlyClosed` | Google Places star ratings + review counts. Permanently closed restaurants flagged. Cached in R2 for 30 days. |
 | News Expansion | `GET /` | `categories.*` | 8-10 items per category. When `lang=en`, all items (including local/culture/events from German feeds) are translated via Claude. Each item has `detail` field (1 sentence, shown on tap). |
 | Deals API | `GET /deals` | `deals[]` | Deals/free entry data now served from worker endpoint. iOS should fetch from `/deals` instead of hardcoding `DealsData.swift`. Same JSON shape as before. |
 | Sunshine Highlights | `GET /sunshine` | `destinations[].highlights[]` | Each destination now includes `highlights` array with toddler-friendly attractions. iOS can drop `DestinationHighlights.swift` and use API data directly. |
@@ -30,6 +30,8 @@ These features were removed or changed in the PWA and the iOS app should match:
 | **Weekend Brief removed from News** | The `.weekend-brief` card is no longer rendered on the news page. iOS should NOT build `WeekendBriefCard.swift`. The `weekendBrief` field is still in the API response but the PWA ignores it. |
 | **Age filter removed** | Activity age filters (All ages / 2-3 / 4-5) have been removed from the PWA. iOS should NOT implement age filtering in `ActivitiesViewModel`. |
 | **Hero banners removed** | Pastel gradient hero banners on activity cards have been removed. Cards now use colored left-border + emoji in title only. iOS should NOT build hero gradient headers. |
+| **Featured activities removed** | `featured: true` field removed from all activities. No more featured badge, no featured sorting. "All" filter now shows activities in random order. iOS should NOT implement featured logic. |
+| **Self-rating stars removed** | User self-rating on lunch cards replaced by real Google Places ratings from the API. iOS should NOT implement local star rating — use `rating`/`ratingCount` from API. |
 
 ---
 
@@ -102,16 +104,16 @@ These features were removed or changed in the PWA and the iOS app should match:
 - Fall back gracefully on 404 (hide image, show emoji in modal)
 - All photos are lazy loaded; R2-cached after first fetch so subsequent loads are instant
 
-### 6. Featured / NEW Badges
-**PWA**: Badge rendering in `renderActivityCard()`
-**iOS target**: `ActivityCard.swift` + `BadgeView.swift`
+### 6. Lunch Google Ratings
+**PWA**: `renderLunchCard()` in `app.js` — Google star rating display
+**iOS target**: `LunchView.swift` + `LunchViewModel.swift`
 
 **What to build:**
-- Parse `featured: true` from activity JSON (add to `Activity.swift` model)
-- Parse `addedDate` string field (optional)
-- Purple "Featured" / "Empfohlen" badge when `featured == true`
-- Green "NEW" / "NEU" badge when `addedDate` is within 30 days
-- In "All" filter, sort featured activities to top (`ActivitiesViewModel`)
+- Parse `rating` (Float?), `ratingCount` (Int?), `permanentlyClosed` (Bool?) from lunch API response
+- Show Google star rating on restaurant cards: ★★★★☆ 4.2 (127)
+- Dim/flag permanently closed restaurants
+- Remove any local self-rating logic (replaced by real Google data)
+- Ratings populate progressively (10 per request) — some restaurants may not have ratings yet
 
 ### 7. Explore View (Map-First Discovery)
 **PWA**: `renderExploreView()`, `initExploreMap()`, `getExploreItems()`
@@ -122,7 +124,7 @@ These features were removed or changed in the PWA and the iOS app should match:
 - Full MapKit map at top (~300pt height, ~400pt on iPad)
 - Filter bar: All / Activities / Events / Deals
 - Map annotations colored by type:
-  - Activities: green circles (larger if featured)
+  - Activities: green circles
   - Events: purple circles (only events within next 7 days)
   - Deals: blue/amber circles (city-relevant, month-relevant)
 - Events and deals don't have coordinates — place at city center with small random offset
@@ -187,8 +189,8 @@ struct CategoryColors {
 static let badgeFree = Color(hex: "#22c55e")       // green — free entry
 static let badgeDeal = Color(hex: "#3b82f6")       // blue — deals
 static let badgeTip = Color(hex: "#f59e0b")        // amber — tips
-static let badgeFeatured = Color(hex: "#a855f7")   // purple — featured
 static let badgeNew = Color(hex: "#22c55e")        // green — new (< 30 days)
+static let googleStars = Color(hex: "#f59e0b")     // amber — Google rating stars
 static let badgeSchoolHoliday = Color(hex: "#f59e0b") // amber
 ```
 
@@ -227,10 +229,18 @@ let trending: Trending?
 
 ### `Activity.swift`
 ```swift
-// Add optional fields:
-let featured: Bool?
+// Add optional field:
 let addedDate: String?
+// Note: featured field has been REMOVED — do not add
 // Note: No age filter — minAge/maxAge fields exist but are not used for filtering
+```
+
+### `LunchSpot.swift`
+```swift
+// Add optional fields:
+let rating: Double?       // Google Places star rating (1.0-5.0)
+let ratingCount: Int?     // Number of Google reviews
+let permanentlyClosed: Bool?  // true if Google says permanently closed
 ```
 
 ### `NewsItem.swift`
@@ -244,8 +254,8 @@ let detail: String?  // 1-sentence expansion, shown on tap
 ## Priority Order
 
 1. **Daily Pick + Trending** (models + 2 cards) — quick wins, data already in API
-2. **Lunch filter rework** — multi-select pills + cuisine dropdown
-3. **Featured badges** — small change, improves Activities view
+2. **Lunch filter rework + Google ratings** — multi-select pills + cuisine dropdown + star ratings
+3. **Venue photos** — AsyncImage with /photo/ endpoint, covers activities + sunshine + snow
 4. **Reminders** — requires UNNotificationCenter, most iOS-specific work
 5. **Explore view** — new tab + MapKit, largest effort
 
@@ -254,7 +264,7 @@ let detail: String?  // 1-sentence expansion, shown on tap
 ## Testing Notes
 
 - Test Daily Pick with different weather conditions (use `?refresh=true` to get fresh data)
-- Featured activities: zoo-zurich, kindercity, wildnispark (Zürich), basel-zoo, basel-lange-erlen, bern-barenpark, bern-gurten, geneva-jardin-botanique, lausanne-aquatis, luzern-verkehrshaus, winterthur-technorama, winterthur-wildpark-bruderhaus
+- Lunch ratings: verify `rating`/`ratingCount` fields appear on lunch spots, `permanentlyClosed` flags work
 - Explore view: verify events within 7 days show up, deals filter by city + month
 - Lunch filters: test combining Near Me + Open, verify cuisine filter matches `cuisineCategory` values
 - Activities: 94 base activities now (was 52), verify all render correctly

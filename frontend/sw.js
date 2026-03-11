@@ -1,4 +1,4 @@
-const CACHE_NAME = 'today-switzerland-v54';
+const CACHE_NAME = 'today-switzerland-v56';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
