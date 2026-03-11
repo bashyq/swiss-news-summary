@@ -1949,12 +1949,17 @@ function renderSunshineCard(d, rank) {
 
   const rankHtml = isBaseline ? '<div class="sunshine-rank sunshine-rank-baseline">📍</div>' : `<div class="sunshine-rank">${rank}</div>`;
 
+  const summaryBadges = isBaseline
+    ? `<span class="sunshine-badge-inline">📍 ${t('yourCity')}</span>`
+    : `<span class="sunshine-badge-inline">🚗 ${driveLabel}</span>`;
+  const distBadge = dist !== null && !isBaseline ? `<span class="sunshine-badge-inline">📍 ${formatDist(dist)}</span>` : '';
+
   return `<div class="sunshine-card sunshine-${cls}" id="sunshine-${d.id}" onclick="sunshineCardClick('${d.id}')" data-id="${d.id}">
     <div class="sunshine-card-header">
       ${rankHtml}
       <div class="sunshine-card-info">
         <div class="sunshine-card-name">${emoji} ${esc(name)}</div>
-        <div class="sunshine-card-region">${esc(region)}</div>
+        <div class="sunshine-card-region">${esc(region)} ${summaryBadges}${distBadge}</div>
       </div>
       <div class="sunshine-card-total">
         <div class="sunshine-total-num">${d.sunshineHoursTotal}</div>
@@ -2408,12 +2413,15 @@ function renderSnowCard(d, rank) {
   if (d.snowDepthCm > 0) badges += `<span class="snow-depth-badge">📏 ${d.snowDepthCm}cm ${t('snowDepth')}</span>`;
   if (dist !== null) badges += `<span class="snow-dist-badge">📍 ${formatDist(dist)}</span>`;
 
+  const summarySnowBadges = `<span class="sunshine-badge-inline">🚗 ${driveLabel}</span><span class="sunshine-badge-inline">⛰️ ${d.altitude}m</span>`;
+  const distSnowBadge = dist !== null ? `<span class="sunshine-badge-inline">📍 ${formatDist(dist)}</span>` : '';
+
   return `<div class="snow-card snow-${cls}" id="snow-${d.id}" onclick="snowCardClick('${d.id}')" data-id="${d.id}">
     <div class="snow-card-header">
       <div class="snow-rank">${rank}</div>
       <div class="snow-card-info">
         <div class="snow-card-name">${emoji} ${esc(name)}</div>
-        <div class="snow-card-region">${esc(region)}</div>
+        <div class="snow-card-region">${esc(region)} ${summarySnowBadges}${distSnowBadge}</div>
       </div>
       <div class="snow-card-total">
         <div class="snow-total-num">${d.snowfallWeekTotal}</div>
