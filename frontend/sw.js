@@ -1,4 +1,4 @@
-const CACHE_NAME = 'today-switzerland-v56';
+const CACHE_NAME = 'today-switzerland-v57';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -6,7 +6,10 @@ const STATIC_ASSETS = [
   '/app.js',
   '/widget.html',
   '/manifest.json',
-  '/icon.svg'
+  '/icon.svg',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/icon-180.png'
 ];
 
 // Install - cache static assets
@@ -153,8 +156,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: '/icon.svg',
-    badge: '/icon.svg',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
     tag: 'daily-briefing',
     renotify: true,
     data: {

@@ -11,8 +11,25 @@
     {
       "src": "icon.svg",
       "sizes": "any",
-      "type": "image/svg+xml",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "shortcuts": [
@@ -21,56 +38,56 @@
       "short_name": "News",
       "description": "View today's news",
       "url": "/?view=news",
-      "icons": [{ "src": "icon.svg", "sizes": "96x96" }]
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "What to do?",
       "short_name": "Activities",
       "description": "Find family activities",
       "url": "/?view=activities",
-      "icons": [{ "src": "icon.svg", "sizes": "96x96" }]
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Events Calendar",
       "short_name": "Events",
       "description": "Holidays and events calendar",
       "url": "/?view=events",
-      "icons": [{ "src": "icon.svg", "sizes": "96x96" }]
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Weekend Planner",
       "short_name": "Weekend",
       "description": "Plan your weekend activities",
       "url": "/?view=weekend",
-      "icons": [{ "src": "icon.svg", "sizes": "96x96" }]
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Lunch Spots",
       "short_name": "Lunch",
       "description": "Find lunch spots nearby",
       "url": "/?view=lunch",
-      "icons": [{ "src": "icon.svg", "sizes": "96x96" }]
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Where is Snow?",
       "short_name": "Snow",
       "description": "Weekly snowfall for ski resorts",
       "url": "/?view=snow",
-      "icons": [{ "src": "icon.svg", "sizes": "96x96" }]
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Deals & Free",
       "short_name": "Deals",
       "description": "Free entry and family deals",
       "url": "/?view=deals",
-      "icons": [{ "src": "icon.svg", "sizes": "96x96" }]
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Quick Widget",
       "short_name": "Widget",
       "description": "Compact weather & headlines",
       "url": "/widget.html",
-      "icons": [{ "src": "icon.svg", "sizes": "96x96" }]
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     }
   ]
 }
