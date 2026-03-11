@@ -32,6 +32,36 @@ These features were removed or changed in the PWA and the iOS app should match:
 | **Hero banners removed** | Pastel gradient hero banners on activity cards have been removed. Cards now use colored left-border + emoji in title only. iOS should NOT build hero gradient headers. |
 | **Featured activities removed** | `featured: true` field removed from all activities. No more featured badge, no featured sorting. "All" filter now shows activities in random order. iOS should NOT implement featured logic. |
 | **Self-rating stars removed** | User self-rating on lunch cards replaced by real Google Places ratings from the API. iOS should NOT implement local star rating — use `rating`/`ratingCount` from API. |
+| **Sunshine/Snow cards accordion** | PWA cards collapse by default, expand on tap (header shows name + region + badges + total). iOS should use native `DisclosureGroup` or expandable card pattern — don't replicate the CSS toggle approach. |
+
+---
+
+## Branding & Theming Changes
+
+| Change | Details |
+|--------|---------|
+| **Rebrand: Znüni** | App renamed from "Today in Switzerland" to **Znüni**. Update `CFBundleDisplayName`, nav titles, about screen. |
+| **Tagline: Was lauft hüt?** | Subtitle/tagline is now **"Was lauft hüt?"** (Swiss German, same in both EN/DE — it's brand, not translatable). Use in onboarding, about screen, App Store description. |
+| **Alpine theme (default)** | New color system: navy bg `#1B2B4D`, blue accent `#4A90E2`, warm accent `#F5A623`, Inter font for headlines. This is the default theme for new users. |
+| **Classic theme (opt-in)** | Original dark theme: black bg `#0a0a0a`, red accent `#e53e3e`, Playfair Display serif headlines. Available via settings toggle. |
+| **Theme switcher** | Users can toggle between Alpine (Playground) and Classic (Klassik) in settings. Persisted in UserDefaults. iOS should implement via `@AppStorage("brand")` with `"alpine"` default. |
+| **Language toggle in header** | EN/DE toggle is now in the header bar next to city selector (not buried in hamburger menu). iOS already has this in settings — no change needed. |
+
+### iOS Theme Implementation
+```swift
+enum AppBrand: String, CaseIterable {
+    case alpine, classic
+}
+
+// Colors per brand
+extension AppBrand {
+    var background: Color { self == .alpine ? Color(hex: "#1B2B4D") : Color(hex: "#0a0a0a") }
+    var accent: Color { self == .alpine ? Color(hex: "#4A90E2") : Color(hex: "#e53e3e") }
+    var accentWarm: Color { self == .alpine ? Color(hex: "#F5A623") : Color(hex: "#e53e3e") }
+    var card: Color { self == .alpine ? Color(hex: "#233660") : Color(hex: "#161616") }
+    var headlineFont: Font { self == .alpine ? .system(.title, design: .default).weight(.bold) : .custom("PlayfairDisplay-Bold", size: 20) }
+}
+```
 
 ---
 
