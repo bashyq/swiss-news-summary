@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.22.0';
+const APP_VERSION = '2.23.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -46,6 +46,7 @@ let dealsFilter = 'all';
 let activityReminders = JSON.parse(localStorage.getItem('activityReminders') || '[]');
 let exploreFilter = 'all';
 let exploreMap = null;
+let exploreMarkers = {};
 let snowMap = null;
 let snowMarkers = {};
 let userLat = null, userLon = null;
@@ -2945,6 +2946,7 @@ async function initExploreMap() {
   const center = userLat ? [userLat, userLon] : (CITY_COORDS[city] || CITY_COORDS.zurich);
 
   if (exploreMap) exploreMap.remove();
+  exploreMarkers = {};
   exploreMap = L.map(el).setView(center, 13);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(exploreMap);
 
@@ -2965,6 +2967,7 @@ async function initExploreMap() {
     const popupContent = `<b>${item.emoji} ${esc(item.name)}</b><br><span style="font-size:.85em;color:#666">${esc(item.desc?.substring(0, 80) || '')}${item.desc?.length > 80 ? '...' : ''}</span>`;
     marker.bindPopup(popupContent);
     marker.on('click', () => highlightCard(`explore-${item.id}`));
+    exploreMarkers[item.id] = marker;
 
     // List card
     const dist = userLat ? haversine(userLat, userLon, item.lat, item.lon) : null;
@@ -2974,10 +2977,7 @@ async function initExploreMap() {
     if (item.price) badges += `<span class="badge badge-price">${item.price}</span>`;
     if (item.savings) badges += `<span class="badge badge-price">${item.savings}</span>`;
 
-    let onclick = '';
-    if (item.type === 'activity') onclick = `onclick="switchView('activities')"`;
-    else if (item.type === 'event') onclick = `onclick="switchView('events')"`;
-    else if (item.url) onclick = `onclick="window.open('${esc(item.url)}','_blank')"`;
+    const onclick = `onclick="exploreCardClick('${esc(item.id)}')"`;
 
     listHtml += `<div class="explore-card" id="explore-${item.id}" ${onclick}>
       <div class="explore-card-header">
@@ -3000,6 +3000,16 @@ async function initExploreMap() {
   if (userLat) {
     L.marker([userLat, userLon], { icon: L.divIcon({ html: '📍', className: '', iconSize: [20, 20] }) }).addTo(exploreMap);
   }
+}
+
+function exploreCardClick(id) {
+  if (exploreMap && exploreMarkers[id]) {
+    const marker = exploreMarkers[id];
+    exploreMap.setView(marker.getLatLng(), 15, { animate: true });
+    marker.openPopup();
+    $('explore-map')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  highlightCard(`explore-${id}`);
 }
 
 async function loadExplore(force = false) {
