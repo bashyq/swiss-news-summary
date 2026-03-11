@@ -159,8 +159,7 @@ extension AppBrand {
   - Deals: blue/amber circles (city-relevant, month-relevant)
 - Events and deals don't have coordinates — place at city center with small random offset
 - Card list below map (compact: emoji + name + description + badges)
-- Tap activity card → navigate to Activities tab
-- Tap event card → navigate to Events tab
+- Tap card → pan map to marker + open annotation popup (stay on Explore view)
 - Tap deal card → open URL in Safari
 - Auto-request location permission, sort by distance
 - User location annotation on map
