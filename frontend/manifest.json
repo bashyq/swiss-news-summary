@@ -4,8 +4,8 @@
   "description": "Daily news, weather, activities for families in Switzerland",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#0a0a0a",
+  "background_color": "#1B2B4D",
+  "theme_color": "#1B2B4D",
   "orientation": "portrait-primary",
   "icons": [
     {
