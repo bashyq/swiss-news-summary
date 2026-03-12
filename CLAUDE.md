@@ -210,15 +210,16 @@ swiss-news-summary/
 - `filterDeals(f)` function, `dealsFilter` state variable
 - `renderDealsView()`, `renderDealCard(d)` renderers
 
-### Explore View ("Explore")
-- Map-first view showing all activities, events, and deals near the user
-- **Full-screen Leaflet map**: Circle markers colored by type (green=activities, purple=events, blue/amber=deals)
-- **Filters**: All / Activities / Events / Deals
-- **Geolocation**: Auto-requests location, sorts items by distance, shows user marker
-- **Card list below map**: Compact cards with emoji, name, description, badges
-- **Cross-linking**: Tapping activity cards goes to Activities view, event cards to Events view, deal cards open URL
-- **Data sources**: Activities from worker API, city events from cached data, deals from static DEALS array
-- `renderExploreView()`, `initExploreMap()`, `getExploreItems()`, `loadExplore()`
+### Explore View ("Explore") — Design System v3.4
+- **Hero header**: Navy hero with filter pills (All/Activities/Events/Deals) in hero
+- **Mini map**: Compact Leaflet map (178px) with expand hint, expandable to 400px
+- **"Near You" horizontal scroll**: Top 10 nearest items as chips (130px, icon + name + distance)
+- **"Browse by Type" grid**: 2-column category cards (Museums, Playgrounds, Outdoors, Animals, Indoor, Cafés) linking to Activities view
+- **Item list**: `explore-item` cards with icon, Playfair name, description, type/free tags, distance
+- **Filters**: All / Activities / Events / Deals (in hero pills)
+- **Geolocation**: Auto-requests location, sorts by distance, user marker on map
+- **Data sources**: Activities from worker API, city events from cached data, deals from worker API
+- `renderExploreView()`, `initExploreMap()`, `getExploreItems()`, `loadExplore()`, `expandExploreMap()`
 - `exploreFilter` state variable, `exploreMap` Leaflet instance
 
 ### Widget Page (`/widget.html`)

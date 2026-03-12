@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '3.3.0';
+const APP_VERSION = '3.4.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -392,7 +392,7 @@ function renderHeader() {
   const now = new Date();
   const dateStr = now.toLocaleDateString(lang === 'de' ? 'de-CH' : 'en-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-  const heroViews = { news: true, activities: true, lunch: true };
+  const heroViews = { news: true, activities: true, lunch: true, explore: true };
   if (heroViews[view]) {
     const eyebrow = dateStr.toUpperCase();
     const cityName = CITIES[city] || 'Zürich';
@@ -425,6 +425,16 @@ function renderHeader() {
       }).join('')}${cuisines.map(([k, v]) => {
         const active = lunchCuisine === k;
         return `<button class="pill ${active ? 'on' : 'off'}" onclick="setLunchCuisine('${k}')">${v}</button>`;
+      }).join('')}</div>`;
+    } else if (view === 'explore') {
+      titleText = lang === 'de' ? `Entdecke <em>${cityName}</em>` : `Explore <em>${cityName}</em>`;
+      const explorePills = [
+        ['all', t('exploreAll')], ['activities', t('exploreActivities')],
+        ['events', t('exploreEvents')], ['deals', t('exploreDeals')]
+      ];
+      heroBottom = `</div><div class="pill-row-hero">${explorePills.map(([k, v]) => {
+        const active = exploreFilter === k;
+        return `<button class="pill ${active ? 'on' : 'off'}" onclick="setExploreFilter('${k}')">${v}</button>`;
       }).join('')}</div>`;
     }
 
@@ -3123,23 +3133,69 @@ function renderDayDetail(dateStr) {
 // ═══ EXPLORE VIEW ═══
 
 function renderExploreView() {
-  const filters = [
-    ['all', t('exploreAll')],
-    ['activities', t('exploreActivities')],
-    ['events', t('exploreEvents')],
-    ['deals', t('exploreDeals')]
+  let html = '';
+
+  // Mini map
+  html += `<div class="explore-map-wrap"><div class="explore-map-container" id="explore-map"></div><div class="explore-map-hint" onclick="expandExploreMap()">🗺️ ${lang === 'de' ? 'Karte vergrössern' : 'Expand map'}</div></div>`;
+
+  // Near You horizontal scroll
+  const items = getExploreItems();
+  const nearItems = items.slice(0, 10);
+  if (nearItems.length) {
+    html += `<div class="near-section"><div class="near-section-row"><span class="section-heading">${lang === 'de' ? 'In der Nähe' : 'Near You'}</span><span class="section-count">${items.length} ${lang === 'de' ? 'Orte' : 'places'}</span></div>`;
+    html += '<div class="near-scroll">';
+    for (const item of nearItems) {
+      const dist = userLat ? formatDist(haversine(userLat, userLon, item.lat, item.lon)) : '';
+      html += `<div class="near-chip" onclick="exploreCardClick('${esc(item.id)}')">
+        <div class="near-chip-icon" style="background:${item.color}15"><span>${item.emoji}</span></div>
+        <div class="near-chip-info"><div class="near-chip-name">${esc(item.name)}</div>${dist ? `<div class="near-chip-dist">↗ ${dist}</div>` : `<div class="near-chip-dist">${item.type}</div>`}</div>
+      </div>`;
+    }
+    html += '</div></div>';
+  }
+
+  // Browse by Type — category grid
+  const categories = [
+    { key: 'museum', emoji: '🏛️', label: lang === 'de' ? 'Museen' : 'Museums', color: '#a855f7' },
+    { key: 'playground', emoji: '🛝', label: lang === 'de' ? 'Spielplätze' : 'Playgrounds', color: '#22c55e' },
+    { key: 'outdoor', emoji: '🌳', label: lang === 'de' ? 'Draussen' : 'Outdoors', color: '#059669' },
+    { key: 'animals', emoji: '🦁', label: lang === 'de' ? 'Tiere' : 'Animals', color: '#f59e0b' },
+    { key: 'indoor-play', emoji: '🎪', label: 'Indoor', color: '#ec4899' },
+    { key: 'cafe', emoji: '☕', label: 'Cafés', color: '#C4623A' }
   ];
-  let html = `<div class="subtitle">${t('exploreSubtitle')}</div>`;
-  html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${exploreFilter === k ? ' active' : ''}" onclick="setExploreFilter('${k}')">${v}</button>`).join('')}</div>`;
-  html += '<div class="explore-map-container" id="explore-map"></div>';
+  const actCounts = {};
+  for (const a of activitiesData) { actCounts[a.category] = (actCounts[a.category] || 0) + 1; }
+
+  html += `<div class="explore-section"><div class="section-heading" style="margin-bottom:12px">${lang === 'de' ? 'Nach Typ entdecken' : 'Browse by Type'}</div>`;
+  html += '<div class="explore-grid">';
+  for (const cat of categories) {
+    const count = actCounts[cat.key] || 0;
+    html += `<div class="explore-cat-card" style="--cat-color:${cat.color}" onclick="filterActivities('all');switchView('activities')">
+      <div class="explore-cat-icon">${cat.emoji}</div>
+      <div class="explore-cat-label">${cat.label}</div>
+      <div class="explore-cat-count">${count} ${lang === 'de' ? 'Orte' : 'places'}</div>
+    </div>`;
+  }
+  html += '</div></div>';
+
+  // Full list
   html += '<div id="explore-list" class="explore-list"></div>';
+
   return html;
 }
 
 function setExploreFilter(f) {
   exploreFilter = f;
+  renderHeader();
   renderCurrentView();
   afterRender(() => initExploreMap());
+}
+
+function expandExploreMap() {
+  const el = $('explore-map');
+  if (!el) return;
+  el.closest('.explore-map-wrap')?.classList.toggle('expanded');
+  if (exploreMap) setTimeout(() => exploreMap.invalidateSize(), 300);
 }
 
 function getExploreItems() {
@@ -3250,23 +3306,18 @@ async function initExploreMap() {
 
     // List card
     const dist = userLat ? haversine(userLat, userLon, item.lat, item.lon) : null;
-    let badges = `<span class="badge" style="background:${item.color}20;color:${item.color}">${item.type === 'activity' ? (item.indoor ? 'Indoor' : 'Outdoor') : item.type === 'event' ? 'Event' : item.dealType || 'Deal'}</span>`;
-    if (item.free) badges += `<span class="badge badge-free">Free</span>`;
-    if (dist !== null) badges += `<span class="badge badge-distance">${formatDist(dist)}</span>`;
-    if (item.price) badges += `<span class="badge badge-price">${item.price}</span>`;
-    if (item.savings) badges += `<span class="badge badge-price">${item.savings}</span>`;
+    let tags = `<span class="vcard-tag" style="background:${item.color}15;color:${item.color}">${item.type === 'activity' ? (item.indoor ? 'Indoor' : 'Outdoor') : item.type === 'event' ? 'Event' : item.dealType || 'Deal'}</span>`;
+    if (item.free) tags += '<span class="vcard-tag" style="background:rgba(58,125,92,.1);color:var(--clr-green)">Free</span>';
+    if (item.savings) tags += `<span class="vcard-tag">${item.savings}</span>`;
 
-    const onclick = `onclick="exploreCardClick('${esc(item.id)}')"`;
-
-    listHtml += `<div class="explore-card" id="explore-${item.id}" ${onclick}>
-      <div class="explore-card-header">
-        <span class="explore-card-emoji">${item.emoji}</span>
-        <div class="explore-card-info">
-          <div class="explore-card-name">${esc(item.name)}</div>
-          <div class="explore-card-desc">${esc(item.desc?.substring(0, 100) || '')}${item.desc?.length > 100 ? '...' : ''}</div>
-        </div>
+    listHtml += `<div class="explore-item" id="explore-${item.id}" onclick="exploreCardClick('${esc(item.id)}')">
+      <div class="explore-item-icon" style="background:${item.color}15"><span>${item.emoji}</span></div>
+      <div class="explore-item-body">
+        <div class="vcard-name">${esc(item.name)}</div>
+        <div class="vcard-desc">${esc(item.desc?.substring(0, 80) || '')}${item.desc?.length > 80 ? '...' : ''}</div>
+        <div class="vcard-tags">${tags}</div>
       </div>
-      <div class="explore-card-badges">${badges}</div>
+      ${dist !== null ? `<div class="vcard-dist">↗ ${formatDist(dist)}</div>` : ''}
     </div>`;
   }
 
