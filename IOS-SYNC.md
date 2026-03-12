@@ -174,6 +174,7 @@ extension AppBrand {
 
 **What to build:**
 - Filter pill order: All, Near Me, Indoor, Outdoor, Stay Home, Free, Seasonal, Saved
+- **Near Me**: 2km radius (same as lunch), sorted by distance. Requires CoreLocation.
 - No age filter (removed from PWA)
 
 ---
