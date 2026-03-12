@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '3.1.0';
+const APP_VERSION = '3.2.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -392,10 +392,28 @@ function renderHeader() {
   const now = new Date();
   const dateStr = now.toLocaleDateString(lang === 'de' ? 'de-CH' : 'en-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-  if (view === 'news') {
+  const heroViews = { news: true, activities: true };
+  if (heroViews[view]) {
     const eyebrow = dateStr.toUpperCase();
     const cityName = CITIES[city] || 'Zürich';
-    const titleText = lang === 'de' ? `Heute in <em>${cityName}</em>` : `Today in <em>${cityName}</em>`;
+
+    let titleText, heroBottom = '';
+    if (view === 'news') {
+      titleText = lang === 'de' ? `Heute in <em>${cityName}</em>` : `Today in <em>${cityName}</em>`;
+      heroBottom = `<div class="weather-row" id="weather-compact"></div>`;
+    } else if (view === 'activities') {
+      titleText = lang === 'de' ? `Was <em>tun?</em>` : `What to <em>do?</em>`;
+      const filters = [
+        ['all', t('all')], ['near', t('nearMe')], ['indoor', t('indoor')], ['outdoor', t('outdoor')],
+        ['stayhome', t('stayHome')], ['free', t('freeFilter')], ['seasonal', t('seasonal')], ['saved', t('saved')]
+      ];
+      const totalCount = activitiesData.length || '...';
+      heroBottom = `</div><div class="pill-row-hero">${filters.map(([k, v]) => {
+        const active = activityFilter === k;
+        return `<button class="pill ${active ? 'on' : 'off'}" onclick="filterActivities('${k}')">${v}${k === 'all' ? `<span class="pill-cnt">${totalCount}</span>` : ''}</button>`;
+      }).join('')}</div>`;
+    }
+
     $('header').innerHTML = `
       <div class="hero">
         <div class="hero-glow"></div>
@@ -423,14 +441,14 @@ function renderHeader() {
         </div>
         <div class="hero-body">
           <div class="hero-eyebrow">${eyebrow}</div>
-          <h1 class="hero-title">${titleText}</h1>
-          <div class="weather-row" id="weather-compact"></div>
+          <h1 class="hero-title" style="${view !== 'news' ? 'font-size:24px;margin-bottom:0' : ''}">${titleText}</h1>
+          ${heroBottom}
         </div>
       </div>
-      <div id="weather-dropdown" class="weather-dropdown"></div>
+      ${view === 'news' ? `<div id="weather-dropdown" class="weather-dropdown"></div>
       <div class="history-strip" id="history-inline"></div>
       <div id="trending-inline" class="trending-banner" style="display:none"></div>
-      <div class="alert-banner" id="transport-widget"></div>
+      <div class="alert-banner" id="transport-widget"></div>` : ''}
     `;
   } else {
     // Legacy header for non-news views
@@ -667,28 +685,19 @@ function renderWeekendBriefCard(wb) {
 // ═══ ACTIVITIES VIEW ═══
 
 function renderActivitiesView() {
-  const cityName = CITIES[city] || 'Switzerland';
-  let html = `<div class="subtitle" id="activities-subtitle">${t('familyActivities')} ${lang === 'de' ? 'in' : 'in'} ${cityName}</div>`;
-
-  // Filters
-  const filters = [
-    ['all', t('all')], ['near', t('nearMe')], ['indoor', t('indoor')], ['outdoor', t('outdoor')],
-    ['stayhome', t('stayHome')], ['free', '🆓 ' + t('freeFilter')], ['seasonal', t('seasonal')], ['saved', t('saved')]
-  ];
-  html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${activityFilter === k ? ' active' : ''}" onclick="filterActivities('${k}')">${v}</button>`).join('')}</div>`;
-
-  // Surprise + playgrounds buttons
-  html += `<div class="activities-actions">
-    <button class="surprise-btn" onclick="surpriseMe()" id="surprise-btn">🎲 ${t('surpriseMe')}</button>
-    <button class="surprise-btn playground-btn" onclick="openPlaygroundsMap()">🛝 ${t('findPlaygrounds')}</button>
-  </div>`;
+  const filtered = getFilteredActivities();
+  let html = '';
 
   // Map
   html += '<div class="map-container" id="activity-map"></div>';
 
+  // Results count
+  html += `<div class="act-results">
+    <div class="act-results-count">${filtered.length} ${lang === 'de' ? 'Ergebnisse' : 'results'}</div>
+  </div>`;
+
   // Activities list
-  html += '<div id="activities-list">';
-  const filtered = getFilteredActivities();
+  html += '<div class="act-list" id="activities-list">';
   if (filtered.length === 0) {
     if (activitiesData.length === 0) {
       html += renderSkeleton(3);
@@ -701,6 +710,14 @@ function renderActivitiesView() {
     for (const a of filtered) html += renderActivityCard(a);
   }
   html += '</div>';
+
+  // Surprise me button
+  html += `<div style="padding:4px 0 20px">
+    <button class="btn-surprise" onclick="surpriseMe()" id="surprise-btn">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M11 1L13 5H15L11.5 8L12.5 12L10 10.5L7.5 12L8.5 8L5 5H7L9 1H11Z" fill="white" opacity=".85"/><path d="M4 6L5 8H6L4.5 9.5L5 11.5L3.5 10.5L2 11.5L2.5 9.5L1 8H2L3 6H4Z" fill="white" opacity=".5"/></svg>
+      ${t('surpriseMe')}
+    </button>
+  </div>`;
 
   // Add custom
   html += `<button class="btn-add" onclick="showAddForm('activity')">${t('addActivity')}</button>`;
@@ -724,63 +741,68 @@ function renderActivityCard(a) {
   const name = lang === 'de' ? (a.nameDE || a.name) : a.name;
   const desc = lang === 'de' ? (a.descriptionDE || a.description) : a.description;
   const isSaved = savedActivities.includes(a.id);
-  const hasRemind = activityReminders.some(r => r.activityId === a.id);
   const dist = (userLat && a.lat) ? haversine(userLat, userLon, a.lat, a.lon) : null;
+  const hasPhoto = a.category !== 'stayhome' && a.id && !a.custom;
+  const catLabel = a.category ? (a.category.charAt(0).toUpperCase() + a.category.slice(1).replace('-', ' ')) : '';
 
-  let badges = '';
-  if (a.addedDate) {
-    const daysSince = Math.floor((Date.now() - new Date(a.addedDate).getTime()) / 86400000);
-    if (daysSince <= 30) badges += `<span class="badge badge-new">${t('newBadge')}</span>`;
-  }
-  badges += `<span class="badge ${a.indoor ? 'badge-indoor' : 'badge-outdoor'}">${a.indoor ? 'Indoor' : 'Outdoor'}</span>`;
-  if (a.duration) badges += `<span class="badge badge-duration">${a.duration}</span>`;
-  if (a.price) badges += `<span class="badge badge-price">${a.price}</span>`;
-  if (dist !== null) badges += `<span class="badge badge-distance">${formatDist(dist)}</span>`;
-  if (a.season) badges += `<span class="badge-seasonal badge-${a.season}">${a.season}</span>`;
-  if (a.recurring) badges += `<span class="badge-recurring">${a.recurring}</span>`;
-  if (a.subcategory) badges += `<span class="badge-subcategory">${getSubcategoryLabel(a.subcategory)}</span>`;
+  // Face tags
+  let tags = '';
+  tags += `<span class="act-tag ${a.indoor ? 'indoor' : 'outdoor'}">${a.indoor ? 'Indoor' : 'Outdoor'}</span>`;
+  if (a.duration) tags += `<span class="act-tag time">${a.duration}</span>`;
+  if (a.free || (a.price && /^free|^gratis/i.test(a.price))) tags += `<span class="act-tag free">${lang === 'de' ? 'Gratis' : 'Free'}</span>`;
+  else if (a.price) tags += `<span class="act-tag price">${a.price}</span>`;
+  if (dist !== null) tags += `<span class="act-tag dist">↗ ${formatDist(dist)}</span>`;
 
-  let hoursHtml = '';
-  if (a.openNow !== undefined && a.openNow !== null) {
-    hoursHtml = `<span class="badge ${a.openNow ? 'badge-open' : 'badge-closed'}">${a.openNow ? (lang === 'de' ? 'Offen' : 'Open') : (lang === 'de' ? 'Geschlossen' : 'Closed')}</span>`;
-  }
+  // Status info
+  let statusHtml = '';
   if (a.permanentlyClosed) {
-    hoursHtml = '<span class="badge badge-closed">Permanently Closed</span>';
-  }
-  if (hoursHtml) badges = hoursHtml + badges;
-
-  let extra = '';
-  if (a.weekdayText && a.weekdayText.length) {
-    extra += `<div class="activity-hours">🕐 ${a.weekdayText.join(' · ')}</div>`;
-  }
-  if (a.materials) {
-    const mat = lang === 'de' ? (a.materialsDE || a.materials) : a.materials;
-    extra += `<div class="materials-info">📦 ${t('materials')}: ${esc(mat)}</div>`;
+    statusHtml = `<div class="act-status-strip"><div class="act-status-dot closed"></div><span class="act-status-text closed">${lang === 'de' ? 'Dauerhaft geschlossen' : 'Permanently closed'}</span></div>`;
+  } else if (a.openNow !== undefined && a.openNow !== null) {
+    const weekdays = a.weekdayText ? ` · ${a.weekdayText[0]?.split(':')[0] || ''}` : '';
+    statusHtml = `<div class="act-status-strip">
+      <div class="act-status-dot ${a.openNow ? 'open' : 'closed'}"></div>
+      <span class="act-status-text ${a.openNow ? 'open' : 'closed'}">${a.openNow ? (lang === 'de' ? 'Geöffnet' : 'Open now') : (lang === 'de' ? 'Geschlossen' : 'Closed')}</span>
+      <span class="act-status-hours">${weekdays}</span>
+    </div>`;
   }
 
-  const hasThumb = a.category !== 'stayhome' && a.id && !a.custom;
-  const saveBtn = `<button class="activity-save" onclick="event.stopPropagation();toggleSave('${a.id}')">${isSaved ? '❤️' : '🤍'}</button>`;
-  const remindBtn = isSaved ? `<button class="activity-remind" onclick="event.stopPropagation();showReminderModal('${a.id}')">${hasRemind ? '🔔' : '🔕'}</button>` : '';
+  // Detail grid cells
+  const distVal = dist !== null ? formatDist(dist) + (lang === 'de' ? ' entfernt' : ' away') : (lang === 'de' ? 'Standort unbekannt' : 'Location unknown');
+  const durationVal = a.duration || '—';
+  const priceVal = a.price || (lang === 'de' ? 'Gratis' : 'Free');
+  const agesVal = a.ageRange || (a.minAge && a.maxAge ? `${a.minAge}–${a.maxAge} ${lang === 'de' ? 'Jahre' : 'years'}` : (lang === 'de' ? 'Alle Alter' : 'All ages'));
 
-  const thumbHtml = hasThumb
-    ? `<div class="activity-thumb-wrap"><img class="activity-thumb" src="${API}/photo/${a.id}" alt="" loading="lazy" onerror="this.parentNode.classList.add('no-img')">${saveBtn}${remindBtn}</div>`
-    : '';
-
-  return `<div class="activity-card cat-${a.category || 'other'}" id="activity-${a.id}" data-lat="${a.lat || ''}" data-lon="${a.lon || ''}" onclick="activityCardClick('${a.id}', event)">
-    ${hasThumb ? '' : `${saveBtn}${remindBtn}`}
-    <div class="activity-card-row">
-      <div class="activity-card-text">
-        <div class="activity-name"><span class="activity-emoji">${ACTIVITY_EMOJIS[a.category] || '📍'}</span> ${esc(name)}</div>
-        <div class="activity-desc">${esc(desc)}</div>
-        <div class="activity-badges">${badges}</div>
+  return `<div class="act-card" id="activity-${a.id}" data-lat="${a.lat || ''}" data-lon="${a.lon || ''}" onclick="toggleActCard(this, event)">
+    <div class="act-face">
+      ${hasPhoto ? `<div class="act-photo-wrap"><img src="${API}/photo/${a.id}" alt="" loading="lazy" onerror="this.parentNode.classList.add('no-img')"><div class="act-photo-badge">${catLabel}</div></div>` : ''}
+      <div class="act-face-body">
+        <div class="act-face-name">${esc(name)}</div>
+        <div class="act-face-desc">${esc(desc)}</div>
+        <div class="act-face-tags">${tags}</div>
       </div>
-      ${thumbHtml}
+      <button class="act-close-btn" onclick="closeActCard(this.closest('.act-card'), event)">
+        <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1 1L9 9M9 1L1 9" stroke="var(--muted)" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
     </div>
-    ${extra}
-    <div class="activity-actions">
-      ${a.url ? `<button onclick="event.stopPropagation();window.open('${esc(a.url)}','_blank')">${t('website')}</button>` : ''}
-      ${a.lat ? `<button onclick="event.stopPropagation();window.open('${mapsUrl(a.lat, a.lon, name)}','_blank')">${t('directions')}</button>` : ''}
-      ${a.custom ? `<button onclick="event.stopPropagation();deleteCustomActivity('${a.id}')">🗑️</button>` : ''}
+    <div class="act-detail">
+      ${hasPhoto ? `<div class="act-detail-photo"><img src="${API}/photo/${a.id}" alt="" loading="lazy"><div class="act-detail-photo-fade"></div><div class="act-detail-photo-badges"><span class="act-detail-photo-badge">${catLabel}${a.indoor ? ' · Indoor' : ''}</span></div></div>` : ''}
+      <div class="act-detail-body">
+        <div class="act-detail-title">${esc(name)}</div>
+        <div class="act-detail-desc">${esc(desc)}</div>
+        <div class="act-detail-grid">
+          <div class="act-detail-cell"><div class="act-detail-label">${lang === 'de' ? 'Entfernung' : 'Distance'}</div><div class="act-detail-value">${distVal}</div></div>
+          <div class="act-detail-cell"><div class="act-detail-label">${lang === 'de' ? 'Dauer' : 'Duration'}</div><div class="act-detail-value">${durationVal}</div></div>
+          <div class="act-detail-cell"><div class="act-detail-label">${lang === 'de' ? 'Preis' : 'Price'}</div><div class="act-detail-value">${priceVal}</div></div>
+          <div class="act-detail-cell"><div class="act-detail-label">${lang === 'de' ? 'Alter' : 'Ages'}</div><div class="act-detail-value">${agesVal}</div></div>
+        </div>
+        ${statusHtml}
+        <div class="act-detail-actions">
+          ${a.url ? `<a class="btn-website" href="${esc(a.url)}" target="_blank" onclick="event.stopPropagation()"><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M7 1V8M4 5L7 1L10 5" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 10V12C2 12.5 2.5 13 3 13H11C11.5 13 12 12.5 12 12V10" stroke="white" stroke-width="1.4" stroke-linecap="round"/></svg>${t('website')}</a>` : ''}
+          <button class="btn-save${isSaved ? ' saved' : ''}" onclick="event.stopPropagation();toggleSave('${a.id}');renderCurrentView();afterRender(initActivityMap)">
+            ${isSaved ? '❤️' : '🤍'}
+          </button>
+        </div>
+      </div>
     </div>
   </div>`;
 }
@@ -1482,6 +1504,21 @@ function toggleAbout() {
 
 function toggleDetail(id) { $(id)?.classList.toggle('active'); }
 
+function toggleActCard(card, e) {
+  if (e && (e.target.closest('a') || e.target.closest('.btn-save') || e.target.closest('.act-close-btn'))) return;
+  const wasExpanded = card.classList.contains('act-expanded');
+  document.querySelectorAll('.act-card.act-expanded').forEach(c => c.classList.remove('act-expanded'));
+  if (!wasExpanded) {
+    card.classList.add('act-expanded');
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function closeActCard(card, e) {
+  if (e) e.stopPropagation();
+  card.classList.remove('act-expanded');
+}
+
 function toggleNews(card, e) {
   if (e && (e.target.closest('a') || e.target.closest('.btn-share'))) return;
   const wasExpanded = card.classList.contains('expanded');
@@ -1501,6 +1538,7 @@ function shareArticle(headline, url) {
 function filterActivities(f) {
   activityFilter = f;
   if (f === 'near' && !userLat) { requestLocation(); return; }
+  renderHeader();
   renderCurrentView();
   afterRender(initActivityMap);
 }
@@ -1744,38 +1782,80 @@ function showSurpriseModal(item, type) {
   const name = lang === 'de' ? (item.nameDE || item.name) : item.name;
   const desc = lang === 'de' ? (item.descriptionDE || item.description) : item.description;
   const emoji = type === 'lunch' ? '🍽️' : (ACTIVITY_EMOJIS[item.category] || '🎉');
+  const isSaved = savedActivities.includes(item.id);
 
-  let badges = '';
   if (type === 'activity') {
-    badges += `<span class="badge ${item.indoor ? 'badge-indoor' : 'badge-outdoor'}">${item.indoor ? 'Indoor' : 'Outdoor'}</span>`;
-    if (item.duration) badges += `<span class="badge badge-duration">${item.duration}</span>`;
-    if (item.price) badges += `<span class="badge badge-price">${item.price}</span>`;
-  } else {
-    if (item.cuisine) badges += `<span class="badge badge-price">${esc(item.cuisine)}</span>`;
-    if (item.openForLunch === true) badges += '<span class="badge badge-open">Open</span>';
+    // Bottom sheet for activities
+    const hasPhoto = item.id && item.category !== 'stayhome';
+    let tags = `<span class="act-tag ${item.indoor ? 'indoor' : 'outdoor'}">${item.indoor ? 'Indoor' : 'Outdoor'}</span>`;
+    if (item.duration) tags += `<span class="act-tag time">${item.duration}</span>`;
+    if (item.free || (item.price && /^free|^gratis/i.test(item.price))) tags += `<span class="act-tag free">${lang === 'de' ? 'Gratis' : 'Free'}</span>`;
+    if (item.ageRange) tags += `<span class="act-tag ages">${item.ageRange}</span>`;
+
+    // Create sheet elements if not exists
+    let scrim = document.querySelector('.surprise-sheet-scrim');
+    let sheet = document.querySelector('.surprise-sheet');
+    if (!scrim) {
+      scrim = document.createElement('div');
+      scrim.className = 'surprise-sheet-scrim';
+      scrim.onclick = closeSurpriseSheet;
+      document.body.appendChild(scrim);
+    }
+    if (!sheet) {
+      sheet = document.createElement('div');
+      sheet.className = 'surprise-sheet';
+      document.body.appendChild(sheet);
+    }
+    sheet.innerHTML = `
+      <div class="surprise-sheet-handle"><div class="surprise-sheet-bar"></div></div>
+      <button class="surprise-sheet-close" onclick="closeSurpriseSheet()">
+        <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1 1L9 9M9 1L1 9" stroke="var(--muted)" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <div class="surprise-sheet-body">
+        ${hasPhoto ? `<div class="surprise-sheet-photo"><img src="${API}/photo/${item.id}" alt="" onerror="this.parentNode.innerHTML='<div style=\\'font-size:3rem;padding:30px\\'>${emoji}</div>'"></div>` : `<div style="font-size:3rem;margin-bottom:16px">${emoji}</div>`}
+        <div class="surprise-sheet-name">${esc(name)}</div>
+        <div class="surprise-sheet-desc">${esc(desc || '')}</div>
+        <div class="surprise-sheet-tags">${tags}</div>
+        <div class="surprise-sheet-links">
+          ${item.url ? `<button class="surprise-sheet-link" onclick="window.open('${esc(item.url)}','_blank')"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="var(--navy)" stroke-width="1.4"/><path d="M8 2C8 2 6 5 6 8C6 11 8 14 8 14M8 2C8 2 10 5 10 8C10 11 8 14 8 14M2 8H14" stroke="var(--navy)" stroke-width="1.4" stroke-linecap="round"/></svg>${t('website')}</button>` : ''}
+          <button class="surprise-sheet-link" onclick="event.stopPropagation();toggleSave('${item.id}');this.innerHTML=savedActivities.includes('${item.id}')?'❤️ Saved':'🤍 Save'">
+            ${isSaved ? '❤️ Saved' : '🤍 Save'}
+          </button>
+        </div>
+        <button class="btn-surprise" onclick="surpriseMe()" style="margin-top:0">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 8C2 4.7 4.7 2 8 2C10 2 11.8 3 13 4.5M14 8C14 11.3 11.3 14 8 14C6 14 4.2 13 3 11.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/><path d="M13 1.5V5H9.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 14.5V11H6.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          ${t('another')}
+        </button>
+      </div>`;
+    scrim.classList.add('active');
+    requestAnimationFrame(() => sheet.classList.add('active'));
+    return;
   }
 
-  // Show venue photo for activities (with emoji fallback), emoji only for lunch
-  const hasPhoto = type === 'activity' && item.id && item.category !== 'stayhome';
-  const photoHtml = hasPhoto
-    ? `<div class="modal-photo"><div class="modal-photo-shimmer"></div><img src="${API}/photo/${item.id}" alt="${esc(name)}" onload="this.parentNode.classList.add('loaded')" onerror="this.parentNode.innerHTML='<div class=\\'modal-emoji\\'>${emoji}</div>'"></div>`
-    : `<div class="modal-emoji">${emoji}</div>`;
-
+  // Fallback modal for lunch
+  let badges = '';
+  if (item.cuisine) badges += `<span class="badge badge-price">${esc(item.cuisine)}</span>`;
+  if (item.openForLunch === true) badges += '<span class="badge badge-open">Open</span>';
   const modal = $('modal');
   modal.innerHTML = `<div class="modal-content">
     <button class="modal-close" onclick="closeModal()">&times;</button>
-    ${photoHtml}
+    <div class="modal-emoji">${emoji}</div>
     <div class="modal-title">${esc(name)}</div>
     <div class="modal-desc">${esc(desc || '')}</div>
     <div class="modal-badges">${badges}</div>
     <div class="modal-actions">
-      <button class="btn-primary" onclick="${type === 'activity' ? 'surpriseMe()' : 'surpriseLunch()'}">${t('another')}</button>
+      <button class="btn-primary" onclick="surpriseLunch()">${t('another')}</button>
       ${item.lat ? `<button class="btn-secondary" onclick="window.open('${mapsUrl(item.lat, item.lon, name)}','_blank')">${t('directions')}</button>` : ''}
       ${item.url || item.website ? `<button class="btn-secondary" onclick="window.open('${esc(item.url || item.website)}','_blank')">${t('website')}</button>` : ''}
       <button class="btn-secondary" onclick="closeModal()">${t('close')}</button>
     </div>
   </div>`;
   modal.classList.add('active');
+}
+
+function closeSurpriseSheet() {
+  document.querySelector('.surprise-sheet')?.classList.remove('active');
+  document.querySelector('.surprise-sheet-scrim')?.classList.remove('active');
 }
 
 function closeModal() { $('modal').classList.remove('active'); }

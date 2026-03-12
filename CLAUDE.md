@@ -106,18 +106,22 @@ swiss-news-summary/
 - **Share**: Native share API per article + clipboard fallback
 - **Theme**: Light-first (cream #F5F0E8 background), dark mode as secondary variant. Alpine brand theme removed.
 
-### Activities View ("What to do?")
+### Activities View ("What to do?") — Design System v3.2
 - Curated family-friendly activities for toddlers (ages 2-5)
 - **7 cities**: Zürich, Basel, Bern, Geneva, Lausanne, Luzern, Winterthur
+- **Hero header**: Navy hero with terracotta glow, Playfair italic city name, filter pills in hero (`pill-row-hero`)
+- **Filter pills in hero**: White-on-navy pills (`.pill.on`/`.pill.off`), scrollable row
 - **Filters**: All, Near me, Indoor, Outdoor, Free, Saved, Seasonal
 - **"Near me"**: Uses geolocation, shows distance badges
 - **Weather-based**: Indoor prioritized when rainy/cold
+- **Act-card pattern**: Photo-left card (94px `.act-photo-wrap`), expand-in-place accordion
+  - Face: photo + name (Playfair) + description + tags (indoor/outdoor/free/age/featured)
+  - Detail panel: Hero photo with fade overlay, 4-cell meta grid (distance/duration/price/ages), status strip (open/closed), action buttons (website/save)
+- **Surprise Me bottom sheet**: `.surprise-sheet` with scrim, drag handle, photo, tags, website/save links, "Try another" CTA
 - **Custom activities**: Users can add their own
 - **Recurring events**: Farmers markets, play groups, story times
 - **Seasonal activities**: Christmas markets, ice skating, swimming pools, pumpkin farms
-- **"Surprise me!" button**: Random weather-appropriate activity picker
 - **Age filter**: Toggle between All ages, 2-3 years, or 4-5 years
-- **Visual hero cards**: Category-based gradient headers with emoji on activity cards
 - **Featured activities**: Curated top picks sorted to front with "Featured" badge
 - **Reminders**: Set date reminders on saved activities (browser Notification API + toast fallback)
 
@@ -418,9 +422,12 @@ Each city has:
 | `toggleTheme()` | Light/dark mode |
 | `toggleNews(card, event)` | Expand/collapse news card (accordion) |
 | `shareArticle(headline, url)` | Share article via native share or clipboard |
+| `toggleActCard(card, event)` | Expand/collapse activity card (accordion) |
+| `closeActCard(card, event)` | Close expanded activity card |
+| `closeSurpriseSheet()` | Close surprise bottom sheet |
 | `surpriseMe()` | Random activity picker |
 | `setAgeFilter(age)` | Filter by age group |
-| `showSurpriseModal(activity)` | Display surprise activity |
+| `showSurpriseModal(activity)` | Display surprise activity / bottom sheet |
 | `loadEventsCalendar()` | Load events calendar data |
 | `renderCalendar()` | Render calendar grid with dots |
 | `renderEventsList()` | Render filtered events list |
