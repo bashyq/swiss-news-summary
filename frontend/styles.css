@@ -69,8 +69,8 @@ a { color: var(--accent); text-decoration: none; }
 
 /* ═══ FOCUS ═══ */
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
-.tab-btn:focus-visible, .filter-btn:focus-visible, .sort-btn:focus-visible, .lang-btn:focus-visible { outline-offset: 0; }
-.card:focus-visible, .activity-card:focus-visible, .sunshine-card:focus-visible, .snow-card:focus-visible, .event-card:focus-visible { outline-offset: -2px; }
+.tab-btn:focus-visible, .lang-btn:focus-visible { outline-offset: 0; }
+.card:focus-visible, .sunshine-card:focus-visible, .snow-card:focus-visible, .event-card:focus-visible { outline-offset: -2px; }
 input:focus-visible, textarea:focus-visible, select:focus-visible { outline-offset: -1px; }
 
 /* ═══ LOADING BAR ═══ */
@@ -306,12 +306,6 @@ nav { margin: 0; }
 .weekend-brief-event { font-size: 12px; color: var(--text2); margin-bottom: 3px; font-weight: 300; }
 
 /* ═══ ACTIVITIES ═══ */
-.subtitle { font-size: .8rem; color: var(--text2); margin-bottom: 16px; }
-.filter-bar { display: flex; gap: var(--sp-2); overflow-x: auto; padding: var(--sp-1) 0; margin-bottom: var(--sp-4); scrollbar-width: none; }
-.filter-bar::-webkit-scrollbar { display: none; }
-.filter-btn { padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: none; color: var(--text2); font-family: inherit; font-size: var(--fs-sm); cursor: pointer; white-space: nowrap; transition: all var(--ease-fast); min-height: 44px; }
-.filter-btn:hover { border-color: var(--text2); }
-.filter-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
 /* Hero filter pills (white on navy, inside hero) */
 .pill-row-hero { padding: 12px 20px 16px; display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none; position: relative; z-index: 2; }
 .pill-row-hero::-webkit-scrollbar { display: none; }
@@ -457,31 +451,6 @@ nav { margin: 0; }
 [data-theme="dark"] .vcard-act-btn.secondary { background: var(--bg2); color: var(--text); }
 [data-theme="dark"] .vcard-act-btn.icon-only { background: var(--bg2); color: var(--text); }
 
-.activity-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--sp-4); margin-bottom: var(--sp-3); border-left: 4px solid var(--border); cursor: pointer; transition: border-color var(--ease-fast), transform var(--ease-fast), box-shadow var(--ease-fast); position: relative; }
-.activity-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.12); }
-[data-theme="light"] .activity-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); }
-.activity-card.cat-animals { border-left-color: var(--clr-amber); }
-.activity-card.cat-museum { border-left-color: var(--clr-purple); }
-.activity-card.cat-playground { border-left-color: var(--clr-green); }
-.activity-card.cat-outdoor { border-left-color: var(--clr-emerald); }
-.activity-card.cat-nature { border-left-color: var(--clr-teal); }
-.activity-card.cat-indoor-play { border-left-color: var(--clr-pink); }
-.activity-card.cat-event { border-left-color: var(--clr-blue); }
-.activity-card.cat-seasonal { border-left-color: var(--clr-red); }
-.activity-card.cat-stayhome { border-left-color: var(--clr-gray); }
-.activity-card.cat-cafe { border-left-color: var(--clr-orange); }
-.activity-card.cat-other { border-left-color: var(--muted); }
-.activity-card-row { display: flex; gap: var(--sp-3); align-items: flex-start; }
-.activity-card-text { flex: 1; min-width: 0; }
-.activity-thumb-wrap { position: relative; flex-shrink: 0; width: 64px; height: 64px; }
-.activity-thumb-wrap .activity-save { top: -6px; right: -6px; background: rgba(0,0,0,.5); border-radius: var(--radius-full); width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; padding: 0; font-size: .9rem; }
-.activity-thumb-wrap .activity-remind { top: -6px; right: 22px; background: rgba(0,0,0,.5); border-radius: var(--radius-full); width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; padding: 0; font-size: .8rem; }
-.activity-thumb-wrap.no-img .activity-thumb { display: none; }
-.activity-thumb-wrap.no-img { width: auto; height: auto; }
-.activity-thumb { width: 64px; height: 64px; border-radius: var(--radius-sm); object-fit: cover; }
-.activity-name { font-family: var(--serif); font-size: var(--fs-md); font-weight: 600; margin-bottom: var(--sp-1); display: flex; align-items: center; gap: var(--sp-2); }
-.activity-emoji { font-size: 1.4rem; line-height: 1; flex-shrink: 0; }
-.activity-desc { font-size: var(--fs-base); color: var(--text2); margin-bottom: var(--sp-2); line-height: 1.5; }
 .activity-badges { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
 .badge { padding: 3px 8px; border-radius: 6px; font-size: .68rem; font-weight: 600; letter-spacing: .02em; }
 .badge-indoor { background: var(--clr-blue-bg); color: var(--clr-blue); }
@@ -537,17 +506,19 @@ nav { margin: 0; }
 .btn-add:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ═══ EVENTS CALENDAR ═══ */
-.calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.calendar-nav { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--text2); cursor: pointer; padding: 6px 10px; font-size: .8rem; }
-.calendar-nav:hover { border-color: var(--accent); }
+.calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 4px; }
+.calendar-nav { background: none; border: 1px solid var(--border); border-radius: 10px; color: var(--text2); cursor: pointer; padding: 8px 12px; font-size: .8rem; transition: all .15s; }
+.calendar-nav:hover { border-color: var(--navy); color: var(--navy); }
 .calendar-month { font-family: var(--serif); font-size: 1.1rem; font-weight: 600; }
-.calendar-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; margin-bottom: 16px; }
-.calendar-day-header { text-align: center; font-size: .65rem; color: var(--muted); padding: 4px; text-transform: uppercase; }
-.calendar-day { text-align: center; padding: 10px 4px; font-size: .8rem; cursor: pointer; border-radius: 6px; position: relative; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; margin-bottom: 16px; }
+.calendar-day-header { text-align: center; font-size: .65rem; color: var(--text2); padding: 4px; text-transform: uppercase; font-weight: 600; }
+.calendar-day { text-align: center; padding: 10px 4px; font-size: .8rem; cursor: pointer; border-radius: 10px; position: relative; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: background .15s; }
 .calendar-day:hover { background: var(--bg2); }
-.calendar-day.today { font-weight: 700; color: var(--accent); }
-.calendar-day.selected { background: var(--accent); color: #fff; border-radius: 6px; }
-.calendar-day.other-month { color: var(--muted); opacity: .4; }
+.calendar-day.today { font-weight: 700; color: var(--navy); }
+[data-theme="dark"] .calendar-day.today { color: #7BB8E0; }
+.calendar-day.selected { background: var(--navy); color: #fff; border-radius: 10px; }
+[data-theme="dark"] .calendar-day.selected { background: #4A7AAC; }
+.calendar-day.other-month { color: var(--text2); opacity: .3; }
 .calendar-dots { display: flex; gap: 2px; justify-content: center; margin-top: 2px; }
 .calendar-dot { width: 4px; height: 4px; border-radius: 50%; }
 .dot-holiday { background: var(--clr-red); }
@@ -556,7 +527,8 @@ nav { margin: 0; }
 .dot-seasonal { background: var(--clr-green); }
 .dot-school-holiday { background: var(--clr-amber); }
 
-.event-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 8px; }
+.event-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 10px; transition: box-shadow .2s; }
+.event-card:hover { box-shadow: 0 4px 14px rgba(26,58,92,.08); }
 .event-date { font-size: .7rem; color: var(--accent); font-weight: 600; margin-bottom: 4px; }
 .event-name { font-family: var(--serif); font-size: .95rem; font-weight: 600; margin-bottom: 4px; }
 .event-desc { font-size: .8rem; color: var(--text2); }
@@ -565,7 +537,7 @@ nav { margin: 0; }
 .badge-free { background: var(--clr-green-bg); color: var(--clr-green); }
 
 /* ═══ WEEKEND PLANNER ═══ */
-.weekend-day { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+.weekend-day { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 20px; margin-bottom: 12px; }
 .weekend-day-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .weekend-day-name { font-family: var(--serif); font-size: 1.1rem; font-weight: 600; }
 .weekend-weather { display: flex; align-items: center; gap: 6px; font-size: .85rem; }
@@ -577,23 +549,6 @@ nav { margin: 0; }
 .weekend-actions button { flex: 1; }
 
 /* ═══ LUNCH ═══ */
-.lunch-cuisine-select { padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--bg); color: var(--text2); font-family: inherit; font-size: .75rem; cursor: pointer; min-height: 44px; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23999'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
-.lunch-cuisine-select:focus { border-color: var(--accent); }
-.lunch-spot { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-.lunch-info { flex: 1; min-width: 0; }
-.lunch-name { font-weight: 600; margin-bottom: 2px; }
-.lunch-cuisine { font-size: .75rem; color: var(--text2); }
-.lunch-badges { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
-.lunch-photo { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
-.lunch-actions { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
-.lunch-actions button { padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px; background: none; color: var(--text2); font-size: .7rem; cursor: pointer; white-space: nowrap; }
-.lunch-actions button:hover { border-color: var(--accent); color: var(--accent); }
-.google-rating { display: flex; align-items: center; gap: 4px; margin-top: 2px; font-size: var(--fs-sm); }
-.google-stars { color: #f59e0b; letter-spacing: -1px; }
-.google-score { font-weight: 600; color: var(--text); }
-.google-count { color: var(--muted); }
-.lunch-price-level { color: var(--clr-green); font-weight: 700; letter-spacing: -1px; }
-.lunch-spot.closed { opacity: .5; }
 .badge-open { background: var(--clr-green-bg); color: var(--clr-green); }
 .badge-closed { background: var(--clr-red-bg); color: var(--clr-red); }
 .badge-wheelchair { background: var(--clr-blue-bg); color: var(--clr-blue); }
@@ -663,8 +618,6 @@ nav { margin: 0; }
 .brand-btn { padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px; background: none; color: var(--text2); font-family: inherit; font-size: .8rem; font-weight: 500; cursor: pointer; flex: 1; text-align: center; transition: all var(--ease-fast); }
 .brand-btn.active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); font-weight: 600; }
 .brand-btn:hover { border-color: var(--accent); }
-.theme-toggle { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: none; color: var(--text2); font-family: inherit; font-size: .8rem; cursor: pointer; width: 100%; text-align: left; margin-top: 8px; }
-.theme-toggle:hover { border-color: var(--accent); }
 
 /* ═══ LOADING ═══ */
 .skeleton { background: linear-gradient(90deg,var(--bg2) 25%,var(--card) 50%,var(--bg2) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: var(--radius); }
@@ -690,9 +643,6 @@ nav { margin: 0; }
 .dot-partly { background: var(--clr-sky); }
 .dot-cloudy { background: var(--clr-gray); }
 
-.sunshine-sort { display: flex; gap: 6px; margin-bottom: 12px; }
-.sort-btn { padding: 6px 12px; border: 1px solid var(--border); border-radius: 16px; background: none; color: var(--text2); font-family: inherit; font-size: .75rem; cursor: pointer; transition: all .2s; }
-.sort-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
 
 .sunshine-dates { text-align: center; font-size: .8rem; color: var(--muted); margin-bottom: 12px; font-weight: 500; letter-spacing: .05em; }
 
@@ -774,7 +724,6 @@ nav { margin: 0; }
 .sunshine-link:hover { text-decoration: underline; }
 
 /* ═══ SNOW ═══ */
-.snow-sort { display: flex; gap: 6px; margin-bottom: 12px; }
 .snow-dates { text-align: center; font-size: .8rem; color: var(--muted); margin-bottom: 12px; font-weight: 500; letter-spacing: .05em; }
 
 .snow-legend { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -938,14 +887,12 @@ nav { margin: 0; }
   .page-title { font-size: 1.4rem; }
   .calendar-grid { gap: 1px; font-size: .7rem; }
   .sunshine-days { flex-direction: column; gap: 4px; }
-  .filter-bar { flex-wrap: wrap; gap: 4px; }
-  .filter-btn { font-size: .7rem; padding: 6px 8px; }
   .activities-actions { flex-direction: column; }
 }
 /* ── Deals View ── */
 .deals-list { display: flex; flex-direction: column; gap: 10px; }
-.deal-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; cursor: pointer; transition: border-color .2s, transform .2s; }
-.deal-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.12); border-color: rgba(255,255,255,.15); }
+.deal-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; cursor: pointer; transition: box-shadow .2s; margin-bottom: 10px; }
+.deal-card:hover { box-shadow: 0 4px 14px rgba(26,58,92,.08); }
 .deal-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
 .deal-emoji { font-size: 1.3rem; line-height: 1; }
 .deal-card-title { font-family: var(--serif); font-size: .95rem; font-weight: 600; }
@@ -957,7 +904,9 @@ nav { margin: 0; }
 .deal-type-tip { background: var(--clr-amber-bg); color: var(--clr-amber); border: 1px solid rgba(245,158,11,.3); }
 .deal-savings-badge { font-size: .7rem; padding: 3px 10px; border-radius: 12px; background: var(--clr-purple-bg); color: var(--clr-purple); border: 1px solid rgba(168,85,247,.3); }
 .deal-recurring-badge { font-size: .7rem; padding: 3px 10px; border-radius: 12px; background: var(--bg2); color: var(--text2); }
-[data-theme="light"] .deal-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); border-color: rgba(0,0,0,.15); }
+[data-theme="dark"] .deal-card { border-color: rgba(255,255,255,.08); }
+[data-theme="dark"] .event-card { border-color: rgba(255,255,255,.08); }
+[data-theme="dark"] .weekend-day { border-color: rgba(255,255,255,.08); }
 
 /* ═══ EXPLORE MAP VIEW ═══ */
 /* ═══ EXPLORE VIEW ═══ */

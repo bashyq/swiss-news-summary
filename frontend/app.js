@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '4.0.0';
+const APP_VERSION = '4.0.1';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -241,11 +241,6 @@ const T = {
 };
 const t = k => T[k]?.[lang] || k;
 
-function getSubcategoryLabel(sub) {
-  const labels = { sensory: { en:'Sensory', de:'Sensorik' }, art: { en:'Art & Crafts', de:'Basteln' }, active: { en:'Active Play', de:'Bewegung' }, pretend: { en:'Pretend Play', de:'Rollenspiel' }, kitchen: { en:'Kitchen Fun', de:'Küchenspass' } };
-  return labels[sub]?.[lang] || sub;
-}
-
 // Deals fetched from worker API — cached locally
 let dealsData = [];
 
@@ -349,21 +344,6 @@ function renderSkeleton(count = 3) {
 
 function renderEmptyState(icon, msgKey, hintKey) {
   return `<div class="empty-state"><div class="empty-state-icon">${icon}</div><div class="empty-state-msg">${t(msgKey)}</div><div class="empty-state-hint">${t(hintKey)}</div></div>`;
-}
-
-function isAvailableOnDate(activity, date) {
-  if (activity.recurring) {
-    const r = activity.recurring.toLowerCase();
-    const dow = date.getDay();
-    if (r === 'weekends' || r.includes('weekend')) return dow === 0 || dow === 6;
-    if (r.includes('various')) return true;
-    const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-    if (r.includes(days[dow])) return true;
-    if (days.some(d => r.includes(d))) return false;
-    return false;
-  }
-  if (activity.availableMonths) return activity.availableMonths.includes(date.getMonth() + 1);
-  return true;
 }
 
 let activityMarkers = {};
@@ -1518,10 +1498,6 @@ function toggleTheme() {
   renderMenu();
 }
 
-function setBrand(b) {
-  // Legacy — brand system removed, new design system is default
-}
-
 function updateThemeColor() {
   const meta = document.getElementById('meta-theme-color');
   if (!meta) return;
@@ -2516,18 +2492,6 @@ function sunshineCardClick(id) {
   const card = document.getElementById(`sunshine-${id}`);
   if (card) card.classList.toggle('expanded');
   if (sunshineMap) panToMarker(sunshineMarkers, id, sunshineMap, 10);
-}
-
-function activityCardClick(id, event) {
-  if (event.target.closest('.activity-actions') || event.target.closest('.activity-save')) return;
-  panToMarker(activityMarkers, id, activityMap, 15);
-  $('activity-map')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
-function lunchCardClick(id, event) {
-  if (event.target.closest('.lunch-actions')) return;
-  panToMarker(lunchMarkers, id, lunchMap, 16);
-  $('lunch-map')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function setSunshineFilter(f) {
