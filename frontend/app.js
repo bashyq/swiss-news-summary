@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.25.0';
+const APP_VERSION = '2.26.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -310,6 +310,13 @@ function haversine(lat1, lon1, lat2, lon2) {
 
 function formatDist(km) {
   return km < 1 ? `${Math.round(km * 1000)}m` : `${km.toFixed(1)}km`;
+}
+
+function retryPhoto(img) {
+  const attempt = parseInt(img.dataset.retry || '0');
+  if (attempt >= 2) { img.style.display = 'none'; return; }
+  img.dataset.retry = attempt + 1;
+  setTimeout(() => { img.src = img.src; }, 3000 * (attempt + 1));
 }
 
 function mapsUrl(lat, lon, name) {
@@ -964,7 +971,7 @@ function renderLunchCard(s) {
     : '';
 
   const photoUrl = s.lat ? `${API}/photo/${s.id}?name=${encodeURIComponent(s.name)}&lat=${s.lat}&lon=${s.lon}` : '';
-  const photoHtml = photoUrl ? `<img class="lunch-photo" src="${photoUrl}" alt="" loading="lazy" onerror="this.style.display='none'">` : '';
+  const photoHtml = photoUrl ? `<img class="lunch-photo" src="${photoUrl}" alt="" loading="lazy" onerror="retryPhoto(this)">` : '';
 
   return `<div class="lunch-spot${s.permanentlyClosed ? ' closed' : ''}" id="lunch-${s.id}" onclick="lunchCardClick('${s.id}', event)">
     <div class="lunch-info">
