@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '3.0.0';
+const APP_VERSION = '3.1.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -14,8 +14,7 @@ const MAP_COLORS = { green:'#22c55e', purple:'#a855f7', amber:'#f59e0b', blue:'#
 // ═══ STATE ═══
 let lang = localStorage.getItem('lang') || 'en';
 let city = localStorage.getItem('city') || 'zurich';
-let theme = localStorage.getItem('theme') || 'dark';
-let brand = localStorage.getItem('brand') || 'alpine';
+let theme = localStorage.getItem('theme') || 'light';
 let view = localStorage.getItem('view') || 'news';
 if (view === 'whatson') view = 'events'; // merged into events
 let newsData = null;
@@ -393,36 +392,79 @@ function renderHeader() {
   const now = new Date();
   const dateStr = now.toLocaleDateString(lang === 'de' ? 'de-CH' : 'en-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-  $('header').innerHTML = `
-    <div class="header-top">
-      <div class="date-display">${dateStr}</div>
-      <div class="header-controls">
-        <div class="header-lang-toggle">
-          <button class="header-lang-btn${lang === 'en' ? ' active' : ''}" onclick="setLanguage('en')">EN</button>
-          <button class="header-lang-btn${lang === 'de' ? ' active' : ''}" onclick="setLanguage('de')">DE</button>
-        </div>
-        <div class="city-selector">
-          <button class="icon-btn" onclick="toggleCityDropdown()">
-            ${CITIES[city]} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="city-dropdown" id="city-dropdown">
-            ${Object.entries(CITIES).map(([id, name]) => `<button class="city-option${id === city ? ' active' : ''}" onclick="setCity('${id}')">${name}</button>`).join('')}
+  if (view === 'news') {
+    const eyebrow = dateStr.toUpperCase();
+    const cityName = CITIES[city] || 'Zürich';
+    const titleText = lang === 'de' ? `Heute in <em>${cityName}</em>` : `Today in <em>${cityName}</em>`;
+    $('header').innerHTML = `
+      <div class="hero">
+        <div class="hero-glow"></div>
+        <div class="hero-top">
+          <div class="hero-controls">
+            <div class="city-selector">
+              <button class="hero-btn" onclick="toggleCityDropdown()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                ${cityName}
+              </button>
+              <div class="city-dropdown" id="city-dropdown">
+                ${Object.entries(CITIES).map(([id, name]) => `<button class="city-option${id === city ? ' active' : ''}" onclick="setCity('${id}')">${name}</button>`).join('')}
+              </div>
+            </div>
+          </div>
+          <div class="hero-controls">
+            <div class="hero-lang">
+              <button class="hero-lang-btn${lang === 'en' ? ' active' : ''}" onclick="setLanguage('en')">EN</button>
+              <button class="hero-lang-btn${lang === 'de' ? ' active' : ''}" onclick="setLanguage('de')">DE</button>
+            </div>
+            <button class="hero-btn" onclick="openMenu()" aria-label="Menu">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+            </button>
           </div>
         </div>
-        <button class="icon-btn" onclick="openMenu()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
-        </button>
+        <div class="hero-body">
+          <div class="hero-eyebrow">${eyebrow}</div>
+          <h1 class="hero-title">${titleText}</h1>
+          <div class="weather-row" id="weather-compact"></div>
+        </div>
       </div>
-    </div>
-    <div class="title-row">
-      <h1 class="page-title" id="page-title">${getPageTitle()}</h1>
-      <div id="weather-compact"></div>
-    </div>
-    <div id="weather-dropdown" class="weather-dropdown"></div>
-    <div id="history-inline" class="history-inline"></div>
-    <div id="trending-inline" class="trending-banner" style="display:none"></div>
-    <div id="transport-widget"></div>
-  `;
+      <div id="weather-dropdown" class="weather-dropdown"></div>
+      <div class="history-strip" id="history-inline"></div>
+      <div id="trending-inline" class="trending-banner" style="display:none"></div>
+      <div class="alert-banner" id="transport-widget"></div>
+    `;
+  } else {
+    // Legacy header for non-news views
+    $('header').innerHTML = `
+      <div class="header-top">
+        <div class="date-display">${dateStr}</div>
+        <div class="header-controls">
+          <div class="header-lang-toggle">
+            <button class="header-lang-btn${lang === 'en' ? ' active' : ''}" onclick="setLanguage('en')">EN</button>
+            <button class="header-lang-btn${lang === 'de' ? ' active' : ''}" onclick="setLanguage('de')">DE</button>
+          </div>
+          <div class="city-selector">
+            <button class="icon-btn" onclick="toggleCityDropdown()">
+              ${CITIES[city]} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="city-dropdown" id="city-dropdown">
+              ${Object.entries(CITIES).map(([id, name]) => `<button class="city-option${id === city ? ' active' : ''}" onclick="setCity('${id}')">${name}</button>`).join('')}
+            </div>
+          </div>
+          <button class="icon-btn" onclick="openMenu()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="title-row">
+        <h1 class="page-title" id="page-title">${getPageTitle()}</h1>
+        <div id="weather-compact" class="weather-compact"></div>
+      </div>
+      <div id="weather-dropdown" class="weather-dropdown"></div>
+      <div id="history-inline" class="history-inline"></div>
+      <div id="trending-inline" class="trending-banner" style="display:none"></div>
+      <div id="transport-widget"></div>
+    `;
+  }
 }
 
 function getPageTitle() {
@@ -442,10 +484,17 @@ function renderNav() {
   if (view !== 'news') { $('nav').innerHTML = ''; return; }
   const cats = ['topStories', 'politics', 'eventsTab', 'culture', 'local'];
   const keys = ['topStories', 'politics', 'events', 'culture', 'local'];
-  $('nav').innerHTML = `<div class="tabs">${cats.map((c, i) => {
-    const count = newsData?.categories?.[keys[i]]?.length || 0;
-    return `<button class="tab-btn${currentTab === keys[i] ? ' active' : ''}" onclick="setTab('${keys[i]}')">${t(c)} <span class="tab-count">${count}</span></button>`;
-  }).join('')}</div>`;
+  const totalCount = keys.reduce((s, k) => s + (newsData?.categories?.[k]?.length || 0), 0);
+  $('nav').innerHTML = `
+    <div class="section-row">
+      <div class="section-heading">${lang === 'de' ? 'Nachrichten' : 'Headlines'}</div>
+      <div class="section-count">${totalCount} ${lang === 'de' ? 'Artikel' : 'articles'}</div>
+    </div>
+    <div class="pill-row">${cats.map((c, i) => {
+      const count = newsData?.categories?.[keys[i]]?.length || 0;
+      const active = currentTab === keys[i];
+      return `<button class="pill ${active ? 'on' : 'off'}" onclick="setTab('${keys[i]}')">${t(c)}<span class="pill-cnt">${count}</span></button>`;
+    }).join('')}</div>`;
 }
 
 const VIEW_RENDERERS = { news: renderNewsView, activities: renderActivitiesView, lunch: renderLunchView, events: renderEventsView, weekend: renderWeekendView, sunshine: renderSunshineView, snow: renderSnowView, deals: renderDealsView, explore: renderExploreView };
@@ -478,10 +527,6 @@ function renderMenu() {
     ${canDonate ? `<div class="menu-item" onclick="openDonateModal()"><span class="menu-item-icon">☕</span>${t('donate')}</div>` : ''}
     <div class="menu-section">
       <div class="menu-section-title">${t('brandTheme')}</div>
-      <div class="brand-toggle">
-        <button class="brand-btn${brand === 'classic' ? ' active' : ''}" onclick="setBrand('classic')">${t('brandClassic')}</button>
-        <button class="brand-btn${brand === 'alpine' ? ' active' : ''}" onclick="setBrand('alpine')">${t('brandAlpine')}</button>
-      </div>
       <button class="theme-toggle" onclick="toggleTheme()">${theme === 'dark' ? '☀️ ' + t('lightMode') : '🌙 ' + t('darkMode')}</button>
     </div>
     <div class="menu-section" id="menu-holidays">
@@ -538,27 +583,57 @@ function renderNewsView() {
     html += '</div>';
   }
 
-  // Category sections
+  // Weekend brief
+  if (newsData.weekendBrief) {
+    html += renderWeekendBriefCard(newsData.weekendBrief);
+  }
+
+  // Category sections with ncard layout
   const cats = ['topStories', 'politics', 'events', 'culture', 'local'];
   for (const cat of cats) {
     const items = newsData.categories?.[cat] || [];
-    html += `<div class="section${currentTab === cat ? ' active' : ''}" id="section-${cat}">`;
+    html += `<div class="section${currentTab === cat ? ' active' : ''}" id="section-${cat}">
+      <div class="news-list">`;
     for (let ci = 0; ci < items.length; ci++) {
       const item = items[ci];
-      const cardId = `card-${cat}-${ci}`;
-      html += `<div class="card" onclick="toggleDetail('${cardId}')">
-        <div class="card-headline"><a href="${esc(item.url)}" target="_blank" onclick="event.stopPropagation()">${esc(item.headline)}</a></div>
-        <div class="card-summary">${esc(item.summary)}</div>
-        <div class="card-detail" id="${cardId}">${esc(item.detail || '')}</div>
-        <div class="card-meta">
-          <span class="card-source">${esc(item.source)}</span>
-          <span class="sentiment-badge sentiment-${item.sentiment || 'neutral'}">${item.sentiment || 'neutral'}</span>
-          ${item.publishedAt ? `<span class="freshness">${timeAgo(item.publishedAt)}</span>` : ''}
+      const sentiment = item.sentiment || 'neutral';
+      const sentClass = sentiment === 'positive' ? 'positive' : sentiment === 'negative' ? 'negative' : 'neutral';
+      const sentLabel = sentiment === 'positive' ? (lang === 'de' ? 'Positiv' : 'Positive') : sentiment === 'negative' ? (lang === 'de' ? 'Negativ' : 'Negative') : (lang === 'de' ? 'Neutral' : 'Neutral');
+      const sentPill = sentiment === 'positive' ? 'pos' : sentiment === 'negative' ? 'neg' : 'neu';
+      const timeStr = item.publishedAt ? timeAgo(item.publishedAt) : '';
+      html += `<div class="ncard ${sentClass}" onclick="toggleNews(this, event)">
+        <div class="ncard-core">
+          <div class="ncard-top">
+            <div class="ncard-source-row">
+              <span class="ncard-source">${esc(item.source)}</span>
+              ${timeStr ? `<span class="ncard-dot"></span><span class="ncard-time">${timeStr}</span>` : ''}
+            </div>
+          </div>
+          <div class="ncard-headline"><a href="${esc(item.url)}" target="_blank" onclick="event.stopPropagation()">${esc(item.headline)}</a></div>
+          <div class="ncard-summary">${esc(item.summary)}</div>
+          <div class="ncard-footer">
+            <span class="sentiment ${sentPill}">${sentLabel}</span>
+            <span class="ncard-cta">${lang === 'de' ? 'Mehr' : 'More'} <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></span>
+          </div>
+        </div>
+        <div class="ncard-detail">
+          <div class="ncard-detail-inner">
+            ${item.detail ? `<div class="detail-meta"><div class="detail-meta-item"><div class="detail-meta-label">${lang === 'de' ? 'Details' : 'Details'}</div><div class="detail-meta-value">${esc(item.detail)}</div></div></div>` : ''}
+            <div class="detail-actions">
+              <a class="btn-read" href="${esc(item.url)}" target="_blank" onclick="event.stopPropagation()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                ${lang === 'de' ? 'Artikel lesen' : 'Read full article'}
+              </a>
+              <button class="btn-share" onclick="event.stopPropagation();shareArticle('${esc(item.headline)}','${esc(item.url)}')" aria-label="Share">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              </button>
+            </div>
+          </div>
         </div>
       </div>`;
     }
     if (items.length === 0) html += `<div class="loading-msg">${t('noResults')}</div>`;
-    html += '</div>';
+    html += '</div></div>';
   }
 
   return html;
@@ -1175,11 +1250,30 @@ function renderWeather(w) {
   if (!w) return;
   const el = $('weather-compact');
   if (!el) return;
-  el.innerHTML = `<span class="weather-icon">${WEATHER_ICONS[w.weatherCode] || '🌡️'}</span>
-    <span class="weather-temp">${w.temperature}°</span>
-    <span class="weather-wind">${w.windSpeed} km/h</span>`;
-  el.onclick = toggleWeatherDropdown;
-  el.style.cursor = 'pointer';
+
+  if (view === 'news') {
+    // Hero weather row (inside navy hero)
+    const icon = WEATHER_ICONS[w.weatherCode] || '🌡️';
+    const desc = w.description || '';
+    const hi = w.hourly ? Math.max(...w.hourly.map(h => h.temperature)) : w.temperature;
+    const lo = w.hourly ? Math.min(...w.hourly.map(h => h.temperature)) : w.temperature;
+    el.innerHTML = `
+      <span class="weather-temp-lg">${w.temperature}°</span>
+      <span class="weather-meta">
+        <span class="weather-desc">${desc}</span>
+        <span class="weather-range">H:${hi}° L:${lo}°</span>
+      </span>
+      <span class="weather-icon-hero">${icon}</span>`;
+    el.onclick = toggleWeatherDropdown;
+    el.style.cursor = 'pointer';
+  } else {
+    // Legacy compact weather
+    el.innerHTML = `<span class="weather-icon">${WEATHER_ICONS[w.weatherCode] || '🌡️'}</span>
+      <span class="weather-temp">${w.temperature}°</span>
+      <span class="weather-wind">${w.windSpeed} km/h</span>`;
+    el.onclick = toggleWeatherDropdown;
+    el.style.cursor = 'pointer';
+  }
 
   // Hourly dropdown
   const dd = $('weather-dropdown');
@@ -1197,9 +1291,22 @@ function renderHistory(h) {
   const el = $('history-inline');
   if (!el || !h) return;
   const text = lang === 'de' ? h.eventDE : h.event;
-  const title = lang === 'de' ? 'Heute in der Geschichte' : 'This Day in History';
-  el.innerHTML = `<div class="history-title">${title}</div><span class="history-year">${h.year}</span> — ${esc(text)}`;
-  if (view === 'news') el.classList.add('active');
+  const label = lang === 'de' ? 'Heute in der Geschichte' : 'This Day in History';
+
+  if (view === 'news') {
+    // History strip card
+    el.innerHTML = `
+      <svg class="history-strip-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <div>
+        <div class="history-label">${label}</div>
+        <div class="history-text"><span class="history-year">${h.year}</span> — ${esc(text)}</div>
+      </div>`;
+    el.classList.add('active');
+  } else {
+    // Legacy
+    el.innerHTML = `<div class="history-title">${label}</div><span class="history-year">${h.year}</span> — ${esc(text)}`;
+    el.classList.add('active');
+  }
 }
 
 function renderTrending(tr) {
@@ -1207,25 +1314,54 @@ function renderTrending(tr) {
   if (!el) return;
   if (!tr) { el.style.display = 'none'; return; }
   const topic = lang === 'de' ? (tr.topicDE || tr.topic) : tr.topic;
-  el.style.display = view === 'news' ? 'block' : 'none';
+  if (view !== 'news') { el.style.display = 'none'; return; }
   el.setAttribute('onclick', safeUrl(tr.url) ? `window.open('${esc(tr.url)}','_blank')` : '');
-  el.innerHTML = `<div class="trending-label">🔥 Trending</div><div class="trending-topic">${esc(topic)}</div>`;
+  el.innerHTML = `
+    <div class="alert-left">
+      <span>🔥</span>
+      <div><div class="trending-label">Trending</div><div class="trending-topic">${esc(topic)}</div></div>
+    </div>`;
+  el.classList.add('active');
 }
 
 function renderTransport(tr) {
   const el = $('transport-widget');
   if (!el) return;
-  if (!tr?.summary) { el.style.display = 'none'; return; }
-  el.style.display = 'block';
-  const status = tr.summary.status;
-  const statusText = status === 'major' ? (lang === 'de' ? 'Grosse Störungen' : 'Major delays') : (lang === 'de' ? 'Leichte Verspätungen' : 'Minor delays');
-  el.innerHTML = `<div class="transport-header" onclick="$('transport-details').classList.toggle('active')">
-    <div class="transport-status ${status}"></div>
-    <span>🚆 ${statusText} (${tr.summary.totalDelayed})</span>
-  </div>
-  <div class="transport-details" id="transport-details">
-    ${tr.delays.map(d => `<div class="delay-item"><span>${esc(d.line)} → ${esc(d.destination)}</span><span class="delay-badge">+${d.delay}min</span></div>`).join('')}
-  </div>`;
+  if (!tr?.summary || tr.summary.status === 'normal') { el.classList.remove('active'); return; }
+
+  if (view === 'news') {
+    // Alert banner style
+    const status = tr.summary.status;
+    const statusText = status === 'major' ? (lang === 'de' ? 'Grosse Störungen' : 'Major delays') : (lang === 'de' ? 'Leichte Verspätungen' : 'Minor delays');
+    el.innerHTML = `
+      <div class="alert-left" onclick="$('transport-details')?.classList.toggle('active')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--terra)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span class="alert-text">🚆 ${statusText} (${tr.summary.totalDelayed})</span>
+      </div>
+      <svg class="alert-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>`;
+    el.classList.add('active');
+    // Insert details div after alert banner
+    let detailEl = $('transport-details');
+    if (!detailEl) {
+      detailEl = document.createElement('div');
+      detailEl.className = 'transport-details';
+      detailEl.id = 'transport-details';
+      el.after(detailEl);
+    }
+    detailEl.innerHTML = tr.delays.map(d => `<div class="delay-item"><span>${esc(d.line)} → ${esc(d.destination)}</span><span class="delay-badge">+${d.delay}min</span></div>`).join('');
+  } else {
+    // Legacy transport widget
+    el.style.display = 'block';
+    const status = tr.summary.status;
+    const statusText = status === 'major' ? (lang === 'de' ? 'Grosse Störungen' : 'Major delays') : (lang === 'de' ? 'Leichte Verspätungen' : 'Minor delays');
+    el.innerHTML = `<div class="transport-header" onclick="$('transport-details')?.classList.toggle('active')">
+      <div class="transport-status ${status}"></div>
+      <span>🚆 ${statusText} (${tr.summary.totalDelayed})</span>
+    </div>
+    <div class="transport-details" id="transport-details">
+      ${tr.delays.map(d => `<div class="delay-item"><span>${esc(d.line)} → ${esc(d.destination)}</span><span class="delay-badge">+${d.delay}min</span></div>`).join('')}
+    </div>`;
+  }
 }
 
 function renderHolidays(holidays) {
@@ -1303,19 +1439,13 @@ function toggleTheme() {
 }
 
 function setBrand(b) {
-  brand = b;
-  localStorage.setItem('brand', b);
-  if (b === 'alpine') document.documentElement.setAttribute('data-brand', 'alpine');
-  else document.documentElement.removeAttribute('data-brand');
-  updateThemeColor();
-  renderMenu();
+  // Legacy — brand system removed, new design system is default
 }
 
 function updateThemeColor() {
   const meta = document.getElementById('meta-theme-color');
   if (!meta) return;
-  if (brand === 'alpine') meta.content = theme === 'dark' ? '#1A3A5C' : '#F5F0E8';
-  else meta.content = theme === 'dark' ? '#0a0a0a' : '#ffffff';
+  meta.content = theme === 'dark' ? '#1A3050' : '#1A3A5C';
 }
 
 function toggleCityDropdown() {
@@ -1351,6 +1481,22 @@ function toggleAbout() {
 }
 
 function toggleDetail(id) { $(id)?.classList.toggle('active'); }
+
+function toggleNews(card, e) {
+  if (e && (e.target.closest('a') || e.target.closest('.btn-share'))) return;
+  const wasExpanded = card.classList.contains('expanded');
+  // Close all other expanded cards
+  document.querySelectorAll('.ncard.expanded').forEach(c => c.classList.remove('expanded'));
+  if (!wasExpanded) card.classList.add('expanded');
+}
+
+function shareArticle(headline, url) {
+  if (navigator.share) {
+    navigator.share({ title: headline, url: url }).catch(() => {});
+  } else {
+    navigator.clipboard?.writeText(url).then(() => showToast('toastShared'));
+  }
+}
 
 function filterActivities(f) {
   activityFilter = f;
@@ -3129,9 +3275,8 @@ function updateFreshnessTimes() {
 // ═══ INIT ═══
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Theme + brand
+  // Theme
   document.documentElement.setAttribute('data-theme', theme);
-  if (brand === 'alpine') document.documentElement.setAttribute('data-brand', 'alpine');
   updateThemeColor();
 
   // Render

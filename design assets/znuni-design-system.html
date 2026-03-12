@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Znüni — Design System</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: #EDEAE3;
+  color: #1C1A16;
+  padding: 48px 32px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* ---- DOC TYPOGRAPHY ---- */
+.doc-eyebrow {
+  font-size: 11px; font-weight: 500; letter-spacing: 0.14em;
+  text-transform: uppercase; color: #8A8070; margin-bottom: 8px;
+}
+.doc-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 42px; font-weight: 400; color: #1C1A16;
+  margin-bottom: 8px; line-height: 1.1;
+}
+.doc-subtitle {
+  font-size: 16px; color: #6B6355; font-weight: 300;
+  margin-bottom: 48px; max-width: 480px; line-height: 1.6;
+}
+.section-title {
+  font-size: 11px; font-weight: 500; letter-spacing: 0.14em;
+  text-transform: uppercase; color: #8A8070;
+  margin-bottom: 20px; padding-bottom: 8px;
+  border-bottom: 1px solid #D8D0C0;
+}
+.section { margin-bottom: 56px; }
+
+/* ---- COLOUR PALETTE ---- */
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+.swatch {
+  border-radius: 12px; overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.swatch-color { height: 72px; }
+.swatch-info {
+  background: white; padding: 10px 12px;
+}
+.swatch-name { font-size: 12px; font-weight: 500; color: #1C1A16; }
+.swatch-hex { font-size: 11px; color: #8A8070; font-family: monospace; margin-top: 2px; }
+.swatch-role { font-size: 10px; color: #B0A898; margin-top: 2px; }
+
+/* ---- TYPOGRAPHY ---- */
+.type-samples { display: flex; flex-direction: column; gap: 24px; }
+.type-row {
+  background: white; border-radius: 12px; padding: 20px 24px;
+  display: flex; align-items: baseline; gap: 24px;
+}
+.type-meta { min-width: 160px; }
+.type-label { font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #8A8070; }
+.type-spec { font-size: 11px; color: #B0A898; margin-top: 3px; font-family: monospace; }
+.type-sample-text { flex: 1; }
+
+/* ---- SPACING ---- */
+.spacing-row {
+  display: flex; align-items: center; gap: 16px; margin-bottom: 12px;
+}
+.spacing-bar { height: 24px; background: #1A3A5C; border-radius: 4px; opacity: 0.15; }
+.spacing-label { font-size: 12px; color: #6B6355; font-family: monospace; min-width: 80px; }
+.spacing-desc { font-size: 12px; color: #8A8070; }
+
+/* ---- COMPONENTS ---- */
+.component-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+}
+.component-card {
+  background: white; border-radius: 16px; padding: 24px;
+}
+.component-label {
+  font-size: 10px; font-weight: 500; letter-spacing: 0.1em;
+  text-transform: uppercase; color: #8A8070; margin-bottom: 16px;
+}
+
+/* BUTTONS */
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: #1A3A5C; color: white; border-radius: 100px;
+  padding: 12px 24px; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 500; border: none; cursor: pointer;
+  letter-spacing: 0.01em;
+}
+.btn-secondary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: transparent; color: #1A3A5C;
+  border: 1.5px solid #D8D0C0; border-radius: 100px;
+  padding: 11px 24px; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 500; cursor: pointer;
+}
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: #F5F0E8; color: #4A5568; border-radius: 100px;
+  padding: 11px 24px; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 400; border: none; cursor: pointer;
+}
+.btn-danger {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(196,98,58,0.1); color: #C4623A; border-radius: 100px;
+  padding: 11px 24px; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 500; border: none; cursor: pointer;
+}
+.btn-row { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* PILLS */
+.pill-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 30px; padding: 0 12px; border-radius: 100px;
+  font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif;
+}
+.pill-active { background: #1A3A5C; color: white; }
+.pill-inactive { background: transparent; color: #4A5568; border: 1.5px solid #D8D0C0; }
+.pill-positive { background: rgba(58,125,92,0.1); color: #3A7D5C; }
+.pill-negative { background: rgba(176,64,64,0.08); color: #B04040; }
+.pill-tag-outdoor { background: rgba(196,98,58,0.1); color: #C4623A; }
+.pill-tag-indoor { background: rgba(26,58,92,0.1); color: #1A3A5C; }
+.pill-tag-free { background: rgba(58,125,92,0.1); color: #3A7D5C; }
+.pill-tag-neutral { background: #F0EBE3; color: #6B6355; }
+.pill-count {
+  background: rgba(255,255,255,0.2); border-radius: 100px;
+  width: 17px; height: 17px; display: flex;
+  align-items: center; justify-content: center; font-size: 10px;
+}
+.pill-active .pill-count { background: rgba(255,255,255,0.25); }
+.pill-inactive .pill-count { background: #E8E0D0; color: #8A8070; }
+
+/* NEWS CARD */
+.news-card-demo {
+  background: #FAF8F4; border-radius: 16px; padding: 18px 18px 14px;
+  position: relative; overflow: hidden;
+}
+.news-card-demo::before {
+  content: ''; position: absolute; left: 0; top: 16px; bottom: 16px;
+  width: 3px; border-radius: 0 3px 3px 0; background: #1A3A5C;
+}
+.card-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.card-source {
+  background: #E8E0D0; border-radius: 100px; padding: 3px 10px;
+  font-size: 11px; font-weight: 500; color: #4A5568;
+}
+.card-time { font-size: 11px; color: #8A8070; }
+.card-headline {
+  font-family: 'Playfair Display', serif; font-size: 16px;
+  color: #1C1A16; font-weight: 600; line-height: 1.3; margin-bottom: 6px;
+}
+.card-body { font-size: 12px; color: #4A5568; line-height: 1.6; font-weight: 300; margin-bottom: 12px; }
+.card-footer { display: flex; justify-content: space-between; align-items: center; }
+
+/* ACTIVITY CARD */
+.activity-card-demo {
+  background: #FAF8F4; border-radius: 16px; padding: 18px;
+  position: relative; overflow: hidden;
+}
+.activity-card-demo::before {
+  content: ''; position: absolute; left: 0; top: 16px; bottom: 16px;
+  width: 3px; border-radius: 0 3px 3px 0; background: #C4623A;
+}
+.activity-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+.activity-title { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 600; color: #1C1A16; }
+.activity-desc { font-size: 12px; color: #4A5568; font-weight: 300; line-height: 1.6; margin-bottom: 12px; }
+.activity-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.activity-footer { display: flex; justify-content: space-between; align-items: center; }
+.activity-dist { font-size: 12px; color: #1A3A5C; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+
+/* HEADER */
+.header-demo {
+  background: #1A3A5C; border-radius: 16px; padding: 24px 24px 28px;
+  position: relative; overflow: hidden; margin-bottom: 12px;
+}
+.header-demo::before {
+  content: ''; position: absolute; top: -60px; right: -40px;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(196,98,58,0.3) 0%, transparent 70%);
+}
+.header-eyebrow { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 4px; }
+.header-title { font-family: 'Playfair Display', serif; font-size: 26px; color: white; font-weight: 400; }
+.header-title em { font-style: italic; color: rgba(255,255,255,0.7); }
+
+/* SETTINGS ROW */
+.settings-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; background: #FAF8F4; border-radius: 12px; margin-bottom: 2px;
+}
+.settings-row:first-child { border-radius: 12px 12px 4px 4px; }
+.settings-row:last-child { border-radius: 4px 4px 12px 12px; }
+.settings-label { font-size: 15px; color: #1C1A16; }
+.settings-value { font-size: 14px; color: #8A8070; display: flex; align-items: center; gap: 6px; }
+
+/* LIST ROW */
+.list-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px; background: #FAF8F4; margin-bottom: 1px;
+}
+.list-row:first-child { border-radius: 14px 14px 2px 2px; }
+.list-row:last-child { border-radius: 2px 2px 14px 14px; }
+.list-icon {
+  width: 36px; height: 36px; background: #F0EBE3;
+  border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  margin-right: 14px; flex-shrink: 0;
+}
+.list-text { flex: 1; }
+.list-name { font-size: 15px; color: #1C1A16; font-weight: 400; }
+.list-sub { font-size: 12px; color: #8A8070; margin-top: 1px; }
+
+/* TAB BAR */
+.tab-demo {
+  background: rgba(250,248,244,0.97); border: 1px solid #E8E0D0;
+  border-radius: 14px; padding: 12px 8px 8px;
+  display: flex; justify-content: space-around;
+}
+.tab-it { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 52px; }
+.tab-lbl { font-size: 10px; font-weight: 500; color: #8A8070; letter-spacing: 0.02em; }
+.tab-it.on .tab-lbl { color: #1A3A5C; }
+
+/* SEGMENT CONTROL */
+.segment {
+  background: #E8E0D0; border-radius: 10px; padding: 3px;
+  display: inline-flex; gap: 2px;
+}
+.seg-opt {
+  padding: 8px 18px; border-radius: 8px; font-size: 13px;
+  font-weight: 500; font-family: 'DM Sans', sans-serif;
+  cursor: pointer; color: #4A5568;
+}
+.seg-opt.on { background: white; color: #1C1A16; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+/* ALERT BANNER */
+.alert-demo {
+  background: #FDF0EA; border: 1px solid rgba(196,98,58,0.2);
+  border-radius: 12px; padding: 12px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.alert-txt { font-size: 13px; color: #1C1A16; display: flex; align-items: center; gap: 10px; }
+
+/* HISTORY STRIP */
+.history-demo {
+  background: #FAF8F4; border: 1px solid #E8E0D0;
+  border-radius: 14px; padding: 14px 16px;
+  display: flex; gap: 12px; align-items: flex-start;
+}
+.history-lbl { font-size: 10px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: #C4623A; margin-bottom: 3px; }
+.history-txt { font-size: 13px; color: #4A5568; font-weight: 300; line-height: 1.5; }
+
+/* ICON DEMO */
+.icon-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+.icon-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.icon-box {
+  width: 44px; height: 44px; background: white;
+  border-radius: 12px; display: flex; align-items: center;
+  justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+.icon-lbl { font-size: 10px; color: #8A8070; text-align: center; }
+
+/* RULE */
+hr { border: none; border-top: 1px solid #D8D0C0; margin: 48px 0; }
+
+/* TOKENS TABLE */
+.token-table { width: 100%; border-collapse: collapse; }
+.token-table th {
+  text-align: left; font-size: 11px; font-weight: 500;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: #8A8070; padding: 0 12px 10px; border-bottom: 1px solid #D8D0C0;
+}
+.token-table td {
+  padding: 10px 12px; font-size: 13px; border-bottom: 1px solid #F0EBE3;
+  vertical-align: middle;
+}
+.token-table tr:last-child td { border-bottom: none; }
+.token-name { font-family: monospace; font-size: 12px; color: #C4623A; }
+.token-value { font-family: monospace; font-size: 12px; color: #4A5568; }
+.token-row { background: white; }
+.token-row td:first-child { border-radius: 8px 0 0 8px; }
+.token-row td:last-child { border-radius: 0 8px 8px 0; }
+.color-dot {
+  width: 16px; height: 16px; border-radius: 50%;
+  display: inline-block; vertical-align: middle;
+  margin-right: 8px; border: 1px solid rgba(0,0,0,0.06);
+}
+</style>
+</head>
+<body>
+
+<div class="doc-eyebrow">Znüni iOS App</div>
+<div class="doc-title">Design System</div>
+<div class="doc-subtitle">A unified visual language for all screens. Every colour, type size, component, and spacing decision lives here. Build from this — don't deviate.</div>
+
+<!-- COLOURS -->
+<div class="section">
+  <div class="section-title">Colour Palette</div>
+  <div class="palette-grid">
+    <div class="swatch">
+      <div class="swatch-color" style="background:#1A3A5C"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Deep Navy</div>
+        <div class="swatch-hex">#1A3A5C</div>
+        <div class="swatch-role">Primary · Headers · Active</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#C4623A"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Terracotta</div>
+        <div class="swatch-hex">#C4623A</div>
+        <div class="swatch-role">Accent · Alerts · Outdoor</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#F5F0E8"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Warm Cream</div>
+        <div class="swatch-hex">#F5F0E8</div>
+        <div class="swatch-role">App background</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#FAF8F4"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Card White</div>
+        <div class="swatch-hex">#FAF8F4</div>
+        <div class="swatch-role">Cards · Inputs · Surfaces</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#E8E0D0"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Sand</div>
+        <div class="swatch-hex">#E8E0D0</div>
+        <div class="swatch-role">Borders · Dividers · Tags</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#1C1A16"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Ink</div>
+        <div class="swatch-hex">#1C1A16</div>
+        <div class="swatch-role">Primary text</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#4A5568"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Slate</div>
+        <div class="swatch-hex">#4A5568</div>
+        <div class="swatch-role">Body copy · Secondary text</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#8A8070"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Muted</div>
+        <div class="swatch-hex">#8A8070</div>
+        <div class="swatch-role">Captions · Timestamps · Labels</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#3A7D5C"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Forest</div>
+        <div class="swatch-hex">#3A7D5C</div>
+        <div class="swatch-role">Positive · Free · Open</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#B04040"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Rust</div>
+        <div class="swatch-hex">#B04040</div>
+        <div class="swatch-role">Negative · Alerts · Closed</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DESIGN TOKENS -->
+<div class="section">
+  <div class="section-title">SwiftUI Tokens (Color + Font)</div>
+  <table class="token-table">
+    <thead>
+      <tr><th>Token Name</th><th>Value</th><th>Usage</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span style="background:#1A3A5C" class="color-dot"></span><span class="token-name">znuni.navy</span></td><td class="token-value">#1A3A5C</td><td style="font-size:12px;color:#6B6355">Header backgrounds, active tab, primary buttons</td></tr>
+      <tr><td><span style="background:#C4623A" class="color-dot"></span><span class="token-name">znuni.terracotta</span></td><td class="token-value">#C4623A</td><td style="font-size:12px;color:#6B6355">Accent, alert banners, outdoor tags, card accents</td></tr>
+      <tr><td><span style="background:#F5F0E8" class="color-dot"></span><span class="token-name">znuni.cream</span></td><td class="token-value">#F5F0E8</td><td style="font-size:12px;color:#6B6355">App/screen background (.background)</td></tr>
+      <tr><td><span style="background:#FAF8F4" class="color-dot"></span><span class="token-name">znuni.surface</span></td><td class="token-value">#FAF8F4</td><td style="font-size:12px;color:#6B6355">Card fills, list rows, input fields</td></tr>
+      <tr><td><span style="background:#E8E0D0" class="color-dot"></span><span class="token-name">znuni.border</span></td><td class="token-value">#E8E0D0</td><td style="font-size:12px;color:#6B6355">Dividers, borders, inactive pill stroke</td></tr>
+      <tr><td><span style="background:#1C1A16" class="color-dot"></span><span class="token-name">znuni.ink</span></td><td class="token-value">#1C1A16</td><td style="font-size:12px;color:#6B6355">Headings, primary labels</td></tr>
+      <tr><td><span style="background:#4A5568" class="color-dot"></span><span class="token-name">znuni.body</span></td><td class="token-value">#4A5568</td><td style="font-size:12px;color:#6B6355">Body text, descriptions</td></tr>
+      <tr><td><span style="background:#8A8070" class="color-dot"></span><span class="token-name">znuni.muted</span></td><td class="token-value">#8A8070</td><td style="font-size:12px;color:#6B6355">Timestamps, captions, secondary labels</td></tr>
+      <tr><td><span style="background:#3A7D5C" class="color-dot"></span><span class="token-name">znuni.positive</span></td><td class="token-value">#3A7D5C</td><td style="font-size:12px;color:#6B6355">Free, open, positive sentiment</td></tr>
+      <tr><td><span style="background:#B04040" class="color-dot"></span><span class="token-name">znuni.negative</span></td><td class="token-value">#B04040</td><td style="font-size:12px;color:#6B6355">Negative sentiment, errors, closed</td></tr>
+    </tbody>
+  </table>
+  <br>
+  <table class="token-table">
+    <thead><tr><th>Token Name</th><th>Spec</th><th>Usage</th></tr></thead>
+    <tbody>
+      <tr><td class="token-name">znuni.display</td><td class="token-value">Playfair Display / 400–600</td><td style="font-size:12px;color:#6B6355">Screen titles, card headlines, hero text</td></tr>
+      <tr><td class="token-name">znuni.body</td><td class="token-value">DM Sans / 300–500</td><td style="font-size:12px;color:#6B6355">All body copy, labels, UI text</td></tr>
+      <tr><td class="token-name">znuni.mono</td><td class="token-value">SF Mono (system)</td><td style="font-size:12px;color:#6B6355">Times, distances, numbers</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- TYPOGRAPHY -->
+<div class="section">
+  <div class="section-title">Type Scale</div>
+  <div class="type-samples">
+    <div class="type-row">
+      <div class="type-meta">
+        <div class="type-label">Display XL</div>
+        <div class="type-spec">Playfair / 32px / 400</div>
+        <div class="type-spec">lineHeight: 1.1</div>
+      </div>
+      <div class="type-sample-text" style="font-family:'Playfair Display',serif;font-size:32px;font-weight:400;color:#1C1A16;line-height:1.1">Today in <em style="font-style:italic;color:#4A5568">Zürich</em></div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">
+        <div class="type-label">Display L</div>
+        <div class="type-spec">Playfair / 22px / 400</div>
+        <div class="type-spec">lineHeight: 1.2</div>
+      </div>
+      <div class="type-sample-text" style="font-family:'Playfair Display',serif;font-size:22px;font-weight:400;color:#1C1A16">Local News</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">
+        <div class="type-label">Headline</div>
+        <div class="type-spec">Playfair / 17px / 600</div>
+        <div class="type-spec">lineHeight: 1.35</div>
+      </div>
+      <div class="type-sample-text" style="font-family:'Playfair Display',serif;font-size:17px;font-weight:600;color:#1C1A16;line-height:1.35">SBB must invest in infrastructure as passenger numbers rise</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">
+        <div class="type-label">Body</div>
+        <div class="type-spec">DM Sans / 13px / 300</div>
+        <div class="type-spec">lineHeight: 1.6</div>
+      </div>
+      <div class="type-sample-text" style="font-size:13px;font-weight:300;color:#4A5568;line-height:1.6">Switzerland's national railway company must invest in its infrastructure to accommodate rising passenger volumes across all major urban routes.</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">
+        <div class="type-label">Label</div>
+        <div class="type-spec">DM Sans / 12px / 500</div>
+        <div class="type-spec">letterSpacing: 0.02em</div>
+      </div>
+      <div class="type-sample-text" style="font-size:12px;font-weight:500;color:#4A5568;letter-spacing:0.02em">SRF News · 3 hours ago</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">
+        <div class="type-label">Caption / Eyebrow</div>
+        <div class="type-spec">DM Sans / 10–11px / 500</div>
+        <div class="type-spec">uppercase / ls: 0.1em</div>
+      </div>
+      <div class="type-sample-text" style="font-size:11px;font-weight:500;color:#8A8070;letter-spacing:0.1em;text-transform:uppercase">This day in history</div>
+    </div>
+  </div>
+</div>
+
+<!-- SPACING -->
+<div class="section">
+  <div class="section-title">Spacing Scale</div>
+  <div class="spacing-row"><div class="spacing-bar" style="width:4px"></div><span class="spacing-label">4px · xs</span><span class="spacing-desc">Icon gaps, tight internal spacing</span></div>
+  <div class="spacing-row"><div class="spacing-bar" style="width:8px"></div><span class="spacing-label">8px · sm</span><span class="spacing-desc">Pill gaps, tag row gaps</span></div>
+  <div class="spacing-row"><div class="spacing-bar" style="width:12px"></div><span class="spacing-label">12px · md</span><span class="spacing-desc">Between card elements, history icon gap</span></div>
+  <div class="spacing-row"><div class="spacing-bar" style="width:16px"></div><span class="spacing-label">16px · lg</span><span class="spacing-desc">Section gaps, card internal padding (small)</span></div>
+  <div class="spacing-row"><div class="spacing-bar" style="width:20px"></div><span class="spacing-label">20px · xl</span><span class="spacing-desc">Screen horizontal padding, card padding</span></div>
+  <div class="spacing-row"><div class="spacing-bar" style="width:24px"></div><span class="spacing-label">24px · 2xl</span><span class="spacing-desc">Section header top padding, hero padding</span></div>
+  <div class="spacing-row"><div class="spacing-bar" style="width:32px"></div><span class="spacing-label">32px · 3xl</span><span class="spacing-desc">Hero bottom padding, large sections</span></div>
+</div>
+
+<!-- BORDER RADIUS -->
+<div class="section">
+  <div class="section-title">Corner Radius</div>
+  <div style="display:flex;gap:16px;flex-wrap:wrap">
+    <div style="text-align:center">
+      <div style="width:60px;height:60px;background:#FAF8F4;border-radius:4px;border:1px solid #E8E0D0;margin:0 auto 8px"></div>
+      <div style="font-size:11px;color:#8A8070">4px<br>Subtle</div>
+    </div>
+    <div style="text-align:center">
+      <div style="width:60px;height:60px;background:#FAF8F4;border-radius:8px;border:1px solid #E8E0D0;margin:0 auto 8px"></div>
+      <div style="font-size:11px;color:#8A8070">8px<br>Tags</div>
+    </div>
+    <div style="text-align:center">
+      <div style="width:60px;height:60px;background:#FAF8F4;border-radius:12px;border:1px solid #E8E0D0;margin:0 auto 8px"></div>
+      <div style="font-size:11px;color:#8A8070">12px<br>Banners</div>
+    </div>
+    <div style="text-align:center">
+      <div style="width:60px;height:60px;background:#FAF8F4;border-radius:16px;border:1px solid #E8E0D0;margin:0 auto 8px"></div>
+      <div style="font-size:11px;color:#8A8070">16px<br>Cards</div>
+    </div>
+    <div style="text-align:center">
+      <div style="width:60px;height:60px;background:#FAF8F4;border-radius:20px;border:1px solid #E8E0D0;margin:0 auto 8px"></div>
+      <div style="font-size:11px;color:#8A8070">20px<br>Cards lg</div>
+    </div>
+    <div style="text-align:center">
+      <div style="width:60px;height:60px;background:#FAF8F4;border-radius:30px;border:1px solid #E8E0D0;margin:0 auto 8px"></div>
+      <div style="font-size:11px;color:#8A8070">30px<br>Pills</div>
+    </div>
+    <div style="text-align:center">
+      <div style="width:60px;height:60px;background:#1A3A5C;border-radius:48px;margin:0 auto 8px"></div>
+      <div style="font-size:11px;color:#8A8070">48px<br>Phone frame</div>
+    </div>
+  </div>
+</div>
+
+<!-- COMPONENTS -->
+<div class="section">
+  <div class="section-title">Components — Buttons</div>
+  <div class="component-card" style="margin-bottom:16px">
+    <div class="btn-row">
+      <button class="btn-primary">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1V13M1 7H13" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+        Primary Action
+      </button>
+      <button class="btn-secondary">Secondary</button>
+      <button class="btn-ghost">Ghost / Tag</button>
+      <button class="btn-danger">Alert Action</button>
+    </div>
+    <div style="margin-top:16px">
+      <button class="btn-primary" style="width:100%;justify-content:center;font-size:15px;padding:14px 24px">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7L12 7M8 3L12 7L8 11" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Full-Width CTA
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Components — Pills & Tags</div>
+  <div class="component-card" style="margin-bottom:16px">
+    <div class="component-label">Filter Pills</div>
+    <div class="pill-row" style="margin-bottom:16px">
+      <span class="pill pill-active">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1L6 3.5H9L6.5 5.5L7.5 8L5 6.5L2.5 8L3.5 5.5L1 3.5H4L5 1Z" fill="white"/></svg>
+        All
+        <span class="pill-count">12</span>
+      </span>
+      <span class="pill pill-inactive">Outdoor<span class="pill-count" style="background:#E8E0D0;color:#8A8070">5</span></span>
+      <span class="pill pill-inactive">Indoor<span class="pill-count" style="background:#E8E0D0;color:#8A8070">4</span></span>
+      <span class="pill pill-inactive">Free<span class="pill-count" style="background:#E8E0D0;color:#8A8070">3</span></span>
+    </div>
+    <div class="component-label">Activity/Attribute Tags</div>
+    <div class="pill-row">
+      <span class="pill pill-tag-outdoor" style="height:26px;font-size:11px">☀ Outdoor</span>
+      <span class="pill pill-tag-indoor" style="height:26px;font-size:11px">⌂ Indoor</span>
+      <span class="pill pill-tag-free" style="height:26px;font-size:11px">Free</span>
+      <span class="pill pill-tag-neutral" style="height:26px;font-size:11px">2–4 hours</span>
+      <span class="pill pill-tag-neutral" style="height:26px;font-size:11px">CHF 29</span>
+      <span class="pill pill-tag-neutral" style="height:26px;font-size:11px">3.1 km</span>
+    </div>
+    <div style="margin-top:16px">
+      <div class="component-label">Sentiment</div>
+      <div class="pill-row">
+        <span class="pill pill-positive" style="height:26px;font-size:11px">↑ Positive</span>
+        <span class="pill pill-negative" style="height:26px;font-size:11px">↓ Negative</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Components — Cards</div>
+  <div class="component-grid">
+    <div>
+      <div class="component-label">News Card</div>
+      <div class="news-card-demo">
+        <div class="card-meta">
+          <span class="card-source">SRF News</span>
+          <span class="card-time">3h ago</span>
+        </div>
+        <div class="card-headline">SBB must invest in infrastructure</div>
+        <div class="card-body">Switzerland's railway company faces pressure to expand capacity.</div>
+        <div class="card-footer">
+          <span class="pill pill-positive" style="height:24px;font-size:11px">↑ Positive</span>
+          <span style="font-size:12px;color:#1A3A5C;font-weight:500">Details →</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="component-label">Activity Card</div>
+      <div class="activity-card-demo">
+        <div class="activity-header">
+          <span class="activity-title">Zoo Zürich</span>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 15C9 15 2 10.5 2 6.5C2 4.5 3.5 3 5.5 3C7 3 8.5 4 9 5C9.5 4 11 3 12.5 3C14.5 3 16 4.5 16 6.5C16 10.5 9 15 9 15Z" stroke="#D8D0C0" stroke-width="1.5"/></svg>
+        </div>
+        <div class="activity-desc">Elephants, penguins, and the Masoala Rainforest hall.</div>
+        <div class="activity-tags">
+          <span class="pill pill-tag-outdoor" style="height:24px;font-size:11px">Outdoor</span>
+          <span class="pill pill-tag-neutral" style="height:24px;font-size:11px">2–4 hrs</span>
+          <span class="pill pill-tag-neutral" style="height:24px;font-size:11px">CHF 29</span>
+        </div>
+        <div class="activity-footer">
+          <span class="activity-dist">↗ 3.1 km</span>
+          <span style="font-size:12px;color:#1A3A5C;font-weight:500">Details →</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Components — Headers (all screens use this pattern)</div>
+  <div class="header-demo">
+    <div class="header-eyebrow">Wednesday · 11 March</div>
+    <div class="header-title">Today in <em>Zürich</em></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="header-demo" style="padding:20px 20px 22px">
+      <div class="header-eyebrow">Activities</div>
+      <div class="header-title" style="font-size:22px">What to <em>do?</em></div>
+    </div>
+    <div class="header-demo" style="padding:20px 20px 22px">
+      <div class="header-eyebrow">Dining · Zürich</div>
+      <div class="header-title" style="font-size:22px"><em>Lunch</em></div>
+    </div>
+  </div>
+  <div style="margin-top:8px;background:#2A4A6C;border-radius:12px;padding:12px 16px">
+    <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:4px">Rule: All screen headers use Deep Navy (#1A3A5C) with Playfair Display. No per-screen gradient colours. The terracotta radial glow is optional for hero screens only.</div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Components — Navigation & Controls</div>
+  <div class="component-grid">
+    <div>
+      <div class="component-label">Tab Bar</div>
+      <div class="tab-demo">
+        <div class="tab-it on">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="7" height="7" rx="1.5" fill="#1A3A5C"/><rect x="11" y="2" width="7" height="7" rx="1.5" stroke="#1A3A5C" stroke-width="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5" stroke="#1A3A5C" stroke-width="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5" stroke="#1A3A5C" stroke-width="1.5"/></svg>
+          <span class="tab-lbl">News</span>
+        </div>
+        <div class="tab-it">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2L12 7H17L13 11L15 16L10 13L5 16L7 11L3 7H8L10 2Z" stroke="#8A8070" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          <span class="tab-lbl">Activities</span>
+        </div>
+        <div class="tab-it">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 15L7 6L12 11L16 4L18 15H3Z" stroke="#8A8070" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          <span class="tab-lbl">Explore</span>
+        </div>
+        <div class="tab-it">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="8" r="5" stroke="#8A8070" stroke-width="1.5"/><path d="M5 14C3 15 2 17 2 18H18C18 17 17 15 15 14" stroke="#8A8070" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span class="tab-lbl">Weather</span>
+        </div>
+        <div class="tab-it">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#8A8070" stroke-width="1.5"/><circle cx="7" cy="10" r="1" fill="#8A8070"/><circle cx="10" cy="10" r="1" fill="#8A8070"/><circle cx="13" cy="10" r="1" fill="#8A8070"/></svg>
+          <span class="tab-lbl">More</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="component-label">Segment Control</div>
+      <div class="segment">
+        <div class="seg-opt on">English</div>
+        <div class="seg-opt">Deutsch</div>
+      </div>
+      <br><br>
+      <div class="segment">
+        <div class="seg-opt on">System</div>
+        <div class="seg-opt">Light</div>
+        <div class="seg-opt">Dark</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Components — Banners & Strips</div>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div class="alert-demo">
+      <div class="alert-txt">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2L14 13H2L8 2Z" fill="#C4623A" opacity="0.15"/><path d="M8 2L14 13H2L8 2Z" stroke="#C4623A" stroke-width="1.5" stroke-linejoin="round"/><line x1="8" y1="6" x2="8" y2="9.5" stroke="#C4623A" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11.5" r="0.75" fill="#C4623A"/></svg>
+        Bus fire reported in Switzerland
+      </div>
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 10L9 4M9 4H5M9 4V8" stroke="#C4623A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="history-demo">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style="flex-shrink:0;margin-top:2px"><circle cx="9" cy="9" r="7" stroke="#C4623A" stroke-width="1.3"/><path d="M9 5.5V9L11.5 10.8" stroke="#C4623A" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <div>
+        <div class="history-lbl">This day in history</div>
+        <div class="history-txt"><strong style="color:#1C1A16;font-weight:500">1882</strong> — Gotthard rail tunnel construction continues after breakthroughs</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Components — List Rows (More / Settings)</div>
+  <div style="border-radius:14px;overflow:hidden;border:1px solid #E8E0D0">
+    <div class="list-row">
+      <div class="list-icon">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="14" height="12" rx="2" stroke="#4A5568" stroke-width="1.3"/><path d="M6 7H12M6 10H10" stroke="#4A5568" stroke-width="1.3" stroke-linecap="round"/></svg>
+      </div>
+      <div class="list-text"><div class="list-name">Lunch</div></div>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4L10 8L6 12" stroke="#C8C0B4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="list-row" style="border-top:1px solid #F0EBE3">
+      <div class="list-icon">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="6" stroke="#4A5568" stroke-width="1.3"/><path d="M9 5V9L12 11" stroke="#4A5568" stroke-width="1.3" stroke-linecap="round"/></svg>
+      </div>
+      <div class="list-text"><div class="list-name">Weekend Planner</div></div>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4L10 8L6 12" stroke="#C8C0B4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="list-row" style="border-top:1px solid #F0EBE3">
+      <div class="list-icon">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 14C3 14 5 10 9 10C13 10 15 14 15 14" stroke="#4A5568" stroke-width="1.3" stroke-linecap="round"/><circle cx="9" cy="6" r="3" stroke="#4A5568" stroke-width="1.3"/></svg>
+      </div>
+      <div class="list-text"><div class="list-name">Settings</div></div>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4L10 8L6 12" stroke="#C8C0B4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+  </div>
+</div>
+
+<hr>
+<div style="font-size:12px;color:#8A8070;line-height:1.7">
+  <strong style="color:#4A5568">Implementation note for SwiftUI:</strong> Register all colours as a <code style="font-family:monospace;background:#F0EBE3;padding:1px 5px;border-radius:3px">Color+Znuni.swift</code> extension. Register Playfair Display in your <code style="font-family:monospace;background:#F0EBE3;padding:1px 5px;border-radius:3px">Info.plist</code> under UIAppFonts. Use <code style="font-family:monospace;background:#F0EBE3;padding:1px 5px;border-radius:3px">.znuni</code> prefix on all custom colours to avoid namespace conflicts with system colours.
+</div>
+
+</body>
+</html>

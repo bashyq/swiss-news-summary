@@ -91,17 +91,20 @@ swiss-news-summary/
 
 ## Features
 
-### News View (Landing Page)
+### News View (Landing Page) — Design System v3.1
+- **Hero header**: Navy (#1A3A5C) background with terracotta radial glow, Playfair Display italic city name, inline weather row (40px temp, description, hi/lo range, large icon)
 - **5 Categories**: Politics, Disruptions, Events, Culture, Local (city-specific)
-- **Compact Weather**: In header, tap to expand with hourly forecast
-- **Transport Widget**: Real-time delays from Swiss Transport API
-- **History Widget**: "This Day in Swiss History" inline under title
-- **Daily Pick**: Weather- and time-aware activity recommendation with reasoning text ("Rainy afternoon? Zoo Zürich is the perfect indoor escape.")
+- **Filter pills**: Navy active / bordered inactive (replaces tab buttons), with count badges
+- **Section heading**: Playfair Display 22px + muted article count
+- **News cards (ncard)**: Expand-in-place with 3px left accent bar (green=positive, red=negative, navy=neutral), source/time meta, Playfair headline, clamped summary, sentiment pills, expand CTA, detail meta grid, "Read full article" + share buttons
+- **Alert banner**: Transport disruptions as terracotta-tinted banner (replaces transport widget)
+- **History strip**: Card with clock SVG icon + terracotta "This Day in History" label
+- **Daily Pick**: Weather- and time-aware activity recommendation with reasoning text
 - **Weekend Brief**: Sat+Sun weather forecast + upcoming weekend events card (visible Mon-Sat)
 - **Holidays**: In hamburger menu (less prominent)
-- **Category tabs**: With item counts
 - **Pull-to-refresh**: Mobile gesture support
-- **Share Summary**: Native share API
+- **Share**: Native share API per article + clipboard fallback
+- **Theme**: Light-first (cream #F5F0E8 background), dark mode as secondary variant. Alpine brand theme removed.
 
 ### Activities View ("What to do?")
 - Curated family-friendly activities for toddlers (ages 2-5)
@@ -413,6 +416,8 @@ Each city has:
 | `saveCustomActivity()` | Save user's custom activity |
 | `openMenu()` / `closeMenu()` | Hamburger menu |
 | `toggleTheme()` | Light/dark mode |
+| `toggleNews(card, event)` | Expand/collapse news card (accordion) |
+| `shareArticle(headline, url)` | Share article via native share or clipboard |
 | `surpriseMe()` | Random activity picker |
 | `setAgeFilter(age)` | Filter by age group |
 | `showSurpriseModal(activity)` | Display surprise activity |
