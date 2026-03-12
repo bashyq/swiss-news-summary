@@ -125,7 +125,8 @@ swiss-news-summary/
 - **Featured activities**: Curated top picks sorted to front with "Featured" badge
 - **Reminders**: Set date reminders on saved activities (browser Notification API + toast fallback)
 
-### Events View ("What's On")
+### Events View ("What's On") — Design System v4.0
+- **Hero header**: Navy hero with event filter pills (All/Holidays/🎒/Events/🔄/🌸/🎪)
 - Combined calendar + daily digest — merged from separate Events Calendar and What's On views
 - **Calendar grid**: Auto-selects today, purple dots for festivals, red for holidays, amber for school holidays, blue for recurring
 - **Day detail panel**: Click any day to see detail below calendar:
@@ -142,7 +143,8 @@ swiss-news-summary/
 - **Festival cards**: Show date ranges, toddler-friendly and free badges
 - Fetches news data (weather, trending, holidays) if not already loaded
 
-### Weekend Planner
+### Weekend Planner — Design System v4.0
+- **Hero header**: Navy hero with Playfair italic "Weekend" title
 - Smart activity filtering based on weather and day-of-week
 - Uses `isAvailableOnDate()` for recurring/seasonal filtering
 
@@ -166,7 +168,8 @@ swiss-news-summary/
 - **Holidays display**: Upcoming Swiss holidays
 
 
-### Sunshine Page ("Where is Sun?")
+### Sunshine Page ("Where is Sun?") — Design System v4.0
+- **Hero header**: Navy hero with filter pills (All/☀️/⛅/☁️) + sort pills (☀️ Sun / 📍 Distance) separated by pill-sep
 - Weekend sunshine forecast for 29 destinations (28 + Zürich baseline) within driving distance of Zürich
 - **Zürich baseline**: Pinned first card with purple styling, always visible regardless of filter/sort
 - **"Nearest sunny escape"**: When Zürich has <6h sunshine, shows closest destination with more sun (drive-time sorted)
@@ -184,7 +187,8 @@ swiss-news-summary/
 - **Overlap cities** (Basel, Lausanne, Luzern): Show "See all activities →" link to Activities view
 - **Google Maps links**: "Find playgrounds" / "Find restaurants" near destination coordinates
 
-### Snow Page ("Where is Snow?")
+### Snow Page ("Where is Snow?") — Design System v4.0
+- **Hero header**: Navy hero with filter pills (All/🏔️/❄️/🌨️) + sort pills (❄️ Snow / 📍 Distance) separated by pill-sep
 - Weekly snowfall forecast for 22 Swiss ski resorts within driving distance of Zürich
 - **Regions**: Valais, Graubunden, Bernese Oberland, Central Switzerland, Eastern Switzerland
 - **Interactive Leaflet map**: Circle markers with radius proportional to snowfall (deep blue/blue/gray)
@@ -198,7 +202,8 @@ swiss-news-summary/
 - Always Zürich-based (not affected by city selector)
 - **Cache keys**: Worker `snow-v1-{lang}`, Frontend `snowCache-v1` (30min TTL)
 
-### Deals & Free View ("Best deals?")
+### Deals & Free View ("Best deals?") — Design System v4.0
+- **Hero header**: Navy hero with filter pills (All/🆓 Free/🏷️ Deal/💡 Tip)
 - Curated list of free entry spots, family passes, and money-saving tips
 - **DEALS**: ~30 curated entries served from `GET /deals` worker endpoint
 - **Categories**: Museums, Outdoor, Transport, Family Passes, Seasonal

@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '3.4.0';
+const APP_VERSION = '4.0.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -392,7 +392,7 @@ function renderHeader() {
   const now = new Date();
   const dateStr = now.toLocaleDateString(lang === 'de' ? 'de-CH' : 'en-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-  const heroViews = { news: true, activities: true, lunch: true, explore: true };
+  const heroViews = { news: true, activities: true, lunch: true, explore: true, events: true, weekend: true, sunshine: true, snow: true, deals: true };
   if (heroViews[view]) {
     const eyebrow = dateStr.toUpperCase();
     const cityName = CITIES[city] || 'Zürich';
@@ -435,6 +435,44 @@ function renderHeader() {
       heroBottom = `</div><div class="pill-row-hero">${explorePills.map(([k, v]) => {
         const active = exploreFilter === k;
         return `<button class="pill ${active ? 'on' : 'off'}" onclick="setExploreFilter('${k}')">${v}</button>`;
+      }).join('')}</div>`;
+    } else if (view === 'events') {
+      titleText = lang === 'de' ? `Was <em>läuft?</em>` : `What's <em>On?</em>`;
+      const eventPills = [['all', t('all')], ['holidays', t('holidaysFilter')], ['schoolHoliday', '🎒'], ['events', t('eventsTab')], ['recurring', '🔄'], ['seasonal', '🌸'], ['festivals', '🎪']];
+      heroBottom = `</div><div class="pill-row-hero">${eventPills.map(([k, v]) => {
+        const active = eventFilter === k;
+        return `<button class="pill ${active ? 'on' : 'off'}" onclick="filterEvents('${k}')">${v}</button>`;
+      }).join('')}</div>`;
+    } else if (view === 'weekend') {
+      titleText = lang === 'de' ? `Wochen<em>ende</em>` : `Week<em>end</em>`;
+    } else if (view === 'sunshine') {
+      titleText = lang === 'de' ? `Wo ist <em>Sonne?</em>` : `Where is <em>Sun?</em>`;
+      const sunPills = [['all', t('all')], ['sunny', '☀️'], ['partly', '⛅'], ['cloudy', '☁️']];
+      const sortPills = [['sunshine', '☀️ ' + t('sortBySun')], ['distance', '📍 ' + t('sortByDist')]];
+      heroBottom = `</div><div class="pill-row-hero">${sunPills.map(([k, v]) => {
+        const active = sunshineFilter === k;
+        return `<button class="pill ${active ? 'on' : 'off'}" onclick="setSunshineFilter('${k}')">${v}</button>`;
+      }).join('')}<span class="pill-sep"></span>${sortPills.map(([k, v]) => {
+        const active = sunshineSort === k;
+        return `<button class="pill ${active ? 'on' : 'off'}" onclick="setSunshineSort('${k}')">${v}</button>`;
+      }).join('')}</div>`;
+    } else if (view === 'snow') {
+      titleText = lang === 'de' ? `Wo ist <em>Schnee?</em>` : `Where is <em>Snow?</em>`;
+      const snowPills = [['all', t('all')], ['heavy', '🏔️'], ['moderate', '❄️'], ['light', '🌨️']];
+      const sortPills = [['snowfall', '❄️ ' + t('sortBySnow')], ['distance', '📍 ' + t('sortByDist')]];
+      heroBottom = `</div><div class="pill-row-hero">${snowPills.map(([k, v]) => {
+        const active = snowFilter === k;
+        return `<button class="pill ${active ? 'on' : 'off'}" onclick="setSnowFilter('${k}')">${v}</button>`;
+      }).join('')}<span class="pill-sep"></span>${sortPills.map(([k, v]) => {
+        const active = snowSort === k;
+        return `<button class="pill ${active ? 'on' : 'off'}" onclick="setSnowSort('${k}')">${v}</button>`;
+      }).join('')}</div>`;
+    } else if (view === 'deals') {
+      titleText = lang === 'de' ? `Beste <em>Deals?</em>` : `Best <em>Deals?</em>`;
+      const dealPills = [['all', t('all')], ['free', '🆓 ' + t('freeEntry')], ['deal', '🏷️ ' + t('deal')], ['tip', '💡 ' + t('tip')]];
+      heroBottom = `</div><div class="pill-row-hero">${dealPills.map(([k, v]) => {
+        const active = dealsFilter === k;
+        return `<button class="pill ${active ? 'on' : 'off'}" onclick="filterDeals('${k}')">${v}</button>`;
       }).join('')}</div>`;
     }
 
@@ -554,32 +592,32 @@ function renderCurrentView() {
 }
 
 function renderMenu() {
+  const navItems = [
+    ['news', '📰', t('news')], ['activities', '🎈', t('activities')], ['explore', '🗺️', t('explore')],
+    ['sunshine', '☀️', t('sunshine')], ['snow', '❄️', t('snow')], ['lunch', '🍽️', t('lunch')],
+    ['weekend', '🌤️', t('weekend')], ['events', '📅', t('events')], ['deals', '🎁', t('deals')]
+  ];
   $('menu').innerHTML = `
-    <button class="menu-close" onclick="closeMenu()">&times;</button>
-    <div class="menu-title">${t('settings')}</div>
-    <div class="menu-item${view === 'news' ? ' active' : ''}" onclick="switchView('news')"><span class="menu-item-icon">📰</span>${t('news')}</div>
-    <div class="menu-item${view === 'activities' ? ' active' : ''}" onclick="switchView('activities')"><span class="menu-item-icon">🎈</span>${t('activities')}</div>
-    <div class="menu-item${view === 'explore' ? ' active' : ''}" onclick="switchView('explore')"><span class="menu-item-icon">🗺️</span>${t('explore')}</div>
-    <div class="menu-item${view === 'sunshine' ? ' active' : ''}" onclick="switchView('sunshine')"><span class="menu-item-icon">☀️</span>${t('sunshine')}</div>
-    <div class="menu-item${view === 'snow' ? ' active' : ''}" onclick="switchView('snow')"><span class="menu-item-icon">❄️</span>${t('snow')}</div>
-    <div class="menu-item${view === 'lunch' ? ' active' : ''}" onclick="switchView('lunch')"><span class="menu-item-icon">🍽️</span>${t('lunch')}</div>
-    <div class="menu-item${view === 'weekend' ? ' active' : ''}" onclick="switchView('weekend')"><span class="menu-item-icon">🌤️</span>${t('weekend')}</div>
-    <div class="menu-item${view === 'events' ? ' active' : ''}" onclick="switchView('events')"><span class="menu-item-icon">📅</span>${t('events')}</div>
-    <div class="menu-item${view === 'deals' ? ' active' : ''}" onclick="switchView('deals')"><span class="menu-item-icon">🎁</span>${t('deals')}</div>
-    ${canDonate ? `<div class="menu-item" onclick="openDonateModal()"><span class="menu-item-icon">☕</span>${t('donate')}</div>` : ''}
-    <div class="menu-section">
-      <div class="menu-section-title">${t('brandTheme')}</div>
-      <button class="theme-toggle" onclick="toggleTheme()">${theme === 'dark' ? '☀️ ' + t('lightMode') : '🌙 ' + t('darkMode')}</button>
+    <div class="menu-head">
+      <div class="menu-title">Znüni</div>
+      <button class="menu-close" onclick="closeMenu()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
+    <nav class="menu-nav">
+      ${navItems.map(([v, ico, label]) => `<div class="menu-item${view === v ? ' active' : ''}" onclick="switchView('${v}')"><span class="menu-item-icon">${ico}</span>${label}</div>`).join('')}
+      ${canDonate ? `<div class="menu-item" onclick="openDonateModal()"><span class="menu-item-icon">☕</span>${t('donate')}</div>` : ''}
+    </nav>
+    <div class="menu-divider"></div>
+    <div class="menu-actions">
+      <div class="menu-item" onclick="closeMenu();shareSummary()"><span class="menu-item-icon">📤</span>${t('share')}</div>
+      <div class="menu-item" onclick="closeMenu();refreshCurrentView()"><span class="menu-item-icon">🔄</span>${t('refresh')}</div>
+      <div class="menu-item" onclick="toggleTheme()"><span class="menu-item-icon">${theme === 'dark' ? '☀️' : '🌙'}</span>${theme === 'dark' ? t('lightMode') : t('darkMode')}</div>
+    </div>
+    <div class="menu-divider"></div>
     <div class="menu-section" id="menu-holidays">
       <div class="menu-section-title">${t('holidays')}</div>
       <div id="menu-holidays-list"></div>
     </div>
-    <div class="menu-section" style="margin-top:20px;">
-      <div class="menu-item" onclick="closeMenu();shareSummary()"><span class="menu-item-icon">📤</span>${t('share')}</div>
-      <div class="menu-item" onclick="closeMenu();refreshCurrentView()"><span class="menu-item-icon">🔄</span>${t('refresh')}</div>
-    </div>
-    <div class="menu-section">
+    <div class="menu-footer">
       <div class="menu-section-title" onclick="toggleAbout()" style="cursor:pointer">${t('about')} ▾</div>
       <div id="about-panel" style="display:none"></div>
     </div>
@@ -865,10 +903,8 @@ function renderEventsView() {
   html += renderDayDetail(selectedCalendarDay);
   html += '</div>';
 
-  // Filter bar for events list below
-  const filters = [['all', t('all')], ['holidays', t('holidaysFilter')], ['schoolHoliday', t('schoolHolidaysFilter')], ['events', t('eventsTab')], ['recurring', t('recurringFilter')], ['seasonal', t('seasonal')], ['festivals', t('festivalsFilter')]];
-  html += `<div class="events-list-header" style="margin-top:20px;font-family:var(--serif);font-size:1.05rem;font-weight:600;margin-bottom:8px">${lang === 'de' ? 'Alle Events' : 'All Events'}</div>`;
-  html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${eventFilter === k ? ' active' : ''}" onclick="filterEvents('${k}')">${v}</button>`).join('')}</div>`;
+  // Events list header
+  html += `<div class="section-heading" style="margin-top:20px;margin-bottom:8px">${lang === 'de' ? 'Alle Events' : 'All Events'}</div>`;
 
   // Events list
   html += '<div id="events-list">';
@@ -1580,7 +1616,7 @@ function filterActivities(f) {
   afterRender(initActivityMap);
 }
 
-function filterEvents(f) { eventFilter = f; renderCurrentView(); }
+function filterEvents(f) { eventFilter = f; renderHeader(); renderCurrentView(); }
 function toggleLunchFilter(f) {
   lunchFilters[f] = !lunchFilters[f];
   if (f === 'nearMe' && lunchFilters.nearMe && !userLat) { requestLocation().then(() => { renderHeader(); renderCurrentView(); afterRender(initLunchMap); }); return; }
@@ -2114,22 +2150,7 @@ function renderSunshineView() {
   if (allDests.length === 0) return `<div class="loading-msg">${t('noSunshineData')}</div>`;
 
   const wd = sunshineData.weekendDates || {};
-  let html = `<div class="subtitle">${t('sunSubtitle')}</div>`;
-
-  // Filter bar
-  const filters = [
-    ['all', t('all')],
-    ['sunny', '☀️ ' + t('sunnyLabel')],
-    ['partly', '⛅ ' + t('partlyLabel')],
-    ['cloudy', '☁️ ' + t('cloudyLabel')],
-  ];
-  html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${sunshineFilter === k ? ' active' : ''}" onclick="setSunshineFilter('${k}')">${v}</button>`).join('')}</div>`;
-
-  // Sort toggle
-  html += `<div class="sunshine-sort">
-    <button class="sort-btn${sunshineSort === 'sunshine' ? ' active' : ''}" onclick="setSunshineSort('sunshine')">☀️ ${t('sortBySun')}</button>
-    <button class="sort-btn${sunshineSort === 'distance' ? ' active' : ''}" onclick="setSunshineSort('distance')">📍 ${t('sortByDist')}</button>
-  </div>`;
+  let html = '';
 
   // Map
   html += '<div class="map-container" id="sunshine-map" style="height:350px;"></div>';
@@ -2512,6 +2533,7 @@ function lunchCardClick(id, event) {
 function setSunshineFilter(f) {
   sunshineFilter = f;
   sunshineExpanded = false;
+  renderHeader();
   renderCurrentView();
   afterRender(initSunshineMap);
 }
@@ -2522,12 +2544,14 @@ function setSunshineSort(s) {
       userLat = pos.coords.latitude;
       userLon = pos.coords.longitude;
       sunshineSort = 'distance';
+      renderHeader();
       renderCurrentView();
       afterRender(initSunshineMap);
     }, () => {}, { enableHighAccuracy: true });
     return;
   }
   sunshineSort = s;
+  renderHeader();
   renderCurrentView();
   afterRender(initSunshineMap);
 }
@@ -2597,22 +2621,7 @@ function renderSnowView() {
   if (allDests.length === 0) return `<div class="loading-msg">${t('noSnowData')}</div>`;
 
   const wd = snowData.weekDates || {};
-  let html = `<div class="subtitle">${t('snowSubtitle')}</div>`;
-
-  // Filter bar
-  const filters = [
-    ['all', t('all')],
-    ['heavy', '🏔️ ' + t('heavySnow')],
-    ['moderate', '❄️ ' + t('moderateSnow')],
-    ['light', '🌨️ ' + t('lightSnow')],
-  ];
-  html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${snowFilter === k ? ' active' : ''}" onclick="setSnowFilter('${k}')">${v}</button>`).join('')}</div>`;
-
-  // Sort toggle
-  html += `<div class="snow-sort">
-    <button class="sort-btn${snowSort === 'snowfall' ? ' active' : ''}" onclick="setSnowSort('snowfall')">❄️ ${t('sortBySnow')}</button>
-    <button class="sort-btn${snowSort === 'distance' ? ' active' : ''}" onclick="setSnowSort('distance')">📍 ${t('sortByDist')}</button>
-  </div>`;
+  let html = '';
 
   // Map
   html += '<div class="map-container" id="snow-map" style="height:350px;"></div>';
@@ -2738,6 +2747,7 @@ function snowCardClick(id) {
 function setSnowFilter(f) {
   snowFilter = f;
   snowExpanded = false;
+  renderHeader();
   renderCurrentView();
   afterRender(initSnowMap);
 }
@@ -2748,12 +2758,14 @@ function setSnowSort(s) {
       userLat = pos.coords.latitude;
       userLon = pos.coords.longitude;
       snowSort = 'distance';
+      renderHeader();
       renderCurrentView();
       afterRender(initSnowMap);
     }, () => {}, { enableHighAccuracy: true });
     return;
   }
   snowSort = s;
+  renderHeader();
   renderCurrentView();
   afterRender(initSnowMap);
 }
@@ -2908,13 +2920,7 @@ async function loadDeals() {
 
 function renderDealsView() {
   const currentMonth = new Date().getMonth() + 1;
-  let html = `<div class="subtitle">${t('dealsSubtitle')}</div>`;
-
-  // Filter bar
-  const filters = [
-    ['all', t('all')], ['free', '🆓 ' + t('freeEntry')], ['deal', '🏷️ ' + t('deal')], ['tip', '💡 ' + t('tip')]
-  ];
-  html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${dealsFilter === k ? ' active' : ''}" onclick="filterDeals('${k}')">${v}</button>`).join('')}</div>`;
+  let html = '';
 
   // Filter deals
   let items = dealsData.filter(d => {
@@ -2961,7 +2967,7 @@ function renderDealCard(d) {
   </div>`;
 }
 
-function filterDeals(f) { dealsFilter = f; renderCurrentView(); }
+function filterDeals(f) { dealsFilter = f; renderHeader(); renderCurrentView(); }
 
 // ═══ DAY DETAIL (integrated into Events view) ═══
 
