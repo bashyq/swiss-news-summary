@@ -13,7 +13,8 @@ These features were added to the Cloudflare Worker and are automatically availab
 | News Expansion | `GET /` | `categories.*` | 8-10 items per category. When `lang=en`, all items (including local/culture/events from German feeds) are translated via Claude. Each item has `detail` field (1 sentence, shown on tap). |
 | Deals API | `GET /deals` | `deals[]` | Deals/free entry data now served from worker endpoint. iOS should fetch from `/deals` instead of hardcoding `DealsData.swift`. Same JSON shape as before. |
 | Sunshine Highlights | `GET /sunshine` | `destinations[].highlights[]` | Each destination now includes `highlights` array with toddler-friendly attractions. iOS can drop `DestinationHighlights.swift` and use API data directly. |
-| Activities Expanded | `GET /activities` | `activities[]` | Now 94 base activities (was 52). 20km radius per city. No model changes — same JSON shape, just more items. |
+| Activities Expanded | `GET /activities` | `activities[]` | Now 94 base activities (was 52). 20km radius per city. |
+| Activity Opening Hours | `GET /activities` | `activities[].openNow`, `weekdayText[]`, `permanentlyClosed` | Google Places opening hours enriched per activity. Cached in R2 for 14 days. Progressively warms (10 per request). `openNow` = live open/closed, `weekdayText` = full weekly schedule. |
 | Transport Multi-Station | `GET /` | `transport` | Zürich now fetches from Stadelhofen + Hardbrücke (was HB only). Deduplicated. Other cities unchanged. No model change — same JSON shape. |
 | Venue Photos | `GET /photo/:id` | image bytes | Returns JPEG photo via Google Places. Works for activity IDs, sunshine destination IDs, and snow resort IDs. For lunch spots (dynamic IDs), pass `?name=&lat=&lon=` query params. Cached in R2. 404 if no photo found. Use `AsyncImage` with fallback. |
 
@@ -260,8 +261,11 @@ let trending: Trending?
 
 ### `Activity.swift`
 ```swift
-// Add optional field:
+// Add optional fields:
 let addedDate: String?
+let openNow: Bool?              // Google Places — currently open?
+let weekdayText: [String]?      // Google Places — e.g. ["Monday: 9:00 AM – 5:00 PM", ...]
+let permanentlyClosed: Bool?    // Google Places — permanently closed?
 // Note: featured field has been REMOVED — do not add
 // Note: No age filter — minAge/maxAge fields exist but are not used for filtering
 ```

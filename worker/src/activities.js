@@ -2,7 +2,9 @@
  * Activities — curated family activities, seasonal, stay-home, handler.
  */
 
-export const VERSION = '2.3.0';
+export const VERSION = '2.4.0';
+
+const HOURS_CACHE_DAYS = 14;
 
 import { getCity } from './data.js';
 import { fetchWeather, RAINY_CODES } from './weather.js';
@@ -280,6 +282,67 @@ export async function getCuratedActivities(env, cityId) {
   return all;
 }
 
+async function fetchGoogleHours(name, lat, lon, apiKey) {
+  try {
+    const searchUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(name)}&inputtype=textquery&locationbias=point:${lat},${lon}&fields=opening_hours,business_status&key=${apiKey}`;
+    const res = await fetch(searchUrl);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.status !== 'OK' || !data.candidates?.length) return null;
+    const c = data.candidates[0];
+    return {
+      openNow: c.opening_hours?.open_now ?? null,
+      weekdayText: c.opening_hours?.weekday_text || null,
+      closed: c.business_status === 'CLOSED_PERMANENTLY',
+      cachedAt: Date.now()
+    };
+  } catch { return null; }
+}
+
+async function enrichWithHours(activities, cityId, env) {
+  if (!env.GOOGLE_PLACES_KEY || !env.PHOTOS_BUCKET) return activities;
+
+  const r2Key = `hours/city-${cityId}.json`;
+  let cache = {};
+  try {
+    const obj = await env.PHOTOS_BUCKET.get(r2Key);
+    if (obj) cache = JSON.parse(await obj.text());
+  } catch {}
+
+  const now = Date.now();
+  const expired = HOURS_CACHE_DAYS * 86400000;
+  // Only enrich non-stayhome activities with coordinates
+  const enrichable = activities.filter(a => a.category !== 'stayhome' && a.lat && a.lon);
+  const uncached = enrichable.filter(a => {
+    const c = cache[a.id];
+    return !c || (now - c.cachedAt > expired);
+  });
+
+  const MAX_GOOGLE = 10;
+  const toFetch = uncached.slice(0, MAX_GOOGLE);
+  if (toFetch.length > 0) {
+    const fetches = toFetch.map(async (a) => {
+      const hours = await fetchGoogleHours(a.name, a.lat, a.lon, env.GOOGLE_PLACES_KEY);
+      cache[a.id] = hours || { openNow: null, weekdayText: null, closed: false, cachedAt: now };
+    });
+    await Promise.allSettled(fetches);
+
+    await env.PHOTOS_BUCKET.put(r2Key, JSON.stringify(cache), {
+      httpMetadata: { contentType: 'application/json' }
+    });
+  }
+
+  return activities.map(a => {
+    const h = cache[a.id];
+    if (!h) return a;
+    const enriched = { ...a };
+    if (h.openNow !== null) enriched.openNow = h.openNow;
+    if (h.weekdayText) enriched.weekdayText = h.weekdayText;
+    if (h.closed) enriched.permanentlyClosed = true;
+    return enriched;
+  });
+}
+
 export async function handleActivities(url, env) {
   const cityId = url.searchParams.get('city') || 'zurich';
   const city = getCity(cityId);
@@ -289,10 +352,11 @@ export async function handleActivities(url, env) {
     getCuratedActivities(env, cityId)
   ]);
 
-  let sorted = activities;
+  let enriched = await enrichWithHours(activities, cityId, env);
+  let sorted = enriched;
   if (weather) {
     const bad = RAINY_CODES.includes(weather.weatherCode) || weather.temperature < 5;
-    if (bad) sorted = [...activities].sort((a, b) => (a.indoor ? -1 : 1) - (b.indoor ? -1 : 1));
+    if (bad) sorted = [...enriched].sort((a, b) => (a.indoor ? -1 : 1) - (b.indoor ? -1 : 1));
   }
 
   return new Response(JSON.stringify({

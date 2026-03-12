@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.26.0';
+const APP_VERSION = '2.27.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -665,10 +665,22 @@ function renderActivityCard(a) {
   if (a.recurring) badges += `<span class="badge-recurring">${a.recurring}</span>`;
   if (a.subcategory) badges += `<span class="badge-subcategory">${getSubcategoryLabel(a.subcategory)}</span>`;
 
+  let hoursHtml = '';
+  if (a.openNow !== undefined && a.openNow !== null) {
+    hoursHtml = `<span class="badge ${a.openNow ? 'badge-open' : 'badge-closed'}">${a.openNow ? (lang === 'de' ? 'Offen' : 'Open') : (lang === 'de' ? 'Geschlossen' : 'Closed')}</span>`;
+  }
+  if (a.permanentlyClosed) {
+    hoursHtml = '<span class="badge badge-closed">Permanently Closed</span>';
+  }
+  if (hoursHtml) badges = hoursHtml + badges;
+
   let extra = '';
+  if (a.weekdayText && a.weekdayText.length) {
+    extra += `<div class="activity-hours">🕐 ${a.weekdayText.join(' · ')}</div>`;
+  }
   if (a.materials) {
     const mat = lang === 'de' ? (a.materialsDE || a.materials) : a.materials;
-    extra = `<div class="materials-info">📦 ${t('materials')}: ${esc(mat)}</div>`;
+    extra += `<div class="materials-info">📦 ${t('materials')}: ${esc(mat)}</div>`;
   }
 
   const hasThumb = a.category !== 'stayhome' && a.id && !a.custom;
