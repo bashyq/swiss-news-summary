@@ -367,6 +367,7 @@ nav { margin: 16px 0; }
 .google-stars { color: #f59e0b; letter-spacing: -1px; }
 .google-score { font-weight: 600; color: var(--text); }
 .google-count { color: var(--muted); }
+.lunch-price-level { color: var(--clr-green); font-weight: 700; letter-spacing: -1px; }
 .lunch-spot.closed { opacity: .5; }
 .badge-open { background: var(--clr-green-bg); color: var(--clr-green); }
 .badge-closed { background: var(--clr-red-bg); color: var(--clr-red); }

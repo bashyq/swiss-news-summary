@@ -275,6 +275,7 @@ let permanentlyClosed: Bool?    // Google Places — permanently closed?
 // Add optional fields:
 let rating: Double?       // Google Places star rating (1.0-5.0)
 let ratingCount: Int?     // Number of Google reviews
+let priceLevel: Int?      // Google Places price level (0=Free, 1=$, 2=$$, 3=$$$, 4=$$$$)
 let permanentlyClosed: Bool?  // true if Google says permanently closed
 ```
 

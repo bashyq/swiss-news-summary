@@ -2,11 +2,9 @@
  * Lunch — Overpass API integration for nearby restaurants.
  */
 
-export const VERSION = '2.1.0';
+export const VERSION = '2.2.0';
 
 import { getCity } from './data.js';
-
-const RATING_CACHE_DAYS = 30;
 
 const CUISINE_MAP = {
   swiss: 'swiss', schweizer: 'swiss', fondue: 'swiss', raclette: 'swiss',
@@ -120,7 +118,7 @@ function normalize(elements) {
 }
 
 async function fetchGoogleRating(name, lat, lon, apiKey) {
-  const searchUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(name)}&inputtype=textquery&locationbias=point:${lat},${lon}&fields=rating,user_ratings_total,business_status&key=${apiKey}`;
+  const searchUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(name)}&inputtype=textquery&locationbias=point:${lat},${lon}&fields=rating,user_ratings_total,business_status,price_level&key=${apiKey}`;
   const res = await fetch(searchUrl);
   if (!res.ok) return null;
   const data = await res.json();
@@ -129,6 +127,7 @@ async function fetchGoogleRating(name, lat, lon, apiKey) {
   return {
     rating: c.rating || null,
     ratingCount: c.user_ratings_total || 0,
+    priceLevel: c.price_level ?? null,
     closed: c.business_status === 'CLOSED_PERMANENTLY',
     cachedAt: Date.now()
   };
@@ -146,11 +145,8 @@ async function enrichWithRatings(spots, cityId, env) {
   } catch {}
 
   const now = Date.now();
-  const expired = RATING_CACHE_DAYS * 86400000;
-  const uncached = spots.filter(s => {
-    const c = cache[s.id];
-    return !c || (now - c.cachedAt > expired);
-  });
+  // Fetch spots not cached or missing priceLevel (added in v2.2)
+  const uncached = spots.filter(s => !cache[s.id] || cache[s.id].priceLevel === undefined);
 
   // Fetch up to 20 uncached ratings per request (each = 1 Google subrequest)
   const MAX_GOOGLE = 20;
@@ -158,7 +154,7 @@ async function enrichWithRatings(spots, cityId, env) {
   if (toFetch.length > 0) {
     const fetches = toFetch.map(async (s) => {
       const rating = await fetchGoogleRating(s.name, s.lat, s.lon, env.GOOGLE_PLACES_KEY);
-      cache[s.id] = rating || { rating: null, ratingCount: 0, closed: false, cachedAt: now };
+      cache[s.id] = rating || { rating: null, ratingCount: 0, priceLevel: null, closed: false, cachedAt: now };
     });
     await Promise.allSettled(fetches);
 
@@ -170,7 +166,12 @@ async function enrichWithRatings(spots, cityId, env) {
 
   return spots.map(s => {
     const r = cache[s.id];
-    return r && r.rating ? { ...s, rating: r.rating, ratingCount: r.ratingCount, permanentlyClosed: r.closed || false } : s;
+    if (!r) return s;
+    const enriched = { ...s };
+    if (r.rating) { enriched.rating = r.rating; enriched.ratingCount = r.ratingCount; }
+    if (r.priceLevel !== null && r.priceLevel !== undefined) enriched.priceLevel = r.priceLevel;
+    if (r.closed) enriched.permanentlyClosed = true;
+    return enriched;
   });
 }
 

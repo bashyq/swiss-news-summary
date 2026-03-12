@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.27.0';
+const APP_VERSION = '2.28.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -978,9 +978,10 @@ function renderLunchCard(s) {
   if (s.takeaway) badges += '<span class="badge badge-takeaway">📦</span>';
   if (dist !== null) badges += `<span class="badge badge-distance">${formatDist(dist)}</span>`;
 
+  const priceHtml = s.priceLevel != null ? `<span class="lunch-price-level">${'$'.repeat(s.priceLevel || 1)}</span>` : '';
   const ratingHtml = s.rating
-    ? `<div class="google-rating"><span class="google-stars">${'★'.repeat(Math.round(s.rating))}${'☆'.repeat(5 - Math.round(s.rating))}</span> <span class="google-score">${s.rating}</span><span class="google-count">(${s.ratingCount || 0})</span></div>`
-    : '';
+    ? `<div class="google-rating">${priceHtml}<span class="google-stars">${'★'.repeat(Math.round(s.rating))}${'☆'.repeat(5 - Math.round(s.rating))}</span> <span class="google-score">${s.rating}</span><span class="google-count">(${s.ratingCount || 0})</span></div>`
+    : (priceHtml ? `<div class="google-rating">${priceHtml}</div>` : '');
 
   const photoUrl = s.lat ? `${API}/photo/${s.id}?name=${encodeURIComponent(s.name)}&lat=${s.lat}&lon=${s.lon}` : '';
   const photoHtml = photoUrl ? `<img class="lunch-photo" src="${photoUrl}" alt="" loading="lazy" onerror="retryPhoto(this)">` : '';

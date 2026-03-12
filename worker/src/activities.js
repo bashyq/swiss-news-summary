@@ -2,9 +2,7 @@
  * Activities — curated family activities, seasonal, stay-home, handler.
  */
 
-export const VERSION = '2.4.0';
-
-const HOURS_CACHE_DAYS = 14;
+export const VERSION = '2.5.0';
 
 import { getCity } from './data.js';
 import { fetchWeather, RAINY_CODES } from './weather.js';
@@ -310,13 +308,10 @@ async function enrichWithHours(activities, cityId, env) {
   } catch {}
 
   const now = Date.now();
-  const expired = HOURS_CACHE_DAYS * 86400000;
   // Only enrich non-stayhome activities with coordinates
   const enrichable = activities.filter(a => a.category !== 'stayhome' && a.lat && a.lon);
-  const uncached = enrichable.filter(a => {
-    const c = cache[a.id];
-    return !c || (now - c.cachedAt > expired);
-  });
+  // Only fetch if not yet cached (no expiry — hours/status rarely change)
+  const uncached = enrichable.filter(a => !cache[a.id]);
 
   const MAX_GOOGLE = 10;
   const toFetch = uncached.slice(0, MAX_GOOGLE);

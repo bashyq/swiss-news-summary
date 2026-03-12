@@ -1,4 +1,4 @@
-const CACHE_NAME = 'znuni-v8';
+const CACHE_NAME = 'znuni-v9';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
