@@ -1,153 +1,227 @@
 import SwiftUI
 
-/// A card view for a single news article.
+/// Accordion-style news card with expanding detail panel.
 ///
-/// Displays the headline, summary, source badge, time ago, and sentiment.
-/// Tapping opens the article URL in Safari. An optional detail section
-/// is available via a disclosure group.
+/// Collapsed: Left accent bar, Playfair headline, 2-line summary, metadata row.
+/// Expanded: Photo panel, unclamped summary, meta grid, action buttons.
+/// Only one card expands at a time via the shared `expandedID` binding.
 struct NewsCard: View {
     @Environment(AppState.self) private var appState
 
     let item: NewsItem
     var category: String = "topStories"
+    @Binding var expandedID: String?
 
-    @State private var isExpanded = false
+    private var isExpanded: Bool { expandedID == item.id }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            cardContent
+            // Main content
+            VStack(alignment: .leading, spacing: 6) {
+                sourceRow
+                headline
+                    .padding(.bottom, 1)
+                summaryText
+                footerRow
+
+                if isExpanded {
+                    expandedContent
+                }
+            }
+            .padding(14)
+            .padding(.leading, isExpanded ? 2 : 8)
         }
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .background(Color.znSurface)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.newsCardRadius))
         .overlay(alignment: .leading) {
+            // Left accent bar — fades on expand
             RoundedRectangle(cornerRadius: 2)
                 .fill(Color.categoryColor(category))
-                .frame(width: 4)
-                .padding(.vertical, 6)
+                .frame(width: AppSpacing.borderStripWidth)
+                .padding(.vertical, 8)
+                .opacity(isExpanded ? 0 : 1)
         }
-        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-        .sensoryFeedback(.selection, trigger: isExpanded)
-    }
-
-    // MARK: - Card Content
-
-    private var cardContent: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Tappable area: headline, summary, metadata → opens URL
-            VStack(alignment: .leading, spacing: 8) {
-                headline
-                summary
-                metadataRow
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                openURL()
-            }
-
-            // Expandable detail section (separate hit target)
-            if let detail = item.localizedDetail(language: appState.language),
-               !detail.isEmpty {
-                detailSection(detail)
+        .shadow(
+            color: isExpanded ? Color.znNavy.opacity(0.12) : AppShadow.card.color,
+            radius: isExpanded ? 12 : AppShadow.card.radius,
+            x: 0,
+            y: isExpanded ? 4 : AppShadow.card.y
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(AppAnimation.spring) {
+                if isExpanded {
+                    expandedID = nil
+                } else {
+                    expandedID = item.id
+                }
             }
         }
-        .padding(14)
+        .sensoryFeedback(.impact(weight: .light), trigger: isExpanded)
     }
 
     // MARK: - Headline
 
     private var headline: some View {
         Text(item.localizedHeadline(language: appState.language))
-            .font(.system(.subheadline, design: .serif))
-            .fontWeight(.semibold)
-            .lineLimit(3)
+            .font(.newsCardHeadline)
+            .foregroundStyle(.znInk)
+            .lineLimit(isExpanded ? nil : 3)
             .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: - Summary
 
-    private var summary: some View {
+    private var summaryText: some View {
         Text(item.localizedSummary(language: appState.language))
             .font(.caption)
-            .foregroundStyle(.secondary)
-            .lineLimit(isExpanded ? nil : 3)
+            .foregroundStyle(.znBody)
+            .lineLimit(isExpanded ? nil : 2)
             .fixedSize(horizontal: false, vertical: true)
     }
 
-    // MARK: - Metadata Row
+    // MARK: - Source Row
 
-    private var metadataRow: some View {
-        HStack(spacing: 6) {
-            // Source badge
-            BadgeView(
-                text: item.source,
-                icon: "newspaper",
-                color: .blue,
-                style: .filled
-            )
+    private var sourceRow: some View {
+        HStack(spacing: 7) {
+            Text(item.source)
+                .font(.system(size: 10, weight: .medium))
+                .tracking(0.7)
+                .textCase(.uppercase)
+                .foregroundStyle(.znMuted)
 
-            // Time ago
+            Circle()
+                .fill(Color.znBorder)
+                .frame(width: 2, height: 2)
+
             if let timeAgo = item.timeAgo {
                 Text(timeAgo)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-
-            Spacer()
-
-            // Sentiment badge
-            SentimentBadge(sentiment: item.sentiment)
-
-            // External link indicator
-            if item.url != nil {
-                Image(systemName: "arrow.up.right.square")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .font(.system(size: 10, weight: .light))
+                    .foregroundStyle(.znMuted)
             }
         }
     }
 
-    // MARK: - Detail Section
+    // MARK: - Footer
 
-    private func detailSection(_ detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Divider()
-                .padding(.vertical, 4)
-
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    isExpanded.toggle()
+    private var footerRow: some View {
+        HStack {
+            SentimentBadge(sentiment: item.sentiment)
+            Spacer()
+            if !isExpanded {
+                HStack(spacing: 3) {
+                    Text(appState.localized(en: "Expand", de: "Mehr"))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.znNavy)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.znNavy)
                 }
-            } label: {
-                HStack(spacing: 4) {
-                    Text(appState.localized(en: "More details", de: "Mehr Details"))
-                        .font(.caption2)
-                        .fontWeight(.medium)
-                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .font(.caption2)
-                    Spacer()
-                }
-                .foregroundStyle(.brand)
-                .padding(.vertical, 6)
-                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+        }
+        .padding(.top, 9)
+    }
 
-            if isExpanded {
+    // MARK: - Expanded Content
+
+    private var expandedContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Divider()
+                .foregroundStyle(.znBorder)
+
+            // Detail text if available
+            if let detail = item.localizedDetail(language: appState.language), !detail.isEmpty {
                 Text(detail)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.znBody)
                     .fixedSize(horizontal: false, vertical: true)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
+            // Meta detail grid
+            metaGrid
+
+            // Action buttons
+            HStack(spacing: 12) {
+                if let urlString = item.url, let url = URL(string: urlString) {
+                    Button {
+                        UIApplication.shared.open(url)
+                    } label: {
+                        Label(appState.localized(en: "Read more", de: "Weiterlesen"), systemImage: "arrow.up.right")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(Color.znNavy)
+                            .clipShape(Capsule())
+                    }
+                }
+
+                Button {
+                    shareArticle()
+                } label: {
+                    Label(appState.localized(en: "Share", de: "Teilen"), systemImage: "square.and.arrow.up")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.znNavy)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Color.znNavy.opacity(0.08))
+                        .clipShape(Capsule())
+                }
+            }
+        }
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    // MARK: - Meta Grid
+
+    private var metaGrid: some View {
+        let gridItems = [GridItem(.flexible()), GridItem(.flexible())]
+
+        return LazyVGrid(columns: gridItems, alignment: .leading, spacing: 6) {
+            metaGridCell(icon: "newspaper", label: appState.localized(en: "Source", de: "Quelle"), value: item.source)
+            if let timeAgo = item.timeAgo {
+                metaGridCell(icon: "clock", label: appState.localized(en: "Published", de: "Veröffentlicht"), value: timeAgo)
+            }
+            metaGridCell(icon: "tag", label: appState.localized(en: "Category", de: "Kategorie"), value: NewsCategories.displayName(for: category, language: appState.language))
+            if let sentiment = item.sentiment, sentiment != "neutral" {
+                metaGridCell(icon: "arrow.up.arrow.down", label: appState.localized(en: "Sentiment", de: "Stimmung"), value: sentiment.capitalized)
             }
         }
     }
 
-    // MARK: - Open URL
+    private func metaGridCell(icon: String, label: String, value: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption2)
+                .foregroundStyle(.znMuted)
+                .frame(width: 14)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(label)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(.znMuted)
+                    .textCase(.uppercase)
+                Text(value)
+                    .font(.caption2)
+                    .foregroundStyle(.znBody)
+            }
+        }
+    }
 
-    private func openURL() {
-        guard let urlString = item.url,
-              let url = URL(string: urlString) else { return }
-        UIApplication.shared.open(url)
+    // MARK: - Helpers
+
+    private func shareArticle() {
+        let text = item.localizedHeadline(language: appState.language)
+        var shareItems: [Any] = [text]
+        if let urlString = item.url, let url = URL(string: urlString) {
+            shareItems.append(url)
+        }
+        let activityVC = UIActivityViewController(activityItems: shareItems, applicationActivities: nil)
+        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let root = scene.windows.first?.rootViewController {
+            root.present(activityVC, animated: true)
+        }
     }
 }
 
@@ -165,7 +239,7 @@ struct NewsCard: View {
         publishedAt: "2026-02-21T10:30:00Z"
     )
 
-    NewsCard(item: sampleItem)
+    NewsCard(item: sampleItem, expandedID: .constant(nil))
         .padding()
         .environment(AppState())
 }

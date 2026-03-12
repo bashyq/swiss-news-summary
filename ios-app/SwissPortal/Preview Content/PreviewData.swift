@@ -72,7 +72,7 @@ enum PreviewData {
         history: HistoryFact(year: 1958, event: "The Swiss Pavilion opened at Expo 58 in Brussels", eventDE: "Der Schweizer Pavillon wurde an der Expo 58 in Brüssel eröffnet"),
         categories: categories,
         trending: TrendingTopic(topic: "SNB Interest Rates", topicDE: "SNB Leitzins", headline: nil, headlineDE: nil, url: nil),
-        briefing: Briefing(topStory: BriefingItem(headline: "SNB holds rates", summary: "Summary of top story", source: "NZZ", url: "https://www.nzz.ch", sentiment: "neutral"), dailyPick: DailyPick(activityId: "zoo-zurich", name: "Visit Zoo Zürich", nameDE: "Zoo Zürich besuchen", reason: "Perfect weather for a walk among the animals", reasonDE: "Perfektes Wetter für einen Spaziergang bei den Tieren", emoji: "🦁", indoor: false, category: "animals")),
+        briefing: Briefing(topStory: BriefingItem(headline: "SNB holds rates", summary: "Summary of top story", source: "NZZ", url: "https://www.nzz.ch", sentiment: "neutral"), suggestedActivity: Activity(id: "zoo-zurich", name: "Zoo Zürich", nameDE: "Zoo Zürich", description: "Award-winning zoo with Masoala rainforest", descriptionDE: "Preisgekrönter Zoo mit Masoala-Regenwald", indoor: false, ageRange: "2-5 years", duration: "2-4 hours", price: "CHF 29", priceDE: "CHF 29", url: "https://www.zoo.ch", lat: 47.3849, lon: 8.5743, category: "animals", minAge: 2, maxAge: 5, season: nil, free: false, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil, addedDate: nil)),
         weekendBrief: WeekendBrief(saturday: WeekendBriefDay(date: "2026-02-21", weatherCode: 1, tempMax: 8, tempMin: 2, description: "Mostly sunny"), sunday: WeekendBriefDay(date: "2026-02-22", weatherCode: 3, tempMax: 6, tempMin: 1, description: "Overcast"), events: [WeekendBriefEvent(name: "Fasnacht", nameDE: "Fasnacht", startDate: "2026-02-20", endDate: "2026-02-22", toddlerFriendly: true, free: true)], satDate: "2026-02-21", sunDate: "2026-02-22"),
         city: CityInfo(id: "zurich", name: "Zürich"),
         timestamp: "2026-02-21T12:00:00Z"
@@ -105,7 +105,6 @@ enum PreviewData {
         subcategory: nil,
         materials: nil,
         materialsDE: nil,
-        featured: true,
         addedDate: nil
     )
 
@@ -134,7 +133,6 @@ enum PreviewData {
         subcategory: "sensory",
         materials: "Rice or pasta, Small toys, Container",
         materialsDE: "Reis oder Nudeln, Kleine Spielzeuge, Behälter",
-        featured: nil,
         addedDate: nil
     )
 
@@ -218,6 +216,9 @@ enum PreviewData {
         vegan: nil,
         phone: nil,
         website: "https://www.zeughauskeller.ch",
-        amenity: "restaurant"
+        amenity: "restaurant",
+        rating: 4.3,
+        ratingCount: 1523,
+        permanentlyClosed: false
     )
 }

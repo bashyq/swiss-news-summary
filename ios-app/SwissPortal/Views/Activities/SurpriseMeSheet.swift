@@ -17,15 +17,14 @@ struct SurpriseMeSheet: View {
         NavigationStack {
             VStack(spacing: 0) {
                 ScrollView {
-                    VStack(spacing: 16) {
+                    VStack(spacing: 12) {
                         // Venue photo or category icon
                         venueImage
-                            .padding(.top, 16)
+                            .padding(.top, 12)
 
                         // Activity name
                         Text(activity.localizedName(language: appState.language))
-                            .font(.title2)
-                            .fontWeight(.bold)
+                            .font(.custom("Playfair", size: 22).weight(.semibold))
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
 
@@ -34,10 +33,11 @@ struct SurpriseMeSheet: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
+                            .lineLimit(3)
                             .padding(.horizontal, 24)
 
                         // Badges + price inline
-                        VStack(spacing: 8) {
+                        VStack(spacing: 6) {
                             badgesRow
 
                             if let price = activity.localizedPrice(language: appState.language) {
@@ -98,7 +98,7 @@ struct SurpriseMeSheet: View {
                 default:
                     // Loading placeholder
                     RoundedRectangle(cornerRadius: 16)
-                        .fill(Color(.systemGray5))
+                        .fill(Color.znBorder)
                         .frame(width: 120, height: 120)
                         .overlay {
                             ProgressView()
@@ -148,11 +148,16 @@ struct SurpriseMeSheet: View {
                     ? appState.localized(en: "Indoor", de: "Indoor")
                     : appState.localized(en: "Outdoor", de: "Outdoor"),
                 icon: activity.indoor ? "house.fill" : "sun.max.fill",
-                color: activity.indoor ? .blue : .orange
+                color: activity.indoor ? .znNavy : .znTerracotta
             )
 
             // Duration
-            BadgeView(text: activity.duration, icon: "clock", color: .gray)
+            BadgeView(text: activity.duration, icon: "clock", color: .znMuted)
+
+            // Opening hours
+            if let hours = activity.localizedOpeningHours(language: appState.language) {
+                BadgeView(text: hours, icon: "door.left.hand.open", color: .znMuted)
+            }
 
             // Free badge
             if activity.isFree {
@@ -172,40 +177,31 @@ struct SurpriseMeSheet: View {
 
     private var actionButtons: some View {
         VStack(spacing: 12) {
-            // Primary row: Open + Save
-            HStack(spacing: 12) {
-                // "Open" button (opens URL)
+            // Primary row: Website + Directions + Save
+            HStack(spacing: 8) {
+                // Website button
                 if let urlString = activity.url, let url = URL(string: urlString) {
                     Link(destination: url) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "safari")
-                            Text(appState.localized(en: "Website", de: "Webseite"))
-                                .fontWeight(.medium)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color(.systemGray6))
-                        .foregroundStyle(.primary)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        actionPill(icon: "safari", label: appState.localized(en: "Website", de: "Webseite"))
+                    }
+                }
+
+                // Directions button (Apple Maps)
+                if activity.lat != nil && activity.lon != nil {
+                    Button(action: openInMaps) {
+                        actionPill(icon: "arrow.triangle.turn.up.right.diamond", label: appState.localized(en: "Directions", de: "Route"))
                     }
                 }
 
                 // Save / heart button
                 Button(action: onSave) {
-                    HStack(spacing: 6) {
-                        Image(systemName: isSaved ? "heart.fill" : "heart")
-                            .foregroundStyle(isSaved ? .red : .primary)
-                        Text(isSaved
-                             ? appState.localized(en: "Saved", de: "Gespeichert")
-                             : appState.localized(en: "Save", de: "Speichern")
-                        )
-                        .fontWeight(.medium)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color(.systemGray6))
-                    .foregroundStyle(.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    actionPill(
+                        icon: isSaved ? "heart.fill" : "heart",
+                        label: isSaved
+                            ? appState.localized(en: "Saved", de: "Gespeichert")
+                            : appState.localized(en: "Save", de: "Speichern"),
+                        iconColor: isSaved ? .znNegative : .primary
+                    )
                 }
             }
 
@@ -221,8 +217,32 @@ struct SurpriseMeSheet: View {
                 .padding(.vertical, 14)
                 .background(LinearGradient.brand)
                 .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
             }
+        }
+    }
+
+    private func actionPill(icon: String, label: String, iconColor: Color? = nil) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 16))
+                .foregroundStyle(iconColor ?? .primary)
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .background(Color.znNeutralTagBg)
+        .foregroundStyle(.primary)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
+    }
+
+    private func openInMaps() {
+        guard let lat = activity.lat, let lon = activity.lon else { return }
+        let urlString = "http://maps.apple.com/?daddr=\(lat),\(lon)&dirflg=w"
+        if let url = URL(string: urlString) {
+            UIApplication.shared.open(url)
         }
     }
 }

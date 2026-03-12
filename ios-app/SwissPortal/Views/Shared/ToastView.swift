@@ -9,9 +9,9 @@ enum ToastType {
 
     var color: Color {
         switch self {
-        case .success: return .green
-        case .error: return .red
-        case .info: return .blue
+        case .success: return .znPositive
+        case .error: return .znNegative
+        case .info: return .znNavy
         }
     }
 

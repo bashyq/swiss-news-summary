@@ -46,7 +46,7 @@ struct SunshineWidgetView: View {
             // Header
             HStack {
                 Image(systemName: "sun.max.fill")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Color("znTerracotta"))
                 Text(localized(en: "Weekend Sunshine", de: "Wochenend-Sonnenschein"))
                     .font(.caption.weight(.semibold))
                 Spacer()
@@ -79,7 +79,7 @@ struct SunshineWidgetView: View {
                     HStack(spacing: 2) {
                         Image(systemName: "sun.max.fill")
                             .font(.system(size: 8))
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Color("znTerracotta"))
                         Text("\(String(format: "%.0f", dest.sunshineHours))h")
                             .font(.caption2.weight(.semibold))
                     }
@@ -102,10 +102,10 @@ struct SunshineWidgetView: View {
 
     private func rankColor(_ index: Int) -> Color {
         switch index {
-        case 0: return .orange
-        case 1: return .blue
-        case 2: return .gray
-        default: return .gray
+        case 0: return Color("znTerracotta")
+        case 1: return Color("znNavy")
+        case 2: return Color("znMuted")
+        default: return Color("znMuted")
         }
     }
 }

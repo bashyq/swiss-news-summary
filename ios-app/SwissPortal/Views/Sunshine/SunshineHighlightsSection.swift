@@ -90,7 +90,7 @@ struct SunshineHighlightsSection: View {
             } label: {
                 Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
                     .font(.caption)
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(.znNavy)
             }
             .buttonStyle(.plain)
         }
@@ -131,7 +131,7 @@ struct SunshineHighlightsSection: View {
                     .fontWeight(.medium)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
-                    .background(Color(.systemGray6))
+                    .background(Color.znNeutralTagBg)
                     .foregroundStyle(.primary)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
@@ -148,7 +148,7 @@ struct SunshineHighlightsSection: View {
                     .fontWeight(.medium)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
-                    .background(Color(.systemGray6))
+                    .background(Color.znNeutralTagBg)
                     .foregroundStyle(.primary)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                 }

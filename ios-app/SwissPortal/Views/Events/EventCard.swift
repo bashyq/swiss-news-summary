@@ -28,10 +28,10 @@ struct EventCard: View {
             // Badges
             badgesRow
         }
-        .padding(14)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
+        .padding(AppSpacing.cardPadding)
+        .background(Color.znSurface)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
+        .shadow(color: AppShadow.subtle.color, radius: AppShadow.subtle.radius, x: AppShadow.subtle.x, y: AppShadow.subtle.y)
         .contentShape(Rectangle())
         .onTapGesture {
             openURL()
@@ -48,8 +48,7 @@ struct EventCard: View {
                 .frame(width: 20, height: 20)
 
             Text(event.localizedName(language: appState.language))
-                .font(.system(.subheadline, design: .serif))
-                .fontWeight(.semibold)
+                .font(.cardTitle)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -99,7 +98,7 @@ struct EventCard: View {
             BadgeView(
                 text: event.city.capitalized,
                 icon: "mappin",
-                color: .teal
+                color: .znNavy.opacity(0.7)
             )
         }
     }

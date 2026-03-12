@@ -13,6 +13,7 @@ struct ActivitiesView: View {
     @State private var viewModel = ActivitiesViewModel()
     @State private var surpriseActivity: Activity?
     @State private var showAddSheet = false
+    @State private var expandedActivityID: String?
 
     var body: some View {
         content
@@ -25,6 +26,7 @@ struct ActivitiesView: View {
                 )
             }
             .onChange(of: viewModel.filter) { _, newFilter in
+                expandedActivityID = nil
                 if newFilter == .nearMe {
                     locationManager.requestLocation()
                 }
@@ -43,7 +45,7 @@ struct ActivitiesView: View {
                     },
                     isSaved: appState.savedActivityIDs.contains(activity.id)
                 )
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.fraction(0.7), .large])
             }
             .sheet(isPresented: $showAddSheet) {
                 AddActivitySheet()
@@ -56,7 +58,24 @@ struct ActivitiesView: View {
         appState.localized(en: "What to do?", de: "Was tun?")
     }
 
-    // MARK: - City Menu Button
+    // MARK: - Glass Buttons (frosted circles matching Explore hero)
+
+    private func glassButton(
+        systemName: String,
+        size: CGFloat = 36,
+        iconSize: CGFloat = 16,
+        radius: CGFloat = 10,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: iconSize))
+                .foregroundStyle(.white)
+                .frame(width: size, height: size)
+                .background(.white.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: radius))
+        }
+    }
 
     private var cityMenuButton: some View {
         Menu {
@@ -74,38 +93,209 @@ struct ActivitiesView: View {
             }
         } label: {
             Image(systemName: "building.2")
+                .font(.system(size: 16))
+                .foregroundStyle(.white)
+                .frame(width: 36, height: 36)
+                .background(.white.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
         }
     }
 
-    // MARK: - Toolbar Buttons
-
     private var mapToggleButton: some View {
-        Button {
+        glassButton(
+            systemName: viewModel.showMap ? "list.bullet" : "map"
+        ) {
             withAnimation(AppAnimation.standardEase) {
                 viewModel.showMap.toggle()
             }
-        } label: {
-            Image(systemName: viewModel.showMap ? "list.bullet" : "map")
         }
     }
 
     private var addButton: some View {
-        Button {
+        glassButton(systemName: "plus") {
             showAddSheet = true
-        } label: {
-            Image(systemName: "plus")
         }
     }
 
     // MARK: - Hero Banner
 
     private var heroBanner: some View {
-        HeroBanner(style: .activities, title: navigationTitle) {
-            HStack(spacing: 14) {
-                addButton
-                mapToggleButton
-                cityMenuButton
+        VStack(alignment: .leading, spacing: 0) {
+            // Title row + icon buttons
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 4) {
+                    // Eyebrow
+                    Text(heroEyebrow)
+                        .font(.system(size: 10, weight: .medium))
+                        .tracking(1.3)
+                        .textCase(.uppercase)
+                        .foregroundStyle(.white.opacity(0.42))
+
+                    // Title: "What to _do?_"
+                    heroTitle
+                }
+
+                Spacer()
+
+                HStack(spacing: 8) {
+                    addButton
+                    mapToggleButton
+                    cityMenuButton
+                }
             }
+
+            // Filter pills inside hero (matching Explore style)
+            heroFilterPills
+                .padding(.top, 12)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 14)
+        .padding(.bottom, 22)
+        .background {
+            ZStack(alignment: .bottomTrailing) {
+                Color.znNavy
+                    .ignoresSafeArea(.container, edges: .top)
+                RadialGradient(
+                    colors: [Color.znTerracotta.opacity(0.22), .clear],
+                    center: UnitPoint(x: 1.2, y: -0.3),
+                    startRadius: 0,
+                    endRadius: 220
+                )
+                skylineIllustration
+                    .frame(width: 200, height: 110)
+                    .opacity(0.09)
+            }
+        }
+    }
+
+    private var heroEyebrow: String {
+        let cityName = appState.city.localizedName(language: appState.language)
+        let formatter = DateFormatter()
+        formatter.locale = appState.language == .de ? Locale(identifier: "de_CH") : Locale(identifier: "en_US")
+        formatter.dateFormat = "EEEE"
+        return "\(cityName) · \(formatter.string(from: Date()))"
+    }
+
+    private var heroTitle: some View {
+        (
+            Text(appState.localized(en: "What to ", de: "Was "))
+                .font(.custom("Playfair", size: 28))
+                .foregroundStyle(.white)
+            + Text(appState.localized(en: "do?", de: "tun?"))
+                .font(.custom("Playfair", size: 28).italic())
+                .foregroundStyle(.white.opacity(0.65))
+        )
+        .lineLimit(1)
+    }
+
+    // MARK: - Hero Filter Pills
+
+    private var heroFilterPills: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(ActivityFilter.allCases, id: \.self) { filter in
+                    let isSelected = viewModel.filter == filter
+                    let label = appState.language == .en ? filter.displayName : filter.displayNameDE
+                    let count = filterCount(for: filter)
+
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            viewModel.filter = filter
+                        }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: filter.sfSymbol)
+                                .font(.system(size: 11))
+                            Text(label)
+                                .font(.system(size: 12, weight: .medium))
+                                .lineLimit(1)
+                            if let count, count > 0 {
+                                Text("\(count)")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .frame(width: 16, height: 16)
+                                    .background(.white.opacity(0.25))
+                                    .clipShape(Circle())
+                            }
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(isSelected ? Color.white.opacity(0.2) : .clear)
+                        .foregroundStyle(.white)
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(.white.opacity(isSelected ? 0.6 : 0.3), lineWidth: 1)
+                        )
+                    }
+                    .sensoryFeedback(.selection, trigger: isSelected)
+                }
+            }
+        }
+    }
+
+    private func filterCount(for filter: ActivityFilter) -> Int? {
+        guard let activities = viewModel.activitiesData?.activities else { return nil }
+        let count: Int
+        switch filter {
+        case .all:
+            count = activities.filter { !$0.isStayHome }.count
+        case .indoor:
+            count = activities.filter { $0.indoor && !$0.isStayHome }.count
+        case .outdoor:
+            count = activities.filter { !$0.indoor && !$0.isStayHome }.count
+        case .free:
+            count = activities.filter { $0.isFree && !$0.isStayHome }.count
+        case .saved:
+            // Count only saved IDs that exist in the current city's activities
+            let activityIDs = Set(activities.map(\.id))
+            count = appState.savedActivityIDs.filter { activityIDs.contains($0) }.count
+        case .seasonal:
+            count = activities.filter { $0.isCurrentSeason && !$0.isStayHome }.count
+        case .stayHome:
+            count = activities.filter { $0.isStayHome }.count
+        case .nearMe:
+            // Count only activities within 2km radius (matching the actual filter)
+            if let userLocation = locationManager.location {
+                count = activities.filter { activity in
+                    guard !activity.isStayHome,
+                          let distance = activity.distance(from: userLocation) else { return false }
+                    return distance <= 2000
+                }.count
+            } else {
+                count = activities.filter { !$0.isStayHome }.count
+            }
+        }
+        return count > 0 ? count : nil
+    }
+
+    private var skylineIllustration: some View {
+        Canvas { ctx, size in
+            let w = size.width, h = size.height
+            let white = Color.white
+            ctx.fill(Path(CGRect(x: w * 0.05, y: h * 0.36, width: w * 0.09, height: h * 0.64)), with: .color(white))
+            ctx.fill(Path { p in
+                p.move(to: CGPoint(x: w * 0.05, y: h * 0.36))
+                p.addLine(to: CGPoint(x: w * 0.095, y: h * 0.11))
+                p.addLine(to: CGPoint(x: w * 0.14, y: h * 0.36))
+                p.closeSubpath()
+            }, with: .color(white))
+            ctx.fill(Path(CGRect(x: w * 0.19, y: h * 0.45, width: w * 0.11, height: h * 0.55)), with: .color(white))
+            ctx.fill(Path { p in
+                p.move(to: CGPoint(x: w * 0.19, y: h * 0.45))
+                p.addLine(to: CGPoint(x: w * 0.245, y: h * 0.16))
+                p.addLine(to: CGPoint(x: w * 0.30, y: h * 0.45))
+                p.closeSubpath()
+            }, with: .color(white))
+            ctx.fill(Path(CGRect(x: w * 0.36, y: h * 0.41, width: w * 0.08, height: h * 0.59)), with: .color(white))
+            ctx.fill(Path(ellipseIn: CGRect(x: w * 0.32, y: h * 0.29, width: w * 0.16, height: h * 0.18)), with: .color(white))
+            ctx.fill(Path(CGRect(x: w * 0.50, y: h * 0.32, width: w * 0.14, height: h * 0.68)), with: .color(white))
+            ctx.fill(Path { p in
+                p.move(to: CGPoint(x: w * 0.69, y: h))
+                p.addLine(to: CGPoint(x: w * 0.79, y: h * 0.25))
+                p.addLine(to: CGPoint(x: w * 0.89, y: h))
+                p.closeSubpath()
+            }, with: .color(white))
+            ctx.fill(Path(CGRect(x: 0, y: h * 0.76, width: w, height: h * 0.13)), with: .color(white.opacity(0.25)))
         }
     }
 
@@ -117,8 +307,6 @@ struct ActivitiesView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     heroBanner
-                        .padding(.horizontal)
-                        .padding(.top, 8)
                     ForEach(0..<5, id: \.self) { _ in
                         SkeletonActivityCard()
                     }
@@ -128,8 +316,6 @@ struct ActivitiesView: View {
         } else if let error = viewModel.error, viewModel.activitiesData == nil {
             VStack(spacing: 0) {
                 heroBanner
-                    .padding(.horizontal)
-                    .padding(.top, 8)
                 ErrorView(message: error) {
                     Task {
                         await viewModel.loadActivities(
@@ -147,9 +333,9 @@ struct ActivitiesView: View {
     private var weatherTintColor: Color? {
         guard let code = viewModel.activitiesData?.weather.weatherCode else { return nil }
         switch code {
-        case 0...3: return Color.orange.opacity(0.03)
-        case 51...67, 80...82: return Color.blue.opacity(0.03)
-        case 71...77, 85, 86: return Color.gray.opacity(0.03)
+        case 0...3: return Color.znTerracotta.opacity(0.03)
+        case 51...67, 80...82: return Color.znNavy.opacity(0.03)
+        case 71...77, 85, 86: return Color.znMuted.opacity(0.03)
         default: return nil
         }
     }
@@ -161,29 +347,24 @@ struct ActivitiesView: View {
 
         return ZStack(alignment: .bottom) {
             VStack(spacing: 0) {
-                // 0. Hero banner with title + city picker + map/add buttons
+                // 0. Hero banner with title + city picker + map/add buttons + filter pills
                 heroBanner
-                    .padding(.horizontal)
-                    .padding(.top, 8)
 
-                // 1. Filter bar
-                ActivityFilterBar(viewModel: viewModel, language: appState.language)
-                    .padding(.top, 8)
-
-                // 2. Results count
+                // 1. Results count hint
                 HStack {
                     Text(appState.localized(
-                        en: "\(activities.count) results",
-                        de: "\(activities.count) Ergebnisse"
+                        en: "\(activities.count) activities found — tap a card to expand",
+                        de: "\(activities.count) Aktivitäten gefunden — tippe zum Öffnen"
                     ))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.znMuted)
                     .contentTransition(.numericText())
                     .animation(.default, value: activities.count)
                     Spacer()
                 }
-                .padding(.horizontal)
-                .padding(.top, 8)
+                .padding(.horizontal, 20)
+                .padding(.top, 6)
+                .padding(.bottom, 4)
 
                 // 3. Inline loading indicator for background refresh
                 if viewModel.isLoading && viewModel.activitiesData != nil {
@@ -238,25 +419,38 @@ struct ActivitiesView: View {
             if activities.isEmpty {
                 emptyState
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(activities) { activity in
-                            ActivityCard(
-                                activity: activity,
-                                language: appState.language,
-                                location: locationManager.location
-                            )
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 10) {
+                            ForEach(activities) { activity in
+                                ActivityCard(
+                                    activity: activity,
+                                    language: appState.language,
+                                    location: locationManager.location,
+                                    expandedID: $expandedActivityID
+                                )
+                                .id(activity.id)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 12)
+                        .padding(.bottom, 80) // Space for floating button
+                    }
+                    .refreshable {
+                        await viewModel.loadActivities(
+                            city: appState.city,
+                            language: appState.language
+                        )
+                    }
+                    .onChange(of: expandedActivityID) { _, newID in
+                        if let newID {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                withAnimation {
+                                    proxy.scrollTo(newID, anchor: .top)
+                                }
+                            }
                         }
                     }
-                    .padding(.horizontal)
-                    .padding(.top, 12)
-                    .padding(.bottom, 80) // Space for floating button
-                }
-                .refreshable {
-                    await viewModel.loadActivities(
-                        city: appState.city,
-                        language: appState.language
-                    )
                 }
             }
         }
@@ -267,8 +461,12 @@ struct ActivitiesView: View {
     private var filteredAndSorted: [Activity] {
         var activities = viewModel.filteredActivities(savedIDs: appState.savedActivityIDs)
 
-        // Sort by distance when .nearMe filter is active and location is available
+        // Filter to 2km radius and sort by distance when .nearMe filter is active
         if viewModel.filter == .nearMe, let userLocation = locationManager.location {
+            activities = activities.filter { activity in
+                guard let distance = activity.distance(from: userLocation) else { return false }
+                return distance <= 2000
+            }
             activities.sort { a, b in
                 let distA = a.distance(from: userLocation) ?? .greatestFiniteMagnitude
                 let distB = b.distance(from: userLocation) ?? .greatestFiniteMagnitude
@@ -309,17 +507,18 @@ struct ActivitiesView: View {
 
     private var surpriseMeButton: some View {
         Button(action: pickSurprise) {
-            HStack(spacing: 8) {
+            HStack(spacing: 7) {
                 Image(systemName: "sparkles")
+                    .font(.system(size: 14))
                 Text(appState.localized(en: "Surprise me!", de: "Überrasche mich!"))
-                    .fontWeight(.semibold)
+                    .font(.system(size: 14, weight: .medium))
             }
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 20)
             .padding(.vertical, 12)
-            .background(LinearGradient.brand)
+            .background(Color.znNavy)
             .foregroundStyle(.white)
             .clipShape(Capsule())
-            .shadow(color: .brand.opacity(0.3), radius: 8, x: 0, y: 4)
+            .shadow(color: Color.znNavy.opacity(0.28), radius: 12, x: 0, y: 6)
         }
     }
 

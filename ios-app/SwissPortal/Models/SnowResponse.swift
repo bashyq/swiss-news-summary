@@ -131,21 +131,30 @@ enum SnowFilter: String, CaseIterable {
     }
 }
 
-enum SnowSort: String, CaseIterable {
+enum SnowSort: String, CaseIterable, Identifiable {
     case snowfall
     case distance
 
+    var id: String { rawValue }
+
     var displayName: String {
         switch self {
-        case .snowfall: return "By snowfall"
-        case .distance: return "By distance"
+        case .snowfall: return "Most snow"
+        case .distance: return "Nearest first"
         }
     }
 
     var displayNameDE: String {
         switch self {
-        case .snowfall: return "Nach Schneefall"
-        case .distance: return "Nach Entfernung"
+        case .snowfall: return "Meister Schnee"
+        case .distance: return "Nächstgelegene"
+        }
+    }
+
+    var sfSymbol: String {
+        switch self {
+        case .snowfall: return "snowflake"
+        case .distance: return "location.fill"
         }
     }
 }

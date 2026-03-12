@@ -18,7 +18,7 @@ struct WeatherCompactView: View {
                     .frame(width: 36, height: 36)
                     .background(
                         Circle()
-                            .fill(Color(.tertiarySystemFill))
+                            .fill(Color.znBorder.opacity(0.5))
                     )
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -52,7 +52,7 @@ struct WeatherCompactView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(Color.weatherCard)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityDescription)

@@ -75,7 +75,7 @@ struct WeatherDetailSheet: View {
             .padding(.vertical, 6)
             .background(
                 Capsule()
-                    .fill(Color(.tertiarySystemFill))
+                    .fill(Color.znBorder.opacity(0.5))
             )
         }
         .frame(maxWidth: .infinity)
@@ -150,7 +150,7 @@ struct WeatherDetailSheet: View {
         .padding(.horizontal, 2)
         .background(
             RoundedRectangle(cornerRadius: AppSpacing.cardRadius)
-                .fill(isCurrent ? Color.brand.opacity(0.12) : Color(.tertiarySystemFill).opacity(0.5))
+                .fill(isCurrent ? Color.brand.opacity(0.12) : Color.znBorder.opacity(0.5).opacity(0.5))
         )
         .overlay(
             RoundedRectangle(cornerRadius: AppSpacing.cardRadius)

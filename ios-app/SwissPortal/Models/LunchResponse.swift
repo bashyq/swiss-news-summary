@@ -27,6 +27,9 @@ struct LunchSpot: Codable, Identifiable, Sendable {
     let phone: String?
     let website: String?
     let amenity: String
+    let rating: Double?
+    let ratingCount: Int?
+    let permanentlyClosed: Bool?
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: lat, longitude: lon)
@@ -41,6 +44,15 @@ struct LunchSpot: Codable, Identifiable, Sendable {
     /// Display cuisine nicely
     var cuisineDisplay: String {
         cuisineCategory?.capitalized ?? cuisine?.capitalized ?? "Restaurant"
+    }
+
+    /// Price tier based on amenity type (rough proxy: cafe=1, fast_food=2, restaurant=3)
+    var priceTier: Int {
+        switch amenity.lowercased() {
+        case "cafe": return 1
+        case "fast_food": return 2
+        default: return 3
+        }
     }
 
     /// SF Symbol for cuisine category
@@ -92,6 +104,44 @@ enum LunchToggle: String, CaseIterable, Identifiable {
         case .open: return "clock"
         case .terrace: return "sun.max"
         case .saved: return "heart.fill"
+        }
+    }
+}
+
+// MARK: - Lunch Sort (radio-select, one active at a time)
+
+enum LunchSort: String, CaseIterable, Identifiable {
+    case nearest
+    case topRated
+    case priceLow
+    case priceHigh
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .nearest: return "Nearest first"
+        case .topRated: return "Top rated"
+        case .priceLow: return "Price: low to high"
+        case .priceHigh: return "Price: high to low"
+        }
+    }
+
+    var displayNameDE: String {
+        switch self {
+        case .nearest: return "Nächste zuerst"
+        case .topRated: return "Bestbewertet"
+        case .priceLow: return "Preis: aufsteigend"
+        case .priceHigh: return "Preis: absteigend"
+        }
+    }
+
+    var sfSymbol: String {
+        switch self {
+        case .nearest: return "location"
+        case .topRated: return "star"
+        case .priceLow: return "arrow.up"
+        case .priceHigh: return "arrow.down"
         }
     }
 }

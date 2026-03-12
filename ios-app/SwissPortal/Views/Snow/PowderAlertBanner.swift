@@ -56,7 +56,7 @@ struct PowderAlertBanner: View {
 
             Spacer()
         }
-        .padding(14)
+        .padding(AppSpacing.cardPadding)
         .background(
             LinearGradient(
                 gradient: Gradient(colors: [
@@ -68,7 +68,7 @@ struct PowderAlertBanner: View {
                 endPoint: .trailing
             )
         )
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
         .contentShape(Rectangle())
         .onTapGesture {
             onTap?()

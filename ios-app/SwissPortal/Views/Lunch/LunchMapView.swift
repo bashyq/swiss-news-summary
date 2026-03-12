@@ -85,7 +85,7 @@ struct LunchMapView: View {
             VStack(spacing: 0) {
                 Spacer()
                 LinearGradient(
-                    colors: [.clear, Color(.systemBackground).opacity(0.8)],
+                    colors: [.clear, Color.znCream.opacity(0.8)],
                     startPoint: .top, endPoint: .bottom
                 )
                 .frame(height: 20)
@@ -109,7 +109,7 @@ struct LunchMapView: View {
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(.systemBackground).opacity(0.6))
+                .background(Color.znCream.opacity(0.6))
             }
         }
     }
@@ -118,14 +118,14 @@ struct LunchMapView: View {
 
     private func markerColor(for spot: LunchSpot) -> Color {
         switch spot.cuisineCategory?.lowercased() {
-        case "swiss": return .red
-        case "italian": return .green
-        case "asian": return .orange
-        case "kebab": return .brown
-        case "cafe": return .purple
-        case "vegetarian": return .mint
-        case "fastfood": return .yellow
-        default: return .blue
+        case "swiss": return .znNegative
+        case "italian": return .znPositive
+        case "asian": return .znTerracotta
+        case "kebab": return .znTerracotta.opacity(0.7)
+        case "cafe": return .znNavy.opacity(0.65)
+        case "vegetarian": return .znPositive.opacity(0.8)
+        case "fastfood": return .znTerracotta.opacity(0.85)
+        default: return .znNavy
         }
     }
 
@@ -165,7 +165,7 @@ struct LunchMapView: View {
                     BadgeView(
                         text: language == .en ? "Open for lunch" : "Mittagstisch",
                         icon: "clock",
-                        color: .green
+                        color: .znPositive
                     )
                 }
 
@@ -173,17 +173,11 @@ struct LunchMapView: View {
                     BadgeView(
                         text: language == .en ? "Outdoor" : "Terrasse",
                         icon: "sun.max.fill",
-                        color: .orange
+                        color: .znTerracotta
                     )
                 }
 
-                if spot.vegetarian == "yes" {
-                    BadgeView(
-                        text: language == .en ? "Vegetarian" : "Vegetarisch",
-                        icon: "leaf",
-                        color: .green
-                    )
-                }
+
 
                 Spacer()
 
@@ -203,7 +197,7 @@ struct LunchMapView: View {
             }
         }
         .padding(AppSpacing.cardPadding)
-        .background(Color(.secondarySystemGroupedBackground))
+        .background(Color.znSurface)
         .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
         .shadow(color: AppShadow.card.color, radius: AppShadow.card.radius, x: AppShadow.card.x, y: -AppShadow.card.y)
         .padding(.horizontal, 12)

@@ -251,14 +251,6 @@ final class ViewModelTests: XCTestCase {
         XCTAssertFalse(state.savedActivityIDs.contains(testID))
     }
 
-    func testAppStateLunchRating() {
-        let state = AppState()
-        let testID = "test-lunch-\(UUID().uuidString)"
-
-        state.setLunchRating(testID, rating: 4)
-        XCTAssertEqual(state.lunchRatings[testID], 4)
-    }
-
     // MARK: - Localization
 
     func testNewsItemLocalization() {

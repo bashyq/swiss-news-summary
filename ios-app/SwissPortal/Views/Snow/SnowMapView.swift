@@ -77,7 +77,7 @@ struct SnowMapView: View {
             VStack(spacing: 0) {
                 Spacer()
                 LinearGradient(
-                    colors: [.clear, Color(.systemBackground).opacity(0.8)],
+                    colors: [.clear, Color.znCream.opacity(0.8)],
                     startPoint: .top, endPoint: .bottom
                 )
                 .frame(height: 20)
@@ -85,9 +85,9 @@ struct SnowMapView: View {
             }
 
             MapLegend(items: [
-                .init(color: Color(red: 0.1, green: 0.2, blue: 0.8), label: ">30cm"),
-                .init(color: Color(red: 0.3, green: 0.5, blue: 0.9), label: "10-30cm"),
-                .init(color: .gray, label: "<10cm"),
+                .init(color: .znNavy, label: ">30cm"),
+                .init(color: .znNavy.opacity(0.6), label: "10-30cm"),
+                .init(color: .znMuted, label: "<10cm"),
             ])
             .padding(8)
         }

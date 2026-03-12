@@ -12,13 +12,6 @@ struct WeekendView: View {
 
     var body: some View {
         content
-            .navigationTitle(navigationTitle)
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    shuffleButton
-                }
-            }
             .refreshable {
                 await viewModel.loadWeekend(
                     city: appState.city,
@@ -142,6 +135,7 @@ struct WeekendView: View {
                 .font(.subheadline)
                 .fontWeight(.medium)
             Spacer()
+            shuffleButton
         }
         .padding(.horizontal, 4)
     }

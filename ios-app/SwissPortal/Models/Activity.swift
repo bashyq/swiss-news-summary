@@ -39,8 +39,9 @@ struct Activity: Codable, Identifiable, Sendable {
     let subcategory: String?
     let materials: String?
     let materialsDE: String?
-    let featured: Bool?
     let addedDate: String?
+    var openingHours: String? = nil
+    var openingHoursDE: String? = nil
 
     func localizedName(language: AppLanguage) -> String {
         switch language {
@@ -70,9 +71,11 @@ struct Activity: Codable, Identifiable, Sendable {
         }
     }
 
-    /// Whether this activity is marked as featured by the API
-    var isFeatured: Bool {
-        featured == true
+    func localizedOpeningHours(language: AppLanguage) -> String? {
+        switch language {
+        case .en: return openingHours
+        case .de: return openingHoursDE ?? openingHours
+        }
     }
 
     /// Whether this activity was added within the last 30 days

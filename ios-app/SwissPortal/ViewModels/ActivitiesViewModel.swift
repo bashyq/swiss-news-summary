@@ -34,13 +34,7 @@ final class ActivitiesViewModel {
         let categoryFiltered: [Activity]
         switch filter {
         case .all:
-            // Sort featured activities to the top
-            categoryFiltered = activities
-                .filter { !$0.isStayHome }
-                .sorted { a, b in
-                    if a.isFeatured != b.isFeatured { return a.isFeatured }
-                    return false
-                }
+            categoryFiltered = activities.filter { !$0.isStayHome }
         case .indoor:
             categoryFiltered = activities.filter { $0.indoor && !$0.isStayHome }
         case .outdoor:

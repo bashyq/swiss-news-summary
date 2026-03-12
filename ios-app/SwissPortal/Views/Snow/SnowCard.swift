@@ -20,19 +20,19 @@ struct SnowCard: View {
             collapsedContent
             if isExpanded {
                 Divider()
-                    .padding(.horizontal, 14)
+                    .padding(.horizontal, AppSpacing.cardPadding)
                 expandedContent
             }
         }
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .background(Color.znSurface)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
         .overlay(alignment: .leading) {
             RoundedRectangle(cornerRadius: 2)
                 .fill(Color.snowColor(cm: resort.snowfallWeekTotal))
-                .frame(width: 4)
+                .frame(width: AppSpacing.borderStripWidth)
                 .padding(.vertical, 6)
         }
-        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+        .shadow(color: AppShadow.card.color, radius: AppShadow.card.radius, x: AppShadow.card.x, y: AppShadow.card.y)
         .sensoryFeedback(.selection, trigger: isExpanded)
         .contentShape(Rectangle())
         .onTapGesture { onTap() }
@@ -49,8 +49,7 @@ struct SnowCard: View {
             // Name and region
             VStack(alignment: .leading, spacing: 2) {
                 Text(resort.localizedName(language: language))
-                    .font(.system(.subheadline, design: .serif))
-                    .fontWeight(.semibold)
+                    .font(.cardTitle)
                     .lineLimit(1)
                 Text(resort.localizedRegion(language: language))
                     .font(.caption)
@@ -76,13 +75,14 @@ struct SnowCard: View {
                     }
                 }
             }
+            .fixedSize(horizontal: true, vertical: false)
 
             // Chevron
             Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
-        .padding(14)
+        .padding(AppSpacing.cardPadding)
     }
 
     // MARK: - Snowfall Icon
@@ -140,7 +140,7 @@ struct SnowCard: View {
             // Get directions button
             directionsButton
         }
-        .padding(14)
+        .padding(AppSpacing.cardPadding)
         .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
@@ -162,7 +162,7 @@ struct SnowCard: View {
                     EmptyView()
                 default:
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(.systemGray5))
+                        .fill(Color.znBorder)
                         .frame(maxWidth: .infinity)
                         .frame(height: 140)
                         .overlay { ProgressView() }
@@ -175,7 +175,7 @@ struct SnowCard: View {
 
     private var dailyForecastSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(language == .de ? "7-Tage-Prognose" : "7-Day Forecast")
+            Text(language == .de ? "Prognose" : "Forecast")
                 .font(.caption)
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
@@ -218,7 +218,7 @@ struct SnowCard: View {
 
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(Color(.systemGray5))
+                        .fill(Color.znBorder)
                         .frame(height: 6)
 
                     RoundedRectangle(cornerRadius: 3)
@@ -232,7 +232,7 @@ struct SnowCard: View {
             Text(day.snowfallCm > 0 ? String(format: "%.1fcm", day.snowfallCm) : "-")
                 .font(.caption2)
                 .fontWeight(.medium)
-                .foregroundStyle(day.snowfallCm > 0 ? Color.snowColor(cm: day.snowfallCm) : Color.gray)
+                .foregroundStyle(day.snowfallCm > 0 ? Color.snowColor(cm: day.snowfallCm) : Color.znMuted)
                 .frame(width: 40, alignment: .trailing)
         }
     }

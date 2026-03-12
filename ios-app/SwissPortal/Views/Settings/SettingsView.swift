@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Settings view with city picker, language picker, theme picker, upcoming holidays, about section, and cache management.
 ///
-/// Accessed from the "More" tab via NavigationLink. All preferences are persisted
+/// Displayed as its own tab. All preferences are persisted
 /// through `AppState` which syncs to `UserDefaults`.
 struct SettingsView: View {
     @Environment(AppState.self) private var appState
@@ -22,13 +22,10 @@ struct SettingsView: View {
             // 3. Theme picker
             themeSection(state: $state)
 
-            // 4. Upcoming holidays
-            holidaysSection
-
-            // 5. About section
+            // 4. About section
             aboutSection
 
-            // 6. Clear cache
+            // 8. Clear cache
             cacheSection
         }
         .navigationTitle(navigationTitle)
@@ -126,57 +123,6 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Holidays Section
-
-    private var holidaysSection: some View {
-        Section {
-            let holidays = SwissHolidayCalculator.upcomingHolidays()
-            if holidays.isEmpty {
-                Text(appState.localized(
-                    en: "No upcoming holidays",
-                    de: "Keine bevorstehenden Feiertage"
-                ))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            } else {
-                ForEach(holidays) { holiday in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(holiday.localizedName(language: appState.language))
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                            Text(holiday.date)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        daysUntilBadge(holiday.daysUntil)
-                    }
-                }
-            }
-        } header: {
-            Label(
-                appState.localized(en: "Upcoming Holidays", de: "Kommende Feiertage"),
-                systemImage: "calendar.badge.checkmark"
-            )
-        }
-    }
-
-    private func daysUntilBadge(_ days: Int) -> some View {
-        let text: String
-        if days == 0 {
-            text = appState.localized(en: "Today", de: "Heute")
-        } else if days == 1 {
-            text = appState.localized(en: "Tomorrow", de: "Morgen")
-        } else {
-            text = appState.localized(en: "\(days) days", de: "\(days) Tage")
-        }
-
-        let color: Color = days <= 7 ? .green : (days <= 30 ? .orange : .secondary)
-
-        return BadgeView(text: text, color: color)
-    }
-
     // MARK: - About Section
 
     private var aboutSection: some View {
@@ -185,9 +131,14 @@ struct SettingsView: View {
                 Text(appState.localized(en: "App", de: "App"))
                     .font(.subheadline)
                 Spacer()
-                Text("Today in Switzerland")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("Znüni")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text("Was lauft hüt?")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
             }
 
             HStack {
@@ -233,7 +184,7 @@ struct SettingsView: View {
                     Spacer()
                     if cacheCleared {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
+                            .foregroundStyle(.znPositive)
                             .transition(.scale.combined(with: .opacity))
                     }
                 }

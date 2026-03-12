@@ -11,39 +11,41 @@ struct FilterChip: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 4) {
+            HStack(spacing: 5) {
                 if let icon {
                     Image(systemName: icon)
-                        .font(.caption2)
+                        .font(.system(size: 11))
                 }
                 Text(label)
-                    .font(.caption)
-                    .fontWeight(isSelected ? .semibold : .regular)
+                    .font(.system(size: 12, weight: .medium))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 if let count, count > 0 {
                     Text("\(count)")
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 1)
-                        .background(isSelected ? .white.opacity(0.3) : .secondary.opacity(0.2))
-                        .clipShape(Capsule())
+                        .font(.system(size: 10, weight: .bold))
+                        .frame(width: 16, height: 16)
+                        .background(isSelected ? .white.opacity(0.25) : Color.znNeutralTagBg)
+                        .clipShape(Circle())
                         .contentTransition(.numericText())
                         .animation(.default, value: count)
                 }
             }
             .frame(maxWidth: expandsToFill ? .infinity : nil)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
+            .frame(height: 31)
+            .padding(.horizontal, 13)
             .background {
                 if isSelected {
-                    LinearGradient.brand
+                    Color.znNavy
                 } else {
-                    LinearGradient(colors: [Color(.systemGray6)], startPoint: .leading, endPoint: .trailing)
+                    Color.clear
                 }
             }
-            .foregroundStyle(isSelected ? .white : .primary)
+            .foregroundStyle(isSelected ? .white : Color.znBody)
+            .overlay {
+                if !isSelected {
+                    Capsule().stroke(Color.znBorder, lineWidth: 1)
+                }
+            }
             .clipShape(Capsule())
             .scaleEffect(isSelected ? AppAnimation.selectedScale : 1.0)
             .animation(AppAnimation.spring, value: isSelected)
@@ -63,7 +65,7 @@ struct FilterBar<Filter: Hashable>: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+            HStack(spacing: 7) {
                 ForEach(filters, id: \.self) { filter in
                     FilterChip(
                         label: label(filter),

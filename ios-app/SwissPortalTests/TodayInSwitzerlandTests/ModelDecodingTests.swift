@@ -18,7 +18,7 @@ final class ModelDecodingTests: XCTestCase {
             "history": {"year": 1958, "event": "Test event", "eventDE": "Test-Ereignis"},
             "categories": {"topStories": [{"headline": "Test headline", "summary": "Test summary", "source": "NZZ"}], "politics": [], "disruptions": [], "events": [], "culture": [], "local": []},
             "trending": {"topic": "Test topic"},
-            "briefing": {"topStory": {"headline": "Top story headline", "summary": "Top story summary", "source": "NZZ", "url": "https://example.com", "sentiment": "neutral"}, "dailyPick": {"activityId": "zoo", "name": "Zoo Zürich", "nameDE": "Zoo Zürich", "reason": "Great weather", "reasonDE": "Tolles Wetter", "emoji": "🦁", "indoor": false, "category": "animals"}},
+            "briefing": {"topStory": {"headline": "Top story headline", "summary": "Top story summary", "source": "NZZ", "url": "https://example.com", "sentiment": "neutral"}, "suggestedActivity": {"id": "zoo-zurich", "name": "Zoo Zürich", "nameDE": "Zoo Zürich", "description": "Great zoo", "descriptionDE": "Toller Zoo", "indoor": false, "ageRange": "2-5", "duration": "2h", "category": "animals"}},
             "city": {"id": "zurich", "name": "Zürich"},
             "timestamp": "2026-02-21T12:00:00Z"
         }
@@ -306,15 +306,15 @@ final class ModelDecodingTests: XCTestCase {
     // MARK: - Activity Helpers
 
     func testActivityFreeDetection() {
-        let freeActivity = Activity(id: "test", name: "Test", nameDE: "Test", description: "Test", descriptionDE: "Test", indoor: false, ageRange: "2-5", duration: "1h", price: "Free entry", priceDE: nil, url: nil, lat: nil, lon: nil, category: "nature", minAge: nil, maxAge: nil, season: nil, free: nil, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil, featured: nil, addedDate: nil)
+        let freeActivity = Activity(id: "test", name: "Test", nameDE: "Test", description: "Test", descriptionDE: "Test", indoor: false, ageRange: "2-5", duration: "1h", price: "Free entry", priceDE: nil, url: nil, lat: nil, lon: nil, category: "nature", minAge: nil, maxAge: nil, season: nil, free: nil, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil, addedDate: nil)
         XCTAssertTrue(freeActivity.isFree)
 
-        let paidActivity = Activity(id: "test2", name: "Test", nameDE: "Test", description: "Test", descriptionDE: "Test", indoor: false, ageRange: "2-5", duration: "2h", price: "CHF 15", priceDE: nil, url: nil, lat: nil, lon: nil, category: "museum", minAge: nil, maxAge: nil, season: nil, free: nil, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil, featured: nil, addedDate: nil)
+        let paidActivity = Activity(id: "test2", name: "Test", nameDE: "Test", description: "Test", descriptionDE: "Test", indoor: false, ageRange: "2-5", duration: "2h", price: "CHF 15", priceDE: nil, url: nil, lat: nil, lon: nil, category: "museum", minAge: nil, maxAge: nil, season: nil, free: nil, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil, addedDate: nil)
         XCTAssertFalse(paidActivity.isFree)
     }
 
     func testActivityAgeFilter() {
-        let toddlerActivity = Activity(id: "t", name: "T", nameDE: "T", description: "T", descriptionDE: "T", indoor: false, ageRange: "2-3", duration: "1h", price: "Free", priceDE: nil, url: nil, lat: nil, lon: nil, category: "play", minAge: 2, maxAge: 3, season: nil, free: nil, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil, featured: nil, addedDate: nil)
+        let toddlerActivity = Activity(id: "t", name: "T", nameDE: "T", description: "T", descriptionDE: "T", indoor: false, ageRange: "2-3", duration: "1h", price: "Free", priceDE: nil, url: nil, lat: nil, lon: nil, category: "play", minAge: 2, maxAge: 3, season: nil, free: nil, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil, addedDate: nil)
 
         XCTAssertTrue(toddlerActivity.matchesAge(.all))
         XCTAssertTrue(toddlerActivity.matchesAge(.toddler))

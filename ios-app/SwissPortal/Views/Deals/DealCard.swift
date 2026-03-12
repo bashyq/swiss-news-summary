@@ -13,9 +13,9 @@ struct DealCard: View {
         VStack(alignment: .leading, spacing: 0) {
             cardContent
         }
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
+        .background(Color.znSurface)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
+        .shadow(color: AppShadow.subtle.color, radius: AppShadow.subtle.radius, x: AppShadow.subtle.x, y: AppShadow.subtle.y)
     }
 
     // MARK: - Card Content
@@ -27,8 +27,7 @@ struct DealCard: View {
 
             // Deal name
             Text(deal.localizedName(language: language))
-                .font(.system(.subheadline, design: .serif))
-                .fontWeight(.semibold)
+                .font(.cardTitle)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -42,7 +41,7 @@ struct DealCard: View {
             // Footer: seasonal badge + open URL button
             footerRow
         }
-        .padding(14)
+        .padding(AppSpacing.cardPadding)
     }
 
     // MARK: - Header Row
@@ -95,7 +94,7 @@ struct DealCard: View {
                 BadgeView(
                     text: seasonalLabel(months: months),
                     icon: "calendar",
-                    color: .teal
+                    color: .znNavy.opacity(0.7)
                 )
             }
 

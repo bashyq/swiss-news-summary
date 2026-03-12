@@ -1,48 +1,80 @@
 import SwiftUI
 import MapKit
 
-/// Map-first exploration view combining activities, events, and deals on a single map.
+/// Explore view — hero with filters, mini map, near-you chips, browse-by-type grid.
 struct ExploreView: View {
     @Environment(AppState.self) private var appState
+    @Binding var path: NavigationPath
     @State private var viewModel = ExploreViewModel()
+    @State private var locationManager = LocationManager()
     @State private var cameraPosition: MapCameraPosition = .automatic
-    @State private var selectedItem: ExploreItem?
     @State private var showFullMap = false
+    @State private var mapInitialSelection: ExploreItem?
 
     var body: some View {
-        ScrollViewReader { scrollProxy in
-            VStack(spacing: 0) {
-                // Hero + filter are always visible
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 0) {
-                        heroBanner
-                            .padding(.horizontal)
-                            .padding(.top, 8)
-
-                        // Filter bar
-                        filterBar
-                            .padding(.top, 10)
+        VStack(spacing: 0) {
+            // Header — full hero in list mode, compact bar in map mode
+            ExploreHeroBanner(
+                filter: $viewModel.filter,
+                showFullMap: showFullMap,
+                onMapToggle: {
+                    withAnimation(AppAnimation.spring) {
+                        showFullMap.toggle()
                     }
                 }
-                .fixedSize(horizontal: false, vertical: true)
+            )
 
-                if showFullMap {
-                    // Full-screen map mode
-                    fullMapSection(scrollProxy: scrollProxy)
-                        .padding(.top, 8)
-                } else {
-                    // Map + card list mode
-                    ScrollView {
-                        VStack(spacing: 0) {
-                            mapSection(scrollProxy: scrollProxy)
-                                .padding(.top, 8)
-
-                            cardList
-                                .padding(.top, 12)
-                                .padding(.horizontal)
+            if showFullMap {
+                // Inline map — fills remaining space, tab bar stays visible
+                ExploreMapOverlay(
+                    items: viewModel.filteredItems(city: appState.city, language: appState.language),
+                    city: appState.city,
+                    onCollapse: {
+                        withAnimation(AppAnimation.spring) {
+                            showFullMap = false
+                            mapInitialSelection = nil
                         }
-                        .padding(.bottom, 16)
+                    },
+                    initialSelection: mapInitialSelection
+                )
+            } else {
+                // List content
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // Mini map — "Browse by map"
+                        miniMapSection
+                            .padding(.horizontal, 20)
+                            .padding(.top, 16)
+
+                        // Loading indicator
+                        if viewModel.isLoading && viewModel.activitiesData == nil {
+                            ProgressView()
+                                .padding(.top, 20)
+                        } else {
+                            // Near you section
+                            NearYouSection(
+                                items: nearYouItems,
+                                userLocation: locationManager.location,
+                                onItemTap: { item in
+                                    mapInitialSelection = item
+                                    withAnimation(AppAnimation.spring) {
+                                        showFullMap = true
+                                    }
+                                }
+                            )
+
+                            // Browse by type
+                            BrowseByTypeSection(
+                                countForCategory: { category in
+                                    viewModel.count(for: category, city: appState.city)
+                                },
+                                onRestaurantsTap: {
+                                    path.append("lunch")
+                                }
+                            )
+                        }
                     }
+                    .padding(.bottom, 24)
                 }
             }
         }
@@ -51,251 +83,161 @@ struct ExploreView: View {
         .task(id: "\(appState.city.rawValue)-\(appState.language.rawValue)") {
             await viewModel.loadData(city: appState.city, language: appState.language)
             resetCamera()
+            locationManager.requestLocation()
         }
-    }
-
-    // MARK: - Hero Banner
-
-    private var heroBanner: some View {
-        HeroBanner(style: .explore, title: appState.localized(en: "Explore", de: "Entdecken")) {
-            HStack(spacing: 14) {
-                mapToggleButton
-                cityMenu
-            }
-        }
-    }
-
-    private var cityMenu: some View {
-        Menu {
-            ForEach(City.allCases) { city in
-                Button {
-                    appState.city = city
-                } label: {
-                    HStack {
-                        Text(city.localizedName(language: appState.language))
-                        if city == appState.city {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                }
-            }
-        } label: {
-            Image(systemName: "building.2")
-        }
-    }
-
-    private var mapToggleButton: some View {
-        Button {
-            withAnimation(AppAnimation.standardEase) {
-                showFullMap.toggle()
-            }
-        } label: {
-            Image(systemName: showFullMap ? "list.bullet" : "map")
-        }
-    }
-
-    // MARK: - Filter Bar
-
-    private var filterBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(ExploreFilter.allCases, id: \.self) { filter in
-                    let isSelected = viewModel.filter == filter
-                    Button {
-                        withAnimation(AppAnimation.spring) {
-                            viewModel.filter = filter
-                        }
-                    } label: {
-                        Label(
-                            appState.language == .en ? filter.displayName : filter.displayNameDE,
-                            systemImage: filter.sfSymbol
-                        )
-                        .font(.subheadline.weight(.medium))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(
-                            isSelected
-                            ? AnyShapeStyle(LinearGradient.brand)
-                            : AnyShapeStyle(Color(.secondarySystemBackground))
-                        )
-                        .foregroundStyle(isSelected ? .white : .primary)
-                        .clipShape(Capsule())
-                        .scaleEffect(isSelected ? AppAnimation.selectedScale : 1.0)
-                    }
-                    .sensoryFeedback(.selection, trigger: isSelected)
-                }
-            }
-            .padding(.horizontal)
-        }
-    }
-
-    // MARK: - Full Map
-
-    private func fullMapSection(scrollProxy: ScrollViewProxy) -> some View {
-        let items = viewModel.filteredItems(city: appState.city, language: appState.language)
-
-        return Map(position: $cameraPosition) {
-            ForEach(items) { item in
-                Annotation(item.localizedName(language: appState.language), coordinate: item.coordinate) {
-                    annotationView(for: item)
-                        .onTapGesture {
-                            withAnimation(AppAnimation.spring) {
-                                selectedItem = item
-                            }
-                        }
+        .onChange(of: appState.tabRetapCount) {
+            if showFullMap {
+                withAnimation(AppAnimation.spring) {
+                    showFullMap = false
                 }
             }
         }
-        .mapStyle(.standard(pointsOfInterest: .excludingAll))
-        .overlay(alignment: .bottomLeading) {
-            legendBar
-                .padding(12)
-                .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .padding(12)
-        }
-        .overlay(alignment: .bottom) {
-            // Selected item card overlay
-            if let selected = selectedItem {
-                ExploreCardView(item: selected, language: appState.language, isSelected: true)
-                    .padding(.horizontal)
-                    .padding(.bottom, 12)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-        }
-        .ignoresSafeArea(edges: .bottom)
-    }
-
-    // MARK: - Map
-
-    private func mapSection(scrollProxy: ScrollViewProxy) -> some View {
-        let items = viewModel.filteredItems(city: appState.city, language: appState.language)
-
-        return Map(position: $cameraPosition) {
-            ForEach(items) { item in
-                Annotation(item.localizedName(language: appState.language), coordinate: item.coordinate) {
-                    annotationView(for: item)
-                        .onTapGesture {
-                            withAnimation(AppAnimation.spring) {
-                                selectedItem = item
-                            }
-                            // Scroll the list to the tapped item's card
-                            withAnimation {
-                                scrollProxy.scrollTo(item.id, anchor: .center)
-                            }
-                        }
-                }
-            }
-        }
-        .mapStyle(.standard(pointsOfInterest: .excludingAll))
-        .frame(height: AppSpacing.mapHeight)
-        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
-        .overlay(alignment: .bottom) {
-            // Gradient fade at bottom
-            LinearGradient(
-                colors: [.clear, Color(.systemBackground).opacity(0.6)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: 40)
-            .clipShape(
-                UnevenRoundedRectangle(
-                    bottomLeadingRadius: 12,
-                    bottomTrailingRadius: 12
-                )
-            )
-        }
-        .padding(.horizontal)
-    }
-
-    private func annotationView(for item: ExploreItem) -> some View {
-        let isSelected = selectedItem?.id == item.id
-
-        let color: Color = switch item {
-        case .activity: .orange
-        case .event: .purple
-        case .deal: .teal
-        }
-
-        let symbol: String = switch item {
-        case .activity: "mappin.circle.fill"
-        case .event: "star.circle.fill"
-        case .deal: "tag.circle.fill"
-        }
-
-        return Image(systemName: symbol)
-            .font(isSelected ? .title : .title2)
-            .foregroundStyle(color)
-            .background(
-                Circle()
-                    .fill(.white)
-                    .frame(width: isSelected ? 24 : 20, height: isSelected ? 24 : 20)
-            )
-            .shadow(color: isSelected ? color.opacity(0.4) : .clear, radius: 6)
-            .scaleEffect(isSelected ? 1.25 : 1.0)
-            .animation(AppAnimation.spring, value: isSelected)
-    }
-
-    // MARK: - Card List
-
-    private var cardList: some View {
-        let items = viewModel.filteredItems(city: appState.city, language: appState.language)
-
-        return LazyVStack(spacing: 10) {
-            if viewModel.isLoading && items.isEmpty {
-                ProgressView()
-                    .padding(.top, 40)
-            } else if items.isEmpty {
-                emptyState
+        .navigationDestination(for: ExploreCategory.self) { category in
+            if category == .events {
+                EventsView(showHeroHeader: true)
             } else {
-                // Legend
-                legendBar
-
-                ForEach(items) { item in
-                    ExploreCardView(item: item, language: appState.language, isSelected: selectedItem?.id == item.id)
-                        .id(item.id)
-                        .onTapGesture {
-                            withAnimation(AppAnimation.spring) {
-                                selectedItem = item
-                                cameraPosition = .region(MKCoordinateRegion(
-                                    center: item.coordinate,
-                                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                                ))
-                            }
-                        }
-                        .sensoryFeedback(.selection, trigger: selectedItem?.id == item.id)
-                }
+                CategoryDetailView(
+                    category: category,
+                    items: viewModel.items(for: category, city: appState.city, language: appState.language),
+                    userLocation: locationManager.location
+                )
+            }
+        }
+        .navigationDestination(for: String.self) { route in
+            if route == "lunch" {
+                LunchView()
             }
         }
     }
 
-    private var legendBar: some View {
-        HStack(spacing: 16) {
-            legendDot(color: .orange, label: appState.localized(en: "Activities", de: "Aktivitäten"))
-            legendDot(color: .purple, label: appState.localized(en: "Events", de: "Events"))
-            legendDot(color: .teal, label: appState.localized(en: "Deals", de: "Angebote"))
-            Spacer()
+    // MARK: - Mini Map
+
+    private var miniMapSection: some View {
+        let items = viewModel.filteredItems(city: appState.city, language: appState.language)
+
+        return VStack(spacing: 10) {
+            // Section header
+            HStack(alignment: .firstTextBaseline) {
+                Text(appState.localized(en: "Browse by map", de: "Karte durchsuchen"))
+                    .font(.sectionHeadline)
+                    .foregroundStyle(.znInk)
+                Spacer()
+                Button {
+                    withAnimation(AppAnimation.spring) {
+                        showFullMap = true
+                    }
+                } label: {
+                    HStack(spacing: 3) {
+                        Text(appState.localized(en: "Expand", de: "Erweitern"))
+                            .font(.system(size: 11, weight: .medium))
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 9, weight: .medium))
+                    }
+                    .foregroundStyle(.znTerracotta)
+                }
+            }
+
+            // Map card
+            Button {
+                withAnimation(AppAnimation.spring) {
+                    showFullMap = true
+                }
+            } label: {
+                ZStack(alignment: .bottom) {
+                    ZStack {
+                        Map(position: $cameraPosition, interactionModes: []) {
+                            ForEach(items) { item in
+                                Annotation("", coordinate: item.coordinate) {
+                                    miniAnnotation(for: item)
+                                }
+                            }
+                        }
+                        .mapStyle(.standard(pointsOfInterest: .excludingAll))
+
+                        // Dark navy tint overlay to match mockup aesthetic
+                        Color(red: 0.10, green: 0.15, blue: 0.21)
+                            .opacity(0.52)
+                            .allowsHitTesting(false)
+                    }
+                    .frame(height: AppSpacing.miniMapHeight)
+                    .allowsHitTesting(false)
+
+                    // Bottom bar: legend left, "Full map" pill right
+                    HStack(alignment: .center) {
+                        // Legend
+                        HStack(spacing: 9) {
+                            legendDot(color: .znTerracotta, label: appState.localized(en: "Activities", de: "Aktivitäten"))
+                            legendDot(color: .znPositive, label: appState.localized(en: "Deals", de: "Angebote"))
+                        }
+
+                        Spacer()
+
+                        // "Full map" pill
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                .font(.system(size: 9))
+                            Text(appState.localized(en: "Full map", de: "Vollkarte"))
+                                .font(.system(size: 10, weight: .medium))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.znNavy.opacity(0.8))
+                        .clipShape(Capsule())
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 9)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
+                .overlay(
+                    RoundedRectangle(cornerRadius: AppSpacing.cardRadius)
+                        .stroke(Color.znBorder, lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
         }
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        .padding(.bottom, 4)
+    }
+
+    private func miniAnnotation(for item: ExploreItem) -> some View {
+        let color: Color = switch item {
+        case .activity: .znTerracotta
+        case .event: .znNavy
+        case .deal: .znPositive
+        }
+        return VStack(spacing: 0) {
+            Circle()
+                .fill(color)
+                .frame(width: 14, height: 14)
+                .overlay(
+                    Circle()
+                        .fill(.white)
+                        .frame(width: 4.4, height: 4.4)
+                )
+                .shadow(color: color.opacity(0.35), radius: 3, y: 1)
+        }
     }
 
     private func legendDot(color: Color, label: String) -> some View {
         HStack(spacing: 4) {
-            Circle().fill(color).frame(width: 8, height: 8)
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
             Text(label)
+                .font(.system(size: 8))
+                .foregroundStyle(.white.opacity(0.65))
         }
     }
 
-    private var emptyState: some View {
-        VStack(spacing: 12) {
-            EmojiScene(["🗺️", "🔍", "📍"], size: 28)
-            Text(appState.localized(en: "Nothing to explore yet", de: "Noch nichts zu entdecken"))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .padding(.top, 40)
+    // MARK: - Near You Items
+
+    private var nearYouItems: [ExploreItem] {
+        guard let location = locationManager.location else { return [] }
+        return viewModel.nearYouItems(
+            location: location,
+            city: appState.city,
+            language: appState.language,
+            limit: 8
+        )
     }
 
     // MARK: - Helpers
@@ -304,12 +246,12 @@ struct ExploreView: View {
         let center = appState.city.coordinate
         cameraPosition = .region(MKCoordinateRegion(
             center: center,
-            span: MKCoordinateSpan(latitudeDelta: 0.08, longitudeDelta: 0.08)
+            span: MKCoordinateSpan(latitudeDelta: 0.04, longitudeDelta: 0.04)
         ))
     }
 }
 
-// MARK: - Explore Card
+// MARK: - Explore Card (used in map overlay)
 
 struct ExploreCardView: View {
     let item: ExploreItem
@@ -318,10 +260,9 @@ struct ExploreCardView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Color indicator
             RoundedRectangle(cornerRadius: 3)
                 .fill(itemColor)
-                .frame(width: 4)
+                .frame(width: AppSpacing.borderStripWidth)
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
@@ -354,7 +295,7 @@ struct ExploreCardView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color(.secondarySystemGroupedBackground))
+        .background(Color.znSurface)
         .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
         .overlay(
             RoundedRectangle(cornerRadius: AppSpacing.cardRadius)
@@ -365,9 +306,9 @@ struct ExploreCardView: View {
 
     private var itemColor: Color {
         switch item {
-        case .activity: return .orange
-        case .event: return .purple
-        case .deal: return .teal
+        case .activity: return .znTerracotta
+        case .event: return .znNavy
+        case .deal: return .znPositive
         }
     }
 
@@ -391,9 +332,7 @@ struct ExploreCardView: View {
     private var itemSubtitle: String? {
         switch item {
         case .activity(let a):
-            return a.indoor
-                ? (language == .en ? "Indoor" : "Indoor")
-                : (language == .en ? "Outdoor" : "Outdoor")
+            return a.indoor ? "Indoor" : "Outdoor"
         case .event(let e, _):
             return e.startDate == e.endDate ? e.startDate : "\(e.startDate) – \(e.endDate)"
         case .deal(let d, _):
@@ -403,8 +342,9 @@ struct ExploreCardView: View {
 }
 
 #Preview {
-    NavigationStack {
-        ExploreView()
+    @Previewable @State var path = NavigationPath()
+    NavigationStack(path: $path) {
+        ExploreView(path: $path)
     }
     .environment(AppState())
 }

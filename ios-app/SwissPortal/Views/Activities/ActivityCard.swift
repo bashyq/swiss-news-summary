@@ -1,11 +1,14 @@
 import SwiftUI
 import CoreLocation
 
-/// Card view for a single activity.
+/// Expanding activity card with accordion behavior.
 ///
-/// Displays the activity name, description, badges (indoor/outdoor, duration, price, age),
-/// a save/heart button, and optional distance from the user's location.
-/// Tapping the card opens the activity URL if available.
+/// **Collapsed**: Category eyebrow, Playfair title, 2-line description, tag pills,
+/// footer with distance + "Tap to expand" CTA, 3px left accent bar, background photo wash.
+///
+/// **Expanded**: Photo panel slides in from top, description un-clamps,
+/// detail panel slides in from bottom with 2×2 metadata grid, action buttons.
+/// Accent bar fades out when photo is visible.
 struct ActivityCard: View {
     @Environment(AppState.self) private var appState
     @Environment(ToastManager.self) private var toastManager
@@ -14,15 +17,55 @@ struct ActivityCard: View {
     let activity: Activity
     let language: AppLanguage
     let location: CLLocation?
+    @Binding var expandedID: String?
 
     @State private var showDeleteConfirmation = false
     @State private var showReminderSheet = false
 
+    private var isExpanded: Bool { expandedID == activity.id }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            cardContent
+            // Photo panel — slides in from top when expanded
+            photoPanel
+
+            // Always-visible core content
+            coreContent
+
+            // Detail panel — slides in from bottom when expanded
+            detailPanel
         }
-        .cardStyle(borderColor: Color.activityBorderColor(indoor: activity.indoor, isFree: activity.isFree))
+        .background {
+            // Background photo wash (collapsed only)
+            if !isExpanded {
+                venuePhotoBackground
+            }
+            Color.znSurface
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .overlay(alignment: .leading) {
+            // Left accent bar — fades out when expanded (photo visible)
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(accentBarColor)
+                .frame(width: AppSpacing.borderStripWidth)
+                .padding(.vertical, 18)
+                .opacity(isExpanded ? 0 : 1)
+        }
+        .shadow(
+            color: isExpanded ? Color.znNavy.opacity(0.18) : AppShadow.card.color,
+            radius: isExpanded ? 20 : AppShadow.card.radius,
+            x: 0,
+            y: isExpanded ? 6 : AppShadow.card.y
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if !isExpanded {
+                withAnimation(.easeInOut(duration: 0.4)) {
+                    expandedID = activity.id
+                }
+            }
+        }
+        .sensoryFeedback(.impact(flexibility: .soft), trigger: isExpanded)
         .confirmationDialog(
             appState.localized(en: "Delete Activity", de: "Aktivität löschen"),
             isPresented: $showDeleteConfirmation,
@@ -47,37 +90,405 @@ struct ActivityCard: View {
         }
     }
 
-    // MARK: - Card Content
+    // MARK: - Accent Bar Color
 
-    private var cardContent: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Header: name + category icon + heart button
-            headerRow
+    private var accentBarColor: Color {
+        Color.activityBorderColor(indoor: activity.indoor, isFree: activity.isFree)
+    }
 
-            // Description (2 lines max)
-            Text(activity.localizedDescription(language: language))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
+    // MARK: - Photo Panel (slides in from top)
 
-            // Badges row
-            badgesRow
+    @ViewBuilder
+    private var photoPanel: some View {
+        if isExpanded,
+           !activity.id.hasPrefix("custom-"),
+           activity.category.lowercased() != "stayhome",
+           let photoURL = APIClient.shared.photoURL(for: activity.id) {
+            ZStack(alignment: .topTrailing) {
+                ZStack(alignment: .bottomLeading) {
+                    // Photo image — tap anywhere on photo to collapse
+                    AsyncImage(url: photoURL) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(height: 200)
+                                .clipped()
+                        default:
+                            // Placeholder gradient while loading
+                            LinearGradient(
+                                colors: [accentBarColor.opacity(0.3), Color.znSurface],
+                                startPoint: .top, endPoint: .bottom
+                            )
+                            .frame(height: 200)
+                        }
+                    }
 
-            // Distance badge (if location available)
-            if distanceBadgeText != nil {
-                DistanceBadge(meters: distanceMeters ?? 0)
+                    // Gradient fade into card body
+                    LinearGradient(
+                        colors: [.clear, Color.znSurface],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                    .frame(height: 80)
+
+                    // Category badge on photo
+                    Text(categoryLabel.uppercased())
+                        .font(.system(size: 10, weight: .medium))
+                        .tracking(0.8)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.znNavy.opacity(0.82))
+                        .clipShape(Capsule())
+                        .padding(.leading, 14)
+                        .padding(.bottom, 62)
+                }
+
+                // Close button
+                Button {
+                    withAnimation(.easeInOut(duration: 0.35)) {
+                        expandedID = nil
+                    }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 28, height: 28)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .padding(10)
             }
-        }
-        .padding(14)
-        .background { venuePhotoBackground }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            openURL()
+            .contentShape(Rectangle())
+            .onTapGesture {
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    expandedID = nil
+                }
+            }
+            .transition(.opacity.combined(with: .move(edge: .top)))
         }
     }
 
-    // MARK: - Venue Photo Background
+    // MARK: - Core Content (always visible)
+
+    private var coreContent: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Top row: category + title + heart
+            HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: 3) {
+                    // Category eyebrow — hidden when expanded (shown on photo badge instead)
+                    if !isExpanded {
+                        Text(categoryLabel.uppercased())
+                            .font(.system(size: 10, weight: .medium))
+                            .tracking(0.9)
+                            .foregroundStyle(Color.znMuted)
+                    }
+
+                    // Title — grows slightly when expanded
+                    Text(activity.localizedName(language: language))
+                        .font(.custom("Playfair", size: isExpanded ? 18 : 16).weight(.semibold))
+                        .foregroundStyle(Color.znInk)
+                        .lineLimit(isExpanded ? nil : 2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+
+                // Action buttons row
+                HStack(spacing: 0) {
+                    // Delete button for custom activities
+                    if activity.id.hasPrefix("custom-") {
+                        Button {
+                            showDeleteConfirmation = true
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.caption)
+                                .foregroundStyle(.znNegative.opacity(0.7))
+                                .frame(width: 28, height: 28)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    // Bell button (reminder — only on saved activities)
+                    if isSaved {
+                        Button {
+                            if reminderManager.hasReminder(for: activity.id) {
+                                reminderManager.removeReminder(for: activity.id)
+                                toastManager.show(
+                                    appState.localized(en: "Reminder removed", de: "Erinnerung entfernt"),
+                                    type: .success
+                                )
+                            } else {
+                                showReminderSheet = true
+                            }
+                        } label: {
+                            Image(systemName: reminderManager.hasReminder(for: activity.id) ? "bell.fill" : "bell")
+                                .font(.caption)
+                                .foregroundStyle(reminderManager.hasReminder(for: activity.id) ? .znTerracotta : .secondary)
+                                .frame(width: 28, height: 28)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    // Heart button
+                    Button {
+                        appState.toggleSavedActivity(activity.id)
+                        let wasSaved = appState.savedActivityIDs.contains(activity.id)
+                        toastManager.show(
+                            appState.localized(en: wasSaved ? "Saved" : "Removed", de: wasSaved ? "Gespeichert" : "Entfernt"),
+                            type: .success
+                        )
+                    } label: {
+                        Image(systemName: isSaved ? "heart.fill" : "heart")
+                            .font(.callout)
+                            .foregroundStyle(isSaved ? .znNegative : Color.znBorder)
+                            .frame(width: 28, height: 28)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .sensoryFeedback(.impact(flexibility: .soft), trigger: isSaved)
+                }
+            }
+            .padding(.bottom, 5)
+
+            // Description — 2-line clamp when collapsed, full when expanded
+            Text(activity.localizedDescription(language: language))
+                .font(.system(size: 12.5, weight: .light))
+                .foregroundStyle(Color.znBody)
+                .lineSpacing(3)
+                .lineLimit(isExpanded ? nil : 2)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.bottom, 10)
+
+            // Tag pills
+            tagsRow
+                .padding(.bottom, 10)
+
+            // Footer divider + distance/CTA
+            footerRow
+        }
+        .padding(.top, 15)
+        .padding(.horizontal, isExpanded ? 18 : 22)
+        .padding(.leading, isExpanded ? 0 : 0) // accent bar space handled by overlay
+        .padding(.bottom, 13)
+    }
+
+    // MARK: - Tags Row
+
+    private var tagsRow: some View {
+        FlowLayout(spacing: 5) {
+            // NEW badge
+            if activity.isNew {
+                tagPill(
+                    text: appState.localized(en: "NEW", de: "NEU"),
+                    icon: "sparkle",
+                    bg: Color.znPositive.opacity(0.1),
+                    fg: Color.znPositive
+                )
+            }
+
+            // Indoor/Outdoor tag
+            if activity.indoor {
+                tagPill(
+                    text: appState.localized(en: "Indoor", de: "Indoor"),
+                    icon: "house.fill",
+                    bg: Color.znNavy.opacity(0.1),
+                    fg: Color.znNavy
+                )
+            } else {
+                tagPill(
+                    text: appState.localized(en: "Outdoor", de: "Outdoor"),
+                    icon: "sun.max.fill",
+                    bg: Color.znTerracotta.opacity(0.1),
+                    fg: Color.znTerracotta
+                )
+            }
+
+            // Free tag
+            if activity.isFree {
+                tagPill(
+                    text: appState.localized(en: "Free", de: "Gratis"),
+                    icon: "gift",
+                    bg: Color.znPositive.opacity(0.1),
+                    fg: Color.znPositive
+                )
+            }
+
+            // Duration tag
+            tagPill(text: activity.duration, icon: "clock", bg: Color.znNeutralTagBg, fg: Color.znNeutralTagText)
+
+            // Opening hours tag
+            if let hours = activity.localizedOpeningHours(language: appState.language) {
+                tagPill(text: hours, icon: "door.left.hand.open", bg: Color.znNeutralTagBg, fg: Color.znNeutralTagText)
+            }
+
+            // Price tag
+            if let price = activity.localizedPrice(language: language), !activity.isFree {
+                tagPill(text: price, icon: nil, bg: Color.znNeutralTagBg, fg: Color.znNeutralTagText)
+            }
+
+            // Age range tag
+            tagPill(text: activity.ageRange, icon: nil, bg: Color.znNeutralTagBg, fg: Color.znNeutralTagText)
+
+            // Seasonal tag
+            if let season = activity.season {
+                tagPill(
+                    text: season.capitalized,
+                    icon: seasonIcon(for: season),
+                    bg: Color.znNeutralTagBg,
+                    fg: Color.znNeutralTagText
+                )
+            }
+        }
+    }
+
+    private func tagPill(text: String, icon: String? = nil, bg: Color, fg: Color) -> some View {
+        HStack(spacing: 4) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.system(size: 9))
+            }
+            Text(text)
+                .font(.system(size: 11, weight: .medium))
+        }
+        .foregroundStyle(fg)
+        .padding(.horizontal, 10)
+        .frame(height: 24)
+        .background(bg)
+        .clipShape(Capsule())
+    }
+
+    // MARK: - Footer Row
+
+    private var footerRow: some View {
+        VStack(spacing: 0) {
+            Divider()
+                .overlay(Color.znInnerDivider)
+                .padding(.bottom, 10)
+
+            HStack {
+                // Distance
+                if let meters = distanceMeters {
+                    HStack(spacing: 4) {
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 10))
+                        Text(CLLocation.formattedDistance(meters))
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .foregroundStyle(Color.znNavy)
+                }
+
+                Spacer()
+
+                // CTA hint
+                if !isExpanded {
+                    HStack(spacing: 3) {
+                        Text(appState.localized(en: "Tap to expand", de: "Antippen"))
+                            .font(.system(size: 12, weight: .medium))
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 10))
+                    }
+                    .foregroundStyle(Color.znNavy)
+                }
+            }
+        }
+    }
+
+    // MARK: - Detail Panel (slides in from bottom)
+
+    @ViewBuilder
+    private var detailPanel: some View {
+        if isExpanded {
+            VStack(alignment: .leading, spacing: 0) {
+                // 2×2 metadata grid
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                    detailCell(
+                        label: appState.localized(en: "Distance", de: "Entfernung"),
+                        value: distanceMeters.map { CLLocation.formattedDistance($0) + " " + appState.localized(en: "away", de: "entfernt") }
+                            ?? appState.localized(en: "Unknown", de: "Unbekannt")
+                    )
+                    detailCell(
+                        label: appState.localized(en: "Duration", de: "Dauer"),
+                        value: activity.duration
+                    )
+                    detailCell(
+                        label: appState.localized(en: "Price", de: "Preis"),
+                        value: activity.localizedPrice(language: language)
+                            ?? appState.localized(en: "Not specified", de: "Nicht angegeben")
+                    )
+                    detailCell(
+                        label: appState.localized(en: "Ages", de: "Alter"),
+                        value: activity.ageRange
+                    )
+                }
+                .padding(.bottom, 12)
+
+                // Action buttons
+                HStack(spacing: 8) {
+                    // "Get directions" button
+                    if let coordinate = activity.coordinate {
+                        Button {
+                            openDirections(coordinate: coordinate, name: activity.name)
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "mappin.and.ellipse")
+                                    .font(.system(size: 13))
+                                Text(appState.localized(en: "Get directions", de: "Route"))
+                                    .font(.system(size: 13, weight: .medium))
+                            }
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 42)
+                            .background(Color.znTerracotta)
+                            .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    // Website button
+                    if activity.url != nil {
+                        Button {
+                            openURL()
+                        } label: {
+                            Image(systemName: "safari")
+                                .font(.system(size: 15))
+                                .foregroundStyle(Color.znBody)
+                                .frame(width: 42, height: 42)
+                                .background(Color.znBorder)
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .padding(.horizontal, 18)
+            .padding(.bottom, 18)
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
+        }
+    }
+
+    private func detailCell(label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label.uppercased())
+                .font(.system(size: 9, weight: .medium))
+                .tracking(1)
+                .foregroundStyle(Color.znMuted)
+            Text(value)
+                .font(.system(size: 13))
+                .foregroundStyle(Color.znInk)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(Color.znCream)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    // MARK: - Background Photo Wash (collapsed state)
 
     @ViewBuilder
     private var venuePhotoBackground: some View {
@@ -89,158 +500,7 @@ struct ActivityCard: View {
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .opacity(0.08)
-                }
-            }
-        }
-    }
-
-    // MARK: - Header Row
-
-    private var headerRow: some View {
-        HStack(alignment: .top, spacing: 8) {
-            // Category icon
-            Image(systemName: categoryIcon)
-                .font(.caption)
-                .foregroundStyle(.brand)
-                .frame(width: 20, height: 20)
-
-            // Activity name
-            Text(activity.localizedName(language: language))
-                .font(.system(.subheadline, design: .serif))
-                .fontWeight(.semibold)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Spacer()
-
-            // Delete button for custom activities
-            if activity.id.hasPrefix("custom-") {
-                Button {
-                    showDeleteConfirmation = true
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.body)
-                        .foregroundStyle(.red.opacity(0.7))
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(appState.localized(en: "Delete activity", de: "Aktivität löschen"))
-            }
-
-            // Bell button (reminder — only on saved activities)
-            if isSaved {
-                Button {
-                    if reminderManager.hasReminder(for: activity.id) {
-                        reminderManager.removeReminder(for: activity.id)
-                        toastManager.show(
-                            appState.localized(en: "Reminder removed", de: "Erinnerung entfernt"),
-                            type: .success
-                        )
-                    } else {
-                        showReminderSheet = true
-                    }
-                } label: {
-                    Image(systemName: reminderManager.hasReminder(for: activity.id) ? "bell.fill" : "bell")
-                        .font(.body)
-                        .foregroundStyle(reminderManager.hasReminder(for: activity.id) ? .orange : .secondary)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-
-            // Heart button
-            Button {
-                appState.toggleSavedActivity(activity.id)
-                let wasSaved = appState.savedActivityIDs.contains(activity.id)
-                toastManager.show(
-                    appState.localized(en: wasSaved ? "Saved" : "Removed", de: wasSaved ? "Gespeichert" : "Entfernt"),
-                    type: .success
-                )
-            } label: {
-                Image(systemName: isSaved ? "heart.fill" : "heart")
-                    .font(.body)
-                    .foregroundStyle(isSaved ? .red : .secondary)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .sensoryFeedback(.impact(flexibility: .soft), trigger: isSaved)
-            .accessibilityLabel(appState.localized(
-                en: isSaved ? "Remove from saved" : "Save activity",
-                de: isSaved ? "Aus Gespeicherten entfernen" : "Aktivität speichern"
-            ))
-
-            // External link indicator
-            if activity.url != nil {
-                Image(systemName: "arrow.up.right.square")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-        }
-    }
-
-    // MARK: - Badges Row
-
-    private var badgesRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                // Featured badge
-                if activity.isFeatured {
-                    FeaturedBadge()
-                }
-
-                // NEW badge
-                if activity.isNew {
-                    NewBadge()
-                }
-
-                // Indoor/Outdoor badge
-                BadgeView(
-                    text: activity.indoor
-                        ? appState.localized(en: "Indoor", de: "Indoor")
-                        : appState.localized(en: "Outdoor", de: "Outdoor"),
-                    icon: activity.indoor ? "house.fill" : "sun.max.fill",
-                    color: activity.indoor ? .blue : .orange
-                )
-
-                // Duration badge
-                BadgeView(
-                    text: activity.duration,
-                    icon: "clock",
-                    color: .gray
-                )
-
-                // Price badge
-                if let price = activity.localizedPrice(language: language) {
-                    BadgeView(
-                        text: price,
-                        icon: "banknote",
-                        color: .gray
-                    )
-                }
-
-                // Free badge
-                if activity.isFree {
-                    FreeBadge()
-                }
-
-                // Age range badge
-                BadgeView(
-                    text: activity.ageRange,
-                    icon: "figure.and.child.holdinghands",
-                    color: .brand
-                )
-
-                // Seasonal badge
-                if let season = activity.season {
-                    BadgeView(
-                        text: season.capitalized,
-                        icon: seasonIcon(for: season),
-                        color: .teal
-                    )
+                        .overlay(Color.znSurface.opacity(0.83))
                 }
             }
         }
@@ -250,6 +510,14 @@ struct ActivityCard: View {
 
     private var isSaved: Bool {
         appState.savedActivityIDs.contains(activity.id)
+    }
+
+    private var categoryLabel: String {
+        let type = activity.indoor
+            ? appState.localized(en: "Indoor", de: "Indoor")
+            : appState.localized(en: "Outdoor", de: "Outdoor")
+        let cat = activity.category.capitalized
+        return "\(cat) · \(type)"
     }
 
     private var categoryIcon: String {
@@ -294,16 +562,83 @@ struct ActivityCard: View {
               let url = URL(string: urlString) else { return }
         UIApplication.shared.open(url)
     }
+
+    private func openDirections(coordinate: CLLocationCoordinate2D, name: String? = nil) {
+        var urlString = "maps://?daddr=\(coordinate.latitude),\(coordinate.longitude)&dirflg=w"
+        if let name, let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+            urlString += "&dname=\(encoded)"
+        }
+        let url = URL(string: urlString)!
+        UIApplication.shared.open(url)
+    }
+}
+
+// MARK: - Flow Layout (wrapping tag pills)
+
+/// Simple horizontal flow layout that wraps items to the next line.
+struct FlowLayout: Layout {
+    var spacing: CGFloat = 5
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let result = layout(proposal: proposal, subviews: subviews)
+        return result.size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let result = layout(proposal: ProposedViewSize(width: bounds.width, height: nil), subviews: subviews)
+        for (index, position) in result.positions.enumerated() {
+            subviews[index].place(
+                at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y),
+                proposal: .unspecified
+            )
+        }
+    }
+
+    private func layout(proposal: ProposedViewSize, subviews: Subviews) -> (size: CGSize, positions: [CGPoint]) {
+        let maxWidth = proposal.width ?? .infinity
+        var positions: [CGPoint] = []
+        var x: CGFloat = 0
+        var y: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        var totalHeight: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x + size.width > maxWidth, x > 0 {
+                x = 0
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            positions.append(CGPoint(x: x, y: y))
+            rowHeight = max(rowHeight, size.height)
+            x += size.width + spacing
+            totalHeight = y + rowHeight
+        }
+
+        return (CGSize(width: maxWidth, height: totalHeight), positions)
+    }
 }
 
 #Preview {
-    ActivityCard(
-        activity: PreviewData.activity,
-        language: .en,
-        location: nil
-    )
-    .padding()
-    .environment(AppState())
-    .environment(ToastManager())
-    .environment(ReminderManager())
+    struct PreviewWrapper: View {
+        @State private var expanded: String? = nil
+        var body: some View {
+            ScrollView {
+                VStack(spacing: 10) {
+                    ActivityCard(
+                        activity: PreviewData.activity,
+                        language: .en,
+                        location: nil,
+                        expandedID: $expanded
+                    )
+                }
+                .padding()
+            }
+            .background(Color.znCream)
+            .environment(AppState())
+            .environment(ToastManager())
+            .environment(ReminderManager())
+        }
+    }
+    return PreviewWrapper()
 }

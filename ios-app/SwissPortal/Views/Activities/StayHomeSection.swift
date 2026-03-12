@@ -2,50 +2,119 @@ import SwiftUI
 
 /// Grouped grid/list of stay-home activities organized by subcategory.
 ///
-/// Groups activities by subcategory (sensory, art, active, pretend, kitchen)
-/// and displays each as a simple card with name, description, and materials list.
+/// Each subcategory (sensory, art, active, pretend, kitchen) is an accordion card.
+/// Collapsed: icon, category name, activity count, chevron.
+/// Expanded: 2-column grid of activity tiles inside the card.
+/// One category open at a time.
 struct StayHomeSection: View {
     let activities: [Activity]
     let language: AppLanguage
+
+    @State private var expandedCategory: String?
 
     var body: some View {
         if activities.isEmpty {
             emptyState
         } else {
-            LazyVStack(spacing: 20) {
+            LazyVStack(spacing: 10) {
                 ForEach(groupedActivities, id: \.category) { group in
-                    VStack(alignment: .leading, spacing: 12) {
-                        // Subcategory header
-                        subcategoryHeader(group.category, icon: group.icon)
-
-                        // Activity cards in a 2-column grid
-                        LazyVGrid(
-                            columns: [
-                                GridItem(.flexible(), spacing: 12),
-                                GridItem(.flexible(), spacing: 12)
-                            ],
-                            spacing: 12
-                        ) {
-                            ForEach(group.activities) { activity in
-                                StayHomeCard(activity: activity, language: language)
-                            }
-                        }
-                    }
+                    categoryCard(group)
                 }
             }
         }
     }
 
-    // MARK: - Subcategory Header
+    // MARK: - Category Card (accordion)
 
-    private func subcategoryHeader(_ category: String, icon: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.subheadline)
-                .foregroundStyle(.brand)
-            Text(localizedCategoryName(category))
-                .font(.subheadline)
-                .fontWeight(.semibold)
+    private func categoryCard(_ group: ActivityGroup) -> some View {
+        let isExpanded = expandedCategory == group.category
+
+        return VStack(spacing: 0) {
+            // Collapsed face — always visible
+            HStack(spacing: 10) {
+                // Icon circle
+                Image(systemName: group.icon)
+                    .font(.system(size: 14))
+                    .foregroundStyle(.white)
+                    .frame(width: 34, height: 34)
+                    .background(categoryColor(group.category))
+                    .clipShape(Circle())
+
+                // Name + count
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(localizedCategoryName(group.category))
+                        .font(.custom("Playfair", size: 16).weight(.semibold))
+                        .foregroundStyle(.znInk)
+
+                    Text(language == .en
+                         ? "\(group.activities.count) \(group.activities.count == 1 ? "activity" : "activities")"
+                         : "\(group.activities.count) \(group.activities.count == 1 ? "Aktivität" : "Aktivitäten")")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.znMuted)
+                }
+
+                Spacer()
+
+                // Chevron
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.znTerracotta)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    expandedCategory = isExpanded ? nil : group.category
+                }
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            }
+
+            // Expand panel — activity grid
+            if isExpanded {
+                Divider()
+                    .padding(.horizontal, 16)
+
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), spacing: 10),
+                        GridItem(.flexible(), spacing: 10)
+                    ],
+                    spacing: 10
+                ) {
+                    ForEach(group.activities) { activity in
+                        StayHomeCard(activity: activity, language: language)
+                    }
+                }
+                .padding(14)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .background(Color.znSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(Color.znBorder, lineWidth: 1)
+        )
+        .shadow(
+            color: isExpanded ? Color.znNavy.opacity(0.12) : AppShadow.card.color,
+            radius: isExpanded ? 12 : AppShadow.card.radius,
+            x: 0,
+            y: isExpanded ? 6 : AppShadow.card.y
+        )
+    }
+
+    // MARK: - Category Color
+
+    private func categoryColor(_ category: String) -> Color {
+        switch category {
+        case "sensory": return .znTerracotta
+        case "art": return .znNavy
+        case "active": return .znPositive
+        case "pretend": return Color(red: 0.6, green: 0.4, blue: 0.7)
+        case "kitchen": return Color(red: 0.8, green: 0.55, blue: 0.2)
+        default: return .znMuted
         }
     }
 
@@ -147,7 +216,7 @@ private struct ActivityGroup: Identifiable {
 
 // MARK: - Stay Home Card
 
-/// A compact card for a single stay-home activity.
+/// A compact tile for a single stay-home activity inside an accordion card.
 ///
 /// Shows the activity name, a brief description, and a materials list if available.
 struct StayHomeCard: View {
@@ -155,103 +224,57 @@ struct StayHomeCard: View {
     let language: AppLanguage
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 5) {
             // Activity name
             Text(activity.localizedName(language: language))
-                .font(.caption)
-                .fontWeight(.semibold)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.znInk)
                 .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
 
             // Description
             Text(activity.localizedDescription(language: language))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 11))
+                .foregroundStyle(.znBody)
                 .lineLimit(3)
-                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 0)
 
             // Materials
             if let materials = activity.localizedMaterials(language: language), !materials.isEmpty {
                 Divider()
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(language == .en ? "Materials:" : "Material:")
-                        .font(.caption2)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.brand)
-
+                    .padding(.vertical, 2)
+                HStack(spacing: 4) {
+                    Image(systemName: "list.bullet")
+                        .font(.system(size: 8))
+                        .foregroundStyle(.znTerracotta)
                     Text(materials)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(3)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.znMuted)
+                        .lineLimit(2)
                 }
             }
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
-        .shadow(color: AppShadow.subtle.color, radius: AppShadow.subtle.radius, x: AppShadow.subtle.x, y: AppShadow.subtle.y)
+        .padding(11)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Color.znCream)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
+}
+
+private func _stayHomeSample(_ id: String, _ name: String, _ desc: String, _ sub: String, _ mats: String?) -> Activity {
+    Activity(id: id, name: name, nameDE: name, description: desc, descriptionDE: desc, indoor: true, ageRange: "2-5 years", duration: "30 min", price: "Free", priceDE: "Gratis", url: nil, lat: nil, lon: nil, category: "creative", minAge: 2, maxAge: 5, season: nil, free: true, recurring: nil, stayHome: true, availableMonths: nil, subcategory: sub, materials: mats, materialsDE: mats, addedDate: nil)
 }
 
 #Preview {
     let sampleActivities = [
-        Activity(
-            id: "sensory-1",
-            name: "Play Dough Fun",
-            nameDE: "Knete-Spass",
-            description: "Make shapes and creatures with colorful play dough.",
-            descriptionDE: "Formen und Kreaturen aus bunter Knete herstellen.",
-            indoor: true,
-            ageRange: "2-5 years",
-            duration: "30-60 min",
-            price: "Free",
-            priceDE: "Gratis",
-            url: nil,
-            lat: nil,
-            lon: nil,
-            category: "creative",
-            minAge: 2,
-            maxAge: 5,
-            season: nil,
-            free: true,
-            recurring: nil,
-            stayHome: true,
-            availableMonths: nil,
-            subcategory: "sensory",
-            materials: "Play dough, Cookie cutters, Rolling pin",
-            materialsDE: "Knete, Ausstechformen, Nudelholz",
-            featured: nil,
-            addedDate: nil
-        ),
-        Activity(
-            id: "art-1",
-            name: "Finger Painting",
-            nameDE: "Fingermalerei",
-            description: "Express creativity with washable finger paints on large paper.",
-            descriptionDE: "Kreativitat mit abwaschbaren Fingerfarben auf grossem Papier.",
-            indoor: true,
-            ageRange: "2-5 years",
-            duration: "30-45 min",
-            price: "Free",
-            priceDE: "Gratis",
-            url: nil,
-            lat: nil,
-            lon: nil,
-            category: "creative",
-            minAge: 2,
-            maxAge: 5,
-            season: nil,
-            free: true,
-            recurring: nil,
-            stayHome: true,
-            availableMonths: nil,
-            subcategory: "art",
-            materials: "Finger paints, Large paper, Old clothes",
-            materialsDE: "Fingerfarben, Grosses Papier, Alte Kleidung",
-            featured: nil,
-            addedDate: nil
-        )
+        _stayHomeSample("s1", "Play Dough Fun", "Make shapes and creatures with colorful play dough.", "sensory", "Play dough, Cookie cutters"),
+        _stayHomeSample("s2", "Water Play", "Pouring, splashing and measuring with cups and funnels.", "sensory", "Cups, Funnels, Water"),
+        _stayHomeSample("a1", "Finger Painting", "Express creativity with washable finger paints.", "art", "Finger paints, Paper"),
+        _stayHomeSample("a2", "Paper Collage", "Cut and glue colorful paper into pictures.", "art", "Scissors, Glue, Paper"),
+        _stayHomeSample("ac1", "Obstacle Course", "Build a course with pillows, chairs and blankets.", "active", nil),
+        _stayHomeSample("ac2", "Dance Party", "Put on music and dance together!", "active", nil),
+        _stayHomeSample("p1", "Tea Party", "Set up a pretend tea party with stuffed animals.", "pretend", "Tea set, Stuffed animals"),
+        _stayHomeSample("k1", "Cookie Decorating", "Decorate pre-made cookies with icing and sprinkles.", "kitchen", "Cookies, Icing, Sprinkles"),
     ]
 
     ScrollView {

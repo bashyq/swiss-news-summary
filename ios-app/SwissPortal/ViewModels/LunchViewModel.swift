@@ -36,6 +36,9 @@ final class LunchViewModel {
     /// Whether the user has tapped "Show all" to bypass the display limit
     var showingAll: Bool = false
 
+    /// Current sort order (smart default: nearest when Near Me active, topRated otherwise)
+    var sortOrder: LunchSort = .topRated
+
     // MARK: - Filtering
 
     /// Returns lunch spots filtered by all active toggles and cuisine filter.

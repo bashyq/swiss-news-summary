@@ -24,23 +24,23 @@ struct SunshineCard: View {
             collapsedContent
             if isExpanded {
                 Divider()
-                    .padding(.horizontal, 14)
+                    .padding(.horizontal, AppSpacing.cardPadding)
                 expandedContent
             }
         }
         .background(cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: AppSpacing.cardRadius)
                 .stroke(isBaseline ? Color.brand.opacity(0.5) : .clear, lineWidth: isBaseline ? 2 : 0)
         )
         .overlay(alignment: .leading) {
             RoundedRectangle(cornerRadius: 2)
                 .fill(isBaseline ? Color.brand : Color.sunshineColor(hours: destination.sunshineHoursTotal))
-                .frame(width: 4)
+                .frame(width: AppSpacing.borderStripWidth)
                 .padding(.vertical, 6)
         }
-        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+        .shadow(color: AppShadow.card.color, radius: AppShadow.card.radius, x: AppShadow.card.x, y: AppShadow.card.y)
         .sensoryFeedback(.selection, trigger: isExpanded)
         .contentShape(Rectangle())
         .onTapGesture { onTap() }
@@ -54,7 +54,7 @@ struct SunshineCard: View {
             LinearGradient(colors: [Color.brand.opacity(0.08), Color.brand.opacity(0.03)],
                            startPoint: .top, endPoint: .bottom)
         } else {
-            Color(.secondarySystemGroupedBackground)
+            Color.znSurface
         }
     }
 
@@ -75,8 +75,7 @@ struct SunshineCard: View {
                             .foregroundStyle(.brand)
                     }
                     Text(destination.localizedName(language: language))
-                        .font(.system(.subheadline, design: .serif))
-                        .fontWeight(.semibold)
+                        .font(.cardTitle)
                         .lineLimit(1)
                 }
                 Text(destination.localizedRegion(language: language))
@@ -103,7 +102,7 @@ struct SunshineCard: View {
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
-        .padding(14)
+        .padding(AppSpacing.cardPadding)
     }
 
     // MARK: - Sunshine Hours Label
@@ -133,7 +132,7 @@ struct SunshineCard: View {
             } else {
                 Image(systemName: "sun.max.fill")
                     .font(.title2)
-                    .foregroundStyle(.gray)
+                    .foregroundStyle(.znMuted)
             }
         }
     }
@@ -154,7 +153,7 @@ struct SunshineCard: View {
             // Destination highlights + action buttons
             SunshineHighlightsSection(destination: destination, language: language)
         }
-        .padding(14)
+        .padding(AppSpacing.cardPadding)
         .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
@@ -176,7 +175,7 @@ struct SunshineCard: View {
                     EmptyView()
                 default:
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(.systemGray5))
+                        .fill(Color.znBorder)
                         .frame(maxWidth: .infinity)
                         .frame(height: 140)
                         .overlay { ProgressView() }
@@ -189,7 +188,7 @@ struct SunshineCard: View {
 
     private var dailyForecastSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(language == .de ? "Wochenendprognose" : "Weekend Forecast")
+            Text(language == .de ? "Prognose" : "Forecast")
                 .font(.caption)
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
@@ -228,7 +227,7 @@ struct SunshineCard: View {
 
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(Color(.systemGray5))
+                        .fill(Color.znBorder)
                         .frame(height: 6)
 
                     RoundedRectangle(cornerRadius: 3)

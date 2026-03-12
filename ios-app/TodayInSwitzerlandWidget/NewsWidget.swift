@@ -48,7 +48,7 @@ struct NewsWidgetMediumView: View {
             HStack(spacing: 6) {
                 Image(systemName: "newspaper.fill")
                     .font(.caption)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(Color("znNavy"))
                 Text(entry.cityName)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
@@ -93,10 +93,10 @@ struct NewsWidgetMediumView: View {
 
     private func dotColor(_ index: Int) -> Color {
         switch index {
-        case 0: return .red
-        case 1: return .blue
-        case 2: return .orange
-        default: return .gray
+        case 0: return Color("znNavy")
+        case 1: return Color("znTerracotta")
+        case 2: return Color("znPositive")
+        default: return Color("znMuted")
         }
     }
 }
@@ -112,7 +112,7 @@ struct NewsWidgetLargeView: View {
             HStack(spacing: 6) {
                 Image(systemName: "newspaper.fill")
                     .font(.subheadline)
-                    .foregroundStyle(.red)
+                    .foregroundStyle(Color("znNavy"))
                 Text(localized(en: "Headlines", de: "Schlagzeilen"))
                     .font(.subheadline.weight(.semibold))
                 Spacer()
@@ -176,12 +176,12 @@ struct NewsWidgetLargeView: View {
 
     private func rankColor(_ index: Int) -> Color {
         switch index {
-        case 0: return .red
-        case 1: return .blue
-        case 2: return .orange
-        case 3: return .purple
-        case 4: return .teal
-        default: return .gray
+        case 0: return Color("znNavy")
+        case 1: return Color("znTerracotta")
+        case 2: return Color("znPositive")
+        case 3: return Color("znNavy").opacity(0.7)
+        case 4: return Color("znTerracotta").opacity(0.7)
+        default: return Color("znMuted")
         }
     }
 }

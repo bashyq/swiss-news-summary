@@ -138,21 +138,30 @@ enum SunshineFilter: String, CaseIterable {
     }
 }
 
-enum SunshineSort: String, CaseIterable {
+enum SunshineSort: String, CaseIterable, Identifiable {
     case sunshine
     case distance
 
+    var id: String { rawValue }
+
     var displayName: String {
         switch self {
-        case .sunshine: return "By sunshine"
-        case .distance: return "By distance"
+        case .sunshine: return "Most sun"
+        case .distance: return "Nearest first"
         }
     }
 
     var displayNameDE: String {
         switch self {
-        case .sunshine: return "Nach Sonnenschein"
-        case .distance: return "Nach Entfernung"
+        case .sunshine: return "Meiste Sonne"
+        case .distance: return "Nächstgelegene"
+        }
+    }
+
+    var sfSymbol: String {
+        switch self {
+        case .sunshine: return "sun.max.fill"
+        case .distance: return "location.fill"
         }
     }
 }

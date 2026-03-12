@@ -13,10 +13,10 @@ struct WeekendDayCard: View {
         VStack(alignment: .leading, spacing: 0) {
             // Day header with weather
             dayHeader
-                .padding(14)
+                .padding(AppSpacing.cardPadding)
 
             Divider()
-                .padding(.horizontal, 14)
+                .padding(.horizontal, AppSpacing.cardPadding)
 
             // Activities
             VStack(alignment: .leading, spacing: 0) {
@@ -31,7 +31,7 @@ struct WeekendDayCard: View {
 
                 if day.plan.morning != nil && day.plan.afternoon != nil {
                     Divider()
-                        .padding(.horizontal, 14)
+                        .padding(.horizontal, AppSpacing.cardPadding)
                 }
 
                 // Afternoon activity
@@ -46,13 +46,13 @@ struct WeekendDayCard: View {
                 // No activities fallback
                 if day.plan.morning == nil && day.plan.afternoon == nil {
                     noActivitiesView
-                        .padding(14)
+                        .padding(AppSpacing.cardPadding)
                 }
             }
         }
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
+        .background(Color.znSurface)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
+        .shadow(color: AppShadow.subtle.color, radius: AppShadow.subtle.radius, x: AppShadow.subtle.x, y: AppShadow.subtle.y)
     }
 
     // MARK: - Day Header
@@ -133,7 +133,7 @@ struct WeekendDayCard: View {
             HStack(spacing: 6) {
                 Image(systemName: timeIcon)
                     .font(.caption)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(.znTerracotta)
                 Text(timeLabel)
                     .font(.caption)
                     .fontWeight(.semibold)
@@ -161,7 +161,7 @@ struct WeekendDayCard: View {
                         ? (language == .en ? "Indoor" : "Indoor")
                         : (language == .en ? "Outdoor" : "Outdoor"),
                     icon: activity.indoor ? "house.fill" : "sun.max.fill",
-                    color: activity.indoor ? .blue : .orange
+                    color: activity.indoor ? .znNavy : .znTerracotta
                 )
 
                 // Duration badge
@@ -169,7 +169,7 @@ struct WeekendDayCard: View {
                     BadgeView(
                         text: duration,
                         icon: "clock",
-                        color: .gray
+                        color: .znMuted
                     )
                 }
 
@@ -178,12 +178,12 @@ struct WeekendDayCard: View {
                     BadgeView(
                         text: price,
                         icon: "banknote",
-                        color: .gray
+                        color: .znMuted
                     )
                 }
             }
         }
-        .padding(14)
+        .padding(AppSpacing.cardPadding)
     }
 
     // MARK: - No Activities View
@@ -203,16 +203,16 @@ struct WeekendDayCard: View {
 
     private var weatherIconColor: Color {
         switch day.weather?.weatherCode ?? 3 {
-        case 0: return .orange
-        case 1, 2: return .yellow
-        case 3: return .gray
-        case 45, 48: return .gray
-        case 51...67: return .blue
-        case 71...77: return .cyan
-        case 80...82: return .blue
-        case 85, 86: return .cyan
-        case 95...99: return .indigo
-        default: return .gray
+        case 0: return .znTerracotta
+        case 1, 2: return .znTerracotta.opacity(0.7)
+        case 3: return .znMuted
+        case 45, 48: return .znMuted
+        case 51...67: return .znNavy
+        case 71...77: return .znNavy.opacity(0.7)
+        case 80...82: return .znNavy
+        case 85, 86: return .znNavy.opacity(0.7)
+        case 95...99: return .znNavy.opacity(0.85)
+        default: return .znMuted
         }
     }
 }

@@ -11,6 +11,7 @@ struct SunshineView: View {
 
     @State private var viewModel = SunshineViewModel()
     @State private var scrollToID: String?
+    @State private var showSortSheet = false
 
     var body: some View {
         content
@@ -29,6 +30,13 @@ struct SunshineView: View {
                 if newSort == .distance && !locationManager.isAuthorized {
                     locationManager.requestLocation()
                 }
+            }
+            .sheet(isPresented: $showSortSheet) {
+                SunshineSortSheet(
+                    selectedSort: $viewModel.sort,
+                    language: appState.language
+                )
+                .presentationDetents([.height(200)])
             }
     }
 
@@ -58,11 +66,6 @@ struct SunshineView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    // 0. Hero banner with title
-                    HeroBanner(style: .sunshine, title: appState.localized(en: "Weekend Sunshine", de: "Wochenend-Sonne"))
-                        .padding(.horizontal)
-                        .padding(.top, 8)
-
                     // 1. Sunny escape banner
                     if let escape = viewModel.nearestSunnyEscape(userLocation: locationManager.location) {
                         SunnyEscapeBanner(
@@ -123,6 +126,13 @@ struct SunshineView: View {
                             withAnimation(AppAnimation.expandEase) {
                                 viewModel.toggleExpanded(destination.id)
                             }
+                            if viewModel.expandedDestinationID == destination.id {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                    withAnimation {
+                                        proxy.scrollTo(destination.id, anchor: .top)
+                                    }
+                                }
+                            }
                         }
                         .id(destination.id)
                         .padding(.horizontal)
@@ -176,24 +186,23 @@ struct SunshineView: View {
                 }
             )
 
-            SortPicker(
-                options: [
-                    (
-                        value: SunshineSort.sunshine,
-                        label: appState.language == .de ? "Sonne" : "Sun",
-                        icon: "sun.max.fill"
-                    ),
-                    (
-                        value: SunshineSort.distance,
-                        label: appState.language == .de ? "Nähe" : "Near",
-                        icon: "location.fill"
-                    )
-                ],
-                selected: Binding(
-                    get: { viewModel.sort },
-                    set: { viewModel.sort = $0 }
-                )
-            )
+            Button {
+                showSortSheet = true
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: viewModel.sort.sfSymbol)
+                        .font(.system(size: 10))
+                    Text(appState.language == .en
+                         ? viewModel.sort.displayName
+                         : viewModel.sort.displayNameDE)
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundStyle(.znNavy)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.znNavy.opacity(0.08))
+                .clipShape(Capsule())
+            }
             .padding(.trailing)
         }
     }
@@ -218,6 +227,74 @@ struct SunshineView: View {
         }
 
         return (baseline != nil ? 1 : 0) + rest.count
+    }
+}
+
+// MARK: - Sunshine Sort Sheet
+
+struct SunshineSortSheet: View {
+    @Binding var selectedSort: SunshineSort
+    let language: AppLanguage
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack {
+                Text(language == .en ? "Sort by" : "Sortieren nach")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.znInk)
+                Spacer()
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.znMuted)
+                        .frame(width: 30, height: 30)
+                        .background(Color.znBorder.opacity(0.4))
+                        .clipShape(Circle())
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
+
+            // Sort options
+            ForEach(SunshineSort.allCases) { sort in
+                Button {
+                    selectedSort = sort
+                    dismiss()
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: sort.sfSymbol)
+                            .font(.system(size: 14))
+                            .foregroundStyle(selectedSort == sort ? .znNavy : .znMuted)
+                            .frame(width: 20)
+
+                        Text(language == .en ? sort.displayName : sort.displayNameDE)
+                            .font(.system(size: 15))
+                            .foregroundStyle(selectedSort == sort ? .znInk : .znBody)
+
+                        Spacer()
+
+                        if selectedSort == sort {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.znNavy)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 14)
+                    .background(selectedSort == sort ? Color.znNavy.opacity(0.06) : .clear)
+                }
+                .buttonStyle(.plain)
+                .sensoryFeedback(.selection, trigger: selectedSort)
+            }
+
+            Spacer()
+        }
+        .background(Color.znSurface)
     }
 }
 

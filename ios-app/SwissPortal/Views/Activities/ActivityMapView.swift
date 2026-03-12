@@ -70,7 +70,7 @@ struct ActivityMapView: View {
             VStack(spacing: 0) {
                 Spacer()
                 LinearGradient(
-                    colors: [.clear, Color(.systemBackground).opacity(0.8)],
+                    colors: [.clear, Color.znCream.opacity(0.8)],
                     startPoint: .top, endPoint: .bottom
                 )
                 .frame(height: 20)
@@ -94,7 +94,7 @@ struct ActivityMapView: View {
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(.systemBackground).opacity(0.6))
+                .background(Color.znCream.opacity(0.6))
             }
         }
     }
@@ -109,9 +109,9 @@ struct ActivityMapView: View {
 
     private func markerColor(for activity: Activity) -> Color {
         if activity.isFree {
-            return .green
+            return .znPositive
         }
-        return activity.indoor ? .blue : .orange
+        return activity.indoor ? .znNavy : .znTerracotta
     }
 
     private func markerIcon(for activity: Activity) -> String {
@@ -168,10 +168,10 @@ struct ActivityMapView: View {
                         ? (language == .en ? "Indoor" : "Indoor")
                         : (language == .en ? "Outdoor" : "Outdoor"),
                     icon: activity.indoor ? "house.fill" : "sun.max.fill",
-                    color: activity.indoor ? .blue : .orange
+                    color: activity.indoor ? .znNavy : .znTerracotta
                 )
 
-                BadgeView(text: activity.duration, icon: "clock", color: .gray)
+                BadgeView(text: activity.duration, icon: "clock", color: .znMuted)
 
                 if activity.isFree {
                     FreeBadge()
@@ -193,9 +193,9 @@ struct ActivityMapView: View {
                 }
             }
         }
-        .padding(14)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(AppSpacing.cardPadding)
+        .background(Color.znSurface)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
         .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: -2)
         .padding(.horizontal, 12)
         .padding(.bottom, 8)

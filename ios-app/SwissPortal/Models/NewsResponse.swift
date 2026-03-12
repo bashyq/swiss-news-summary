@@ -61,6 +61,16 @@ struct Weather: Codable, Sendable {
     var isBadWeather: Bool {
         temperature < 5 || [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99].contains(weatherCode)
     }
+
+    /// Today's high temperature derived from hourly data
+    var highTemp: Double? {
+        hourly?.map(\.temperature).max()
+    }
+
+    /// Today's low temperature derived from hourly data
+    var lowTemp: Double? {
+        hourly?.map(\.temperature).min()
+    }
 }
 
 struct HourlyWeather: Codable, Identifiable, Sendable {
@@ -327,7 +337,7 @@ struct TrendingTopic: Codable, Sendable {
 
 struct Briefing: Codable, Sendable {
     let topStory: BriefingItem?
-    let dailyPick: DailyPick?
+    let suggestedActivity: Activity?
 
     func localizedStory(language: AppLanguage) -> String? {
         topStory?.headline
@@ -340,26 +350,6 @@ struct BriefingItem: Codable, Sendable {
     let source: String
     let url: String
     let sentiment: String
-}
-
-/// Weather+time-aware activity recommendation from the API
-struct DailyPick: Codable, Sendable {
-    let activityId: String
-    let name: String
-    let nameDE: String
-    let reason: String
-    let reasonDE: String
-    let emoji: String
-    let indoor: Bool
-    let category: String
-
-    func localizedName(language: AppLanguage) -> String {
-        language == .de ? nameDE : name
-    }
-
-    func localizedReason(language: AppLanguage) -> String {
-        language == .de ? reasonDE : reason
-    }
 }
 
 // MARK: - Weekend Brief

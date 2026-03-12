@@ -33,7 +33,7 @@ struct AddActivitySheet: View {
                             en: "Name is required",
                             de: "Name ist erforderlich"
                         ))
-                        .foregroundStyle(.red)
+                        .foregroundStyle(.znNegative)
                     }
                 }
 

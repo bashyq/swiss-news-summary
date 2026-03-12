@@ -11,11 +11,11 @@ struct HistoryBanner: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
-            // Calendar icon
-            Image(systemName: "clock.arrow.circlepath")
-                .font(.caption)
-                .foregroundStyle(.brand.opacity(0.8))
-                .padding(.top, 2)
+            // Clock icon
+            Image(systemName: "clock")
+                .font(.system(size: 16))
+                .foregroundStyle(.znTerracotta)
+                .padding(.top, 1)
 
             VStack(alignment: .leading, spacing: 2) {
                 // Header
@@ -25,23 +25,33 @@ struct HistoryBanner: View {
                 ))
                 .font(.caption2)
                 .fontWeight(.semibold)
-                .foregroundStyle(.brand.opacity(0.8))
+                .foregroundStyle(.znTerracotta)
                 .textCase(.uppercase)
 
                 // Year + event
-                Text("\(String(history.year)) \u{2014} \(history.localizedEvent(language: appState.language))")
-                    .font(.caption)
+                (Text(String(history.year))
+                    .foregroundStyle(.znTerracotta)
+                    .fontWeight(.semibold)
+                 + Text(" \u{2014} ")
                     .foregroundStyle(.secondary)
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
+                 + Text(history.localizedEvent(language: appState.language))
+                    .foregroundStyle(.secondary)
+                )
+                .font(.caption)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer()
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color.brand.opacity(0.06))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .background(Color.znSurface)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSpacing.cardRadius)
+                .stroke(Color.znBorder, lineWidth: 1)
+        )
         .accessibilityElement(children: .combine)
     }
 }

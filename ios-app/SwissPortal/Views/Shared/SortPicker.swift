@@ -34,7 +34,7 @@ struct SortPicker<S: Hashable>: View {
                 }
             }
         }
-        .background(Color(.systemGray6))
+        .background(Color.znNeutralTagBg)
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 }
@@ -65,7 +65,7 @@ struct ShowAllButton: View {
                 .foregroundStyle(.brand)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
-                .background(Color(.systemGray6))
+                .background(Color.znNeutralTagBg)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
             .buttonStyle(.plain)

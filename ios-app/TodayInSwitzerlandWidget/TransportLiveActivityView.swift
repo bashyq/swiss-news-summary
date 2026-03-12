@@ -138,16 +138,16 @@ struct TransportLiveActivity: Widget {
 
     private func statusColor(_ status: String) -> Color {
         switch status {
-        case "none": return .green
-        case "minor": return .yellow
-        case "major": return .red
-        default: return .gray
+        case "none": return Color("znPositive")
+        case "minor": return Color("znTerracotta")
+        case "major": return Color("znNegative")
+        default: return Color("znMuted")
         }
     }
 
     private func delayColor(_ minutes: Int) -> Color {
-        if minutes >= 10 { return .red }
-        if minutes >= 5 { return .orange }
-        return .yellow
+        if minutes >= 10 { return Color("znNegative") }
+        if minutes >= 5 { return Color("znTerracotta") }
+        return Color("znTerracotta").opacity(0.75)
     }
 }

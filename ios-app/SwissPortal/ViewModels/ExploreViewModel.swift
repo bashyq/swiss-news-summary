@@ -1,5 +1,6 @@
 import Foundation
 import CoreLocation
+import SwiftUI
 
 /// ViewModel for the Explore view — aggregates activities, upcoming city events, and deals onto a single map.
 @Observable
@@ -70,6 +71,68 @@ final class ExploreViewModel {
             .map { ExploreItem.deal($0, city: city) }
     }
 
+    // MARK: - Category Helpers
+
+    /// Items filtered by ExploreCategory.
+    func items(for category: ExploreCategory, city: City, language: AppLanguage) -> [ExploreItem] {
+        switch category {
+        case .museums:
+            return activityItems().filter { item in
+                if case .activity(let a) = item { return a.category.lowercased() == "museums" || a.category.lowercased() == "museum" }
+                return false
+            }
+        case .parks:
+            return activityItems().filter { item in
+                if case .activity(let a) = item { return a.category.lowercased() == "parks" || a.category.lowercased() == "playgrounds" || !a.indoor }
+                return false
+            }
+        case .restaurants:
+            return dealItems(city: city).filter { item in
+                if case .deal(let d, _) = item { return d.category.lowercased() == "restaurants" || d.category.lowercased() == "outdoor" }
+                return false
+            }
+        case .events:
+            return eventItems(city: city)
+        case .deals:
+            return dealItems(city: city)
+        }
+    }
+
+    /// Count of items for a category.
+    func count(for category: ExploreCategory, city: City) -> Int {
+        switch category {
+        case .museums:
+            return activityItems().filter { item in
+                if case .activity(let a) = item { return a.category.lowercased() == "museums" || a.category.lowercased() == "museum" }
+                return false
+            }.count
+        case .parks:
+            return activityItems().filter { item in
+                if case .activity(let a) = item { return !a.indoor }
+                return false
+            }.count
+        case .restaurants:
+            return dealItems(city: city).count
+        case .events:
+            return eventItems(city: city).count
+        case .deals:
+            return dealItems(city: city).count
+        }
+    }
+
+    /// Items sorted by distance from the given location.
+    func nearYouItems(location: CLLocation, city: City, language: AppLanguage, limit: Int = 8) -> [ExploreItem] {
+        let all = filteredItems(city: city, language: language)
+        return Array(
+            all.sorted { a, b in
+                let aDist = location.distance(from: CLLocation(latitude: a.coordinate.latitude, longitude: a.coordinate.longitude))
+                let bDist = location.distance(from: CLLocation(latitude: b.coordinate.latitude, longitude: b.coordinate.longitude))
+                return aDist < bDist
+            }
+            .prefix(limit)
+        )
+    }
+
     // MARK: - Loading
 
     @MainActor
@@ -126,7 +189,7 @@ enum ExploreFilter: String, CaseIterable {
         switch self {
         case .all: return "All"
         case .activities: return "Activities"
-        case .events: return "Events"
+        case .events: return "Family Events"
         case .deals: return "Deals"
         }
     }
@@ -206,21 +269,21 @@ enum ExploreItem: Identifiable {
 
     var markerColor: MarkerColor {
         switch self {
-        case .activity: return .green
-        case .event: return .purple
+        case .activity: return .positive
+        case .event: return .navy
         case .deal(let d, _):
-            return d.type == .free ? .green : .blue
+            return d.type == .free ? .positive : .terracotta
         }
     }
 
     enum MarkerColor {
-        case green, purple, blue
+        case positive, navy, terracotta
 
         var tint: (light: String, dark: String) {
             switch self {
-            case .green: return ("34C759", "30D158")
-            case .purple: return ("AF52DE", "BF5AF2")
-            case .blue: return ("007AFF", "0A84FF")
+            case .positive: return ("4A8C5C", "5CA06B")   // znPositive-aligned
+            case .navy: return ("1A3A5C", "3A6A8C")       // znNavy
+            case .terracotta: return ("C4623A", "D4825A")  // znTerracotta
             }
         }
     }
@@ -231,5 +294,58 @@ enum ExploreItem: Identifiable {
         let latOffset = Double(hash % 1000) / 100_000.0 - 0.005
         let lonOffset = Double((hash / 1000) % 1000) / 100_000.0 - 0.005
         return (latOffset, lonOffset)
+    }
+}
+
+// MARK: - Explore Category
+
+/// Category for "Browse by type" grid in the Explore view.
+enum ExploreCategory: String, CaseIterable, Identifiable {
+    case museums
+    case parks
+    case restaurants
+    case events
+    case deals
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .museums: return "Museums"
+        case .parks: return "Parks & Playgrounds"
+        case .restaurants: return "Restaurants"
+        case .events: return "Events"
+        case .deals: return "Deals & Free"
+        }
+    }
+
+    var displayNameDE: String {
+        switch self {
+        case .museums: return "Museen"
+        case .parks: return "Parks & Spielplätze"
+        case .restaurants: return "Restaurants"
+        case .events: return "Familienevents"
+        case .deals: return "Angebote & Gratis"
+        }
+    }
+
+    var sfSymbol: String {
+        switch self {
+        case .museums: return "building.columns.fill"
+        case .parks: return "leaf.fill"
+        case .restaurants: return "fork.knife"
+        case .events: return "calendar"
+        case .deals: return "tag.fill"
+        }
+    }
+
+    var gradientColors: [Color] {
+        switch self {
+        case .museums: return [.znNavy, .znNavy.opacity(0.7)]
+        case .parks: return [.znPositive, .znPositive.opacity(0.7)]
+        case .restaurants: return [.znTerracotta, .znTerracotta.opacity(0.7)]
+        case .events: return [.znNavy.opacity(0.8), .znNavy.opacity(0.5)]
+        case .deals: return [.znPositive.opacity(0.8), .znPositive.opacity(0.5)]
+        }
     }
 }

@@ -2,156 +2,131 @@ import SwiftUI
 
 /// Transport disruptions widget displayed in the News view.
 ///
-/// Shows a status summary with a colored badge (none/minor/major) and a
-/// collapsible list of individual train delays. When there are no delays,
-/// a green "All clear" message is displayed instead.
+/// Shows a single tappable status row. When there are delays, tapping opens
+/// a sheet with the full delay list. When all clear, shows a green status.
 struct TransportWidget: View {
     @Environment(AppState.self) private var appState
 
     let transport: Transport
 
-    @State private var isExpanded = false
+    @State private var showDelaySheet = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if transport.delays.isEmpty {
-                allClearBanner
-            } else {
-                delayDisclosure
-            }
-        }
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-
-    // MARK: - All Clear
-
-    private var allClearBanner: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-            Text(appState.localized(en: "Transport: All clear", de: "Verkehr: Alles in Ordnung"))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            Spacer()
-        }
-        .padding(12)
-    }
-
-    // MARK: - Delay Disclosure Group
-
-    private var delayDisclosure: some View {
-        DisclosureGroup(isExpanded: $isExpanded) {
-            VStack(spacing: 0) {
-                Divider()
-                    .padding(.vertical, 4)
-
-                ForEach(transport.delays) { delay in
-                    delayRow(delay)
-                    if delay.id != transport.delays.last?.id {
-                        Divider()
-                            .padding(.leading, 36)
-                    }
-                }
+        Button {
+            if !transport.delays.isEmpty {
+                showDelaySheet = true
             }
         } label: {
-            statusHeader
-        }
-        .tint(.secondary)
-        .padding(12)
-    }
+            HStack(spacing: 9) {
+                // Warning triangle
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.znTerracotta)
 
-    // MARK: - Status Header
+                Text(alertText)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.znInk)
+                    .lineLimit(1)
 
-    private var statusHeader: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "tram.fill")
-                .foregroundStyle(statusColor)
+                Spacer()
 
-            Text(statusText)
-                .font(.subheadline)
-                .fontWeight(.medium)
-
-            Spacer()
-
-            // Status badge
-            BadgeView(
-                text: statusBadgeText,
-                color: statusColor
+                if !transport.delays.isEmpty {
+                    // Arrow icon
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.znTerracotta)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .background(Color.znTerracotta.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.znTerracotta.opacity(0.18), lineWidth: 1)
             )
         }
-    }
-
-    // MARK: - Delay Row
-
-    private func delayRow(_ delay: TrainDelay) -> some View {
-        HStack(spacing: 10) {
-            // Line name
-            Text(delay.line)
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(.primary)
-                .frame(width: 52, alignment: .leading)
-
-            // Destination
-            Text(delay.destination)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-
-            Spacer()
-
-            // Scheduled time
-            Text(delay.scheduledTime)
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-                .monospacedDigit()
-
-            // Delay badge
-            Text("+\(delay.delay) min")
-                .font(.caption2)
-                .fontWeight(.semibold)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(delayColor(delay.delay))
-                .clipShape(Capsule())
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showDelaySheet) {
+            TransportDelaySheet(transport: transport)
+                .presentationDetents([.medium])
         }
-        .padding(.vertical, 6)
     }
 
     // MARK: - Helpers
 
-    private var statusColor: Color {
-        Color.transportStatus(transport.summary.status)
+    private var alertText: String {
+        if transport.delays.isEmpty {
+            return appState.localized(en: "Transport: All clear", de: "Verkehr: Alles in Ordnung")
+        }
+        // Show first delay as summary, like mockup
+        if let first = transport.delays.first {
+            let count = transport.summary.totalDelayed
+            if count == 1 {
+                return appState.localized(
+                    en: "\(first.line) disruption — delays expected",
+                    de: "\(first.line) Störung — Verspätungen erwartet"
+                )
+            } else {
+                return appState.localized(
+                    en: "\(count) disruptions — delays expected",
+                    de: "\(count) Störungen — Verspätungen erwartet"
+                )
+            }
+        }
+        return ""
     }
+}
 
-    private var statusText: String {
-        let count = transport.summary.totalDelayed
-        return appState.localized(
-            en: "\(count) delay\(count == 1 ? "" : "s")",
-            de: "\(count) Verspätung\(count == 1 ? "" : "en")"
-        )
-    }
+// MARK: - Delay Sheet
 
-    private var statusBadgeText: String {
-        switch transport.summary.status {
-        case "minor":
-            return appState.localized(en: "Minor", de: "Gering")
-        case "major":
-            return appState.localized(en: "Major", de: "Erheblich")
-        default:
-            return appState.localized(en: "OK", de: "OK")
+private struct TransportDelaySheet: View {
+    @Environment(AppState.self) private var appState
+
+    let transport: Transport
+
+    var body: some View {
+        NavigationStack {
+            List(transport.delays) { delay in
+                HStack(spacing: 10) {
+                    Text(delay.line)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .frame(width: 60, alignment: .leading)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(delay.destination)
+                            .font(.subheadline)
+                        Text(delay.scheduledTime)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+
+                    Spacer()
+
+                    Text("+\(delay.delay) min")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(delayColor(delay.delay))
+                        .clipShape(Capsule())
+                }
+            }
+            .navigationTitle(appState.localized(en: "Delays", de: "Verspätungen"))
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 
     private func delayColor(_ minutes: Int) -> Color {
         if minutes >= 15 {
-            return .red
+            return .znNegative
         } else if minutes >= 5 {
-            return .orange
+            return .znTerracotta
         } else {
-            return .yellow
+            return .znTerracotta.opacity(0.75)
         }
     }
 }

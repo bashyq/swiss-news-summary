@@ -62,37 +62,50 @@ final class WeekendViewModel {
 
     // MARK: - Shuffle
 
-    /// Force-refresh the weekend plan to get new random activity picks.
+    /// Shuffle the weekend plan by randomly swapping morning/afternoon activities.
     ///
-    /// Bypasses the cache entirely by removing the cached entry first,
-    /// then fetching fresh data from the worker.
+    /// Applies a random local permutation of the four activity slots
+    /// (Saturday morning, Saturday afternoon, Sunday morning, Sunday afternoon)
+    /// so each shuffle produces a visibly different plan.
     @MainActor
     func shuffle(city: City, language: AppLanguage) async {
-        let cacheKey = CacheKey.weekend(city: city)
+        guard var data = weekendData else { return }
 
-        // Clear the cache to ensure fresh data
-        await CacheManager.shared.remove(key: cacheKey)
+        // Collect all available activities into a pool
+        var pool: [PlannedActivity] = []
+        if let a = data.saturday.plan.morning { pool.append(a) }
+        if let a = data.saturday.plan.afternoon { pool.append(a) }
+        if let a = data.sunday.plan.morning { pool.append(a) }
+        if let a = data.sunday.plan.afternoon { pool.append(a) }
 
-        // Fetch fresh data
-        isLoading = true
-        error = nil
+        guard pool.count >= 2 else { return }
 
-        do {
-            let response = try await APIClient.shared.fetchWeekend(
-                city: city,
-                language: language
-            )
+        // Shuffle the pool
+        pool.shuffle()
 
-            self.weekendData = response
+        // Redistribute back into the four slots
+        let satMorning = pool.indices.contains(0) ? pool[0] : nil
+        let satAfternoon = pool.indices.contains(1) ? pool[1] : nil
+        let sunMorning = pool.indices.contains(2) ? pool[2] : nil
+        let sunAfternoon = pool.indices.contains(3) ? pool[3] : nil
 
-            // Cache the new response
-            await CacheManager.shared.set(response, key: cacheKey)
+        data = WeekendResponse(
+            saturday: WeekendDay(
+                date: data.saturday.date,
+                weather: data.saturday.weather,
+                plan: DayPlan(morning: satMorning, afternoon: satAfternoon),
+                holidays: data.saturday.holidays
+            ),
+            sunday: WeekendDay(
+                date: data.sunday.date,
+                weather: data.sunday.weather,
+                plan: DayPlan(morning: sunMorning, afternoon: sunAfternoon),
+                holidays: data.sunday.holidays
+            ),
+            city: data.city,
+            timestamp: data.timestamp
+        )
 
-            self.error = nil
-        } catch {
-            self.error = error.localizedDescription
-        }
-
-        isLoading = false
+        self.weekendData = data
     }
 }

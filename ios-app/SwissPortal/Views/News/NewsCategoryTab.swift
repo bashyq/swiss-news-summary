@@ -1,10 +1,9 @@
 import SwiftUI
 
-/// Wrapping grid of category tabs with item counts.
+/// Horizontal scroll of category pill chips with item counts.
 ///
-/// All categories are visible at once — no horizontal scrolling needed.
-/// Each tab is rendered as a `FilterChip` with the category's localized display name
-/// and the number of items in that category.
+/// Shows a "Top stories" section header, then a horizontally scrolling
+/// row of pill chips — each with category name, icon, and count.
 struct NewsCategoryTab: View {
     @Environment(AppState.self) private var appState
 
@@ -12,29 +11,75 @@ struct NewsCategoryTab: View {
     @Binding var selectedCategory: String
     let itemCount: (String) -> Int
 
-    private let columns = [
-        GridItem(.flexible(), spacing: 8),
-        GridItem(.flexible(), spacing: 8),
-        GridItem(.flexible(), spacing: 8)
-    ]
-
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 8) {
-            ForEach(categoryKeys, id: \.self) { key in
-                FilterChip(
-                    label: NewsCategories.displayName(for: key, language: appState.language),
-                    isSelected: selectedCategory == key,
-                    icon: iconName(for: key),
-                    count: itemCount(key),
-                    expandsToFill: true
-                ) {
-                    withAnimation(AppAnimation.standardEase) {
-                        selectedCategory = key
+        VStack(alignment: .leading, spacing: 10) {
+            // Section header — "Local News" + story count
+            HStack(alignment: .firstTextBaseline) {
+                Text(appState.localized(en: "Local News", de: "Lokale News"))
+                    .font(.sectionHeadline)
+                    .foregroundStyle(.znInk)
+                Spacer()
+                Text(appState.localized(
+                    en: "\(totalCount) stories today",
+                    de: "\(totalCount) Meldungen heute"
+                ))
+                .font(.system(size: 12, weight: .light))
+                .foregroundStyle(.znMuted)
+            }
+            .padding(.horizontal)
+
+            // Horizontal pill scroll
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 7) {
+                    ForEach(categoryKeys, id: \.self) { key in
+                        let isSelected = selectedCategory == key
+                        let count = itemCount(key)
+                        Button {
+                            withAnimation(AppAnimation.standardEase) {
+                                selectedCategory = key
+                            }
+                        } label: {
+                            HStack(spacing: 5) {
+                                if let icon = iconName(for: key), isSelected {
+                                    Image(systemName: icon)
+                                        .font(.system(size: 9))
+                                }
+                                Text(NewsCategories.displayName(for: key, language: appState.language))
+                                    .font(.system(size: 12, weight: .medium))
+                                // Count circle
+                                Text("\(count)")
+                                    .font(.system(size: 10))
+                                    .frame(width: 16, height: 16)
+                                    .background(
+                                        isSelected
+                                            ? Color.white.opacity(0.18)
+                                            : Color.znBorder
+                                    )
+                                    .foregroundStyle(
+                                        isSelected ? .white : .znMuted
+                                    )
+                                    .clipShape(Circle())
+                            }
+                            .padding(.horizontal, 13)
+                            .frame(height: 31)
+                            .background(isSelected ? Color.znNavy : .clear)
+                            .foregroundStyle(isSelected ? .white : .znBody)
+                            .clipShape(Capsule())
+                            .overlay(
+                                Capsule()
+                                    .stroke(isSelected ? .clear : Color.znBorder, lineWidth: 1.5)
+                            )
+                        }
+                        .sensoryFeedback(.selection, trigger: isSelected)
                     }
                 }
+                .padding(.horizontal)
             }
         }
-        .padding(.horizontal)
+    }
+
+    private var totalCount: Int {
+        categoryKeys.reduce(0) { $0 + itemCount($1) }
     }
 
     // MARK: - Category Icons

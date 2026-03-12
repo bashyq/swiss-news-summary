@@ -46,11 +46,13 @@ final class APIClient: @unchecked Sendable {
     }
 
     /// Fetch weekend plan for a city
-    func fetchWeekend(city: City, language: AppLanguage) async throws -> WeekendResponse {
-        try await fetch("/weekend", queryParams: [
+    func fetchWeekend(city: City, language: AppLanguage, forceRefresh: Bool = false) async throws -> WeekendResponse {
+        var params = [
             "lang": language.rawValue,
             "city": city.rawValue
-        ])
+        ]
+        if forceRefresh { params["refresh"] = "true" }
+        return try await fetch("/weekend", queryParams: params)
     }
 
     /// Fetch sunshine forecast (always Zürich-based)

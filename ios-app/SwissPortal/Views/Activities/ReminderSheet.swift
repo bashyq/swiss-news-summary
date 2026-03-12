@@ -72,7 +72,7 @@ struct ReminderSheet: View {
                         .padding(.vertical, 14)
                         .background(LinearGradient.brand)
                         .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
                 }
                 .padding(.horizontal)
                 .padding(.bottom)

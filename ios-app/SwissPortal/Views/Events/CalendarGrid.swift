@@ -27,8 +27,8 @@ struct CalendarGrid: View {
             dotLegend
         }
         .padding(12)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .background(Color.znSurface)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
     }
 
     // MARK: - Month Header
@@ -145,10 +145,10 @@ struct CalendarGrid: View {
 
     private var dotLegend: some View {
         HStack(spacing: 16) {
-            legendItem(color: .red, label: appState.localized(en: "Holiday", de: "Feiertag"))
+            legendItem(color: .znNegative, label: appState.localized(en: "Holiday", de: "Feiertag"))
             legendItem(color: .brand, label: appState.localized(en: "Festival", de: "Festival"))
-            legendItem(color: .orange, label: appState.localized(en: "School", de: "Schulferien"))
-            legendItem(color: .blue, label: appState.localized(en: "Recurring", de: "Wiederkehrend"))
+            legendItem(color: .znTerracotta, label: appState.localized(en: "School", de: "Schulferien"))
+            legendItem(color: .znNavy.opacity(0.7), label: appState.localized(en: "Recurring", de: "Wiederkehrend"))
         }
         .padding(.top, 4)
     }

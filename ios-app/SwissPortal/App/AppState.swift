@@ -13,9 +13,11 @@ final class AppState {
     var theme: AppTheme {
         didSet { UserDefaults.standard.set(theme.rawValue, forKey: "theme") }
     }
-
     // Transient UI state
     var selectedTab: AppTab = .news
+    /// Incremented when the user re-taps the already-selected tab (used to reset tab state)
+    var tabRetapCount: Int = 0
+    
     var savedActivityIDs: Set<String> {
         didSet {
             UserDefaults.standard.set(Array(savedActivityIDs), forKey: "savedActivities")
@@ -24,11 +26,6 @@ final class AppState {
     var savedLunchIDs: Set<String> {
         didSet {
             UserDefaults.standard.set(Array(savedLunchIDs), forKey: "savedLunch")
-        }
-    }
-    var lunchRatings: [String: Int] {
-        didSet {
-            UserDefaults.standard.set(lunchRatings, forKey: "lunchRatings")
         }
     }
 
@@ -47,8 +44,6 @@ final class AppState {
 
         let savedLunch = UserDefaults.standard.stringArray(forKey: "savedLunch") ?? []
         self.savedLunchIDs = Set(savedLunch)
-
-        self.lunchRatings = UserDefaults.standard.dictionary(forKey: "lunchRatings") as? [String: Int] ?? [:]
     }
 
     // MARK: - Actions
@@ -67,10 +62,6 @@ final class AppState {
         } else {
             savedLunchIDs.insert(id)
         }
-    }
-
-    func setLunchRating(_ id: String, rating: Int) {
-        lunchRatings[id] = rating
     }
 
     func deleteCustomActivity(_ id: String) {
@@ -116,9 +107,10 @@ final class AppState {
         case "news": selectedTab = .news
         case "activities": selectedTab = .activities
         case "explore": selectedTab = .explore
-        case "weather": selectedTab = .weather
-        case "lunch": selectedTab = .more
-        case "events": selectedTab = .more
+        case "weather", "weekend": selectedTab = .weekend
+        case "lunch": selectedTab = .explore
+        case "events": selectedTab = .explore
+        case "settings": selectedTab = .settings
         default: break
         }
 
@@ -137,16 +129,16 @@ enum AppTab: String, CaseIterable {
     case news
     case activities
     case explore
-    case weather // sunshine + snow
-    case more
+    case weekend // sunshine + snow + planner
+    case settings
 
     var label: String {
         switch self {
         case .news: return "News"
         case .activities: return "Activities"
         case .explore: return "Explore"
-        case .weather: return "Weather"
-        case .more: return "More"
+        case .weekend: return "Weekend"
+        case .settings: return "Settings"
         }
     }
 
@@ -155,18 +147,18 @@ enum AppTab: String, CaseIterable {
         case .news: return "Nachrichten"
         case .activities: return "Aktivitäten"
         case .explore: return "Entdecken"
-        case .weather: return "Wetter"
-        case .more: return "Mehr"
+        case .weekend: return "Wochenende"
+        case .settings: return "Einstellungen"
         }
     }
 
     var sfSymbol: String {
         switch self {
-        case .news: return "newspaper.fill"
-        case .activities: return "sparkles"
-        case .explore: return "map.fill"
-        case .weather: return "cloud.sun.fill"
-        case .more: return "ellipsis.circle.fill"
+        case .news: return "square.grid.2x2"
+        case .activities: return "star"
+        case .explore: return "mountain.2"
+        case .weekend: return "person"
+        case .settings: return "gearshape"
         }
     }
 }
@@ -194,3 +186,5 @@ enum AppTheme: String, CaseIterable {
         }
     }
 }
+
+

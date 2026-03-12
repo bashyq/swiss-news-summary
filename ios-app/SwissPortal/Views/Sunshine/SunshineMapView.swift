@@ -78,7 +78,7 @@ struct SunshineMapView: View {
             VStack(spacing: 0) {
                 Spacer()
                 LinearGradient(
-                    colors: [.clear, Color(.systemBackground).opacity(0.8)],
+                    colors: [.clear, Color.znCream.opacity(0.8)],
                     startPoint: .top, endPoint: .bottom
                 )
                 .frame(height: 20)
@@ -86,9 +86,9 @@ struct SunshineMapView: View {
             }
 
             MapLegend(items: [
-                .init(color: .orange, label: ">6h"),
-                .init(color: .blue, label: "3-6h"),
-                .init(color: .gray, label: "<3h"),
+                .init(color: .znTerracotta, label: ">6h"),
+                .init(color: .znNavy.opacity(0.7), label: "3-6h"),
+                .init(color: .znMuted, label: "<3h"),
                 .init(color: .brand, label: language == .de ? "Zürich" : "Zürich"),
             ])
             .padding(8)

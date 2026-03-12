@@ -8,7 +8,6 @@ import SwiftUI
 /// - Festival cards with purple left border
 /// - Recurring activity cards
 /// - Weather-based activity suggestion (today only)
-/// - Trending news topic (today only)
 struct DayDetailView: View {
     @Environment(AppState.self) private var appState
 
@@ -55,15 +54,12 @@ struct DayDetailView: View {
                 if isToday {
                     // Weather-based activity suggestion
                     weatherSuggestion
-
-                    // Trending topic
-                    trendingTopic
                 }
             }
         }
-        .padding(14)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(AppSpacing.cardPadding)
+        .background(Color.znSurface)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
     }
 
     // MARK: - Date Header
@@ -157,7 +153,7 @@ struct DayDetailView: View {
             Spacer()
         }
         .padding(10)
-        .background(Color.orange)
+        .background(Color.znTerracotta)
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
@@ -168,7 +164,7 @@ struct DayDetailView: View {
             // Purple left border
             RoundedRectangle(cornerRadius: 2)
                 .fill(Color.brand)
-                .frame(width: 4)
+                .frame(width: AppSpacing.borderStripWidth)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(festival.localizedName(language: appState.language))
@@ -229,7 +225,7 @@ struct DayDetailView: View {
         HStack(spacing: 10) {
             Image(systemName: "arrow.triangle.2.circlepath")
                 .font(.caption)
-                .foregroundStyle(.blue)
+                .foregroundStyle(.znNavy)
                 .frame(width: 20)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -245,7 +241,7 @@ struct DayDetailView: View {
                 if let schedule = activity.recurring {
                     Text(schedule)
                         .font(.caption2)
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(.znNavy)
                 }
             }
 
@@ -269,7 +265,7 @@ struct DayDetailView: View {
                 HStack(spacing: 10) {
                     Image(systemName: weather.sfSymbol)
                         .font(.title3)
-                        .foregroundStyle(.blue)
+                        .symbolRenderingMode(.multicolor)
                         .frame(width: 28)
 
                     VStack(alignment: .leading, spacing: 2) {
@@ -296,7 +292,7 @@ struct DayDetailView: View {
                             )
                         )
                         .font(.caption)
-                        .foregroundStyle(weather.isBadWeather ? .blue : .green)
+                        .foregroundStyle(weather.isBadWeather ? .znNavy : .znPositive)
                     }
 
                     Spacer()
@@ -385,41 +381,7 @@ struct DayDetailView: View {
         }
     }
 
-    // MARK: - Trending Topic (Today Only)
 
-    @ViewBuilder
-    private var trendingTopic: some View {
-        if let trending = viewModel.newsData?.trending,
-           let topic = trending.localizedTopic(language: appState.language) {
-            HStack(spacing: 10) {
-                Image(systemName: "chart.line.uptrend.xyaxis")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-                    .frame(width: 20)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(appState.localized(
-                        en: "Trending",
-                        de: "Im Trend"
-                    ))
-                    .font(.caption2)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-
-                    Text(topic)
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .lineLimit(2)
-                }
-
-                Spacer()
-            }
-            .padding(10)
-            .background(Color.orange.opacity(0.1))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-        }
-    }
 }
 
 #Preview {

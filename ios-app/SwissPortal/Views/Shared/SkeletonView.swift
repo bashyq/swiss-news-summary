@@ -47,7 +47,7 @@ private struct SkeletonBlock: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: 4)
-            .fill(Color(.systemGray5))
+            .fill(Color.znBorder)
             .frame(width: width, height: height)
     }
 }
@@ -74,10 +74,10 @@ struct SkeletonNewsCard: View {
                 SkeletonBlock(width: 50, height: 20)
             }
         }
-        .padding(14)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
+        .padding(AppSpacing.cardPadding)
+        .background(Color.znSurface)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
+        .shadow(color: AppShadow.subtle.color, radius: AppShadow.subtle.radius, x: AppShadow.subtle.x, y: AppShadow.subtle.y)
         .shimmer()
     }
 }
@@ -107,10 +107,10 @@ struct SkeletonActivityCard: View {
                 SkeletonBlock(width: 50, height: 20)
             }
         }
-        .padding(14)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
+        .padding(AppSpacing.cardPadding)
+        .background(Color.znSurface)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
+        .shadow(color: AppShadow.subtle.color, radius: AppShadow.subtle.radius, x: AppShadow.subtle.x, y: AppShadow.subtle.y)
         .shimmer()
     }
 }
@@ -120,40 +120,32 @@ struct SkeletonActivityCard: View {
 /// Placeholder matching the LunchCard layout
 struct SkeletonLunchCard: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Header: icon + name + heart
-            HStack(spacing: 8) {
-                SkeletonBlock(width: 20, height: 20)
-                SkeletonBlock(width: 180, height: 16)
-                Spacer()
-                SkeletonBlock(width: 24, height: 24)
-            }
+        HStack(spacing: 0) {
+            // Photo thumbnail placeholder
+            SkeletonBlock(width: 94, height: 90)
 
-            // Details row: cuisine badge + hours + open badge
-            HStack(spacing: 8) {
-                SkeletonBlock(width: 70, height: 20)
-                SkeletonBlock(width: 90, height: 12)
-                Spacer()
-                SkeletonBlock(width: 80, height: 20)
-            }
-
-            // Badges
-            HStack(spacing: 6) {
-                SkeletonBlock(width: 80, height: 20)
-                SkeletonBlock(width: 70, height: 20)
-            }
-
-            // Star rating
-            HStack(spacing: 2) {
-                ForEach(0..<5, id: \.self) { _ in
-                    SkeletonBlock(width: 14, height: 14)
+            // Body
+            VStack(alignment: .leading, spacing: 6) {
+                SkeletonBlock(width: 140, height: 14)
+                HStack(spacing: 5) {
+                    SkeletonBlock(width: 12, height: 12)
+                    SkeletonBlock(width: 40, height: 12)
+                }
+                SkeletonBlock(width: 80, height: 10)
+                HStack(spacing: 6) {
+                    SkeletonBlock(width: 60, height: 18)
+                    SkeletonBlock(width: 50, height: 18)
                 }
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 13)
+
+            Spacer()
         }
-        .padding(14)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
+        .background(Color.znSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.znBorder, lineWidth: 1))
+        .shadow(color: AppShadow.subtle.color, radius: AppShadow.subtle.radius, x: AppShadow.subtle.x, y: AppShadow.subtle.y)
         .shimmer()
     }
 }

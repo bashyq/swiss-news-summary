@@ -30,12 +30,12 @@ struct HourlyTimelineView: View {
                         let isSunny = sunnyHourSet.contains(hour)
 
                         Rectangle()
-                            .fill(isSunny ? Color.orange : Color(.systemGray5))
+                            .fill(isSunny ? Color.znTerracotta : Color.znBorder)
                             .frame(width: segmentWidth, height: 12)
                             .overlay(
                                 // Add subtle borders between segments
                                 Rectangle()
-                                    .stroke(Color(.systemBackground).opacity(0.3), lineWidth: 0.5)
+                                    .stroke(Color.znCream.opacity(0.3), lineWidth: 0.5)
                             )
                     }
                 }

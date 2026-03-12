@@ -38,7 +38,7 @@ struct ErrorBanner: View {
     var body: some View {
         HStack {
             Image(systemName: "exclamationmark.circle.fill")
-                .foregroundStyle(.red)
+                .foregroundStyle(.znNegative)
             Text(message)
                 .font(.caption)
                 .lineLimit(2)
@@ -51,7 +51,7 @@ struct ErrorBanner: View {
             }
         }
         .padding(10)
-        .background(.red.opacity(0.1))
+        .background(Color.znAlertBg)
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .padding(.horizontal)
     }

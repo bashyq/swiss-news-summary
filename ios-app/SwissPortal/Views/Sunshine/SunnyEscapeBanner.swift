@@ -64,19 +64,19 @@ struct SunnyEscapeBanner: View {
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.7))
             }
-            .padding(14)
+            .padding(AppSpacing.cardPadding)
             .background(
                 LinearGradient(
                     gradient: Gradient(colors: [
-                        Color.orange,
-                        Color.orange.opacity(0.85),
-                        Color.yellow.opacity(0.7)
+                        Color.znTerracotta,
+                        Color.znTerracotta.opacity(0.85),
+                        Color.znTerracotta.opacity(0.6)
                     ]),
                     startPoint: .leading,
                     endPoint: .trailing
                 )
             )
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
         }
         .buttonStyle(.plain)
     }

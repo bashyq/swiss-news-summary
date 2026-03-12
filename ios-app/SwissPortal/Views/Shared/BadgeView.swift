@@ -72,7 +72,7 @@ struct DriveTimeBadge: View {
         BadgeView(
             text: CLLocation.formattedDriveTime(minutes),
             icon: "car.fill",
-            color: .blue
+            color: .znNavy
         )
     }
 }
@@ -87,7 +87,7 @@ struct DistanceBadge: View {
         BadgeView(
             text: CLLocation.formattedDistance(meters),
             icon: "location.fill",
-            color: .teal
+            color: .znTerracotta
         )
     }
 }
@@ -100,7 +100,7 @@ struct AltitudeBadge: View {
         BadgeView(
             text: "\(meters)m",
             icon: "mountain.2.fill",
-            color: .brown
+            color: .znNavy.opacity(0.7)
         )
     }
 }
@@ -110,7 +110,7 @@ struct FreeBadge: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        BadgeView(text: appState.localized(en: "Free", de: "Gratis"), icon: "gift", color: .green)
+        BadgeView(text: appState.localized(en: "Free", de: "Gratis"), icon: "gift", color: .znPositive)
     }
 }
 
@@ -119,24 +119,15 @@ struct ToddlerFriendlyBadge: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        BadgeView(text: appState.localized(en: "Toddler-friendly", de: "Kleinkindfreundlich"), icon: "figure.and.child.holdinghands", color: .brand)
+        BadgeView(text: appState.localized(en: "Toddler-friendly", de: "Kleinkindfreundlich"), icon: "figure.and.child.holdinghands", color: .znNavy)
     }
 }
 
-/// Featured activity badge (purple)
-struct FeaturedBadge: View {
-    @Environment(AppState.self) private var appState
-
-    var body: some View {
-        BadgeView(text: appState.localized(en: "Featured", de: "Empfohlen"), icon: "star.fill", color: .purple)
-    }
-}
-
-/// NEW activity badge (green)
+/// NEW activity badge
 struct NewBadge: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        BadgeView(text: appState.localized(en: "NEW", de: "NEU"), icon: "sparkle", color: .green)
+        BadgeView(text: appState.localized(en: "NEW", de: "NEU"), icon: "sparkle", color: .znPositive)
     }
 }

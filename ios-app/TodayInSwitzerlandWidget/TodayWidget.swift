@@ -48,7 +48,7 @@ struct TodayWidgetSmallView: View {
             HStack(spacing: 4) {
                 Image(systemName: entry.weatherSFSymbol)
                     .font(.title2)
-                    .foregroundStyle(.blue)
+                    .symbolRenderingMode(.multicolor)
                 Text("\(Int(entry.temperature))°")
                     .font(.title2.weight(.semibold))
                 Spacer()
@@ -76,10 +76,10 @@ struct TodayWidgetSmallView: View {
 
     private var transportColor: Color {
         switch entry.transportStatus {
-        case "none": return .green
-        case "minor": return .yellow
-        case "major": return .red
-        default: return .gray
+        case "none": return Color("znPositive")
+        case "minor": return Color("znTerracotta")
+        case "major": return Color("znNegative")
+        default: return Color("znMuted")
         }
     }
 
@@ -104,7 +104,7 @@ struct TodayWidgetMediumView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Image(systemName: entry.weatherSFSymbol)
                     .font(.largeTitle)
-                    .foregroundStyle(.blue)
+                    .symbolRenderingMode(.multicolor)
                 Text("\(Int(entry.temperature))°")
                     .font(.title.weight(.bold))
                 Text(entry.weatherDescription)
@@ -131,7 +131,7 @@ struct TodayWidgetMediumView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(entry.cityName)
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.purple)
+                    .foregroundStyle(Color("znNavy"))
 
                 Text(entry.topHeadline)
                     .font(.subheadline.weight(.medium))
@@ -147,10 +147,10 @@ struct TodayWidgetMediumView: View {
 
     private var transportColor: Color {
         switch entry.transportStatus {
-        case "none": return .green
-        case "minor": return .yellow
-        case "major": return .red
-        default: return .gray
+        case "none": return Color("znPositive")
+        case "minor": return Color("znTerracotta")
+        case "major": return Color("znNegative")
+        default: return Color("znMuted")
         }
     }
 }
@@ -164,7 +164,7 @@ struct TodayWidget: Widget {
         StaticConfiguration(kind: kind, provider: TodayWidgetProvider()) { entry in
             TodayWidgetEntryView(entry: entry)
         }
-        .configurationDisplayName("Today in Switzerland")
+        .configurationDisplayName("Znüni")
         .description("Weather, headlines, and transport status")
         .supportedFamilies([.systemSmall, .systemMedium])
     }

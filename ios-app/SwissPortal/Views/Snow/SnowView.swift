@@ -10,6 +10,7 @@ struct SnowView: View {
     @Environment(LocationManager.self) private var locationManager
 
     @State private var viewModel = SnowViewModel()
+    @State private var showSortSheet = false
 
     var body: some View {
         content
@@ -28,6 +29,13 @@ struct SnowView: View {
                 if newSort == .distance && !locationManager.isAuthorized {
                     locationManager.requestLocation()
                 }
+            }
+            .sheet(isPresented: $showSortSheet) {
+                SnowSortSheet(
+                    selectedSort: $viewModel.sort,
+                    language: appState.language
+                )
+                .presentationDetents([.height(200)])
             }
     }
 
@@ -57,11 +65,6 @@ struct SnowView: View {
         ScrollViewReader { proxy in
         ScrollView {
             LazyVStack(spacing: 0) {
-                // 0. Hero banner with title
-                HeroBanner(style: .snow, title: appState.localized(en: "Snow Report", de: "Schneebericht"))
-                    .padding(.horizontal)
-                    .padding(.top, 8)
-
                 // 1. Powder alert banner
                 if viewModel.hasPowderAlert, let topResort = topResort {
                     PowderAlertBanner(
@@ -121,6 +124,13 @@ struct SnowView: View {
                         withAnimation(AppAnimation.expandEase) {
                             viewModel.toggleExpanded(resort.id)
                         }
+                        if viewModel.expandedResortID == resort.id {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                withAnimation {
+                                    proxy.scrollTo(resort.id, anchor: .top)
+                                }
+                            }
+                        }
                     }
                     .id(resort.id)
                     .padding(.horizontal)
@@ -174,24 +184,23 @@ struct SnowView: View {
                 }
             )
 
-            SortPicker(
-                options: [
-                    (
-                        value: SnowSort.snowfall,
-                        label: appState.language == .de ? "Schnee" : "Snow",
-                        icon: "snowflake"
-                    ),
-                    (
-                        value: SnowSort.distance,
-                        label: appState.language == .de ? "Nähe" : "Near",
-                        icon: "location.fill"
-                    )
-                ],
-                selected: Binding(
-                    get: { viewModel.sort },
-                    set: { viewModel.sort = $0 }
-                )
-            )
+            Button {
+                showSortSheet = true
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: viewModel.sort.sfSymbol)
+                        .font(.system(size: 10))
+                    Text(appState.language == .en
+                         ? viewModel.sort.displayName
+                         : viewModel.sort.displayNameDE)
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundStyle(.znNavy)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.znNavy.opacity(0.08))
+                .clipShape(Capsule())
+            }
             .padding(.trailing)
         }
     }
@@ -219,6 +228,74 @@ struct SnowView: View {
         }
 
         return destinations.count
+    }
+}
+
+// MARK: - Snow Sort Sheet
+
+struct SnowSortSheet: View {
+    @Binding var selectedSort: SnowSort
+    let language: AppLanguage
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack {
+                Text(language == .en ? "Sort by" : "Sortieren nach")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.znInk)
+                Spacer()
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.znMuted)
+                        .frame(width: 30, height: 30)
+                        .background(Color.znBorder.opacity(0.4))
+                        .clipShape(Circle())
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
+
+            // Sort options
+            ForEach(SnowSort.allCases) { sort in
+                Button {
+                    selectedSort = sort
+                    dismiss()
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: sort.sfSymbol)
+                            .font(.system(size: 14))
+                            .foregroundStyle(selectedSort == sort ? .znNavy : .znMuted)
+                            .frame(width: 20)
+
+                        Text(language == .en ? sort.displayName : sort.displayNameDE)
+                            .font(.system(size: 15))
+                            .foregroundStyle(selectedSort == sort ? .znInk : .znBody)
+
+                        Spacer()
+
+                        if selectedSort == sort {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.znNavy)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 14)
+                    .background(selectedSort == sort ? Color.znNavy.opacity(0.06) : .clear)
+                }
+                .buttonStyle(.plain)
+                .sensoryFeedback(.selection, trigger: selectedSort)
+            }
+
+            Spacer()
+        }
+        .background(Color.znSurface)
     }
 }
 

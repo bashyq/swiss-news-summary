@@ -25,14 +25,8 @@ struct HeroBanner<Trailing: View>: View {
         case explore
 
         var gradient: [Color] {
-            switch self {
-            case .news: return [Color.brand, Color.brand.opacity(0.7)]
-            case .activities: return [.orange, .pink]
-            case .lunch: return [Color(red: 0.2, green: 0.7, blue: 0.4), .teal]
-            case .sunshine: return [.orange, .yellow]
-            case .snow: return [Color(red: 0.3, green: 0.5, blue: 0.9), Color(red: 0.6, green: 0.8, blue: 1.0)]
-            case .explore: return [.indigo, .purple]
-            }
+            // Znuni: uniform deep navy for all hero headers
+            return [Color.znNavy, Color.znNavy.opacity(0.92)]
         }
 
         /// Large background symbol (decorative)
@@ -69,10 +63,18 @@ struct HeroBanner<Trailing: View>: View {
                 endPoint: .bottomTrailing
             )
 
+            // Terracotta radial glow accent
+            RadialGradient(
+                colors: [Color.znTerracotta.opacity(0.15), .clear],
+                center: .topTrailing,
+                startRadius: 0,
+                endRadius: 120
+            )
+
             // Large background symbol — faded, offset right
             Image(systemName: style.backgroundSymbol)
                 .font(.system(size: 64, weight: .ultraLight))
-                .foregroundStyle(.white.opacity(0.15))
+                .foregroundStyle(.white.opacity(0.12))
                 .offset(x: 110, y: 0)
                 .rotationEffect(.degrees(-10))
 
@@ -83,13 +85,15 @@ struct HeroBanner<Trailing: View>: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.title3.weight(.bold))
+                        .font(.custom("Playfair", size: 20).weight(.semibold))
                         .foregroundStyle(.white)
                         .lineLimit(1)
                     if let subtitle {
                         Text(subtitle)
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.75))
+                            .font(.znEyebrow)
+                            .foregroundStyle(.white.opacity(0.5))
+                            .textCase(.uppercase)
+                            .tracking(1.4)
                             .lineLimit(1)
                     }
                 }
@@ -102,7 +106,7 @@ struct HeroBanner<Trailing: View>: View {
             .padding(.vertical, 10)
         }
         .frame(height: 56)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
     }
 
     // MARK: - Scattered Symbols
@@ -241,9 +245,9 @@ struct EmojiScene: View {
 
 #Preview("Section Headers") {
     VStack(spacing: 16) {
-        IllustratedSectionHeader("sun.max.fill", title: "Weekend Sunshine", subtitle: "Fri–Sun forecast", tint: .orange)
-        IllustratedSectionHeader("snowflake", title: "Fresh Powder", subtitle: "This week's snowfall", tint: .blue)
-        IllustratedSectionHeader("flame.fill", title: "Trending", tint: .orange)
+        IllustratedSectionHeader("sun.max.fill", title: "Weekend Sunshine", subtitle: "Fri–Sun forecast", tint: .znTerracotta)
+        IllustratedSectionHeader("snowflake", title: "Fresh Powder", subtitle: "This week's snowfall", tint: .znNavy)
+        IllustratedSectionHeader("flame.fill", title: "Trending", tint: .znTerracotta)
     }
     .padding()
 }

@@ -17,15 +17,14 @@ struct LunchSurpriseSheet: View {
         NavigationStack {
             VStack(spacing: 0) {
                 ScrollView {
-                    VStack(spacing: 16) {
+                    VStack(spacing: 12) {
                         // Cuisine icon
                         cuisineIcon
-                            .padding(.top, 16)
+                            .padding(.top, 12)
 
                         // Spot name
                         Text(spot.name)
-                            .font(.title2)
-                            .fontWeight(.bold)
+                            .font(.custom("Playfair", size: 22).weight(.semibold))
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
 
@@ -36,6 +35,11 @@ struct LunchSurpriseSheet: View {
 
                         // Badges
                         badgesRow
+
+                        // Opening hours
+                        if let hours = spot.openingHours, !hours.isEmpty {
+                            openingHoursView(hours)
+                        }
                     }
                     .padding(.bottom, 8)
                 }
@@ -64,7 +68,42 @@ struct LunchSurpriseSheet: View {
         }
     }
 
+    @ViewBuilder
     private var cuisineIcon: some View {
+        if spot.id.hasPrefix("custom-"),
+           let customSpot = CustomLunchSpot.find(spot.id),
+           let photo = customSpot.photo {
+            // User's photo for custom restaurants
+            Image(uiImage: photo)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 120, height: 120)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+        } else if !spot.id.hasPrefix("custom-"),
+           let photoURL = APIClient.shared.photoURL(for: spot.id) {
+            AsyncImage(url: photoURL) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 120, height: 120)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                case .failure:
+                    cuisineIconFallback
+                default:
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.znBorder)
+                        .frame(width: 120, height: 120)
+                        .overlay { ProgressView() }
+                }
+            }
+        } else {
+            cuisineIconFallback
+        }
+    }
+
+    private var cuisineIconFallback: some View {
         ZStack {
             Circle()
                 .fill(Color.brand.opacity(0.12))
@@ -82,7 +121,7 @@ struct LunchSurpriseSheet: View {
                 BadgeView(
                     text: appState.localized(en: "Open for lunch", de: "Mittagstisch"),
                     icon: "clock",
-                    color: .green
+                    color: .znPositive
                 )
             }
 
@@ -90,56 +129,59 @@ struct LunchSurpriseSheet: View {
                 BadgeView(
                     text: appState.localized(en: "Outdoor", de: "Terrasse"),
                     icon: "sun.max.fill",
-                    color: .orange
+                    color: .znTerracotta
                 )
             }
 
-            if spot.vegetarian == "yes" {
-                BadgeView(
-                    text: appState.localized(en: "Vegetarian", de: "Vegetarisch"),
-                    icon: "leaf",
-                    color: .green
-                )
+
+        }
+    }
+
+    private func openingHoursView(_ hours: String) -> some View {
+        let lines = LunchCard.splitOpeningHours(hours)
+        return VStack(spacing: 3) {
+            HStack(spacing: 4) {
+                Image(systemName: "clock")
+                    .font(.caption2)
+                    .foregroundStyle(.znMuted)
+                Text(appState.localized(en: "Opening hours", de: "Öffnungszeiten"))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.znMuted)
+            }
+            ForEach(lines, id: \.self) { line in
+                Text(line)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.znBody)
             }
         }
+        .padding(.horizontal, 24)
     }
 
     private var actionButtons: some View {
         VStack(spacing: 12) {
-            // Primary row: Directions + Save
-            HStack(spacing: 12) {
-                // Directions button (Apple Maps)
-                Button {
-                    openInMaps()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "map")
-                        Text(appState.localized(en: "Directions", de: "Route"))
-                            .fontWeight(.medium)
+            // Primary row: Website + Directions + Save
+            HStack(spacing: 8) {
+                // Website button
+                if let urlString = spot.website, let url = URL(string: urlString) {
+                    Link(destination: url) {
+                        actionPill(icon: "safari", label: appState.localized(en: "Website", de: "Webseite"))
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color(.systemGray6))
-                    .foregroundStyle(.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
+                }
+
+                // Directions button (Apple Maps)
+                Button(action: openInMaps) {
+                    actionPill(icon: "arrow.triangle.turn.up.right.diamond", label: appState.localized(en: "Directions", de: "Route"))
                 }
 
                 // Save / heart button
                 Button(action: onSave) {
-                    HStack(spacing: 6) {
-                        Image(systemName: isSaved ? "heart.fill" : "heart")
-                            .foregroundStyle(isSaved ? .red : .primary)
-                        Text(isSaved
-                             ? appState.localized(en: "Saved", de: "Gespeichert")
-                             : appState.localized(en: "Save", de: "Speichern")
-                        )
-                        .fontWeight(.medium)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color(.systemGray6))
-                    .foregroundStyle(.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
+                    actionPill(
+                        icon: isSaved ? "heart.fill" : "heart",
+                        label: isSaved
+                            ? appState.localized(en: "Saved", de: "Gespeichert")
+                            : appState.localized(en: "Save", de: "Speichern"),
+                        iconColor: isSaved ? .znNegative : .primary
+                    )
                 }
             }
 
@@ -158,6 +200,22 @@ struct LunchSurpriseSheet: View {
                 .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
             }
         }
+    }
+
+    private func actionPill(icon: String, label: String, iconColor: Color? = nil) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 16))
+                .foregroundStyle(iconColor ?? .primary)
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .background(Color.znNeutralTagBg)
+        .foregroundStyle(.primary)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
     }
 
     private func openInMaps() {
@@ -186,7 +244,10 @@ struct LunchSurpriseSheet: View {
             vegan: nil,
             phone: "+41 44 262 99 00",
             website: "https://www.kronenhalle.ch",
-            amenity: "restaurant"
+            amenity: "restaurant",
+            rating: 4.5,
+            ratingCount: 2847,
+            permanentlyClosed: false
         ),
         onTryAnother: {},
         onSave: {},

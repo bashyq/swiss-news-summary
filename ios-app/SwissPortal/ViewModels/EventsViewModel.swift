@@ -196,24 +196,24 @@ final class EventsViewModel {
     ///
     /// Color mapping:
     /// - `.brand` — festival
-    /// - `.red` — holiday (public)
-    /// - `.orange` (amber) — school holiday
-    /// - `.blue` — recurring activity
+    /// - `.znNegative` — holiday (public)
+    /// - `.znTerracotta` — school holiday
+    /// - `.znNavy` (opacity 0.7) — recurring activity
     func dotColors(for date: Date) -> [Color] {
         let events = eventsForDate(date)
         var colors: [Color] = []
 
         if !events.holidays.isEmpty {
-            colors.append(.red)
+            colors.append(.znNegative)
         }
         if !events.festivals.isEmpty {
             colors.append(.brand)
         }
         if !events.schoolHolidays.isEmpty {
-            colors.append(.orange)
+            colors.append(.znTerracotta)
         }
         if !events.recurringActivities.isEmpty {
-            colors.append(.blue)
+            colors.append(.znNavy.opacity(0.7))
         }
 
         return colors
