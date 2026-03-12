@@ -406,6 +406,56 @@ nav { margin: 0; }
 [data-theme="dark"] .act-detail-cell { background: var(--bg2); }
 [data-theme="dark"] .act-status-strip { background: var(--bg2); }
 
+/* ═══ VCARD — Lunch cards ═══ */
+.vcard-list { display: flex; flex-direction: column; gap: 10px; }
+.vcard { background: var(--card); border-radius: 18px; overflow: hidden; position: relative; display: flex; flex-direction: column; cursor: pointer; transition: box-shadow .2s; border: 1px solid var(--border); }
+.vcard:hover { box-shadow: 0 4px 18px rgba(26,58,92,.1); }
+.vcard.closed { opacity: .5; }
+.vcard-face { display: flex; gap: 0; align-items: stretch; }
+.vcard-photo { width: 94px; flex-shrink: 0; position: relative; overflow: hidden; background: var(--bg2); }
+.vcard-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vcard-photo-empty { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 28px; background: var(--bg2); min-height: 80px; }
+.vcard-body { flex: 1; padding: 13px 14px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.vcard-name { font-family: var(--serif); font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.25; }
+.vcard-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.vcard-stars { font-size: 11px; font-weight: 600; color: var(--terra); }
+.vcard-reviews { font-size: 10px; color: var(--text2); }
+.vcard-price { font-size: 11px; font-weight: 700; color: var(--clr-green); letter-spacing: -1px; }
+.vcard-dist { font-size: 10px; color: var(--text2); margin-left: auto; }
+.vcard-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 2px; }
+.vcard-tag { font-size: 10px; font-weight: 500; border-radius: 100px; padding: 2px 9px; display: inline-flex; align-items: center; gap: 3px; background: rgba(26,58,92,.06); color: var(--text2); }
+.vcard-tag.terrace { background: rgba(196,98,58,.1); color: var(--terra); }
+.vcard-tag.cuisine { background: rgba(26,58,92,.06); color: var(--navy); }
+.vcard-right { width: 34px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--text2); }
+.vcard-chevron { transition: transform .25s; }
+.vcard.vcard-open .vcard-chevron { transform: rotate(90deg); }
+.vcard-expand { display: none; border-top: 1px solid var(--border); }
+.vcard.vcard-open .vcard-expand { display: block; }
+.vcard.vcard-open { box-shadow: 0 6px 24px rgba(26,58,92,.12); }
+.vcard.vcard-open .act-close-btn { display: flex; }
+.vcard .act-close-btn { display: none; }
+.vcard-expand-body { padding: 16px; }
+.vcard-expand-name { font-family: var(--serif); font-size: 18px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+.vcard-status { display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--bg2); border-radius: 100px; width: fit-content; margin-bottom: 12px; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.status-dot.open { background: var(--clr-green); }
+.status-dot.closed { background: var(--clr-red); }
+.status-txt { font-size: 10px; font-weight: 500; }
+.status-txt.open { color: var(--clr-green); }
+.status-txt.closed { color: var(--clr-red); }
+.vcard-actions { display: flex; gap: 7px; margin-top: 14px; }
+.vcard-act-btn { flex: 1; border: none; border-radius: 100px; padding: 10px 6px; font-family: var(--font); font-size: 11.5px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer; }
+.vcard-act-btn.primary { background: var(--navy); color: white; }
+.vcard-act-btn.primary:hover { opacity: .9; }
+.vcard-act-btn.secondary { background: var(--bg2); color: var(--navy); border: 1px solid var(--border); }
+.vcard-act-btn.icon-only { flex: 0; width: 38px; height: 38px; border-radius: 100px; padding: 0; background: var(--bg2); border: 1px solid var(--border); color: var(--navy); }
+[data-theme="dark"] .vcard { border-color: rgba(255,255,255,.08); }
+[data-theme="dark"] .vcard:hover { box-shadow: 0 4px 18px rgba(0,0,0,.3); }
+[data-theme="dark"] .vcard.vcard-open { box-shadow: 0 6px 24px rgba(0,0,0,.4); }
+[data-theme="dark"] .vcard-status { background: var(--bg2); }
+[data-theme="dark"] .vcard-act-btn.secondary { background: var(--bg2); color: var(--text); }
+[data-theme="dark"] .vcard-act-btn.icon-only { background: var(--bg2); color: var(--text); }
+
 .activity-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--sp-4); margin-bottom: var(--sp-3); border-left: 4px solid var(--border); cursor: pointer; transition: border-color var(--ease-fast), transform var(--ease-fast), box-shadow var(--ease-fast); position: relative; }
 .activity-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.12); }
 [data-theme="light"] .activity-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); }

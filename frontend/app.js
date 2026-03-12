@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '3.2.0';
+const APP_VERSION = '3.3.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -392,7 +392,7 @@ function renderHeader() {
   const now = new Date();
   const dateStr = now.toLocaleDateString(lang === 'de' ? 'de-CH' : 'en-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-  const heroViews = { news: true, activities: true };
+  const heroViews = { news: true, activities: true, lunch: true };
   if (heroViews[view]) {
     const eyebrow = dateStr.toUpperCase();
     const cityName = CITIES[city] || 'Zürich';
@@ -411,6 +411,20 @@ function renderHeader() {
       heroBottom = `</div><div class="pill-row-hero">${filters.map(([k, v]) => {
         const active = activityFilter === k;
         return `<button class="pill ${active ? 'on' : 'off'}" onclick="filterActivities('${k}')">${v}${k === 'all' ? `<span class="pill-cnt">${totalCount}</span>` : ''}</button>`;
+      }).join('')}</div>`;
+    } else if (view === 'lunch') {
+      titleText = 'Lunch';
+      const lunchPills = [
+        ['nearMe', t('nearMe')], ['open', lang === 'de' ? 'Offen' : 'Open'],
+        ['terrace', 'Terrasse'], ['saved', t('saved')]
+      ];
+      const cuisines = [['all', lang === 'de' ? 'Alle' : 'All'], ['italian','🍕'], ['asian','🥢'], ['kebab','🥙'], ['cafe','☕'], ['fastfood','🍔'], ['international','🌍']];
+      heroBottom = `</div><div class="pill-row-hero">${lunchPills.map(([k, v]) => {
+        const active = lunchFilters[k];
+        return `<button class="pill ${active ? 'on' : 'off'}" onclick="toggleLunchFilter('${k}')">${v}</button>`;
+      }).join('')}${cuisines.map(([k, v]) => {
+        const active = lunchCuisine === k;
+        return `<button class="pill ${active ? 'on' : 'off'}" onclick="setLunchCuisine('${k}')">${v}</button>`;
       }).join('')}</div>`;
     }
 
@@ -1007,34 +1021,18 @@ function renderWeekendView() {
 // ═══ LUNCH VIEW ═══
 
 function renderLunchView() {
-  let html = `<div class="subtitle">${lang === 'de' ? 'Restaurants in der Nähe von' : 'Restaurants near'} ${CITIES[city]}</div>`;
-
-  // Toggle filters (multi-select)
-  const pills = [
-    ['nearMe', t('nearMe')],
-    ['open', lang === 'de' ? 'Offen' : 'Open'],
-    ['terrace', 'Terrasse'],
-    ['saved', t('saved')],
-  ];
-  html += '<div class="filter-bar">';
-  html += pills.map(([k, v]) => `<button class="filter-btn${lunchFilters[k] ? ' active' : ''}" onclick="toggleLunchFilter('${k}')">${v}</button>`).join('');
-  // Cuisine dropdown
-  const cuisines = [['all', t('all')], ['italian','🍕 Italian'], ['asian','🥢 Asian'], ['kebab','🥙 Kebab'], ['cafe','☕ Café'], ['fastfood','🍔 Fast Food'], ['international','🌍 International']];
-  html += `<select class="lunch-cuisine-select" onchange="setLunchCuisine(this.value)">
-    <option value="all"${lunchCuisine === 'all' ? ' selected' : ''}>${lang === 'de' ? 'Alle Küchen' : 'All cuisines'}</option>
-    ${cuisines.slice(1).map(([k, v]) => `<option value="${k}"${lunchCuisine === k ? ' selected' : ''}>${v}</option>`).join('')}
-  </select>`;
-  html += '</div>';
-
-  // Surprise
-  html += `<button class="surprise-btn" onclick="surpriseLunch()" id="surprise-lunch-btn">🎲 ${t('surpriseMe')}</button>`;
+  let html = '';
 
   // Map
   html += `<div class="map-container${lunchMapExpanded ? ' expanded' : ' compact'}" id="lunch-map" onclick="toggleLunchMap()"></div>`;
 
-  // List
-  html += '<div id="lunch-list">';
+  // Results bar
   const spots = getFilteredLunchSpots();
+  const totalCount = lunchData.length + customLunch.length;
+  html += `<div class="act-results"><span>${spots.length} of ${totalCount} ${lang === 'de' ? 'Ergebnisse' : 'results'}</span></div>`;
+
+  // List
+  html += '<div class="vcard-list" id="lunch-list">';
   if (spots.length === 0) {
     if (lunchData.length === 0) {
       html += renderSkeleton(3);
@@ -1048,16 +1046,8 @@ function renderLunchView() {
   }
   html += '</div>';
 
-  // Add custom
-  html += `<button class="btn-add" onclick="showAddForm('lunch')">${t('addLunch')}</button>`;
-  html += `<div class="add-form" id="add-lunch-form">
-    <input id="new-lunch-name" placeholder="${t('name')}">
-    <input id="new-lunch-cuisine" placeholder="Cuisine">
-    <div class="form-row" style="margin-top:8px;">
-      <button class="btn-primary" onclick="saveCustomLunch()">${t('save')}</button>
-      <button class="btn-secondary" onclick="hideAddForm('lunch')">${t('cancel')}</button>
-    </div>
-  </div>`;
+  // Surprise me button
+  html += `<button class="btn-surprise" onclick="surpriseLunch()">🎲 ${t('surpriseMe')}</button>`;
 
   return html;
 }
@@ -1065,37 +1055,59 @@ function renderLunchView() {
 function renderLunchCard(s) {
   const isSaved = savedLunch.includes(s.id);
   const dist = (userLat && s.lat) ? haversine(userLat, userLon, s.lat, s.lon) : null;
-
-  let badges = '';
-  if (s.permanentlyClosed) badges += '<span class="badge badge-closed">Permanently Closed</span>';
-  else if (s.openForLunch === true) badges += '<span class="badge badge-open">Open</span>';
-  else if (s.openForLunch === false) badges += '<span class="badge badge-closed">Closed</span>';
-  if (s.outdoorSeating) badges += '<span class="badge badge-outdoor-seat">🪑 Terrace</span>';
-  if (s.wheelchair === 'yes') badges += '<span class="badge badge-wheelchair">♿</span>';
-  if (s.takeaway) badges += '<span class="badge badge-takeaway">📦</span>';
-  if (dist !== null) badges += `<span class="badge badge-distance">${formatDist(dist)}</span>`;
-
-  const priceHtml = s.priceLevel != null ? `<span class="lunch-price-level">${'$'.repeat(s.priceLevel || 1)}</span>` : '';
-  const ratingHtml = s.rating
-    ? `<div class="google-rating">${priceHtml}<span class="google-stars">${'★'.repeat(Math.round(s.rating))}${'☆'.repeat(5 - Math.round(s.rating))}</span> <span class="google-score">${s.rating}</span><span class="google-count">(${s.ratingCount || 0})</span></div>`
-    : (priceHtml ? `<div class="google-rating">${priceHtml}</div>` : '');
-
   const photoUrl = s.lat ? `${API}/photo/${s.id}?name=${encodeURIComponent(s.name)}&lat=${s.lat}&lon=${s.lon}` : '';
-  const photoHtml = photoUrl ? `<img class="lunch-photo" src="${photoUrl}" alt="" loading="lazy" onerror="retryPhoto(this)">` : '';
 
-  return `<div class="lunch-spot${s.permanentlyClosed ? ' closed' : ''}" id="lunch-${s.id}" onclick="lunchCardClick('${s.id}', event)">
-    <div class="lunch-info">
-      <div class="lunch-name">${esc(s.name)}</div>
-      <div class="lunch-cuisine">${esc(s.cuisine || s.cuisineCategory || s.amenity || '')}</div>
-      ${ratingHtml}
-      <div class="lunch-badges">${badges}</div>
+  // Face tags
+  let tags = '';
+  if (s.outdoorSeating) tags += '<span class="vcard-tag terrace">☀️ Terrace</span>';
+  if (s.takeaway) tags += '<span class="vcard-tag">📦 Takeaway</span>';
+  if (s.wheelchair === 'yes') tags += '<span class="vcard-tag">♿</span>';
+  const cuisineLabel = s.cuisine || s.cuisineCategory || s.amenity || '';
+  if (cuisineLabel) tags += `<span class="vcard-tag cuisine">${esc(cuisineLabel)}</span>`;
+
+  // Rating
+  const starsHtml = s.rating ? `<span class="vcard-stars">★ ${s.rating}</span><span class="vcard-reviews">(${s.ratingCount || 0})</span>` : '';
+  const priceHtml = s.priceLevel != null ? `<span class="vcard-price">${'$'.repeat(s.priceLevel || 1)}</span>` : '';
+
+  // Status
+  let statusHtml = '';
+  if (s.permanentlyClosed) statusHtml = '<span class="status-dot closed"></span><span class="status-txt closed">Permanently closed</span>';
+  else if (s.openForLunch === true) statusHtml = `<span class="status-dot open"></span><span class="status-txt open">${lang === 'de' ? 'Offen zum Mittagessen' : 'Open for lunch'}</span>`;
+  else if (s.openForLunch === false) statusHtml = `<span class="status-dot closed"></span><span class="status-txt closed">${lang === 'de' ? 'Geschlossen' : 'Closed'}</span>`;
+
+  // Detail grid
+  const distText = dist !== null ? formatDist(dist) : '—';
+  const priceText = s.priceLevel != null ? '$'.repeat(s.priceLevel) : '—';
+
+  return `<div class="vcard${s.permanentlyClosed ? ' closed' : ''}" id="lc-${s.id}" onclick="toggleLunchCard(this, event)">
+    <div class="vcard-face">
+      <div class="vcard-photo">${photoUrl ? `<img src="${photoUrl}" alt="" loading="lazy" onerror="retryPhoto(this)">` : `<div class="vcard-photo-empty">🍽️</div>`}</div>
+      <div class="vcard-body">
+        <div class="vcard-name">${esc(s.name)}</div>
+        <div class="vcard-meta">${starsHtml}${priceHtml}${dist !== null ? `<span class="vcard-dist">↗ ${distText}</span>` : ''}</div>
+        <div class="vcard-tags">${tags}</div>
+      </div>
+      <div class="vcard-right"><svg class="vcard-chevron" width="8" height="14" viewBox="0 0 8 14" fill="none"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
     </div>
-    ${photoHtml}
-    <div class="lunch-actions">
-      <button class="${isSaved ? 'saved' : ''}" onclick="toggleSaveLunch('${s.id}')" style="${isSaved ? 'color:var(--accent);border-color:var(--accent)' : ''}">${isSaved ? '❤️' : '🤍'}</button>
-      ${s.lat ? `<button onclick="window.open('${mapsUrl(s.lat, s.lon, s.name)}','_blank')">📍</button>` : ''}
-      ${s.website ? `<button onclick="window.open('${esc(s.website)}','_blank')">🌐</button>` : ''}
-      ${s.custom ? `<button onclick="deleteCustomLunch('${s.id}')">🗑️</button>` : ''}
+    <button class="act-close-btn" onclick="closeLunchCard(this.closest('.vcard'),event)">✕</button>
+    <div class="vcard-expand">
+      ${photoUrl ? `<div class="act-detail-photo"><img src="${photoUrl}" alt="" loading="lazy"><div class="act-detail-photo-fade"></div></div>` : ''}
+      <div class="vcard-expand-body">
+        <div class="vcard-expand-name">${esc(s.name)}</div>
+        ${statusHtml ? `<div class="vcard-status">${statusHtml}</div>` : ''}
+        <div class="act-detail-grid">
+          <div class="act-detail-cell"><div class="act-detail-label">${lang === 'de' ? 'Entfernung' : 'Distance'}</div><div class="act-detail-val">${distText}</div></div>
+          <div class="act-detail-cell"><div class="act-detail-label">${lang === 'de' ? 'Küche' : 'Cuisine'}</div><div class="act-detail-val">${esc(cuisineLabel) || '—'}</div></div>
+          <div class="act-detail-cell"><div class="act-detail-label">${lang === 'de' ? 'Preis' : 'Price'}</div><div class="act-detail-val">${priceText}</div></div>
+          <div class="act-detail-cell"><div class="act-detail-label">Rating</div><div class="act-detail-val">${s.rating || '—'}</div></div>
+        </div>
+        <div class="vcard-actions">
+          ${s.lat ? `<button class="vcard-act-btn primary" onclick="event.stopPropagation();window.open('${mapsUrl(s.lat, s.lon, s.name)}','_blank')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> ${lang === 'de' ? 'Route' : 'Directions'}</button>` : ''}
+          ${s.website ? `<button class="vcard-act-btn secondary" onclick="event.stopPropagation();window.open('${esc(s.website)}','_blank')">🌐 Website</button>` : ''}
+          <button class="vcard-act-btn icon-only" onclick="event.stopPropagation();toggleSaveLunch('${s.id}')">${isSaved ? '❤️' : '🤍'}</button>
+          ${s.custom ? `<button class="vcard-act-btn icon-only" onclick="event.stopPropagation();deleteCustomLunch('${s.id}')">🗑️</button>` : ''}
+        </div>
+      </div>
     </div>
   </div>`;
 }
@@ -1527,6 +1539,21 @@ function toggleNews(card, e) {
   if (!wasExpanded) card.classList.add('expanded');
 }
 
+function toggleLunchCard(card, e) {
+  if (e && (e.target.closest('a') || e.target.closest('.vcard-act-btn') || e.target.closest('.act-close-btn'))) return;
+  const wasOpen = card.classList.contains('vcard-open');
+  document.querySelectorAll('.vcard.vcard-open').forEach(c => c.classList.remove('vcard-open'));
+  if (!wasOpen) {
+    card.classList.add('vcard-open');
+    setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
+  }
+}
+
+function closeLunchCard(card, e) {
+  if (e) e.stopPropagation();
+  card.classList.remove('vcard-open');
+}
+
 function shareArticle(headline, url) {
   if (navigator.share) {
     navigator.share({ title: headline, url: url }).catch(() => {});
@@ -1546,12 +1573,14 @@ function filterActivities(f) {
 function filterEvents(f) { eventFilter = f; renderCurrentView(); }
 function toggleLunchFilter(f) {
   lunchFilters[f] = !lunchFilters[f];
-  if (f === 'nearMe' && lunchFilters.nearMe && !userLat) { requestLocation().then(() => { renderCurrentView(); afterRender(initLunchMap); }); return; }
+  if (f === 'nearMe' && lunchFilters.nearMe && !userLat) { requestLocation().then(() => { renderHeader(); renderCurrentView(); afterRender(initLunchMap); }); return; }
+  renderHeader();
   renderCurrentView();
   afterRender(initLunchMap);
 }
 function setLunchCuisine(c) {
   lunchCuisine = c;
+  renderHeader();
   renderCurrentView();
   afterRender(initLunchMap);
 }

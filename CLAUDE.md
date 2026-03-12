@@ -146,9 +146,14 @@ swiss-news-summary/
 - Smart activity filtering based on weather and day-of-week
 - Uses `isAvailableOnDate()` for recurring/seasonal filtering
 
-### Lunch Page
-- Restaurant recommendations with compact map strip + list
+### Lunch Page — Design System v3.3
+- **Hero header**: Navy hero with filter pills + cuisine pills in hero (`pill-row-hero`)
+- **vcard pattern**: Photo-left cards (94px), expand-in-place accordion with detail panel
+  - Face: photo + Playfair name + star rating + price level + distance + cuisine/terrace tags
+  - Detail: hero photo, status pill (open/closed), 4-cell grid (distance/cuisine/price/rating), action row (directions/website/save)
+- **Filters in hero**: Near Me, Open, Terrace, Saved + cuisine emoji pills (All/🍕/🥢/🥙/☕/🍔/🌍)
 - "Surprise me!" random restaurant picker
+- Compact map strip above results
 
 ### Stay-Home Activities
 - 40 at-home toddler activities (sensory/art/active/pretend/kitchen)
