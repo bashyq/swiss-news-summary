@@ -3,7 +3,7 @@
  * GET /photo/:activityId → venue photo (JPEG)
  */
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';
 
 import { getActivityById } from './activities.js';
 import { getSunshineDestById } from './sunshine.js';
@@ -61,8 +61,16 @@ export async function handlePhoto(url, env) {
     }
   }
 
-  // Look up place from activities, sunshine destinations, or snow resorts
-  const activity = getActivityById(activityId) || getSunshineDestById(activityId) || getSnowResortById(activityId);
+  // Look up place from activities, sunshine destinations, snow resorts, or query params (for dynamic spots like lunch)
+  let activity = getActivityById(activityId) || getSunshineDestById(activityId) || getSnowResortById(activityId);
+  if (!activity) {
+    const name = url.searchParams.get('name');
+    const lat = parseFloat(url.searchParams.get('lat'));
+    const lon = parseFloat(url.searchParams.get('lon'));
+    if (name && !isNaN(lat) && !isNaN(lon)) {
+      activity = { name, lat, lon };
+    }
+  }
   if (!activity || !activity.lat || !activity.lon) {
     return new Response(JSON.stringify({ error: 'Place not found' }), {
       status: 404, headers: { 'Content-Type': 'application/json', ...corsHeader }

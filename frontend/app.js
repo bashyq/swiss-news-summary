@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.24.0';
+const APP_VERSION = '2.25.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -963,13 +963,17 @@ function renderLunchCard(s) {
     ? `<div class="google-rating"><span class="google-stars">${'★'.repeat(Math.round(s.rating))}${'☆'.repeat(5 - Math.round(s.rating))}</span> <span class="google-score">${s.rating}</span><span class="google-count">(${s.ratingCount || 0})</span></div>`
     : '';
 
+  const photoUrl = s.lat ? `${API}/photo/${s.id}?name=${encodeURIComponent(s.name)}&lat=${s.lat}&lon=${s.lon}` : '';
+  const photoHtml = photoUrl ? `<img class="lunch-photo" src="${photoUrl}" alt="" loading="lazy" onerror="this.style.display='none'">` : '';
+
   return `<div class="lunch-spot${s.permanentlyClosed ? ' closed' : ''}" id="lunch-${s.id}" onclick="lunchCardClick('${s.id}', event)">
-    <div>
+    <div class="lunch-info">
       <div class="lunch-name">${esc(s.name)}</div>
       <div class="lunch-cuisine">${esc(s.cuisine || s.cuisineCategory || s.amenity || '')}</div>
       ${ratingHtml}
       <div class="lunch-badges">${badges}</div>
     </div>
+    ${photoHtml}
     <div class="lunch-actions">
       <button class="${isSaved ? 'saved' : ''}" onclick="toggleSaveLunch('${s.id}')" style="${isSaved ? 'color:var(--accent);border-color:var(--accent)' : ''}">${isSaved ? '❤️' : '🤍'}</button>
       ${s.lat ? `<button onclick="window.open('${mapsUrl(s.lat, s.lon, s.name)}','_blank')">📍</button>` : ''}
