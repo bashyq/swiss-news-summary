@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.28.0';
+const APP_VERSION = '3.0.0';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -1314,7 +1314,7 @@ function setBrand(b) {
 function updateThemeColor() {
   const meta = document.getElementById('meta-theme-color');
   if (!meta) return;
-  if (brand === 'alpine') meta.content = theme === 'dark' ? '#1B2B4D' : '#FFFFFF';
+  if (brand === 'alpine') meta.content = theme === 'dark' ? '#1A3A5C' : '#F5F0E8';
   else meta.content = theme === 'dark' ? '#0a0a0a' : '#ffffff';
 }
 

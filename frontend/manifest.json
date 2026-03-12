@@ -4,8 +4,8 @@
   "description": "Znüni — Was lauft hüt? News, weather, activities, events, deals and more for Swiss families.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1B2B4D",
-  "theme_color": "#1B2B4D",
+  "background_color": "#F5F0E8",
+  "theme_color": "#1A3A5C",
   "orientation": "portrait-primary",
   "icons": [
     {

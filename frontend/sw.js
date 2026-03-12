@@ -1,4 +1,4 @@
-const CACHE_NAME = 'znuni-v9';
+const CACHE_NAME = 'znuni-v10';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -9,7 +9,11 @@ const STATIC_ASSETS = [
   '/icon.svg',
   '/icon-192.png',
   '/icon-512.png',
-  '/icon-180.png'
+  '/icon-180.png',
+  '/icon-navy.svg',
+  '/icon-navy-192.png',
+  '/icon-navy-512.png',
+  '/icon-navy-180.png'
 ];
 
 // Install - cache static assets

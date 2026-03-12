@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <!-- Cream background -->
-  <rect width="1024" height="1024" rx="224" fill="#F5F0E8"/>
+  <!-- Navy background -->
+  <rect width="1024" height="1024" rx="224" fill="#1A3A5C"/>
 
-  <!-- Z lettermark — italic bold, navy -->
+  <!-- Z lettermark — italic bold, cream -->
   <path d="
     M 225,270 L 490,270 L 490,325
     L 322,620
@@ -10,15 +10,12 @@
     L 215,680 L 215,625
     L 385,325
     L 225,325 Z
-  " fill="#1A3A5C" transform="skewX(-10) translate(55,0)"/>
+  " fill="#F5F0E8" transform="skewX(-10) translate(55,0)"/>
 
   <!-- Pin/9 mark — terracotta, single continuous form -->
   <g fill="none" stroke="#C4623A" stroke-width="50" stroke-linecap="round" stroke-linejoin="round">
-    <!-- Circle (pin head / 9 loop) -->
     <circle cx="680" cy="370" r="85"/>
-    <!-- Tail flows from bottom-right of circle, curves down to tapered point -->
     <path d="M 738,430 C 748,530 720,630 680,720" stroke-width="50"/>
   </g>
-  <!-- Tapered pin point -->
   <path d="M 695,690 C 688,720 680,745 675,755 C 672,748 668,730 665,710" fill="#C4623A" stroke="none"/>
 </svg>
