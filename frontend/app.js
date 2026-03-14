@@ -1538,13 +1538,20 @@ function toggleAbout() {
 
 function toggleDetail(id) { $(id)?.classList.toggle('active'); }
 
+function scrollToCard(el) {
+  setTimeout(() => {
+    const y = el.getBoundingClientRect().top + window.scrollY - 12;
+    window.scrollTo({ top: y, behavior: 'smooth' });
+  }, 250);
+}
+
 function toggleActCard(card, e) {
   if (e && (e.target.closest('a') || e.target.closest('.btn-save') || e.target.closest('.act-close-btn'))) return;
   const wasExpanded = card.classList.contains('act-expanded');
   document.querySelectorAll('.act-card.act-expanded').forEach(c => c.classList.remove('act-expanded'));
   if (!wasExpanded) {
     card.classList.add('act-expanded');
-    setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    scrollToCard(card);
   }
 }
 
@@ -1559,7 +1566,7 @@ function toggleNews(card, e) {
   document.querySelectorAll('.ncard.expanded').forEach(c => c.classList.remove('expanded'));
   if (!wasExpanded) {
     card.classList.add('expanded');
-    setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    scrollToCard(card);
   }
 }
 
@@ -1569,7 +1576,7 @@ function toggleLunchCard(card, e) {
   document.querySelectorAll('.vcard.vcard-open').forEach(c => c.classList.remove('vcard-open'));
   if (!wasOpen) {
     card.classList.add('vcard-open');
-    setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    scrollToCard(card);
   }
 }
 
@@ -2494,7 +2501,7 @@ function sunshineCardClick(id) {
   if (card) {
     const wasExpanded = card.classList.contains('expanded');
     card.classList.toggle('expanded');
-    if (!wasExpanded) setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    if (!wasExpanded) scrollToCard(card);
   }
   if (sunshineMap) panToMarker(sunshineMarkers, id, sunshineMap, 10);
 }
@@ -2712,7 +2719,7 @@ function snowCardClick(id) {
   if (card) {
     const wasExpanded = card.classList.contains('expanded');
     card.classList.toggle('expanded');
-    if (!wasExpanded) setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+    if (!wasExpanded) scrollToCard(card);
   }
   if (snowMap) panToMarker(snowMarkers, id, snowMap, 10);
 }
