@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '4.0.2';
+const APP_VERSION = '4.0.3';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
@@ -483,7 +483,7 @@ function renderHeader() {
         </div>
         <div class="hero-body">
           <div class="hero-eyebrow">${eyebrow}</div>
-          <h1 class="hero-title" style="${view !== 'news' ? 'font-size:24px;margin-bottom:0' : ''}">${titleText}</h1>
+          <h1 class="hero-title" style="${view === 'explore' ? 'font-size:26px' : view !== 'news' ? 'font-size:24px' : ''}">${titleText}</h1>
           ${heroBottom}
         </div>
       </div>
