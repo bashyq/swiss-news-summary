@@ -1544,7 +1544,7 @@ function toggleActCard(card, e) {
   document.querySelectorAll('.act-card.act-expanded').forEach(c => c.classList.remove('act-expanded'));
   if (!wasExpanded) {
     card.classList.add('act-expanded');
-    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
   }
 }
 
@@ -1556,9 +1556,11 @@ function closeActCard(card, e) {
 function toggleNews(card, e) {
   if (e && (e.target.closest('a') || e.target.closest('.btn-share'))) return;
   const wasExpanded = card.classList.contains('expanded');
-  // Close all other expanded cards
   document.querySelectorAll('.ncard.expanded').forEach(c => c.classList.remove('expanded'));
-  if (!wasExpanded) card.classList.add('expanded');
+  if (!wasExpanded) {
+    card.classList.add('expanded');
+    setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  }
 }
 
 function toggleLunchCard(card, e) {
@@ -1567,7 +1569,7 @@ function toggleLunchCard(card, e) {
   document.querySelectorAll('.vcard.vcard-open').forEach(c => c.classList.remove('vcard-open'));
   if (!wasOpen) {
     card.classList.add('vcard-open');
-    setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
+    setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
   }
 }
 
@@ -2485,12 +2487,15 @@ function renderHighlightItem(h) {
 }
 
 function sunshineCardClick(id) {
-  // Accordion: collapse other expanded cards
   document.querySelectorAll('.sunshine-card.expanded').forEach(c => {
     if (c.dataset.id !== id) c.classList.remove('expanded');
   });
   const card = document.getElementById(`sunshine-${id}`);
-  if (card) card.classList.toggle('expanded');
+  if (card) {
+    const wasExpanded = card.classList.contains('expanded');
+    card.classList.toggle('expanded');
+    if (!wasExpanded) setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  }
   if (sunshineMap) panToMarker(sunshineMarkers, id, sunshineMap, 10);
 }
 
@@ -2704,7 +2709,11 @@ function snowCardClick(id) {
     if (c.dataset.id !== id) c.classList.remove('expanded');
   });
   const card = document.getElementById(`snow-${id}`);
-  if (card) card.classList.toggle('expanded');
+  if (card) {
+    const wasExpanded = card.classList.contains('expanded');
+    card.classList.toggle('expanded');
+    if (!wasExpanded) setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+  }
   if (snowMap) panToMarker(snowMarkers, id, snowMap, 10);
 }
 
