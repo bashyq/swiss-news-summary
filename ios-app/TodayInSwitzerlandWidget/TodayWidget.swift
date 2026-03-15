@@ -43,35 +43,44 @@ struct TodayWidgetSmallView: View {
     let entry: WidgetNewsEntry
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             // Weather row
-            HStack(spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Image(systemName: entry.weatherSFSymbol)
                     .font(.title2)
                     .symbolRenderingMode(.multicolor)
                 Text("\(Int(entry.temperature))°")
-                    .font(.title2.weight(.semibold))
-                Spacer()
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color("znInk"))
             }
 
-            Text(entry.cityName)
+            Text(entry.weatherDescription)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color("znBody"))
+                .lineLimit(1)
 
             Spacer()
 
-            // Transport status dot
-            HStack(spacing: 4) {
+            // City
+            Text(entry.cityName.uppercased())
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(Color("znMuted"))
+                .tracking(0.5)
+
+            // Transport status
+            HStack(spacing: 5) {
                 Circle()
                     .fill(transportColor)
-                    .frame(width: 6, height: 6)
+                    .frame(width: 7, height: 7)
                 Text(transportLabel)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(Color("znBody"))
             }
         }
-        .padding()
-        .containerBackground(.fill.tertiary, for: .widget)
+        .padding(14)
+        .containerBackground(for: .widget) {
+            Color("znSurface")
+        }
     }
 
     private var transportColor: Color {
@@ -86,8 +95,8 @@ struct TodayWidgetSmallView: View {
     private var transportLabel: String {
         switch entry.transportStatus {
         case "none": return localized(en: "Trains OK", de: "Züge OK")
-        case "minor": return localized(en: "\(entry.transportDelays) delays", de: "\(entry.transportDelays) Verspätungen")
-        case "major": return localized(en: "\(entry.transportDelays) delays", de: "\(entry.transportDelays) Verspätungen")
+        case "minor": return localized(en: "\(entry.transportDelays) delays", de: "\(entry.transportDelays) Versp.")
+        case "major": return localized(en: "\(entry.transportDelays) delays", de: "\(entry.transportDelays) Versp.")
         default: return "—"
         }
     }
@@ -99,50 +108,61 @@ struct TodayWidgetMediumView: View {
     let entry: WidgetNewsEntry
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Left: Weather
+        HStack(spacing: 14) {
+            // Left: Weather column
             VStack(alignment: .leading, spacing: 4) {
                 Image(systemName: entry.weatherSFSymbol)
                     .font(.largeTitle)
                     .symbolRenderingMode(.multicolor)
                 Text("\(Int(entry.temperature))°")
-                    .font(.title.weight(.bold))
+                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color("znInk"))
                 Text(entry.weatherDescription)
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color("znBody"))
                     .lineLimit(1)
 
                 Spacer()
 
-                HStack(spacing: 4) {
+                HStack(spacing: 5) {
                     Circle()
                         .fill(transportColor)
-                        .frame(width: 6, height: 6)
+                        .frame(width: 7, height: 7)
                     Text(entry.transportStatus == "none"
                          ? localized(en: "Trains OK", de: "Züge OK")
-                         : localized(en: "\(entry.transportDelays) delays", de: "\(entry.transportDelays) Verspätungen"))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                         : localized(en: "\(entry.transportDelays) delays", de: "\(entry.transportDelays) Versp."))
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(Color("znBody"))
                 }
             }
-            .frame(width: 80)
+            .frame(width: 90)
+
+            // Divider
+            Rectangle()
+                .fill(Color("znBorder"))
+                .frame(width: 1)
+                .padding(.vertical, 4)
 
             // Right: Headline
-            VStack(alignment: .leading, spacing: 4) {
-                Text(entry.cityName)
-                    .font(.caption2.weight(.semibold))
+            VStack(alignment: .leading, spacing: 6) {
+                Text(entry.cityName.uppercased())
+                    .font(.system(size: 9, weight: .semibold))
                     .foregroundStyle(Color("znNavy"))
+                    .tracking(0.5)
 
                 Text(entry.topHeadline)
                     .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color("znInk"))
                     .lineLimit(4)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Spacer()
             }
         }
-        .padding()
-        .containerBackground(.fill.tertiary, for: .widget)
+        .padding(14)
+        .containerBackground(for: .widget) {
+            Color("znSurface")
+        }
     }
 
     private var transportColor: Color {
@@ -165,7 +185,7 @@ struct TodayWidget: Widget {
             TodayWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("Znüni")
-        .description("Weather, headlines, and transport status")
+        .description(localized(en: "Weather, headlines & transport", de: "Wetter, Schlagzeilen & ÖV"))
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }

@@ -43,43 +43,46 @@ struct NewsWidgetMediumView: View {
     let entry: WidgetHeadlinesEntry
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             // Header
             HStack(spacing: 6) {
                 Image(systemName: "newspaper.fill")
                     .font(.caption)
                     .foregroundStyle(Color("znNavy"))
-                Text(entry.cityName)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                Text(entry.cityName.uppercased())
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(Color("znNavy"))
+                    .tracking(0.5)
                 Spacer()
-                // Compact weather
+                // Weather
                 HStack(spacing: 3) {
                     Image(systemName: entry.weatherSFSymbol)
                         .font(.caption2)
                         .symbolRenderingMode(.multicolor)
                     Text("\(Int(entry.temperature))°")
                         .font(.caption.weight(.medium))
+                        .foregroundStyle(Color("znBody"))
                 }
-                .foregroundStyle(.secondary)
             }
 
             // Headlines
             ForEach(Array(entry.headlines.prefix(3).enumerated()), id: \.offset) { index, item in
-                HStack(alignment: .top, spacing: 8) {
+                HStack(alignment: .top, spacing: 10) {
+                    // Accent dot
                     Circle()
                         .fill(dotColor(index))
-                        .frame(width: 6, height: 6)
+                        .frame(width: 7, height: 7)
                         .padding(.top, 5)
 
-                    VStack(alignment: .leading, spacing: 1) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(item.localizedHeadline(entry.language))
                             .font(.caption.weight(.medium))
+                            .foregroundStyle(Color("znInk"))
                             .lineLimit(2)
                         if let source = item.source {
                             Text(source)
-                                .font(.system(size: 9))
-                                .foregroundStyle(.tertiary)
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(Color("znMuted"))
                         }
                     }
                 }
@@ -87,8 +90,10 @@ struct NewsWidgetMediumView: View {
 
             Spacer(minLength: 0)
         }
-        .padding()
-        .containerBackground(.fill.tertiary, for: .widget)
+        .padding(14)
+        .containerBackground(for: .widget) {
+            Color("znSurface")
+        }
     }
 
     private func dotColor(_ index: Int) -> Color {
@@ -107,7 +112,7 @@ struct NewsWidgetLargeView: View {
     let entry: WidgetHeadlinesEntry
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             // Header
             HStack(spacing: 6) {
                 Image(systemName: "newspaper.fill")
@@ -115,6 +120,7 @@ struct NewsWidgetLargeView: View {
                     .foregroundStyle(Color("znNavy"))
                 Text(localized(en: "Headlines", de: "Schlagzeilen"))
                     .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color("znInk"))
                 Spacer()
                 HStack(spacing: 4) {
                     Image(systemName: entry.weatherSFSymbol)
@@ -122,24 +128,27 @@ struct NewsWidgetLargeView: View {
                         .symbolRenderingMode(.multicolor)
                     Text("\(Int(entry.temperature))°")
                         .font(.caption.weight(.medium))
+                        .foregroundStyle(Color("znBody"))
                     Text("·")
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(Color("znBorder"))
                     Text(entry.cityName)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color("znMuted"))
                 }
             }
 
-            Divider()
+            Rectangle()
+                .fill(Color("znBorder"))
+                .frame(height: 1)
 
             // Headlines list
             ForEach(Array(entry.headlines.prefix(5).enumerated()), id: \.offset) { index, item in
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .top, spacing: 10) {
                         Text("\(index + 1)")
                             .font(.caption2.weight(.bold))
                             .foregroundStyle(.white)
-                            .frame(width: 16, height: 16)
+                            .frame(width: 18, height: 18)
                             .background(rankColor(index))
                             .clipShape(Circle())
                             .padding(.top, 1)
@@ -147,31 +156,36 @@ struct NewsWidgetLargeView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(item.localizedHeadline(entry.language))
                                 .font(.caption.weight(.medium))
+                                .foregroundStyle(Color("znInk"))
                                 .lineLimit(2)
                             if let summary = item.localizedSummary(entry.language) {
                                 Text(summary)
                                     .font(.system(size: 10))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color("znBody"))
                                     .lineLimit(1)
                             }
                             if let source = item.source {
                                 Text(source)
-                                    .font(.system(size: 9))
-                                    .foregroundStyle(.tertiary)
+                                    .font(.system(size: 9, weight: .medium))
+                                    .foregroundStyle(Color("znMuted"))
                             }
                         }
                     }
 
                     if index < entry.headlines.prefix(5).count - 1 {
-                        Divider()
+                        Rectangle()
+                            .fill(Color("znInnerDivider"))
+                            .frame(height: 1)
                     }
                 }
             }
 
             Spacer(minLength: 0)
         }
-        .padding()
-        .containerBackground(.fill.tertiary, for: .widget)
+        .padding(14)
+        .containerBackground(for: .widget) {
+            Color("znSurface")
+        }
     }
 
     private func rankColor(_ index: Int) -> Color {

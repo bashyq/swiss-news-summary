@@ -1,5 +1,6 @@
 import Foundation
 import CoreLocation
+import WidgetKit
 
 /// State of the agenda composition pipeline.
 enum AgendaState: Equatable {
@@ -181,6 +182,7 @@ final class TodayViewModel {
            let cached = try? JSONDecoder().decode(DayAgenda.self, from: cachedData) {
             self.agenda = cached
             self.agendaState = .loaded
+            syncAgendaToWidget()
             restoreAgendaMode()
             return
         }
@@ -201,6 +203,7 @@ final class TodayViewModel {
             )
             self.agenda = result
             self.agendaState = .loaded
+            syncAgendaToWidget()
             restoreAgendaMode()
 
             // Cache the result (only when no anchors — anchor agendas are ephemeral)
@@ -252,6 +255,7 @@ final class TodayViewModel {
         }
 
         self.agenda = current
+        syncAgendaToWidget()
     }
 
     // MARK: - Slot Editing
@@ -383,6 +387,7 @@ final class TodayViewModel {
         )
         self.agenda = result
         self.agendaState = .fallback
+        syncAgendaToWidget()
         restoreAgendaMode()
 
         // Record shown venues
@@ -391,6 +396,20 @@ final class TodayViewModel {
                 recentlyShownStore.recordShown(venueId: venueId)
             }
         }
+    }
+
+    // MARK: - Widget Sync
+
+    /// Sync the current agenda to the shared app group UserDefaults so the widget can display it.
+    private func syncAgendaToWidget() {
+        guard let agenda else {
+            UserDefaults(suiteName: StorageKeys.widgetSuite)?.removeObject(forKey: "todayAgenda")
+            WidgetCenter.shared.reloadTimelines(ofKind: "DayPlanWidget")
+            return
+        }
+        guard let data = try? JSONEncoder().encode(agenda) else { return }
+        UserDefaults(suiteName: StorageKeys.widgetSuite)?.set(data, forKey: "todayAgenda")
+        WidgetCenter.shared.reloadTimelines(ofKind: "DayPlanWidget")
     }
 
     // MARK: - Context Banner (driven by agenda theme)

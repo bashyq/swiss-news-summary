@@ -58,6 +58,35 @@ struct WidgetDataProvider {
         }
     }
 
+    /// Load day plan agenda from shared UserDefaults (written by the main app)
+    static func loadDayPlan() -> WidgetDayPlanEntry? {
+        guard let data = UserDefaults(suiteName: "group.com.todayinswitzerland")?.data(forKey: "todayAgenda") else {
+            return nil
+        }
+        guard let agenda = try? JSONDecoder().decode(WidgetDayAgenda.self, from: data) else {
+            return nil
+        }
+        // Only show today's agenda
+        let todayISO = ISO8601DateFormatter.string(from: Date(), timeZone: .current, formatOptions: [.withFullDate])
+        let todaySimple = String(todayISO.prefix(10))
+        guard agenda.date == todaySimple else { return nil }
+
+        return WidgetDayPlanEntry(
+            date: Date(),
+            theme: agenda.theme,
+            weatherNote: agenda.weatherNote,
+            badWeatherMode: agenda.badWeatherMode,
+            slots: agenda.slots.map { slot in
+                WidgetAgendaSlot(
+                    id: slot.id,
+                    time: slot.time,
+                    type: slot.type,
+                    venueName: slot.venueName
+                )
+            }
+        )
+    }
+
     /// Fetch sunshine summary for widget
     static func fetchSunshine(language: String) async -> WidgetSunshineEntry? {
         guard let url = URL(string: "\(baseURL)/sunshine?lang=\(language)") else { return nil }
@@ -257,4 +286,59 @@ struct WidgetSunshineDest: Codable {
     let driveMinutes: Int
     let sunshineHoursTotal: Double
     let isBaseline: Bool?
+}
+
+// MARK: - Day Plan Widget Models
+
+struct WidgetDayPlanEntry: TimelineEntry {
+    let date: Date
+    let theme: String
+    let weatherNote: String
+    let badWeatherMode: Bool
+    let slots: [WidgetAgendaSlot]
+
+    static let placeholder = WidgetDayPlanEntry(
+        date: Date(),
+        theme: "Family day out",
+        weatherNote: "12° and sunny",
+        badWeatherMode: false,
+        slots: [
+            WidgetAgendaSlot(id: "morning", time: "09:30", type: "activity", venueName: "Zoo Zürich"),
+            WidgetAgendaSlot(id: "lunch", time: "12:00", type: "lunch", venueName: "Restaurant Sonne"),
+            WidgetAgendaSlot(id: "afternoon", time: "14:00", type: "activity", venueName: "Stadtgärtnerei"),
+            WidgetAgendaSlot(id: "dinner", time: "17:30", type: "dinner", venueName: "Tibits"),
+        ]
+    )
+}
+
+struct WidgetAgendaSlot: Identifiable {
+    let id: String
+    let time: String
+    let type: String       // "activity", "lunch", "dinner", "homeActivity"
+    let venueName: String
+
+    var slotIcon: String {
+        switch type {
+        case "lunch": return "fork.knife"
+        case "dinner": return "fork.knife"
+        case "homeActivity": return "house.fill"
+        default: return "star.fill"
+        }
+    }
+}
+
+/// Lightweight Codable mirror of DayAgenda for widget deserialization
+struct WidgetDayAgenda: Codable {
+    let date: String
+    let theme: String
+    let weatherNote: String
+    let badWeatherMode: Bool
+    let slots: [WidgetDayAgendaSlot]
+}
+
+struct WidgetDayAgendaSlot: Codable {
+    let id: String
+    let time: String
+    let type: String
+    let venueName: String
 }

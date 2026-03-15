@@ -44,60 +44,73 @@ struct SunshineWidgetView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Header
-            HStack {
+            HStack(spacing: 6) {
                 Image(systemName: "sun.max.fill")
+                    .font(.caption)
                     .foregroundStyle(Color("znTerracotta"))
-                Text(localized(en: "Weekend Sunshine", de: "Wochenend-Sonnenschein"))
-                    .font(.caption.weight(.semibold))
+                Text(localized(en: "WEEKEND SUN", de: "WOCHENEND-SONNE").uppercased())
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(Color("znTerracotta"))
+                    .tracking(0.5)
                 Spacer()
                 // Zürich baseline
-                Text("ZH: \(String(format: "%.0f", entry.baselineSunshineHours))h")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 3) {
+                    Text("ZH")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(Color("znNavy"))
+                    Text("\(String(format: "%.0f", entry.baselineSunshineHours))h")
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(Color("znBody"))
+                }
             }
 
             // Top 3 sunny destinations
             ForEach(entry.topDestinations.indices, id: \.self) { index in
                 let dest = entry.topDestinations[index]
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     // Rank
                     Text("\(index + 1)")
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(.white)
-                        .frame(width: 16, height: 16)
+                        .frame(width: 18, height: 18)
                         .background(rankColor(index))
                         .clipShape(Circle())
 
                     // Name
                     Text(dest.name)
                         .font(.caption.weight(.medium))
+                        .foregroundStyle(Color("znInk"))
                         .lineLimit(1)
 
                     Spacer()
 
                     // Sunshine hours
-                    HStack(spacing: 2) {
+                    HStack(spacing: 3) {
                         Image(systemName: "sun.max.fill")
-                            .font(.system(size: 8))
+                            .font(.system(size: 9))
                             .foregroundStyle(Color("znTerracotta"))
                         Text("\(String(format: "%.0f", dest.sunshineHours))h")
                             .font(.caption2.weight(.semibold))
+                            .foregroundStyle(Color("znInk"))
                     }
 
                     // Drive time
-                    HStack(spacing: 2) {
+                    HStack(spacing: 3) {
                         Image(systemName: "car.fill")
-                            .font(.system(size: 8))
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 9))
+                            .foregroundStyle(Color("znMuted"))
                         Text("\(dest.driveMinutes)m")
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color("znMuted"))
                     }
+                    .frame(width: 48, alignment: .trailing)
                 }
             }
         }
-        .padding()
-        .containerBackground(.fill.tertiary, for: .widget)
+        .padding(14)
+        .containerBackground(for: .widget) {
+            Color("znSurface")
+        }
     }
 
     private func rankColor(_ index: Int) -> Color {

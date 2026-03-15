@@ -7,6 +7,7 @@ struct TodayInSwitzerlandWidgetBundle: WidgetBundle {
         TodayWidget()
         NewsWidget()
         SunshineWidget()
+        DayPlanWidget()
         WeatherLockScreenWidget()
         NewsLockScreenWidget()
         TransportLockScreenWidget()
