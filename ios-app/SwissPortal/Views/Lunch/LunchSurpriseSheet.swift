@@ -24,14 +24,14 @@ struct LunchSurpriseSheet: View {
 
                         // Spot name
                         Text(spot.name)
-                            .font(.custom("Playfair", size: 22).weight(.semibold))
+                            .font(.sectionTitle)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
 
                         // Cuisine display
                         Text(spot.cuisineDisplay)
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.znMuted)
 
                         // Badges
                         badgesRow
@@ -61,7 +61,7 @@ struct LunchSurpriseSheet: View {
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.title3)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.znMuted)
                     }
                 }
             }

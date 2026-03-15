@@ -28,22 +28,22 @@ struct LunchCard: View {
             // Expand panel — slides in when expanded
             if isExpanded {
                 Divider()
-                    .background(Color.znBorder)
+                    .foregroundStyle(Color.znInnerDivider)
                 expandPanel
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .background(Color.znSurface)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 18)
+            RoundedRectangle(cornerRadius: AppSpacing.cardRadius)
                 .stroke(Color.znBorder, lineWidth: 1)
         )
         .shadow(
-            color: isExpanded ? Color.znNavy.opacity(0.12) : AppShadow.card.color,
-            radius: isExpanded ? 12 : AppShadow.card.radius,
+            color: isExpanded ? AppShadow.cardExpanded.color : AppShadow.card.color,
+            radius: isExpanded ? AppShadow.cardExpanded.radius : AppShadow.card.radius,
             x: 0,
-            y: isExpanded ? 6 : AppShadow.card.y
+            y: isExpanded ? AppShadow.cardExpanded.y : AppShadow.card.y
         )
         .opacity(spot.permanentlyClosed == true ? 0.5 : 1.0)
         .confirmationDialog(
@@ -77,7 +77,7 @@ struct LunchCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 // Name
                 Text(spot.name)
-                    .font(.custom("Playfair", size: 15).weight(.semibold))
+                    .font(.newsCardHeadline)
                     .foregroundStyle(.znInk)
                     .lineLimit(2)
 
@@ -90,7 +90,7 @@ struct LunchCard: View {
                 // Tags + distance
                 tagsRow
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, AppSpacing.cardPadding)
             .padding(.vertical, 13)
 
             Spacer(minLength: 0)
@@ -98,7 +98,7 @@ struct LunchCard: View {
             // Chevron
             Image(systemName: "chevron.right")
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.znTerracotta)
+                .foregroundStyle(.znChevron)
                 .rotationEffect(.degrees(isExpanded ? 90 : 0))
                 .frame(width: 34)
         }
@@ -107,8 +107,8 @@ struct LunchCard: View {
             withAnimation(AppAnimation.spring) {
                 expandedID = isExpanded ? nil : spot.id
             }
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
         }
+        .sensoryFeedback(.impact(weight: .light), trigger: expandedID)
     }
 
     // MARK: - Photo Thumbnail
@@ -299,7 +299,7 @@ struct LunchCard: View {
             // Action buttons
             actionButtons
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, AppSpacing.cardPadding)
         .padding(.vertical, 13)
     }
 
@@ -331,11 +331,11 @@ struct LunchCard: View {
                 }
             }
         }
-        .padding(.horizontal, 11)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.znCream)
-        .clipShape(RoundedRectangle(cornerRadius: 11))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: - Metadata Grid
@@ -376,10 +376,10 @@ struct LunchCard: View {
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 11)
-        .padding(.vertical, 9)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .background(Color.znCream)
-        .clipShape(RoundedRectangle(cornerRadius: 11))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: - Action Buttons

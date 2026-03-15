@@ -75,6 +75,100 @@ final class APIClient: @unchecked Sendable {
         URL(string: "\(baseURL)/photo/\(activityId)")
     }
 
+    /// Fetch AI-generated day agenda via POST /agenda
+    func fetchAgenda(
+        city: City,
+        language: AppLanguage,
+        session: FamilySession,
+        weatherCode: Int?,
+        temperature: Int?,
+        recentlyShown: [String],
+        anchors: [DayAnchor] = [],
+        targetDate: String? = nil
+    ) async throws -> DayAgenda {
+        guard var components = URLComponents(string: baseURL + "/agenda") else {
+            throw APIError.invalidURL(baseURL + "/agenda")
+        }
+        components.queryItems = nil
+
+        guard let url = components.url else {
+            throw APIError.invalidURL(baseURL + "/agenda")
+        }
+
+        struct AgendaRequest: Encodable {
+            let city: String
+            let lang: String
+            let session: SessionPayload
+            let recentlyShown: [String]
+            let anchors: [AnchorPayload]?
+            let targetDate: String?
+
+            struct SessionPayload: Encodable {
+                let soloParent: Bool
+                let children: [ChildPayload]
+            }
+            struct ChildPayload: Encodable {
+                let name: String
+                let age: Int
+            }
+            struct AnchorPayload: Encodable {
+                let label: String
+                let time: String
+                let neighbourhood: String?
+                let durationMinutes: Int?
+            }
+        }
+
+        let anchorPayloads: [AgendaRequest.AnchorPayload]? = anchors.isEmpty ? nil : anchors.map {
+            .init(label: $0.label, time: $0.timeString, neighbourhood: $0.neighbourhood, durationMinutes: $0.durationMinutes)
+        }
+
+        let payload = AgendaRequest(
+            city: city.rawValue,
+            lang: language.rawValue,
+            session: .init(
+                soloParent: session.soloParent,
+                children: session.children.map { .init(name: $0.name, age: $0.age) }
+            ),
+            recentlyShown: recentlyShown,
+            anchors: anchorPayloads,
+            targetDate: targetDate
+        )
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 8 // 5s Claude + 3s network
+        request.httpBody = try JSONEncoder().encode(payload)
+
+        let (data, response) = try await self.session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        // Check for specific error responses
+        if httpResponse.statusCode == 504 {
+            throw APIError.agendaTimeout
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.serverError(httpResponse.statusCode)
+        }
+
+        do {
+            return try decoder.decode(DayAgenda.self, from: data)
+        } catch let decodingError as DecodingError {
+            #if DEBUG
+            print("🔴 DecodingError for /agenda: \(Self.detailedDecodingError(decodingError))")
+            if let jsonStr = String(data: data.prefix(2000), encoding: .utf8) {
+                print("🔴 Response preview: \(jsonStr)")
+            }
+            #endif
+            throw APIError.decodingError(decodingError)
+        }
+    }
+
     /// Fetch snow forecast (always Zürich-based)
     func fetchSnow(language: AppLanguage, forceRefresh: Bool = false) async throws -> SnowResponse {
         var params = ["lang": language.rawValue]
@@ -425,6 +519,7 @@ enum APIError: LocalizedError {
     case serverError(Int)
     case decodingError(Error)
     case invalidData(String)
+    case agendaTimeout
     case unknown
 
     var errorDescription: String? {
@@ -438,6 +533,7 @@ enum APIError: LocalizedError {
             }
             return "Data parsing error: \(error.localizedDescription)"
         case .invalidData(let msg): return msg
+        case .agendaTimeout: return "Agenda generation timed out"
         case .unknown: return "An unknown error occurred"
         }
     }

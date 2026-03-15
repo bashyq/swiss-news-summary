@@ -7,7 +7,6 @@ import SwiftUI
 /// - Amber banner for school holidays (with date range)
 /// - Festival cards with purple left border
 /// - Recurring activity cards
-/// - Weather-based activity suggestion (today only)
 struct DayDetailView: View {
     @Environment(AppState.self) private var appState
 
@@ -27,7 +26,7 @@ struct DayDetailView: View {
             // Date header
             dateHeader
 
-            if dayEvents.isEmpty && !isToday {
+            if dayEvents.isEmpty {
                 emptyDayMessage
             } else {
                 // Holiday banners
@@ -50,11 +49,7 @@ struct DayDetailView: View {
                     recurringActivityCard(activity)
                 }
 
-                // Today-only sections
-                if isToday {
-                    // Weather-based activity suggestion
-                    weatherSuggestion
-                }
+
             }
         }
         .padding(AppSpacing.cardPadding)
@@ -254,131 +249,6 @@ struct DayDetailView: View {
         .padding(10)
         .background(Color(.tertiarySystemGroupedBackground))
         .clipShape(RoundedRectangle(cornerRadius: 8))
-    }
-
-    // MARK: - Weather Suggestion (Today Only)
-
-    @ViewBuilder
-    private var weatherSuggestion: some View {
-        if let weather = viewModel.newsData?.weather {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 10) {
-                    Image(systemName: weather.sfSymbol)
-                        .font(.title3)
-                        .symbolRenderingMode(.multicolor)
-                        .frame(width: 28)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(appState.localized(
-                            en: "Weather today",
-                            de: "Wetter heute"
-                        ))
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.secondary)
-
-                        Text("\(Int(weather.temperature))\u{00B0}C - \(weather.description)")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-
-                        Text(weather.isBadWeather
-                            ? appState.localized(
-                                en: "Indoor activities recommended",
-                                de: "Indoor-Aktivitäten empfohlen"
-                            )
-                            : appState.localized(
-                                en: "Great day for outdoor activities!",
-                                de: "Toller Tag für Outdoor-Aktivitäten!"
-                            )
-                        )
-                        .font(.caption)
-                        .foregroundStyle(weather.isBadWeather ? .znNavy : .znPositive)
-                    }
-
-                    Spacer()
-                }
-
-                // Weather-based activity picks
-                weatherActivityPicks(weather: weather)
-            }
-            .padding(10)
-            .background(Color.weatherCard)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-        }
-    }
-
-    // MARK: - Weather Activity Picks
-
-    @ViewBuilder
-    private func weatherActivityPicks(weather: Weather) -> some View {
-        let isBad = weather.isBadWeather
-        let allActivities = viewModel.activitiesData?.activities ?? []
-        let picks = allActivities.filter { a in
-            a.indoor == isBad && a.stayHome != true && a.recurring == nil
-        }.shuffled().prefix(4)
-
-        if !picks.isEmpty {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(isBad
-                    ? appState.localized(en: "Indoor picks", de: "Indoor-Tipps")
-                    : appState.localized(en: "Outdoor picks", de: "Outdoor-Tipps")
-                )
-                .font(.caption2)
-                .fontWeight(.semibold)
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-
-                ForEach(Array(picks)) { activity in
-                    weatherPickRow(activity)
-                }
-            }
-        }
-    }
-
-    private func weatherPickRow(_ activity: Activity) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: activityCategoryIcon(activity.category))
-                .font(.caption2)
-                .foregroundStyle(.brand)
-                .frame(width: 16)
-
-            Text(activity.localizedName(language: appState.language))
-                .font(.caption)
-                .fontWeight(.medium)
-                .lineLimit(1)
-
-            Spacer()
-
-            Text(activity.ageRange)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(Color.brand.opacity(0.1))
-                .clipShape(Capsule())
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            if let urlString = activity.url, let url = URL(string: urlString) {
-                UIApplication.shared.open(url)
-            }
-        }
-    }
-
-    private func activityCategoryIcon(_ category: String) -> String {
-        switch category.lowercased() {
-        case "animals": return "pawprint.fill"
-        case "playground": return "figure.play"
-        case "museum": return "building.columns.fill"
-        case "nature": return "leaf.fill"
-        case "water": return "drop.fill"
-        case "transport": return "tram.fill"
-        case "creative": return "paintpalette.fill"
-        case "music": return "music.note"
-        case "sports": return "sportscourt.fill"
-        case "food": return "fork.knife"
-        default: return "star.fill"
-        }
     }
 
 

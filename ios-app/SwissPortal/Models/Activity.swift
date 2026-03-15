@@ -142,6 +142,60 @@ struct Activity: Codable, Identifiable, Sendable {
         let todayAbbr = dayAbbreviations[weekday]
         return recurring.localizedCaseInsensitiveContains(todayAbbr)
     }
+
+    /// Heuristic: check if openingHours text suggests availability today.
+    /// Returns true if no openingHours specified (assume open).
+    /// Conservative: returns true when unsure to avoid hiding open venues.
+    var isLikelyOpenToday: Bool {
+        guard let hours = openingHours else { return true }
+        let text = hours.lowercased()
+
+        // "Daily" / "Täglich" → always open
+        if text.contains("daily") || text.contains("täglich") { return true }
+
+        let calendar = Calendar.current
+        let weekday = calendar.component(.weekday, from: Date())
+        // weekday: 1=Sun, 2=Mon, 3=Tue, 4=Wed, 5=Thu, 6=Fri, 7=Sat
+        let enAbbrs = ["", "sun", "mon", "tue", "wed", "thu", "fri", "sat"]
+        let deAbbrs = ["", "so", "mo", "di", "mi", "do", "fr", "sa"]
+
+        // Direct match: today's abbreviation appears in string
+        if text.contains(enAbbrs[weekday]) || text.contains(deAbbrs[weekday]) {
+            return true
+        }
+
+        // Check if any day abbreviations appear at all
+        let allAbbrs = Array(enAbbrs.dropFirst()) + Array(deAbbrs.dropFirst())
+        let hasDayRefs = allAbbrs.contains { text.contains($0) }
+
+        // No day references → assume open (e.g., just "10:00-17:00")
+        if !hasDayRefs { return true }
+
+        // Day references present but today not directly found → try range parsing
+        // Map weekday to 0-based Monday index for range checks
+        let mondayIndex = (weekday + 5) % 7 // Mon=0, Tue=1, ..., Sun=6
+
+        let enOrder = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+        let deOrder = ["mo", "di", "mi", "do", "fr", "sa", "so"]
+
+        for order in [enOrder, deOrder] {
+            for (si, start) in order.enumerated() {
+                for (ei, end) in order.enumerated() {
+                    // Match "tue-sun", "di–so" (both dash and en-dash)
+                    if text.contains("\(start)-\(end)") || text.contains("\(start)–\(end)") {
+                        if si <= ei {
+                            return mondayIndex >= si && mondayIndex <= ei
+                        } else {
+                            return mondayIndex >= si || mondayIndex <= ei
+                        }
+                    }
+                }
+            }
+        }
+
+        // Has day references but couldn't parse → assume closed today
+        return false
+    }
 }
 
 // MARK: - Age Filter

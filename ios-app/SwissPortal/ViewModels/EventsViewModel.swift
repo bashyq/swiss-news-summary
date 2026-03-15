@@ -227,14 +227,17 @@ final class EventsViewModel {
 
         let includeAll = eventFilter == .all
 
-        // Holidays
+        let today = Calendar.current.startOfDay(for: Date())
+        let todayISO = DateHelpers.toISO(today)
+
+        // Holidays (exclude past)
         if includeAll || eventFilter == .holidays {
-            results.append(contentsOf: holidays.map { .holiday($0) })
+            let upcoming = holidays.filter { $0.date >= todayISO }
+            results.append(contentsOf: upcoming.map { .holiday($0) })
         }
 
         // School holidays (exclude those that have already ended)
         if includeAll || eventFilter == .schoolHolidays {
-            let today = Calendar.current.startOfDay(for: Date())
             let current = schoolHolidays.filter { sh in
                 guard let endDate = sh.endDateParsed else { return true }
                 return Calendar.current.startOfDay(for: endDate) >= today
@@ -242,9 +245,13 @@ final class EventsViewModel {
             results.append(contentsOf: current.map { .schoolHoliday($0) })
         }
 
-        // City events / festivals
+        // City events / festivals (exclude past)
         if includeAll || eventFilter == .events || eventFilter == .festivals {
-            results.append(contentsOf: cityEvents.map { .cityEvent($0) })
+            let upcoming = cityEvents.filter { event in
+                guard let endDate = event.endDateParsed else { return true }
+                return Calendar.current.startOfDay(for: endDate) >= today
+            }
+            results.append(contentsOf: upcoming.map { .cityEvent($0) })
         }
 
         // Recurring activities

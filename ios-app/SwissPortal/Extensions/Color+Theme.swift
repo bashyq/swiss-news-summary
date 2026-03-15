@@ -170,6 +170,10 @@ enum AppShadow {
     static let subtle: (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) = (
         .black.opacity(0.05), 4, 0, 2
     )
+    /// Expanded card shadow — heavier lift on accordion cards
+    static let cardExpanded: (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) = (
+        Color.znNavy.opacity(0.12), 12, 0, 6
+    )
 }
 
 // MARK: - Animation Tokens
@@ -284,8 +288,23 @@ extension Font {
         .custom("Playfair", size: 22)
     }
 
+    /// Banner title — Playfair 28pt regular (hero headers on sub-views)
+    static var bannerTitle: Font {
+        .custom("Playfair", size: 28)
+    }
+
     /// Category card title — Playfair 18pt semibold
     static var categoryCardTitle: Font {
+        .custom("Playfair", size: 18).weight(.semibold)
+    }
+
+    /// Compact card title — Playfair 16pt semibold (StayHomeSection, ActivityCard collapsed)
+    static var compactCardTitle: Font {
+        .custom("Playfair", size: 16).weight(.semibold)
+    }
+
+    /// Expanded card title — Playfair 18pt semibold (ActivityCard expanded)
+    static var expandedCardTitle: Font {
         .custom("Playfair", size: 18).weight(.semibold)
     }
 }

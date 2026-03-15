@@ -7,6 +7,8 @@ struct TodayInSwitzerlandApp: App {
     @State private var toastManager = ToastManager()
     @State private var reminderManager = ReminderManager()
 
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -20,6 +22,12 @@ struct TodayInSwitzerlandApp: App {
                 }
                 .task {
                     reminderManager.cleanupPastReminders()
+                    AnchorStore.shared.purgeIfNewDay()
+                }
+                .onChange(of: scenePhase) { _, newPhase in
+                    if newPhase == .active {
+                        AnchorStore.shared.purgeIfNewDay()
+                    }
                 }
         }
     }

@@ -343,9 +343,9 @@ enum ExploreCategory: String, CaseIterable, Identifiable {
         switch self {
         case .museums: return [.znNavy, .znNavy.opacity(0.7)]
         case .parks: return [.znPositive, .znPositive.opacity(0.7)]
-        case .restaurants: return [.znTerracotta, .znTerracotta.opacity(0.7)]
-        case .events: return [.znNavy.opacity(0.8), .znNavy.opacity(0.5)]
-        case .deals: return [.znPositive.opacity(0.8), .znPositive.opacity(0.5)]
+        case .restaurants: return [.znNavy, .znNavy.opacity(0.7)]
+        case .events: return [.znNavy, .znNavy.opacity(0.7)]
+        case .deals: return [.znNavy, .znNavy.opacity(0.7)]
         }
     }
 }

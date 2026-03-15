@@ -33,7 +33,7 @@ struct SnowCard: View {
                 .padding(.vertical, 6)
         }
         .shadow(color: AppShadow.card.color, radius: AppShadow.card.radius, x: AppShadow.card.x, y: AppShadow.card.y)
-        .sensoryFeedback(.selection, trigger: isExpanded)
+        .sensoryFeedback(.impact(weight: .light), trigger: isExpanded)
         .contentShape(Rectangle())
         .onTapGesture { onTap() }
     }
@@ -53,7 +53,7 @@ struct SnowCard: View {
                     .lineLimit(1)
                 Text(resort.localizedRegion(language: language))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.znMuted)
                     .lineLimit(1)
             }
 
@@ -80,7 +80,7 @@ struct SnowCard: View {
             // Chevron
             Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                 .font(.caption)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.znChevron)
         }
         .padding(AppSpacing.cardPadding)
     }
@@ -89,7 +89,7 @@ struct SnowCard: View {
 
     private var snowfallIcon: some View {
         Image(systemName: snowfallIconName)
-            .font(.title2)
+            .font(.system(size: 24))
             .foregroundStyle(Color.snowColor(cm: resort.snowfallWeekTotal))
             .symbolRenderingMode(.hierarchical)
     }
@@ -107,13 +107,12 @@ struct SnowCard: View {
     private var snowfallLabel: some View {
         VStack(spacing: 1) {
             Text(String(format: "%.0f", resort.snowfallWeekTotal))
-                .font(.title3)
-                .fontWeight(.bold)
+                .font(.cardHeadline)
                 .foregroundStyle(Color.snowColor(cm: resort.snowfallWeekTotal))
                 .contentTransition(.numericText())
             Text("cm")
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.znMuted)
         }
     }
 
@@ -176,10 +175,10 @@ struct SnowCard: View {
     private var dailyForecastSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(language == .de ? "Prognose" : "Forecast")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(.secondary)
+                .font(.znEyebrow)
+                .tracking(0.8)
                 .textCase(.uppercase)
+                .foregroundStyle(.znMuted)
 
             // Find max snowfall for relative bar sizing
             let maxSnowfall = resort.forecast.map(\.snowfallCm).max() ?? 1

@@ -53,7 +53,7 @@ struct NearYouSection: View {
             // Info area
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.localizedName(language: appState.language))
-                    .font(.custom("Playfair", size: 13).weight(.semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.znInk)
                     .lineLimit(1)
 
@@ -69,7 +69,7 @@ struct NearYouSection: View {
         }
         .frame(width: AppSpacing.nearYouChipWidth)
         .background(Color.znSurface)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
         .shadow(color: .black.opacity(0.06), radius: 4, y: 2)
     }
 

@@ -153,6 +153,7 @@ struct AddRestaurantSheet: View {
                     Text(appState.localized(en: "Notes", de: "Notizen"))
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle(appState.localized(en: "Add Restaurant", de: "Restaurant hinzufügen"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -206,10 +207,9 @@ struct AddRestaurantSheet: View {
     }
 
     private func saveToUserDefaults(_ spot: CustomLunchSpot) {
-        let key = "customLunch"
         var existing: [CustomLunchSpot] = []
 
-        if let data = UserDefaults.standard.data(forKey: key),
+        if let data = UserDefaults.standard.data(forKey: StorageKeys.customLunch),
            let decoded = try? JSONDecoder().decode([CustomLunchSpot].self, from: data) {
             existing = decoded
         }
@@ -217,7 +217,7 @@ struct AddRestaurantSheet: View {
         existing.append(spot)
 
         if let encoded = try? JSONEncoder().encode(existing) {
-            UserDefaults.standard.set(encoded, forKey: key)
+            UserDefaults.standard.set(encoded, forKey: StorageKeys.customLunch)
         }
     }
 }
@@ -235,7 +235,7 @@ struct CustomLunchSpot: Codable, Identifiable {
 
     /// Look up a custom lunch spot by ID from UserDefaults.
     static func find(_ id: String) -> CustomLunchSpot? {
-        guard let data = UserDefaults.standard.data(forKey: "customLunch"),
+        guard let data = UserDefaults.standard.data(forKey: StorageKeys.customLunch),
               let list = try? JSONDecoder().decode([CustomLunchSpot].self, from: data) else {
             return nil
         }

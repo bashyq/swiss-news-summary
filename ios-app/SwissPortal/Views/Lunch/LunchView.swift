@@ -20,7 +20,7 @@ struct LunchView: View {
 
     var body: some View {
         content
-            .navigationBarHidden(true)
+            .toolbar(.hidden, for: .navigationBar)
             .task(id: "\(appState.city.id)-\(appState.language)") {
                 await viewModel.loadLunch(
                     city: appState.city,
@@ -74,51 +74,8 @@ struct LunchView: View {
         appState.localized(en: "Lunch", de: "Mittagessen")
     }
 
-    // MARK: - Glass Buttons (frosted circles matching other heroes)
-
-    private func glassButton(
-        systemName: String,
-        size: CGFloat = 36,
-        iconSize: CGFloat = 16,
-        radius: CGFloat = 10,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: iconSize))
-                .foregroundStyle(.white)
-                .frame(width: size, height: size)
-                .background(.white.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: radius))
-        }
-    }
-
-    private var cityMenuButton: some View {
-        Menu {
-            ForEach(City.allCases) { city in
-                Button {
-                    appState.city = city
-                } label: {
-                    HStack {
-                        Text(city.localizedName(language: appState.language))
-                        if city == appState.city {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                }
-            }
-        } label: {
-            Image(systemName: "building.2")
-                .font(.system(size: 16))
-                .foregroundStyle(.white)
-                .frame(width: 36, height: 36)
-                .background(.white.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-        }
-    }
-
     private var mapToggleButton: some View {
-        glassButton(
+        GlassButton(
             systemName: viewModel.showMap ? "list.bullet" : "map"
         ) {
             withAnimation(AppAnimation.standardEase) {
@@ -128,7 +85,7 @@ struct LunchView: View {
     }
 
     private var addButton: some View {
-        glassButton(systemName: "plus") {
+        GlassButton(systemName: "plus") {
             showAddSheet = true
         }
     }
@@ -136,8 +93,10 @@ struct LunchView: View {
     // MARK: - Hero Banner
 
     private var heroBanner: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Back button row
+        let spotCount = currentSpots.count
+
+        return VStack(alignment: .leading, spacing: 0) {
+            // Back button row + glass action buttons
             HStack {
                 Button { dismiss() } label: {
                     Image(systemName: "chevron.left")
@@ -148,57 +107,71 @@ struct LunchView: View {
                         .clipShape(Circle())
                 }
                 Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 6)
-
-            // Title row + icon buttons
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 4) {
-                    // Eyebrow
-                    Text(heroEyebrow)
-                        .font(.system(size: 10, weight: .medium))
-                        .tracking(1.3)
-                        .textCase(.uppercase)
-                        .foregroundStyle(.white.opacity(0.42))
-
-                    // Title
-                    Text(navigationTitle)
-                        .font(.custom("Playfair", size: 28))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                }
-
-                Spacer()
 
                 HStack(spacing: 8) {
                     addButton
                     mapToggleButton
-                    cityMenuButton
+                    CityMenuButton()
                 }
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 6)
 
-            // Filter pills inside hero (matching Activities/Explore style)
-            heroFilterPills
-                .padding(.top, 12)
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 14)
-        .padding(.bottom, 22)
-        .background {
-            ZStack(alignment: .bottomTrailing) {
-                Color.znNavy
-                    .ignoresSafeArea(.container, edges: .top)
-                RadialGradient(
-                    colors: [Color.znTerracotta.opacity(0.22), .clear],
-                    center: UnitPoint(x: 1.2, y: -0.3),
-                    startRadius: 0,
-                    endRadius: 220
-                )
-                cutlerySkyline
-                    .frame(width: 200, height: 110)
-                    .opacity(0.09)
+            Spacer(minLength: 0)
+
+            // Title content — bottom-left
+            VStack(alignment: .leading, spacing: 4) {
+                Text(heroEyebrow)
+                    .font(.znEyebrow)
+                    .tracking(1.3)
+                    .textCase(.uppercase)
+                    .foregroundStyle(.white.opacity(0.55))
+
+                Text(navigationTitle)
+                    .font(.bannerTitle)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+
+                HStack(spacing: 12) {
+                    Label(
+                        appState.localized(en: "\(spotCount) restaurants", de: "\(spotCount) Restaurants"),
+                        systemImage: "fork.knife"
+                    )
+                    .font(.znEyebrow)
+                    .foregroundStyle(.white.opacity(0.75))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 3)
+                    .background(.white.opacity(0.14))
+                    .clipShape(Capsule())
+                }
+                .padding(.top, 2)
+
+                // Filter pills inside hero
+                heroFilterPills
+                    .padding(.top, 8)
             }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 16)
+        }
+        .frame(height: 190)
+        .background {
+            ZStack {
+                LinearGradient(
+                    colors: [.znNavy, .znNavy.opacity(0.7)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                LinearGradient(
+                    colors: [
+                        .black.opacity(0.2),
+                        .clear,
+                        .black.opacity(0.3)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
+            .ignoresSafeArea(.container, edges: .top)
         }
     }
 
@@ -285,64 +258,6 @@ struct LunchView: View {
                 Capsule()
                     .stroke(.white.opacity(isActive ? 0.6 : 0.3), lineWidth: 1)
             )
-        }
-    }
-
-    // MARK: - Cutlery Skyline Canvas
-
-    private var cutlerySkyline: some View {
-        Canvas { ctx, size in
-            let w = size.width, h = size.height
-            let white = Color.white
-
-            // Fork (left)
-            ctx.stroke(Path { p in
-                p.move(to: CGPoint(x: w * 0.20, y: h * 0.09))
-                p.addLine(to: CGPoint(x: w * 0.20, y: h * 0.73))
-            }, with: .color(white), lineWidth: 2)
-            // Fork tines
-            ctx.stroke(Path { p in
-                p.move(to: CGPoint(x: w * 0.18, y: h * 0.09))
-                p.addLine(to: CGPoint(x: w * 0.18, y: h * 0.33))
-            }, with: .color(white), lineWidth: 1.5)
-            ctx.stroke(Path { p in
-                p.move(to: CGPoint(x: w * 0.22, y: h * 0.09))
-                p.addLine(to: CGPoint(x: w * 0.22, y: h * 0.33))
-            }, with: .color(white), lineWidth: 1.5)
-            // Fork neck curve
-            ctx.stroke(Path { p in
-                p.move(to: CGPoint(x: w * 0.18, y: h * 0.33))
-                p.addQuadCurve(to: CGPoint(x: w * 0.22, y: h * 0.33),
-                               control: CGPoint(x: w * 0.20, y: h * 0.40))
-            }, with: .color(white), lineWidth: 1.5)
-
-            // Knife (center-left)
-            ctx.stroke(Path { p in
-                p.move(to: CGPoint(x: w * 0.29, y: h * 0.09))
-                p.addLine(to: CGPoint(x: w * 0.29, y: h * 0.73))
-            }, with: .color(white), lineWidth: 2)
-            // Knife blade
-            ctx.stroke(Path { p in
-                p.move(to: CGPoint(x: w * 0.29, y: h * 0.09))
-                p.addQuadCurve(to: CGPoint(x: w * 0.29, y: h * 0.38),
-                               control: CGPoint(x: w * 0.33, y: h * 0.27))
-            }, with: .color(white), lineWidth: 1.5)
-
-            // Spoon (center)
-            ctx.stroke(Path { p in
-                p.move(to: CGPoint(x: w * 0.38, y: h * 0.25))
-                p.addLine(to: CGPoint(x: w * 0.38, y: h * 0.73))
-            }, with: .color(white), lineWidth: 2)
-            // Spoon bowl
-            let spoonRect = CGRect(x: w * 0.345, y: h * 0.09, width: w * 0.07, height: h * 0.18)
-            ctx.stroke(Path(ellipseIn: spoonRect), with: .color(white), lineWidth: 1.5)
-
-            // City buildings (right side)
-            ctx.fill(Path(CGRect(x: w * 0.50, y: h * 0.36, width: w * 0.07, height: h * 0.64)), with: .color(white))
-            ctx.fill(Path(CGRect(x: w * 0.60, y: h * 0.50, width: w * 0.09, height: h * 0.50)), with: .color(white))
-            ctx.fill(Path(CGRect(x: w * 0.72, y: h * 0.27, width: w * 0.05, height: h * 0.73)), with: .color(white))
-            ctx.fill(Path(CGRect(x: w * 0.80, y: h * 0.45, width: w * 0.11, height: h * 0.55)), with: .color(white))
-            ctx.fill(Path(CGRect(x: w * 0.94, y: h * 0.38, width: w * 0.06, height: h * 0.62)), with: .color(white))
         }
     }
 

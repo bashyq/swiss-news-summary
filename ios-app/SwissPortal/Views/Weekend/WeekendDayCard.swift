@@ -62,8 +62,7 @@ struct WeekendDayCard: View {
             HStack {
                 // Day name
                 Text(dayLabel)
-                    .font(.headline)
-                    .fontWeight(.bold)
+                    .font(.cardHeadline)
 
                 Spacer()
 
@@ -71,7 +70,7 @@ struct WeekendDayCard: View {
                 if let date = DateHelpers.parseISO(day.date) {
                     Text(DateHelpers.display(date))
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.znMuted)
                 }
             }
 
@@ -100,16 +99,16 @@ struct WeekendDayCard: View {
                             .fontWeight(.semibold)
                         Text("/")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.znMuted)
                         Text("\(Int(weather.tempMin))\u{00B0}")
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.znMuted)
                     }
 
                     // Weather description
                     Text(weather.localizedDescription(language: language))
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.znMuted)
                         .lineLimit(1)
                 }
 
@@ -135,9 +134,8 @@ struct WeekendDayCard: View {
                     .font(.caption)
                     .foregroundStyle(.znTerracotta)
                 Text(timeLabel)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
+                    .font(.znEyebrow)
+                    .foregroundStyle(.znMuted)
                     .textCase(.uppercase)
             }
 
@@ -149,7 +147,7 @@ struct WeekendDayCard: View {
             // Activity description
             Text(activity.localizedDescription(language: language))
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.znMuted)
                 .lineLimit(3)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -192,10 +190,10 @@ struct WeekendDayCard: View {
         HStack(spacing: 8) {
             Image(systemName: "bed.double.fill")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.znMuted)
             Text(language == .en ? "Rest day — no activities planned" : "Ruhetag — keine Aktivitaten geplant")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.znMuted)
         }
     }
 

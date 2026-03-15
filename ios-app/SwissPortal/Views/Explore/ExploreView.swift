@@ -106,6 +106,8 @@ struct ExploreView: View {
         .navigationDestination(for: String.self) { route in
             if route == "lunch" {
                 LunchView()
+            } else if route == "events" {
+                EventsView(showHeroHeader: true)
             }
         }
     }
@@ -137,42 +139,34 @@ struct ExploreView: View {
                 }
             }
 
-            // Map card
-            Button {
-                withAnimation(AppAnimation.spring) {
-                    showFullMap = true
-                }
-            } label: {
-                ZStack(alignment: .bottom) {
-                    ZStack {
-                        Map(position: $cameraPosition, interactionModes: []) {
-                            ForEach(items) { item in
-                                Annotation("", coordinate: item.coordinate) {
-                                    miniAnnotation(for: item)
-                                }
-                            }
+            // Map card — interactive
+            ZStack(alignment: .bottom) {
+                Map(position: $cameraPosition) {
+                    ForEach(items) { item in
+                        Annotation("", coordinate: item.coordinate) {
+                            miniAnnotation(for: item)
                         }
-                        .mapStyle(.standard(pointsOfInterest: .excludingAll))
-
-                        // Dark navy tint overlay to match mockup aesthetic
-                        Color(red: 0.10, green: 0.15, blue: 0.21)
-                            .opacity(0.52)
-                            .allowsHitTesting(false)
                     }
-                    .frame(height: AppSpacing.miniMapHeight)
-                    .allowsHitTesting(false)
+                }
+                .mapStyle(.standard(pointsOfInterest: .excludingAll))
+                .frame(height: AppSpacing.miniMapHeight)
 
-                    // Bottom bar: legend left, "Full map" pill right
-                    HStack(alignment: .center) {
-                        // Legend
-                        HStack(spacing: 9) {
-                            legendDot(color: .znTerracotta, label: appState.localized(en: "Activities", de: "Aktivitäten"))
-                            legendDot(color: .znPositive, label: appState.localized(en: "Deals", de: "Angebote"))
+                // Bottom bar: legend left, "Full map" pill right
+                HStack(alignment: .center) {
+                    // Legend
+                    HStack(spacing: 9) {
+                        legendDot(color: .znTerracotta, label: appState.localized(en: "Activities", de: "Aktivitäten"))
+                        legendDot(color: .znPositive, label: appState.localized(en: "Deals", de: "Angebote"))
+                    }
+
+                    Spacer()
+
+                    // "Full map" pill
+                    Button {
+                        withAnimation(AppAnimation.spring) {
+                            showFullMap = true
                         }
-
-                        Spacer()
-
-                        // "Full map" pill
+                    } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.up.left.and.arrow.down.right")
                                 .font(.system(size: 9))
@@ -185,16 +179,16 @@ struct ExploreView: View {
                         .background(Color.znNavy.opacity(0.8))
                         .clipShape(Capsule())
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 9)
                 }
-                .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
-                .overlay(
-                    RoundedRectangle(cornerRadius: AppSpacing.cardRadius)
-                        .stroke(Color.znBorder, lineWidth: 1)
-                )
+                .padding(.horizontal, 10)
+                .padding(.bottom, 9)
+                .allowsHitTesting(true)
             }
-            .buttonStyle(.plain)
+            .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppSpacing.cardRadius)
+                    .stroke(Color.znBorder, lineWidth: 1)
+            )
         }
     }
 

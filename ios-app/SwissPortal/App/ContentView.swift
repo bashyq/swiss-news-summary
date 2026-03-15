@@ -31,17 +31,37 @@ struct ContentView: View {
     @ViewBuilder
     private func tabContent(_ tab: AppTab) -> some View {
         switch tab {
+        case .today:
+            TodayNavigationStack()
         case .explore:
             ExploreNavigationStack()
         default:
             NavigationStack {
                 switch tab {
-                case .news: NewsView()
                 case .activities: ActivitiesView()
                 case .weekend: WeekendTabView()
                 case .settings: SettingsView()
                 default: EmptyView()
                 }
+            }
+        }
+    }
+}
+
+// MARK: - Today Navigation Stack
+
+/// Manages its own NavigationPath so "See all news →" can push NewsView.
+private struct TodayNavigationStack: View {
+    @Environment(AppState.self) private var appState
+    @State private var path = NavigationPath()
+
+    var body: some View {
+        NavigationStack(path: $path) {
+            TodayView()
+        }
+        .onChange(of: appState.tabRetapCount) {
+            if appState.selectedTab == .today && !path.isEmpty {
+                path = NavigationPath()
             }
         }
     }
@@ -61,6 +81,12 @@ private struct ExploreNavigationStack: View {
         .onChange(of: appState.tabRetapCount) {
             if appState.selectedTab == .explore && !path.isEmpty {
                 path = NavigationPath()
+            }
+        }
+        .onChange(of: appState.pendingExploreRoute) { _, route in
+            if let route {
+                path.append(route)
+                appState.pendingExploreRoute = nil
             }
         }
     }
@@ -124,7 +150,7 @@ struct ZnuniTabBar: View {
         let inactiveColor = Color.znMuted
 
         switch tab {
-        case .news:
+        case .today:
             newsIcon(isSelected: isSelected, active: activeColor, inactive: inactiveColor)
         case .activities:
             starIcon(isSelected: isSelected, active: activeColor, inactive: inactiveColor)
@@ -330,7 +356,7 @@ struct WeekendTabView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     // Eyebrow
                     Text(weatherEyebrow)
-                        .font(.system(size: 10, weight: .medium))
+                        .font(.znEyebrow)
                         .tracking(1.3)
                         .textCase(.uppercase)
                         .foregroundStyle(.white.opacity(0.42))
@@ -391,7 +417,7 @@ struct WeekendTabView: View {
 
             (
                 Text(appState.localized(en: "Weekend ", de: "Wochenend-"))
-                    .font(.custom("Playfair", size: 28))
+                    .font(.bannerTitle)
                     .foregroundStyle(.white)
                 + Text(italicWord)
                     .font(.custom("Playfair", size: 28).italic())

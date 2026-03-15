@@ -41,7 +41,7 @@ struct SunshineCard: View {
                 .padding(.vertical, 6)
         }
         .shadow(color: AppShadow.card.color, radius: AppShadow.card.radius, x: AppShadow.card.x, y: AppShadow.card.y)
-        .sensoryFeedback(.selection, trigger: isExpanded)
+        .sensoryFeedback(.impact(weight: .light), trigger: isExpanded)
         .contentShape(Rectangle())
         .onTapGesture { onTap() }
     }
@@ -80,7 +80,7 @@ struct SunshineCard: View {
                 }
                 Text(destination.localizedRegion(language: language))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.znMuted)
                     .lineLimit(1)
             }
 
@@ -100,7 +100,7 @@ struct SunshineCard: View {
             // Chevron
             Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                 .font(.caption)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.znChevron)
         }
         .padding(AppSpacing.cardPadding)
     }
@@ -110,13 +110,12 @@ struct SunshineCard: View {
     private var sunshineHoursLabel: some View {
         VStack(spacing: 1) {
             Text(String(format: "%.1f", destination.sunshineHoursTotal))
-                .font(.title3)
-                .fontWeight(.bold)
+                .font(.cardHeadline)
                 .foregroundStyle(Color.sunshineColor(hours: destination.sunshineHoursTotal))
                 .contentTransition(.numericText())
             Text(language == .de ? "Std" : "hrs")
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.znMuted)
         }
     }
 
@@ -126,12 +125,12 @@ struct SunshineCard: View {
         Group {
             if let bestDay = destination.forecast.max(by: { $0.sunshineHours < $1.sunshineHours }) {
                 Image(systemName: bestDay.sfSymbol)
-                    .font(.title2)
+                    .font(.system(size: 24))
                     .foregroundStyle(Color.sunshineColor(hours: destination.sunshineHoursTotal))
                     .symbolRenderingMode(.multicolor)
             } else {
                 Image(systemName: "sun.max.fill")
-                    .font(.title2)
+                    .font(.system(size: 24))
                     .foregroundStyle(.znMuted)
             }
         }
@@ -189,10 +188,10 @@ struct SunshineCard: View {
     private var dailyForecastSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(language == .de ? "Prognose" : "Forecast")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(.secondary)
+                .font(.znEyebrow)
+                .tracking(0.8)
                 .textCase(.uppercase)
+                .foregroundStyle(.znMuted)
 
             ForEach(destination.forecast) { day in
                 dailyForecastRow(day)
@@ -256,13 +255,13 @@ struct SunshineCard: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 4) {
                     Text(language == .de ? "Sonnenstunden" : "Sunny Hours")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.secondary)
+                        .font(.znEyebrow)
+                        .tracking(0.8)
                         .textCase(.uppercase)
+                        .foregroundStyle(.znMuted)
                     Text("(\(dayName(for: bestDay.date)))")
                         .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.znMuted)
                 }
                 HourlyTimelineView(sunnyHours: sunnyHours)
             }

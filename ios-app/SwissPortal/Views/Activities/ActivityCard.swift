@@ -42,30 +42,30 @@ struct ActivityCard: View {
             }
             Color.znSurface
         }
-        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
         .overlay(alignment: .leading) {
             // Left accent bar — fades out when expanded (photo visible)
             RoundedRectangle(cornerRadius: 1.5)
                 .fill(accentBarColor)
                 .frame(width: AppSpacing.borderStripWidth)
-                .padding(.vertical, 18)
+                .padding(.vertical, 8)
                 .opacity(isExpanded ? 0 : 1)
         }
         .shadow(
-            color: isExpanded ? Color.znNavy.opacity(0.18) : AppShadow.card.color,
-            radius: isExpanded ? 20 : AppShadow.card.radius,
+            color: isExpanded ? AppShadow.cardExpanded.color : AppShadow.card.color,
+            radius: isExpanded ? AppShadow.cardExpanded.radius : AppShadow.card.radius,
             x: 0,
-            y: isExpanded ? 6 : AppShadow.card.y
+            y: isExpanded ? AppShadow.cardExpanded.y : AppShadow.card.y
         )
         .contentShape(Rectangle())
         .onTapGesture {
             if !isExpanded {
-                withAnimation(.easeInOut(duration: 0.4)) {
+                withAnimation(AppAnimation.spring) {
                     expandedID = activity.id
                 }
             }
         }
-        .sensoryFeedback(.impact(flexibility: .soft), trigger: isExpanded)
+        .sensoryFeedback(.impact(weight: .light), trigger: isExpanded)
         .confirmationDialog(
             appState.localized(en: "Delete Activity", de: "Aktivität löschen"),
             isPresented: $showDeleteConfirmation,
@@ -134,7 +134,7 @@ struct ActivityCard: View {
 
                     // Category badge on photo
                     Text(categoryLabel.uppercased())
-                        .font(.system(size: 10, weight: .medium))
+                        .font(.znEyebrow)
                         .tracking(0.8)
                         .foregroundStyle(.white)
                         .padding(.horizontal, 10)
@@ -147,7 +147,7 @@ struct ActivityCard: View {
 
                 // Close button
                 Button {
-                    withAnimation(.easeInOut(duration: 0.35)) {
+                    withAnimation(AppAnimation.spring) {
                         expandedID = nil
                     }
                 } label: {
@@ -163,7 +163,7 @@ struct ActivityCard: View {
             }
             .contentShape(Rectangle())
             .onTapGesture {
-                withAnimation(.easeInOut(duration: 0.35)) {
+                withAnimation(AppAnimation.spring) {
                     expandedID = nil
                 }
             }
@@ -181,14 +181,14 @@ struct ActivityCard: View {
                     // Category eyebrow — hidden when expanded (shown on photo badge instead)
                     if !isExpanded {
                         Text(categoryLabel.uppercased())
-                            .font(.system(size: 10, weight: .medium))
+                            .font(.znEyebrow)
                             .tracking(0.9)
                             .foregroundStyle(Color.znMuted)
                     }
 
                     // Title — grows slightly when expanded
                     Text(activity.localizedName(language: language))
-                        .font(.custom("Playfair", size: isExpanded ? 18 : 16).weight(.semibold))
+                        .font(isExpanded ? .expandedCardTitle : .compactCardTitle)
                         .foregroundStyle(Color.znInk)
                         .lineLimit(isExpanded ? nil : 2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -206,7 +206,7 @@ struct ActivityCard: View {
                             Image(systemName: "trash")
                                 .font(.caption)
                                 .foregroundStyle(.znNegative.opacity(0.7))
-                                .frame(width: 28, height: 28)
+                                .frame(width: 44, height: 44)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
@@ -227,8 +227,8 @@ struct ActivityCard: View {
                         } label: {
                             Image(systemName: reminderManager.hasReminder(for: activity.id) ? "bell.fill" : "bell")
                                 .font(.caption)
-                                .foregroundStyle(reminderManager.hasReminder(for: activity.id) ? .znTerracotta : .secondary)
-                                .frame(width: 28, height: 28)
+                                .foregroundStyle(reminderManager.hasReminder(for: activity.id) ? .znTerracotta : .znMuted)
+                                .frame(width: 44, height: 44)
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
@@ -246,11 +246,11 @@ struct ActivityCard: View {
                         Image(systemName: isSaved ? "heart.fill" : "heart")
                             .font(.callout)
                             .foregroundStyle(isSaved ? .znNegative : Color.znBorder)
-                            .frame(width: 28, height: 28)
+                            .frame(width: 44, height: 44)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .sensoryFeedback(.impact(flexibility: .soft), trigger: isSaved)
+                    .sensoryFeedback(.impact(weight: .light), trigger: isSaved)
                 }
             }
             .padding(.bottom, 5)
@@ -392,7 +392,7 @@ struct ActivityCard: View {
                         Image(systemName: "chevron.down")
                             .font(.system(size: 10))
                     }
-                    .foregroundStyle(Color.znNavy)
+                    .foregroundStyle(Color.znChevron)
                 }
             }
         }
@@ -574,50 +574,6 @@ struct ActivityCard: View {
 }
 
 // MARK: - Flow Layout (wrapping tag pills)
-
-/// Simple horizontal flow layout that wraps items to the next line.
-struct FlowLayout: Layout {
-    var spacing: CGFloat = 5
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let result = layout(proposal: proposal, subviews: subviews)
-        return result.size
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let result = layout(proposal: ProposedViewSize(width: bounds.width, height: nil), subviews: subviews)
-        for (index, position) in result.positions.enumerated() {
-            subviews[index].place(
-                at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y),
-                proposal: .unspecified
-            )
-        }
-    }
-
-    private func layout(proposal: ProposedViewSize, subviews: Subviews) -> (size: CGSize, positions: [CGPoint]) {
-        let maxWidth = proposal.width ?? .infinity
-        var positions: [CGPoint] = []
-        var x: CGFloat = 0
-        var y: CGFloat = 0
-        var rowHeight: CGFloat = 0
-        var totalHeight: CGFloat = 0
-
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x + size.width > maxWidth, x > 0 {
-                x = 0
-                y += rowHeight + spacing
-                rowHeight = 0
-            }
-            positions.append(CGPoint(x: x, y: y))
-            rowHeight = max(rowHeight, size.height)
-            x += size.width + spacing
-            totalHeight = y + rowHeight
-        }
-
-        return (CGSize(width: maxWidth, height: totalHeight), positions)
-    }
-}
 
 #Preview {
     struct PreviewWrapper: View {

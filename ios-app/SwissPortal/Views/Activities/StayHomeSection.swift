@@ -43,7 +43,7 @@ struct StayHomeSection: View {
                 // Name + count
                 VStack(alignment: .leading, spacing: 2) {
                     Text(localizedCategoryName(group.category))
-                        .font(.custom("Playfair", size: 16).weight(.semibold))
+                        .font(.compactCardTitle)
                         .foregroundStyle(.znInk)
 
                     Text(language == .en
@@ -58,18 +58,18 @@ struct StayHomeSection: View {
                 // Chevron
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.znTerracotta)
+                    .foregroundStyle(.znChevron)
                     .rotationEffect(.degrees(isExpanded ? 90 : 0))
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
             .contentShape(Rectangle())
             .onTapGesture {
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                withAnimation(AppAnimation.spring) {
                     expandedCategory = isExpanded ? nil : group.category
                 }
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
             }
+            .sensoryFeedback(.impact(weight: .light), trigger: expandedCategory)
 
             // Expand panel — activity grid
             if isExpanded {
@@ -87,21 +87,21 @@ struct StayHomeSection: View {
                         StayHomeCard(activity: activity, language: language)
                     }
                 }
-                .padding(14)
+                .padding(AppSpacing.cardPadding)
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .background(Color.znSurface)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 18)
+            RoundedRectangle(cornerRadius: AppSpacing.cardRadius)
                 .stroke(Color.znBorder, lineWidth: 1)
         )
         .shadow(
-            color: isExpanded ? Color.znNavy.opacity(0.12) : AppShadow.card.color,
-            radius: isExpanded ? 12 : AppShadow.card.radius,
+            color: isExpanded ? AppShadow.cardExpanded.color : AppShadow.card.color,
+            radius: isExpanded ? AppShadow.cardExpanded.radius : AppShadow.card.radius,
             x: 0,
-            y: isExpanded ? 6 : AppShadow.card.y
+            y: isExpanded ? AppShadow.cardExpanded.y : AppShadow.card.y
         )
     }
 
@@ -191,13 +191,13 @@ struct StayHomeSection: View {
         VStack(spacing: 12) {
             Image(systemName: "sofa.fill")
                 .font(.system(size: 36))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.znMuted)
             Text(language == .en
                  ? "No stay-home activities available"
                  : "Keine Zuhause-Aktivitäten verfügbar"
             )
             .font(.subheadline)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.znMuted)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
@@ -257,7 +257,7 @@ struct StayHomeCard: View {
         .padding(11)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color.znCream)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
     }
 }
 

@@ -58,51 +58,8 @@ struct ActivitiesView: View {
         appState.localized(en: "What to do?", de: "Was tun?")
     }
 
-    // MARK: - Glass Buttons (frosted circles matching Explore hero)
-
-    private func glassButton(
-        systemName: String,
-        size: CGFloat = 36,
-        iconSize: CGFloat = 16,
-        radius: CGFloat = 10,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: iconSize))
-                .foregroundStyle(.white)
-                .frame(width: size, height: size)
-                .background(.white.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: radius))
-        }
-    }
-
-    private var cityMenuButton: some View {
-        Menu {
-            ForEach(City.allCases) { city in
-                Button {
-                    appState.city = city
-                } label: {
-                    HStack {
-                        Text(city.localizedName(language: appState.language))
-                        if city == appState.city {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                }
-            }
-        } label: {
-            Image(systemName: "building.2")
-                .font(.system(size: 16))
-                .foregroundStyle(.white)
-                .frame(width: 36, height: 36)
-                .background(.white.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-        }
-    }
-
     private var mapToggleButton: some View {
-        glassButton(
+        GlassButton(
             systemName: viewModel.showMap ? "list.bullet" : "map"
         ) {
             withAnimation(AppAnimation.standardEase) {
@@ -112,7 +69,7 @@ struct ActivitiesView: View {
     }
 
     private var addButton: some View {
-        glassButton(systemName: "plus") {
+        GlassButton(systemName: "plus") {
             showAddSheet = true
         }
     }
@@ -126,7 +83,7 @@ struct ActivitiesView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     // Eyebrow
                     Text(heroEyebrow)
-                        .font(.system(size: 10, weight: .medium))
+                        .font(.znEyebrow)
                         .tracking(1.3)
                         .textCase(.uppercase)
                         .foregroundStyle(.white.opacity(0.42))
@@ -140,7 +97,7 @@ struct ActivitiesView: View {
                 HStack(spacing: 8) {
                     addButton
                     mapToggleButton
-                    cityMenuButton
+                    CityMenuButton()
                 }
             }
 
@@ -161,7 +118,7 @@ struct ActivitiesView: View {
                     startRadius: 0,
                     endRadius: 220
                 )
-                skylineIllustration
+                SkylineIllustration()
                     .frame(width: 200, height: 110)
                     .opacity(0.09)
             }
@@ -179,7 +136,7 @@ struct ActivitiesView: View {
     private var heroTitle: some View {
         (
             Text(appState.localized(en: "What to ", de: "Was "))
-                .font(.custom("Playfair", size: 28))
+                .font(.bannerTitle)
                 .foregroundStyle(.white)
             + Text(appState.localized(en: "do?", de: "tun?"))
                 .font(.custom("Playfair", size: 28).italic())
@@ -266,37 +223,6 @@ struct ActivitiesView: View {
             }
         }
         return count > 0 ? count : nil
-    }
-
-    private var skylineIllustration: some View {
-        Canvas { ctx, size in
-            let w = size.width, h = size.height
-            let white = Color.white
-            ctx.fill(Path(CGRect(x: w * 0.05, y: h * 0.36, width: w * 0.09, height: h * 0.64)), with: .color(white))
-            ctx.fill(Path { p in
-                p.move(to: CGPoint(x: w * 0.05, y: h * 0.36))
-                p.addLine(to: CGPoint(x: w * 0.095, y: h * 0.11))
-                p.addLine(to: CGPoint(x: w * 0.14, y: h * 0.36))
-                p.closeSubpath()
-            }, with: .color(white))
-            ctx.fill(Path(CGRect(x: w * 0.19, y: h * 0.45, width: w * 0.11, height: h * 0.55)), with: .color(white))
-            ctx.fill(Path { p in
-                p.move(to: CGPoint(x: w * 0.19, y: h * 0.45))
-                p.addLine(to: CGPoint(x: w * 0.245, y: h * 0.16))
-                p.addLine(to: CGPoint(x: w * 0.30, y: h * 0.45))
-                p.closeSubpath()
-            }, with: .color(white))
-            ctx.fill(Path(CGRect(x: w * 0.36, y: h * 0.41, width: w * 0.08, height: h * 0.59)), with: .color(white))
-            ctx.fill(Path(ellipseIn: CGRect(x: w * 0.32, y: h * 0.29, width: w * 0.16, height: h * 0.18)), with: .color(white))
-            ctx.fill(Path(CGRect(x: w * 0.50, y: h * 0.32, width: w * 0.14, height: h * 0.68)), with: .color(white))
-            ctx.fill(Path { p in
-                p.move(to: CGPoint(x: w * 0.69, y: h))
-                p.addLine(to: CGPoint(x: w * 0.79, y: h * 0.25))
-                p.addLine(to: CGPoint(x: w * 0.89, y: h))
-                p.closeSubpath()
-            }, with: .color(white))
-            ctx.fill(Path(CGRect(x: 0, y: h * 0.76, width: w, height: h * 0.13)), with: .color(white.opacity(0.25)))
-        }
     }
 
     // MARK: - Content
@@ -487,7 +413,7 @@ struct ActivitiesView: View {
                 de: "Keine Aktivitäten gefunden"
             ))
             .font(.subheadline)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.znMuted)
 
             if viewModel.filter == .saved {
                 Text(appState.localized(
@@ -495,7 +421,7 @@ struct ActivitiesView: View {
                     de: "Speichere Aktivitäten mit dem Herz-Symbol"
                 ))
                 .font(.caption)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.znMuted)
                 .multilineTextAlignment(.center)
             }
         }

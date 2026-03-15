@@ -28,8 +28,8 @@ struct NewsCard: View {
                     expandedContent
                 }
             }
-            .padding(14)
-            .padding(.leading, isExpanded ? 2 : 8)
+            .padding(AppSpacing.cardPadding)
+            .padding(.leading, isExpanded ? 0 : 4)
         }
         .background(Color.znSurface)
         .clipShape(RoundedRectangle(cornerRadius: AppSpacing.newsCardRadius))
@@ -42,10 +42,10 @@ struct NewsCard: View {
                 .opacity(isExpanded ? 0 : 1)
         }
         .shadow(
-            color: isExpanded ? Color.znNavy.opacity(0.12) : AppShadow.card.color,
-            radius: isExpanded ? 12 : AppShadow.card.radius,
+            color: isExpanded ? AppShadow.cardExpanded.color : AppShadow.card.color,
+            radius: isExpanded ? AppShadow.cardExpanded.radius : AppShadow.card.radius,
             x: 0,
-            y: isExpanded ? 4 : AppShadow.card.y
+            y: isExpanded ? AppShadow.cardExpanded.y : AppShadow.card.y
         )
         .contentShape(Rectangle())
         .onTapGesture {
@@ -85,7 +85,7 @@ struct NewsCard: View {
     private var sourceRow: some View {
         HStack(spacing: 7) {
             Text(item.source)
-                .font(.system(size: 10, weight: .medium))
+                .font(.znEyebrow)
                 .tracking(0.7)
                 .textCase(.uppercase)
                 .foregroundStyle(.znMuted)
@@ -115,7 +115,7 @@ struct NewsCard: View {
                         .foregroundStyle(.znNavy)
                     Image(systemName: "chevron.down")
                         .font(.system(size: 9))
-                        .foregroundStyle(.znNavy)
+                        .foregroundStyle(.znChevron)
                 }
             }
         }
@@ -127,7 +127,7 @@ struct NewsCard: View {
     private var expandedContent: some View {
         VStack(alignment: .leading, spacing: 12) {
             Divider()
-                .foregroundStyle(.znBorder)
+                .foregroundStyle(.znInnerDivider)
 
             // Detail text if available
             if let detail = item.localizedDetail(language: appState.language), !detail.isEmpty {

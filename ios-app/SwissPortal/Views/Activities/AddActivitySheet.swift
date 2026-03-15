@@ -90,6 +90,7 @@ struct AddActivitySheet: View {
                     Text(appState.localized(en: "Website", de: "Webseite"))
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle(appState.localized(en: "Add Activity", de: "Aktivitat hinzufugen"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -138,10 +139,9 @@ struct AddActivitySheet: View {
 
     /// Persist the custom activity to UserDefaults.
     private func saveToUserDefaults(_ activity: CustomActivity) {
-        let key = "customActivities"
         var existing: [CustomActivity] = []
 
-        if let data = UserDefaults.standard.data(forKey: key),
+        if let data = UserDefaults.standard.data(forKey: StorageKeys.customActivities),
            let decoded = try? JSONDecoder().decode([CustomActivity].self, from: data) {
             existing = decoded
         }
@@ -149,7 +149,7 @@ struct AddActivitySheet: View {
         existing.append(activity)
 
         if let encoded = try? JSONEncoder().encode(existing) {
-            UserDefaults.standard.set(encoded, forKey: key)
+            UserDefaults.standard.set(encoded, forKey: StorageKeys.customActivities)
         }
     }
 }

@@ -100,6 +100,15 @@ struct ExploreMapOverlay: View {
             }
         }
         .mapStyle(.standard(pointsOfInterest: .excludingAll))
+        .overlay(alignment: .bottom) {
+            LinearGradient(
+                colors: [.clear, Color.znCream.opacity(0.6)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 60)
+            .allowsHitTesting(false)
+        }
     }
 
     private func annotationView(for item: ExploreItem) -> some View {
@@ -131,57 +140,173 @@ struct ExploreMapOverlay: View {
     // MARK: - Pin Detail Card
 
     private func pinDetailCard(_ item: ExploreItem) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                // Type badge
-                Text(typeLabel(item))
-                    .font(.znEyebrow)
-                    .fontWeight(.semibold)
-                    .textCase(.uppercase)
-                    .foregroundStyle(typeColor(item))
-
-                Spacer()
-
-                Button {
-                    withAnimation(AppAnimation.spring) {
-                        selectedItem = nil
+        VStack(alignment: .leading, spacing: 0) {
+            // Photo for activities
+            if case .activity(let a) = item,
+               !a.id.hasPrefix("custom-"),
+               a.category.lowercased() != "stayhome",
+               let photoURL = APIClient.shared.photoURL(for: a.id) {
+                AsyncImage(url: photoURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(height: 120)
+                            .clipped()
+                    case .failure:
+                        photoFallback(item)
+                    default:
+                        photoFallback(item)
                     }
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                }
+                .frame(height: 120)
+                .frame(maxWidth: .infinity)
+                .overlay(alignment: .topTrailing) {
+                    Button {
+                        withAnimation(AppAnimation.spring) {
+                            selectedItem = nil
+                        }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(.white, .black.opacity(0.3))
+                    }
+                    .padding(8)
                 }
             }
 
-            Text(item.localizedName(language: appState.language))
-                .font(.cardHeadline)
-                .foregroundStyle(.znInk)
+            VStack(alignment: .leading, spacing: 8) {
+                // Type badge + close (if no photo)
+                HStack {
+                    Text(typeLabel(item))
+                        .font(.znEyebrow)
+                        .fontWeight(.semibold)
+                        .textCase(.uppercase)
+                        .foregroundStyle(typeColor(item))
 
-            if let subtitle = itemSubtitle(item) {
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.znBody)
-                    .lineLimit(2)
-            }
+                    Spacer()
 
-            // Get directions button
-            Button {
-                openDirections(to: item)
-            } label: {
-                Label(appState.localized(en: "Get directions", de: "Route planen"), systemImage: "arrow.triangle.turn.up.right.diamond")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(Color.znNavy)
-                    .clipShape(Capsule())
+                    if !itemHasPhoto(item) {
+                        Button {
+                            withAnimation(AppAnimation.spring) {
+                                selectedItem = nil
+                            }
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                Text(item.localizedName(language: appState.language))
+                    .font(.cardHeadline)
+                    .foregroundStyle(.znInk)
+
+                if let subtitle = itemSubtitle(item) {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.znBody)
+                        .lineLimit(2)
+                }
+
+                // Opening hours
+                if let hours = itemOpeningHours(item) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "door.left.hand.open")
+                            .font(.system(size: 10))
+                        Text(hours)
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(.znMuted)
+                }
+
+                // Action buttons
+                HStack(spacing: 8) {
+                    Button {
+                        openDirections(to: item)
+                    } label: {
+                        Label(appState.localized(en: "Directions", de: "Route"), systemImage: "arrow.triangle.turn.up.right.diamond")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(Color.znNavy)
+                            .clipShape(Capsule())
+                    }
+
+                    if let url = itemWebsiteURL(item) {
+                        Button {
+                            UIApplication.shared.open(url)
+                        } label: {
+                            Label(appState.localized(en: "Website", de: "Webseite"), systemImage: "safari")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.znNavy)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(Color.znNavy.opacity(0.08))
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
             }
+            .padding(AppSpacing.cardPadding)
         }
-        .padding(AppSpacing.cardPadding)
         .background(Color.znSurface)
         .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
         .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
+    }
+
+    private func photoFallback(_ item: ExploreItem) -> some View {
+        LinearGradient(
+            colors: [typeColor(item).opacity(0.3), Color.znNavy.opacity(0.15)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .frame(height: 120)
+        .overlay {
+            Image(systemName: itemSymbol(item))
+                .font(.system(size: 28))
+                .foregroundStyle(.white.opacity(0.4))
+        }
+    }
+
+    private func itemHasPhoto(_ item: ExploreItem) -> Bool {
+        if case .activity(let a) = item,
+           !a.id.hasPrefix("custom-"),
+           a.category.lowercased() != "stayhome" {
+            return true
+        }
+        return false
+    }
+
+    private func itemSymbol(_ item: ExploreItem) -> String {
+        switch item {
+        case .activity: return "mappin.circle.fill"
+        case .event: return "star.circle.fill"
+        case .deal: return "tag.circle.fill"
+        }
+    }
+
+    private func itemOpeningHours(_ item: ExploreItem) -> String? {
+        if case .activity(let a) = item {
+            return a.localizedOpeningHours(language: appState.language)
+        }
+        return nil
+    }
+
+    private func itemWebsiteURL(_ item: ExploreItem) -> URL? {
+        let urlString: String? = switch item {
+        case .activity(let a): a.url
+        case .event(let e, _): e.url
+        case .deal(let d, _): d.url
+        }
+        guard let str = urlString, let url = URL(string: str) else { return nil }
+        return url
     }
 
     // MARK: - Legend

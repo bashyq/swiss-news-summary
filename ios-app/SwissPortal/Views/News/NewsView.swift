@@ -11,10 +11,15 @@ struct NewsView: View {
     @State private var showHolidayDetail = false
     @State private var expandedNewsID: String?
 
+    /// When true, shows a navigation bar with "All News" title and back button
+    /// (pushed from TodayView). When false, hides the nav bar (standalone mode).
+    var showAsChild: Bool = false
+
     var body: some View {
         content
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar(.hidden, for: .navigationBar)
+            .toolbar(showAsChild ? .visible : .hidden, for: .navigationBar)
+            .navigationTitle(showAsChild ? appState.localized(en: "All News", de: "Alle Nachrichten") : "")
             .task(id: "\(appState.city.id)-\(appState.language)") {
                 await viewModel.loadNews(
                     city: appState.city,

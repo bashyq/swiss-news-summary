@@ -24,14 +24,14 @@ struct SurpriseMeSheet: View {
 
                         // Activity name
                         Text(activity.localizedName(language: appState.language))
-                            .font(.custom("Playfair", size: 22).weight(.semibold))
+                            .font(.sectionTitle)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
 
                         // Description
                         Text(activity.localizedDescription(language: appState.language))
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.znMuted)
                             .multilineTextAlignment(.center)
                             .lineLimit(3)
                             .padding(.horizontal, 24)
@@ -44,10 +44,10 @@ struct SurpriseMeSheet: View {
                                 HStack(spacing: 6) {
                                     Image(systemName: "banknote")
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(.znMuted)
                                     Text(price)
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(.znMuted)
                                 }
                             }
                         }
@@ -72,7 +72,7 @@ struct SurpriseMeSheet: View {
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.title3)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.znMuted)
                     }
                 }
             }

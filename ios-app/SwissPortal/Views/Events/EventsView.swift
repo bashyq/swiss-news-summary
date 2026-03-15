@@ -20,34 +20,18 @@ struct EventsView: View {
         content
             .navigationTitle(showHeroHeader ? "" : navigationTitle)
             .navigationBarTitleDisplayMode(showHeroHeader ? .inline : .large)
-            .navigationBarHidden(showHeroHeader)
+            .toolbar(showHeroHeader ? .hidden : .visible, for: .navigationBar)
             .refreshable {
                 await viewModel.loadData(
                     city: appState.city,
                     language: appState.language
                 )
             }
-            .task {
+            .task(id: "\(appState.city.id)-\(appState.language)") {
                 await viewModel.loadData(
                     city: appState.city,
                     language: appState.language
                 )
-            }
-            .onChange(of: appState.city) { _, _ in
-                Task {
-                    await viewModel.loadData(
-                        city: appState.city,
-                        language: appState.language
-                    )
-                }
-            }
-            .onChange(of: appState.language) { _, _ in
-                Task {
-                    await viewModel.loadData(
-                        city: appState.city,
-                        language: appState.language
-                    )
-                }
             }
     }
 
@@ -112,58 +96,41 @@ struct EventsView: View {
     // MARK: - Hero Header
 
     private var heroHeader: some View {
-        let gradientColors: [Color] = [.znNavy.opacity(0.8), .znNavy.opacity(0.5)]
-        let cityName = appState.city.localizedName(language: appState.language)
         let eventCount = viewModel.cityEvents.count
+        let cityName = appState.city.localizedName(language: appState.language)
 
-        return ZStack(alignment: .bottomLeading) {
-            // Background gradient extending behind Dynamic Island
-            LinearGradient(
-                colors: gradientColors,
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea(.container, edges: .top)
-
-            // Scrim for text legibility
-            LinearGradient(
-                colors: [
-                    .black.opacity(0.25),
-                    .clear,
-                    .black.opacity(0.35)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea(.container, edges: .top)
-
-            // Back button — top-left
-            VStack {
-                HStack {
-                    Button { dismiss() } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .frame(width: 34, height: 34)
-                            .background(.white.opacity(0.18))
-                            .clipShape(Circle())
-                    }
-                    Spacer()
+        return VStack(alignment: .leading, spacing: 0) {
+            // Back button row + glass action buttons
+            HStack {
+                Button { dismiss() } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 34, height: 34)
+                        .background(.white.opacity(0.18))
+                        .clipShape(Circle())
                 }
-                .padding(.horizontal, 16)
                 Spacer()
+
+                HStack(spacing: 8) {
+                    CityMenuButton()
+                }
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 6)
+
+            Spacer(minLength: 0)
 
             // Title content — bottom-left
             VStack(alignment: .leading, spacing: 4) {
                 Text(appState.localized(en: "Family", de: "Familie") + " · " + cityName)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.znEyebrow)
                     .tracking(1.3)
                     .textCase(.uppercase)
                     .foregroundStyle(.white.opacity(0.55))
 
                 Text(appState.localized(en: "Family Events", de: "Familienevents"))
-                    .font(.custom("Playfair", size: 26))
+                    .font(.bannerTitle)
                     .foregroundStyle(.white)
 
                 HStack(spacing: 12) {
@@ -171,7 +138,7 @@ struct EventsView: View {
                         appState.localized(en: "\(eventCount) events", de: "\(eventCount) Events"),
                         systemImage: "calendar"
                     )
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.znEyebrow)
                     .foregroundStyle(.white.opacity(0.75))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 3)
@@ -181,9 +148,28 @@ struct EventsView: View {
                 .padding(.top, 2)
             }
             .padding(.horizontal, 20)
-            .padding(.bottom, 18)
+            .padding(.bottom, 16)
         }
-        .frame(height: 180)
+        .frame(height: 150)
+        .background {
+            ZStack {
+                LinearGradient(
+                    colors: [.znNavy, .znNavy.opacity(0.7)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                LinearGradient(
+                    colors: [
+                        .black.opacity(0.2),
+                        .clear,
+                        .black.opacity(0.3)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
+            .ignoresSafeArea(.container, edges: .top)
+        }
     }
 
     // MARK: - Events Content
@@ -229,7 +215,7 @@ struct EventsView: View {
                             de: "\(currentFilteredEvents.count) Ergebnisse"
                         ))
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.znMuted)
                         Spacer()
                     }
                     .padding(.horizontal)
@@ -318,7 +304,7 @@ struct EventsView: View {
 
                 Text(holiday.date)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.znMuted)
             }
 
             Spacer()
@@ -329,7 +315,7 @@ struct EventsView: View {
                     de: "in \(holiday.daysUntil) Tagen"
                 ))
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.znMuted)
             }
         }
         .padding(12)
@@ -353,7 +339,7 @@ struct EventsView: View {
 
                 Text("\(schoolHoliday.startDate) - \(schoolHoliday.endDate)")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.znMuted)
             }
 
             Spacer()
@@ -379,7 +365,7 @@ struct EventsView: View {
 
                 Text(activity.localizedDescription(language: appState.language))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.znMuted)
                     .lineLimit(2)
 
                 if let schedule = activity.recurring {
@@ -406,13 +392,13 @@ struct EventsView: View {
         VStack(spacing: 12) {
             Image(systemName: "calendar")
                 .font(.system(size: 40))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.znMuted)
             Text(appState.localized(
                 en: "No events found",
                 de: "Keine Events gefunden"
             ))
             .font(.subheadline)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.znMuted)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)

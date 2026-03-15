@@ -84,55 +84,13 @@ struct CategoryDetailView: View {
                 }
             }
         }
-        .navigationBarHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
     }
 
     // MARK: - Hero Header
 
-    // MARK: - Glass Buttons
-
-    private func glassButton(
-        systemName: String,
-        size: CGFloat = 34,
-        iconSize: CGFloat = 14,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: iconSize))
-                .foregroundStyle(.white)
-                .frame(width: size, height: size)
-                .background(.white.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-        }
-    }
-
-    private var cityMenuButton: some View {
-        Menu {
-            ForEach(City.allCases) { city in
-                Button {
-                    appState.city = city
-                } label: {
-                    HStack {
-                        Text(city.localizedName(language: appState.language))
-                        if city == appState.city {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                }
-            }
-        } label: {
-            Image(systemName: "building.2")
-                .font(.system(size: 14))
-                .foregroundStyle(.white)
-                .frame(width: 34, height: 34)
-                .background(.white.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-        }
-    }
-
     private var mapToggleButton: some View {
-        glassButton(
+        GlassButton(
             systemName: showMap ? "list.bullet" : "map"
         ) {
             withAnimation(AppAnimation.standardEase) {
@@ -158,7 +116,7 @@ struct CategoryDetailView: View {
                 if supportsMapAndCity {
                     HStack(spacing: 8) {
                         mapToggleButton
-                        cityMenuButton
+                        CityMenuButton()
                     }
                 }
             }
@@ -170,13 +128,13 @@ struct CategoryDetailView: View {
             // Title content — bottom-left
             VStack(alignment: .leading, spacing: 4) {
                 Text(categoryEyebrow)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.znEyebrow)
                     .tracking(1.3)
                     .textCase(.uppercase)
                     .foregroundStyle(.white.opacity(0.55))
 
                 Text(appState.language == .en ? category.displayName : category.displayNameDE)
-                    .font(.custom("Playfair", size: 28))
+                    .font(.bannerTitle)
                     .foregroundStyle(.white)
 
                 HStack(spacing: 12) {
@@ -184,7 +142,7 @@ struct CategoryDetailView: View {
                         appState.localized(en: "\(filteredItems.count) venues", de: "\(filteredItems.count) Orte"),
                         systemImage: category.sfSymbol
                     )
-                    .font(.system(size: 10, weight: .medium))
+                    .font(.znEyebrow)
                     .foregroundStyle(.white.opacity(0.75))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 3)
@@ -394,7 +352,7 @@ struct CategoryDetailView: View {
                 // Body
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.localizedName(language: appState.language))
-                        .font(.custom("Playfair", size: 15).weight(.semibold))
+                        .font(.newsCardHeadline)
                         .foregroundStyle(.znInk)
                         .lineLimit(1)
 
@@ -449,7 +407,7 @@ struct CategoryDetailView: View {
                 // Chevron
                 Image(systemName: "chevron.right")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.znTerracotta)
+                    .foregroundStyle(.znChevron)
                     .rotationEffect(.degrees(isExpanded ? 90 : 0))
                     .frame(width: 34)
             }
@@ -457,32 +415,32 @@ struct CategoryDetailView: View {
             // EXPAND PANEL
             if isExpanded {
                 Divider()
-                    .foregroundStyle(.znBorder)
+                    .foregroundStyle(.znInnerDivider)
 
                 expandPanel(item)
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .background(Color.znSurface)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: 18)
+            RoundedRectangle(cornerRadius: AppSpacing.cardRadius)
                 .stroke(Color.znBorder, lineWidth: 1)
         )
         .shadow(
-            color: isExpanded ? Color.znNavy.opacity(0.12) : .clear,
-            radius: isExpanded ? 12 : 0, x: 0, y: isExpanded ? 6 : 0
+            color: isExpanded ? AppShadow.cardExpanded.color : .clear,
+            radius: isExpanded ? AppShadow.cardExpanded.radius : 0, x: 0, y: isExpanded ? AppShadow.cardExpanded.y : 0
         )
         .contentShape(Rectangle())
+        .sensoryFeedback(.impact(weight: .light), trigger: expandedItemID)
         .onTapGesture {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            withAnimation(AppAnimation.spring) {
                 if expandedItemID == item.id {
                     expandedItemID = nil
                 } else {
                     expandedItemID = item.id
                 }
             }
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
             // Scroll into view after expand
             if expandedItemID == item.id {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -603,7 +561,7 @@ struct CategoryDetailView: View {
             // Action buttons
             actionButtons(item)
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, AppSpacing.cardPadding)
         .padding(.vertical, 13)
     }
 
@@ -661,10 +619,10 @@ struct CategoryDetailView: View {
                 .foregroundStyle(.znInk)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 11)
-        .padding(.vertical, 9)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .background(Color.znCream)
-        .clipShape(RoundedRectangle(cornerRadius: 11))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: - Action Buttons
@@ -742,6 +700,7 @@ struct CategoryDetailView: View {
                     .clipShape(Circle())
                     .overlay(Circle().stroke(Color.znBorder, lineWidth: 1))
             }
+            .sensoryFeedback(.impact(weight: .light), trigger: isSaved(item))
 
             // Share (icon-only)
             ShareLink(item: shareURL(item)) {
@@ -993,7 +952,6 @@ struct CategoryDetailView: View {
         } else {
             appState.savedActivityIDs.insert(a.id)
         }
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
     /// Share URL for the item

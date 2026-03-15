@@ -97,7 +97,7 @@ struct BrowseByTypeSection: View {
                     .textCase(.uppercase)
                     .foregroundStyle(.white.opacity(0.7))
                 Text(appState.language == .en ? category.displayName : category.displayNameDE)
-                    .font(.custom("Playfair", size: 16).weight(.semibold))
+                    .font(.compactCardTitle)
                     .foregroundStyle(.white)
                     .lineLimit(1)
                 let count = countForCategory(category)
@@ -111,7 +111,7 @@ struct BrowseByTypeSection: View {
             .padding(14)
         }
         .aspectRatio(1 / 0.82, contentMode: .fit)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
         .shadow(color: AppShadow.card.color, radius: AppShadow.card.radius, x: AppShadow.card.x, y: AppShadow.card.y)
     }
 
@@ -156,7 +156,7 @@ struct BrowseByTypeSection: View {
                     .textCase(.uppercase)
                     .foregroundStyle(.white.opacity(0.7))
                 Text(appState.localized(en: "Deals & Free", de: "Angebote & Gratis"))
-                    .font(.custom("Playfair", size: 16).weight(.semibold))
+                    .font(.compactCardTitle)
                     .foregroundStyle(.white)
                 let count = countForCategory(.deals)
                 if count > 0 {
@@ -169,7 +169,7 @@ struct BrowseByTypeSection: View {
             .padding(14)
         }
         .frame(height: 110)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
         .shadow(color: AppShadow.card.color, radius: AppShadow.card.radius, x: AppShadow.card.x, y: AppShadow.card.y)
     }
 

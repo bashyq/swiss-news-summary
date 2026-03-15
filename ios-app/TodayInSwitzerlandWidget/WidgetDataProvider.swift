@@ -24,8 +24,8 @@ struct WidgetDataProvider {
                 weatherCode: response.weather.weatherCode,
                 weatherDescription: response.weather.description,
                 topHeadline: topHeadline,
-                transportStatus: response.transport.summary.status,
-                transportDelays: response.transport.summary.totalDelayed,
+                transportStatus: response.transport.summary?.status ?? "none",
+                transportDelays: response.transport.summary?.totalDelayed ?? 0,
                 cityName: response.city.name
             )
         } catch {
@@ -196,7 +196,7 @@ struct WidgetWeather: Codable {
 }
 
 struct WidgetTransport: Codable {
-    let summary: WidgetTransportSummary
+    let summary: WidgetTransportSummary?
 }
 
 struct WidgetTransportSummary: Codable {

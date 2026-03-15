@@ -1,49 +1,91 @@
 import SwiftUI
+import WidgetKit
+
+// MARK: - UserDefaults Keys
+
+enum StorageKeys {
+    static let city = "city"
+    static let language = "language"
+    static let theme = "theme"
+    static let savedActivities = "savedActivities"
+    static let savedLunch = "savedLunch"
+    static let customActivities = "customActivities"
+    static let customLunch = "customLunch"
+    static let familySession = "familySession"
+
+    /// App group suite for sharing settings with widgets
+    static let widgetSuite = "group.com.todayinswitzerland"
+}
 
 /// Global app state — persisted across launches via @AppStorage
 @Observable
 final class AppState {
     // Persisted preferences (backed by UserDefaults via manual sync)
     var city: City {
-        didSet { UserDefaults.standard.set(city.rawValue, forKey: "city") }
+        didSet {
+            UserDefaults.standard.set(city.rawValue, forKey: StorageKeys.city)
+            Self.syncToWidgetDefaults(key: StorageKeys.city, value: city.rawValue)
+        }
     }
     var language: AppLanguage {
-        didSet { UserDefaults.standard.set(language.rawValue, forKey: "language") }
+        didSet {
+            UserDefaults.standard.set(language.rawValue, forKey: StorageKeys.language)
+            Self.syncToWidgetDefaults(key: StorageKeys.language, value: language.rawValue)
+        }
     }
     var theme: AppTheme {
-        didSet { UserDefaults.standard.set(theme.rawValue, forKey: "theme") }
+        didSet { UserDefaults.standard.set(theme.rawValue, forKey: StorageKeys.theme) }
     }
+    // Family session for agenda composer
+    var familySession: FamilySession {
+        didSet { familySession.save() }
+    }
+
     // Transient UI state
-    var selectedTab: AppTab = .news
+    var selectedTab: AppTab = .today
+    /// Pending navigation target after tab switch (e.g., "lunch" or "events")
+    var pendingExploreRoute: String?
     /// Incremented when the user re-taps the already-selected tab (used to reset tab state)
     var tabRetapCount: Int = 0
     
     var savedActivityIDs: Set<String> {
         didSet {
-            UserDefaults.standard.set(Array(savedActivityIDs), forKey: "savedActivities")
+            UserDefaults.standard.set(Array(savedActivityIDs), forKey: StorageKeys.savedActivities)
         }
     }
     var savedLunchIDs: Set<String> {
         didSet {
-            UserDefaults.standard.set(Array(savedLunchIDs), forKey: "savedLunch")
+            UserDefaults.standard.set(Array(savedLunchIDs), forKey: StorageKeys.savedLunch)
         }
     }
 
     init() {
-        let cityRaw = UserDefaults.standard.string(forKey: "city") ?? "zurich"
+        let cityRaw = UserDefaults.standard.string(forKey: StorageKeys.city) ?? "zurich"
         self.city = City(rawValue: cityRaw) ?? .zurich
 
-        let langRaw = UserDefaults.standard.string(forKey: "language") ?? "en"
+        let langRaw = UserDefaults.standard.string(forKey: StorageKeys.language) ?? "en"
         self.language = AppLanguage(rawValue: langRaw) ?? .en
 
-        let themeRaw = UserDefaults.standard.string(forKey: "theme") ?? "system"
+        let themeRaw = UserDefaults.standard.string(forKey: StorageKeys.theme) ?? "system"
         self.theme = AppTheme(rawValue: themeRaw) ?? .system
 
-        let savedIDs = UserDefaults.standard.stringArray(forKey: "savedActivities") ?? []
+        let savedIDs = UserDefaults.standard.stringArray(forKey: StorageKeys.savedActivities) ?? []
         self.savedActivityIDs = Set(savedIDs)
 
-        let savedLunch = UserDefaults.standard.stringArray(forKey: "savedLunch") ?? []
+        let savedLunch = UserDefaults.standard.stringArray(forKey: StorageKeys.savedLunch) ?? []
         self.savedLunchIDs = Set(savedLunch)
+
+        self.familySession = FamilySession.load()
+
+        // Sync current settings to widget shared defaults on launch
+        Self.syncToWidgetDefaults(key: StorageKeys.city, value: self.city.rawValue)
+        Self.syncToWidgetDefaults(key: StorageKeys.language, value: self.language.rawValue)
+    }
+
+    /// Write a value to the shared app group UserDefaults and reload widgets.
+    private static func syncToWidgetDefaults(key: String, value: String) {
+        UserDefaults(suiteName: StorageKeys.widgetSuite)?.set(value, forKey: key)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     // MARK: - Actions
@@ -65,22 +107,20 @@ final class AppState {
     }
 
     func deleteCustomActivity(_ id: String) {
-        let key = "customActivities"
-        guard let data = UserDefaults.standard.data(forKey: key),
+        guard let data = UserDefaults.standard.data(forKey: StorageKeys.customActivities),
               var list = try? JSONDecoder().decode([CustomActivity].self, from: data) else { return }
         list.removeAll { $0.id == id }
         if let encoded = try? JSONEncoder().encode(list) {
-            UserDefaults.standard.set(encoded, forKey: key)
+            UserDefaults.standard.set(encoded, forKey: StorageKeys.customActivities)
         }
     }
 
     func deleteCustomLunch(_ id: String) {
-        let key = "customLunch"
-        guard let data = UserDefaults.standard.data(forKey: key),
+        guard let data = UserDefaults.standard.data(forKey: StorageKeys.customLunch),
               var list = try? JSONDecoder().decode([CustomLunchSpot].self, from: data) else { return }
         list.removeAll { $0.id == id }
         if let encoded = try? JSONEncoder().encode(list) {
-            UserDefaults.standard.set(encoded, forKey: key)
+            UserDefaults.standard.set(encoded, forKey: StorageKeys.customLunch)
         }
     }
 
@@ -104,7 +144,7 @@ final class AppState {
 
         let host = url.host ?? ""
         switch host {
-        case "news": selectedTab = .news
+        case "news", "today": selectedTab = .today
         case "activities": selectedTab = .activities
         case "explore": selectedTab = .explore
         case "weather", "weekend": selectedTab = .weekend
@@ -126,7 +166,7 @@ final class AppState {
 // MARK: - App Tab
 
 enum AppTab: String, CaseIterable {
-    case news
+    case today
     case activities
     case explore
     case weekend // sunshine + snow + planner
@@ -134,7 +174,7 @@ enum AppTab: String, CaseIterable {
 
     var label: String {
         switch self {
-        case .news: return "News"
+        case .today: return "Today"
         case .activities: return "Activities"
         case .explore: return "Explore"
         case .weekend: return "Weekend"
@@ -144,7 +184,7 @@ enum AppTab: String, CaseIterable {
 
     var labelDE: String {
         switch self {
-        case .news: return "Nachrichten"
+        case .today: return "Heute"
         case .activities: return "Aktivitäten"
         case .explore: return "Entdecken"
         case .weekend: return "Wochenende"
@@ -154,7 +194,7 @@ enum AppTab: String, CaseIterable {
 
     var sfSymbol: String {
         switch self {
-        case .news: return "square.grid.2x2"
+        case .today: return "square.grid.2x2"
         case .activities: return "star"
         case .explore: return "mountain.2"
         case .weekend: return "person"

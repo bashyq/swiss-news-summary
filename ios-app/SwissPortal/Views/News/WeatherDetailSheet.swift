@@ -4,7 +4,8 @@ import SwiftUI
 ///
 /// Displays the current conditions (temperature, description, wind speed)
 /// and an hourly forecast chart as a horizontally scrollable row of columns
-/// showing hour, weather icon, and temperature for hours 6 through 22.
+/// showing hour, weather icon, and temperature. Continues into tomorrow
+/// to fill the available forecast data.
 struct WeatherDetailSheet: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
@@ -89,10 +90,15 @@ struct WeatherDetailSheet: View {
             Text(appState.localized(en: "Hourly Forecast", de: "Stundenprognose"))
                 .font(.headline)
 
-            if let hourly = filteredHourly, !hourly.isEmpty {
+            if let hourly = weather.hourly, !hourly.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 16) {
-                        ForEach(hourly) { entry in
+                    HStack(spacing: 12) {
+                        ForEach(Array(hourly.enumerated()), id: \.element.id) { index, entry in
+                            // "Tomorrow" separator when date changes
+                            if index > 0, isTomorrowBoundary(prev: hourly[index - 1], current: entry) {
+                                tomorrowSeparator
+                            }
+
                             hourColumn(entry)
                         }
                     }
@@ -111,18 +117,39 @@ struct WeatherDetailSheet: View {
         }
     }
 
-    /// Hourly entries filtered to hours 6 through 22
-    private var filteredHourly: [HourlyWeather]? {
-        weather.hourly?.filter { entry in
-            guard let hour = entry.hour else { return false }
-            return hour >= 6 && hour <= 22
+    /// Detects when two adjacent entries cross a midnight boundary
+    private func isTomorrowBoundary(prev: HourlyWeather, current: HourlyWeather) -> Bool {
+        guard let prevDate = prev.parsedDate, let currDate = current.parsedDate else {
+            // Fallback: check if hour wraps around (e.g., 23 → 0)
+            guard let prevHour = prev.hour, let currHour = current.hour else { return false }
+            return currHour < prevHour
         }
+        return !Calendar.current.isDate(prevDate, inSameDayAs: currDate)
+    }
+
+    private var tomorrowSeparator: some View {
+        VStack(spacing: 4) {
+            Rectangle()
+                .fill(Color.znBorder)
+                .frame(width: 1, height: 20)
+
+            Text(appState.localized(en: "Tomorrow", de: "Morgen"))
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(Color.znMuted)
+                .textCase(.uppercase)
+
+            Rectangle()
+                .fill(Color.znBorder)
+                .frame(width: 1, height: 20)
+        }
+        .padding(.horizontal, 2)
     }
 
     // MARK: - Hour Column
 
     private func hourColumn(_ entry: HourlyWeather) -> some View {
-        hourColumnContent(entry: entry, isCurrent: isCurrentHour(entry))
+        let current = isCurrentHour(entry)
+        return hourColumnContent(entry: entry, isCurrent: current)
     }
 
     private func hourColumnContent(entry: HourlyWeather, isCurrent: Bool) -> some View {
@@ -165,16 +192,49 @@ struct WeatherDetailSheet: View {
 
     private func isCurrentHour(_ entry: HourlyWeather) -> Bool {
         guard let hour = entry.hour else { return false }
-        let currentHour = Calendar.current.component(.hour, from: Date())
+        let now = Date()
+        let currentHour = Calendar.current.component(.hour, from: now)
+        // Only highlight if entry is today
+        if let entryDate = entry.parsedDate {
+            guard Calendar.current.isDateInToday(entryDate) else { return false }
+        }
         return hour == currentHour
     }
 }
 
+// MARK: - HourlyWeather Date Parsing
+
+private extension HourlyWeather {
+    /// Parses the ISO timestamp to a Date (handles "2026-03-14T14:00" format)
+    var parsedDate: Date? {
+        guard time.contains("T") else { return nil }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate, .withTime, .withDashSeparatorInDate, .withColonSeparatorInTime]
+        // Open-Meteo returns local time without timezone suffix, so parse manually
+        let components = time.split(separator: "T")
+        guard components.count == 2 else { return nil }
+        let dateParts = components[0].split(separator: "-")
+        let timeParts = components[1].split(separator: ":")
+        guard dateParts.count == 3, timeParts.count >= 2,
+              let year = Int(dateParts[0]), let month = Int(dateParts[1]), let day = Int(dateParts[2]),
+              let hour = Int(timeParts[0]), let minute = Int(timeParts[1]) else { return nil }
+        var cal = Calendar.current
+        cal.timeZone = TimeZone(identifier: "Europe/Zurich") ?? .current
+        return cal.date(from: DateComponents(year: year, month: month, day: day, hour: hour, minute: minute))
+    }
+}
+
 #Preview {
-    let sampleHourly = (6...22).map { hour in
+    let sampleHourly = (14...23).map { hour in
         HourlyWeather(
             time: "2026-02-21T\(String(format: "%02d", hour)):00",
             temperature: Double.random(in: 2...12),
+            weatherCode: [0, 1, 2, 3, 45, 61].randomElement()!
+        )
+    } + (0...10).map { hour in
+        HourlyWeather(
+            time: "2026-02-22T\(String(format: "%02d", hour)):00",
+            temperature: Double.random(in: 0...8),
             weatherCode: [0, 1, 2, 3, 45, 61].randomElement()!
         )
     }
