@@ -98,7 +98,7 @@ struct ExploreView: View {
             } else {
                 CategoryDetailView(
                     category: category,
-                    items: viewModel.items(for: category, city: appState.city, language: appState.language),
+                    viewModel: viewModel,
                     userLocation: locationManager.location
                 )
             }

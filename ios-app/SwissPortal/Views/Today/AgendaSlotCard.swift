@@ -264,6 +264,18 @@ struct AgendaSlotCard: View {
                 Text(appState.localized(en: "Done", de: "Erledigt"))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(Color.znPositive)
+
+                if let weather = slot.weatherAtSlot {
+                    Spacer()
+                    HStack(spacing: 3) {
+                        Image(systemName: weather.sfSymbol)
+                            .font(.system(size: 10))
+                            .symbolRenderingMode(.multicolor)
+                        Text("\(weather.temp)°")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(Color.znMuted)
+                    }
+                }
             }
 
             Text(slot.venueName)
@@ -316,8 +328,8 @@ struct AgendaSlotCard: View {
 
                     Spacer()
 
-                    // ··· edit button (browsing only, not for anchors)
-                    if execState == .browsing, !isAnchorSlot, let onEdit {
+                    // ··· edit button (browsing only)
+                    if execState == .browsing, let onEdit {
                         Button(action: onEdit) {
                             Image(systemName: "ellipsis")
                                 .font(.system(size: 14, weight: .medium))
@@ -360,6 +372,18 @@ struct AgendaSlotCard: View {
                     Text(spot.cuisineDisplay)
                         .font(.system(size: 11))
                         .foregroundStyle(.znMuted)
+                }
+            }
+
+            // Real-time open/closed status
+            if !isCustomSlot, !isAnchorSlot {
+                if let activity = resolvedActivity, activity.openingHours != nil {
+                    VenueStatusBadge(openingHours: activity.openingHours)
+                } else if let spot = resolvedSpot {
+                    VenueStatusBadge(
+                        openingHours: spot.openingHours,
+                        serverOpenForLunch: spot.openForLunch
+                    )
                 }
             }
 
@@ -441,6 +465,24 @@ struct AgendaSlotCard: View {
             Text(slot.type.displayName)
                 .font(.znEyebrow)
                 .foregroundStyle(effectiveAccentColor)
+
+            // Forecasted weather at this slot's time
+            if let weather = slot.weatherAtSlot {
+                Spacer()
+                HStack(spacing: 3) {
+                    Image(systemName: weather.sfSymbol)
+                        .font(.system(size: 11))
+                        .symbolRenderingMode(.multicolor)
+                    Text("\(weather.temp)°")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.znMuted)
+                    if weather.rain {
+                        Image(systemName: "umbrella.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(Color.znNavy)
+                    }
+                }
+            }
         }
     }
 
@@ -977,10 +1019,7 @@ struct AgendaSlotCard: View {
     }
 
     private func openDirections(lat: Double, lon: Double, name: String?) {
-        var urlString = "maps://?daddr=\(lat),\(lon)&dirflg=w"
-        if let name, let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
-            urlString += "&dname=\(encoded)"
-        }
+        let urlString = "https://maps.apple.com/directions?destination=\(lat),\(lon)&mode=walking"
         if let url = URL(string: urlString) {
             UIApplication.shared.open(url)
         }

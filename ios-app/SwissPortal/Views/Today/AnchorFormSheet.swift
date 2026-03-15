@@ -3,26 +3,33 @@ import SwiftUI
 /// Form sheet for adding or editing a day anchor (pre-existing commitment).
 ///
 /// Three fields:
-/// 1. **What** — text field (label)
+/// 1. **What** — text field with autocomplete suggestions
 /// 2. **When** — time picker row (defaults to nearest half-hour)
 /// 3. **Where** — optional neighbourhood chips
 ///
-/// No duration field in v1 — Claude infers duration from the label.
-/// No lock toggle — anchors are always locked by definition.
+/// Suggestions drawn from: today's city events, recurring activities, hardcoded presets.
 struct AnchorFormSheet: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
 
     /// Existing anchor to edit, or nil for new.
     let existingAnchor: DayAnchor?
+    /// Activities data for building suggestions.
+    let activitiesData: ActivitiesResponse?
     let onSave: (DayAnchor) -> Void
 
     @State private var label: String
     @State private var selectedTime: Date
     @State private var selectedNeighbourhood: String?
+    @FocusState private var isLabelFocused: Bool
 
-    init(existingAnchor: DayAnchor? = nil, onSave: @escaping (DayAnchor) -> Void) {
+    init(
+        existingAnchor: DayAnchor? = nil,
+        activitiesData: ActivitiesResponse? = nil,
+        onSave: @escaping (DayAnchor) -> Void
+    ) {
         self.existingAnchor = existingAnchor
+        self.activitiesData = activitiesData
         self.onSave = onSave
         _label = State(initialValue: existingAnchor?.label ?? "")
         _selectedTime = State(initialValue: existingAnchor?.time ?? Self.nearestHalfHour())
@@ -47,6 +54,24 @@ struct AnchorFormSheet: View {
         return calendar.date(from: components) ?? now
     }
 
+    // MARK: - Suggestions
+
+    private var suggestionProvider: AnchorSuggestionProvider {
+        AnchorSuggestionProvider(
+            activitiesData: activitiesData,
+            language: appState.language,
+            today: Date()
+        )
+    }
+
+    private var filteredSuggestions: [AnchorSuggestion] {
+        suggestionProvider.filtered(by: label)
+    }
+
+    private var showSuggestions: Bool {
+        isLabelFocused && !filteredSuggestions.isEmpty
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Handle
@@ -65,7 +90,7 @@ struct AnchorFormSheet: View {
                     .font(.custom("Playfair", size: 20, relativeTo: .title3))
                     .foregroundStyle(.znInk)
 
-                    // 1. What
+                    // 1. What — with autocomplete suggestions
                     VStack(alignment: .leading, spacing: 8) {
                         Text(appState.localized(en: "What", de: "Was"))
                             .font(.system(size: 13, weight: .medium))
@@ -79,6 +104,7 @@ struct AnchorFormSheet: View {
                             text: $label
                         )
                         .font(.system(size: 15))
+                        .focused($isLabelFocused)
                         .padding(12)
                         .background(Color.znCream)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -86,6 +112,11 @@ struct AnchorFormSheet: View {
                             RoundedRectangle(cornerRadius: 12)
                                 .stroke(Color.znBorder, lineWidth: 1)
                         )
+
+                        // Suggestions list
+                        if showSuggestions {
+                            suggestionsView
+                        }
                     }
 
                     // 2. When — time picker
@@ -182,6 +213,59 @@ struct AnchorFormSheet: View {
                 .padding(.bottom, 32)
             }
         }
+    }
+
+    // MARK: - Suggestions View
+
+    private var suggestionsView: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(filteredSuggestions.enumerated()), id: \.element.id) { index, suggestion in
+                Button {
+                    label = suggestion.label
+                    if let coord = suggestion.coordinate {
+                        selectedNeighbourhood = AnchorSuggestionProvider.nearestNeighbourhood(to: coord)
+                    }
+                    isLabelFocused = false
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: suggestion.type.sfSymbol)
+                            .font(.system(size: 12))
+                            .foregroundStyle(.znMuted)
+                            .frame(width: 20)
+
+                        Text(suggestion.label)
+                            .font(.system(size: 14))
+                            .foregroundStyle(.znInk)
+                            .lineLimit(1)
+
+                        Spacer()
+
+                        Text(suggestion.type.badgeText(language: appState.language))
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(.znMuted)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.znNeutralTagBg)
+                            .clipShape(Capsule())
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                }
+                .buttonStyle(.plain)
+
+                if index < filteredSuggestions.count - 1 {
+                    Divider()
+                        .foregroundStyle(Color.znInnerDivider)
+                        .padding(.leading, 42)
+                }
+            }
+        }
+        .background(Color.znSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.znBorder, lineWidth: 1)
+        )
     }
 
     private let neighbourhoods = [

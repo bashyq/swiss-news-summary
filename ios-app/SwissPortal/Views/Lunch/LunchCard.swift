@@ -81,11 +81,11 @@ struct LunchCard: View {
                     .foregroundStyle(.znInk)
                     .lineLimit(2)
 
-                // Star rating
-                starRating
-
-                // Open/closed status
-                lunchStatus
+                // Star rating + open/closed status inline
+                HStack(spacing: 6) {
+                    starRating
+                    lunchStatus
+                }
 
                 // Tags + distance
                 tagsRow
@@ -217,20 +217,11 @@ struct LunchCard: View {
                     .font(.system(size: 10))
                     .foregroundStyle(.znNegative)
             }
-        } else if spot.openForLunch == true {
-            HStack(spacing: 4) {
-                Circle().fill(Color.znPositive).frame(width: 6, height: 6)
-                Text(appState.localized(en: "Open for lunch", de: "Mittagstisch"))
-                    .font(.system(size: 10))
-                    .foregroundStyle(.znPositive)
-            }
-        } else if spot.openForLunch == false {
-            HStack(spacing: 4) {
-                Circle().fill(Color.znMuted).frame(width: 6, height: 6)
-                Text(appState.localized(en: "Closed", de: "Geschlossen"))
-                    .font(.system(size: 10))
-                    .foregroundStyle(.znMuted)
-            }
+        } else {
+            VenueStatusBadge(
+                openingHours: spot.openingHours,
+                serverOpenForLunch: spot.openForLunch
+            )
         }
     }
 
@@ -307,19 +298,16 @@ struct LunchCard: View {
         let lines = Self.splitOpeningHours(hours)
 
         return VStack(alignment: .leading, spacing: 6) {
-            // Status header
+            // Status header — real-time open/closed via client-side parser
             HStack(spacing: 6) {
-                if spot.openForLunch == true {
-                    Circle().fill(Color.znPositive).frame(width: 7, height: 7)
-                    Text(appState.localized(en: "Open for lunch", de: "Mittagstisch"))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.znPositive)
-                } else {
-                    Circle().fill(Color.znMuted).frame(width: 7, height: 7)
-                    Text(appState.localized(en: "Opening hours", de: "Öffnungszeiten"))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.znMuted)
-                }
+                let venueStatus = OpeningHoursParser.status(from: hours)
+                Circle().fill(venueStatus == .open ? Color.znPositive : Color.znMuted)
+                    .frame(width: 7, height: 7)
+                Text(venueStatus == .open
+                     ? appState.localized(en: "Open now", de: "Jetzt geöffnet")
+                     : appState.localized(en: "Opening hours", de: "Öffnungszeiten"))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(venueStatus == .open ? .znPositive : .znMuted)
             }
 
             // Hours listed per day
@@ -388,10 +376,7 @@ struct LunchCard: View {
         HStack(spacing: 7) {
             // Directions (primary)
             Button {
-                var urlString = "maps://?daddr=\(spot.lat),\(spot.lon)&dirflg=w"
-                if let encoded = spot.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
-                    urlString += "&dname=\(encoded)"
-                }
+                let urlString = "https://maps.apple.com/directions?destination=\(spot.lat),\(spot.lon)&mode=walking"
                 if let url = URL(string: urlString) {
                     UIApplication.shared.open(url)
                 }

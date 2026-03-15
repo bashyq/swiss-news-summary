@@ -10,8 +10,34 @@ struct CategoryDetailView: View {
     @Environment(AppState.self) private var appState
 
     let category: ExploreCategory
-    let items: [ExploreItem]
+    var viewModel: ExploreViewModel?
+    private let staticItems: [ExploreItem]?
     let userLocation: CLLocation?
+
+    /// Primary initializer — dynamic items from viewModel (refreshes on city change).
+    init(category: ExploreCategory, viewModel: ExploreViewModel, userLocation: CLLocation?) {
+        self.category = category
+        self.viewModel = viewModel
+        self.staticItems = nil
+        self.userLocation = userLocation
+    }
+
+    /// Fallback initializer — static items (used in previews).
+    init(category: ExploreCategory, items: [ExploreItem], userLocation: CLLocation?) {
+        self.category = category
+        self.viewModel = nil
+        self.staticItems = items
+        self.userLocation = userLocation
+    }
+
+    /// Items are computed dynamically from viewModel when available,
+    /// so they update when the city changes.
+    private var items: [ExploreItem] {
+        if let viewModel {
+            return viewModel.items(for: category, city: appState.city, language: appState.language)
+        }
+        return staticItems ?? []
+    }
 
     @Environment(\.dismiss) private var dismiss
     @State private var expandedItemID: String?
@@ -927,10 +953,10 @@ struct CategoryDetailView: View {
         switch item {
         case .activity:
             let coord = item.coordinate
-            urlString = "maps://?daddr=\(coord.latitude),\(coord.longitude)&dirflg=w&dname=\(encodedName)"
+            urlString = "https://maps.apple.com/directions?destination=\(coord.latitude),\(coord.longitude)&mode=walking"
         case .event, .deal:
             // No real coordinates — let Apple Maps find the place by name
-            urlString = "maps://?q=\(encodedName)"
+            urlString = "https://maps.apple.com/?q=\(encodedName)"
         }
 
         if let url = URL(string: urlString) {

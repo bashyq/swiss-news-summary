@@ -1,5 +1,78 @@
 import Foundation
 
+// MARK: - Plan Day
+
+/// Which day the user is planning for.
+enum PlanDay: Equatable, CaseIterable {
+    case today
+    case tomorrow
+    case saturday
+    case sunday
+
+    /// The actual calendar date for this plan day.
+    func date() -> Date {
+        let cal = Calendar.current
+        let now = Date()
+        switch self {
+        case .today: return now
+        case .tomorrow:
+            return cal.date(byAdding: .day, value: 1, to: now) ?? now
+        case .saturday:
+            return PlanDay.nextWeekendDates().saturday
+        case .sunday:
+            return PlanDay.nextWeekendDates().sunday
+        }
+    }
+
+    /// ISO date string for API calls.
+    var isoDate: String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = TimeZone(identifier: "Europe/Zurich")
+        return f.string(from: date())
+    }
+
+    /// Short label like "Sat 15" for day picker pills.
+    func shortLabel(language: AppLanguage) -> String {
+        let f = DateFormatter()
+        f.locale = language == .de ? Locale(identifier: "de_CH") : Locale(identifier: "en_US")
+        f.dateFormat = language == .de ? "EE d." : "EEE d"
+        return f.string(from: date())
+    }
+
+    /// Display name for headers.
+    func headerTitle(language: AppLanguage) -> String {
+        switch self {
+        case .today:
+            return language == .en ? "Your day" : "Dein Tag"
+        case .tomorrow:
+            return language == .en ? "Tomorrow's plan" : "Plan für morgen"
+        case .saturday, .sunday:
+            return language == .en ? "Weekend plan" : "Wochenendplan"
+        }
+    }
+
+    /// Get next Saturday and Sunday dates.
+    static func nextWeekendDates() -> (saturday: Date, sunday: Date) {
+        let cal = Calendar.current
+        let now = Date()
+        let weekday = cal.component(.weekday, from: now) // 1=Sun, 7=Sat
+
+        let daysToSat: Int
+        switch weekday {
+        case 7: daysToSat = 0  // Already Saturday
+        case 1: daysToSat = 6  // Sunday → next Saturday
+        default: daysToSat = 7 - weekday
+        }
+
+        let saturday = cal.date(byAdding: .day, value: daysToSat, to: now) ?? now
+        let sunday = cal.date(byAdding: .day, value: 1, to: saturday) ?? now
+        return (saturday, sunday)
+    }
+
+    static var allCases: [PlanDay] { [.today, .tomorrow, .saturday, .sunday] }
+}
+
 // MARK: - Agenda Mode
 
 /// Execution state for the day agenda.
@@ -60,6 +133,33 @@ struct DayAgenda: Codable {
     }
 }
 
+/// Forecasted weather at a specific slot's time.
+struct SlotWeather: Codable {
+    let temp: Int           // °C from hourly forecast
+    let code: Int           // WMO weather code
+    let rain: Bool          // whether rain is expected
+
+    /// SF Symbol for the WMO weather code.
+    var sfSymbol: String {
+        switch code {
+        case 0: return "sun.max.fill"
+        case 1: return "sun.max.fill"
+        case 2: return "cloud.sun.fill"
+        case 3: return "cloud.fill"
+        case 45, 48: return "cloud.fog.fill"
+        case 51, 53, 55: return "cloud.drizzle.fill"
+        case 56, 57: return "cloud.sleet.fill"
+        case 61, 63, 65: return "cloud.rain.fill"
+        case 66, 67: return "cloud.sleet.fill"
+        case 71, 73, 75, 77: return "cloud.snow.fill"
+        case 80, 81, 82: return "cloud.heavyrain.fill"
+        case 85, 86: return "cloud.snow.fill"
+        case 95, 96, 99: return "cloud.bolt.rain.fill"
+        default: return "cloud.fill"
+        }
+    }
+}
+
 /// One time slot in the day's agenda.
 struct AgendaSlot: Codable, Identifiable {
     let id: String                      // "morning", "lunch", "afternoon", "dinner"
@@ -73,6 +173,7 @@ struct AgendaSlot: Codable, Identifiable {
     let tags: [String]                  // ["Outdoor", "Free", "Ages 2-5"]
     let swaps: [SwapOption]
     var travelMinutesToNext: Int?       // Travel time to the next slot
+    var weatherAtSlot: SlotWeather?     // Forecasted weather at this slot's time
 
     // MARK: - Check-In Tracking
 
@@ -138,7 +239,7 @@ struct AgendaSlot: Codable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case id, time, type, venueName, venueId, reason, durationDisplay
-        case travelNote, tags, swaps, travelMinutesToNext
+        case travelNote, tags, swaps, travelMinutesToNext, weatherAtSlot
         case checkInTime, checkOutTime, wasAutoCheckedIn
         case source, isLocked, customVenueName, customNeighbourhood, isStale
     }
@@ -156,6 +257,7 @@ struct AgendaSlot: Codable, Identifiable {
         tags = try container.decode([String].self, forKey: .tags)
         swaps = try container.decode([SwapOption].self, forKey: .swaps)
         travelMinutesToNext = try container.decodeIfPresent(Int.self, forKey: .travelMinutesToNext)
+        weatherAtSlot = try container.decodeIfPresent(SlotWeather.self, forKey: .weatherAtSlot)
         // Check-in fields with defaults for backward compatibility
         checkInTime = try container.decodeIfPresent(Date.self, forKey: .checkInTime)
         checkOutTime = try container.decodeIfPresent(Date.self, forKey: .checkOutTime)
@@ -172,6 +274,7 @@ struct AgendaSlot: Codable, Identifiable {
         id: String, time: String, type: SlotType, venueName: String, venueId: String?,
         reason: String, durationDisplay: String? = nil, travelNote: String? = nil,
         tags: [String], swaps: [SwapOption], travelMinutesToNext: Int? = nil,
+        weatherAtSlot: SlotWeather? = nil,
         checkInTime: Date? = nil, checkOutTime: Date? = nil, wasAutoCheckedIn: Bool = false,
         source: SlotSource = .aiGenerated, isLocked: Bool = false,
         customVenueName: String? = nil, customNeighbourhood: String? = nil,
@@ -188,6 +291,7 @@ struct AgendaSlot: Codable, Identifiable {
         self.tags = tags
         self.swaps = swaps
         self.travelMinutesToNext = travelMinutesToNext
+        self.weatherAtSlot = weatherAtSlot
         self.checkInTime = checkInTime
         self.checkOutTime = checkOutTime
         self.wasAutoCheckedIn = wasAutoCheckedIn

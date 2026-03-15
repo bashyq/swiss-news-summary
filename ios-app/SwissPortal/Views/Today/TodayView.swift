@@ -107,7 +107,7 @@ struct TodayView: View {
                 }
             }
             .sheet(isPresented: $showAnchorForm) {
-                AnchorFormSheet(existingAnchor: editingAnchor) { anchor in
+                AnchorFormSheet(existingAnchor: editingAnchor, activitiesData: viewModel.activitiesData) { anchor in
                     if editingAnchor != nil {
                         AnchorStore.shared.update(anchor)
                     } else {
@@ -194,34 +194,10 @@ struct TodayView: View {
         } else {
             TodayHeroBanner(
                 weather: viewModel.weather,
-                contextText: viewModel.contextBannerText(language: appState.language),
-                sessionDisplay: appState.familySession.childrenDisplay,
                 badWeatherMode: viewModel.isBadWeatherDay,
                 planningDate: viewModel.targetDate,
-                anchors: anchors,
                 subView: $subView,
-                onWeatherTap: { showWeatherDetail = true },
-                onSessionTap: { showSessionConfig = true },
                 onHolidayTap: { showHolidayDetail = true },
-                onAnchorAdd: {
-                    editingAnchor = nil
-                    showAnchorForm = true
-                },
-                onAnchorTap: { anchor in
-                    editingAnchor = anchor
-                    showAnchorForm = true
-                },
-                onAnchorRemove: { id in
-                    AnchorStore.shared.remove(id: id)
-                    anchors = AnchorStore.shared.anchors()
-                    Task {
-                        await viewModel.rebuildAgenda(
-                            city: appState.city,
-                            language: appState.language,
-                            session: appState.familySession
-                        )
-                    }
-                },
                 totalStoryCount: viewModel.totalNewsCount,
                 categoryKeys: viewModel.categoryKeys,
                 selectedCategory: $viewModel.selectedCategory,
@@ -276,13 +252,43 @@ struct TodayView: View {
 
     @ViewBuilder
     private var planSubView: some View {
-        // What's on today (before the plan, hidden in execution mode)
+        // Day config + events (hidden in execution mode)
         if !viewModel.agendaMode.isExecuting {
+            yourDayConfigSection
             eventsSection
         }
 
         // Agenda section
         agendaSection
+    }
+
+    // MARK: - Your Day Config Section
+
+    private var yourDayConfigSection: some View {
+        YourDayConfigSection(
+            weather: viewModel.weather,
+            badWeatherMode: viewModel.isBadWeatherDay,
+            contextText: viewModel.contextBannerText(language: appState.language),
+            sessionDisplay: appState.familySession.childrenDisplay,
+            anchorCount: anchors.count,
+            canPlanWeekend: viewModel.canPlanWeekend,
+            isWeekendMode: viewModel.isWeekendMode,
+            onWeatherTap: { showWeatherDetail = true },
+            onSessionTap: { showSessionConfig = true },
+            onAnchorAdd: {
+                editingAnchor = nil
+                showAnchorForm = true
+            },
+            onPlanWeekend: {
+                Task {
+                    await viewModel.composeWeekend(
+                        city: appState.city,
+                        language: appState.language,
+                        session: appState.familySession
+                    )
+                }
+            }
+        )
     }
 
     // MARK: - News Sub-View
@@ -316,9 +322,7 @@ struct TodayView: View {
             // Section header with rebuild button (hidden in execution mode)
             if !viewModel.agendaMode.isExecuting {
                 HStack(alignment: .center) {
-                    Text(viewModel.isNextDayMode
-                        ? appState.localized(en: "Tomorrow's plan", de: "Plan für morgen")
-                        : appState.localized(en: "Your day", de: "Dein Tag"))
+                    Text(viewModel.selectedPlanDay.headerTitle(language: appState.language))
                         .font(.sectionHeadline)
                         .foregroundStyle(.znInk)
 
@@ -351,6 +355,13 @@ struct TodayView: View {
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 10)
+
+                // Day picker pills (weekend mode)
+                if viewModel.isWeekendMode {
+                    dayPickerPills
+                        .padding(.horizontal)
+                        .padding(.bottom, 12)
+                }
             }
 
             // Weather note (if agenda has one, and not executing)
@@ -513,10 +524,30 @@ struct TodayView: View {
         )
         if !events.isEmpty {
             VStack(alignment: .leading, spacing: 0) {
-                sectionHeader(
-                    title: appState.localized(en: "What's on today", de: "Was läuft heute"),
-                    subtitle: nil
-                )
+                // Header with inline calendar link
+                HStack(alignment: .firstTextBaseline) {
+                    Text(appState.localized(en: "What's on today", de: "Was läuft heute"))
+                        .font(.sectionHeadline)
+                        .foregroundStyle(.znInk)
+
+                    Spacer()
+
+                    Button {
+                        appState.pendingExploreRoute = "events"
+                        appState.selectedTab = .explore
+                    } label: {
+                        HStack(spacing: 3) {
+                            Text(appState.localized(en: "Calendar", de: "Kalender"))
+                                .font(.system(size: 12, weight: .medium))
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 10, weight: .semibold))
+                        }
+                        .foregroundStyle(.znNavy)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 10)
 
                 VStack(spacing: 6) {
                     ForEach(events) { event in
@@ -524,26 +555,6 @@ struct TodayView: View {
                     }
                 }
                 .padding(.horizontal)
-
-                // Full calendar → Explore > Events
-                Button {
-                    appState.pendingExploreRoute = "events"
-                    appState.selectedTab = .explore
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(appState.localized(en: "Full calendar", de: "Kalender"))
-                            .font(.system(size: 13, weight: .medium))
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 10, weight: .semibold))
-                    }
-                    .foregroundStyle(.znNavy)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 11)
-                    .background(Color.znNeutralTagBg)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-                .padding(.horizontal)
-                .padding(.top, 10)
             }
             .padding(.top, 20)
         }
@@ -597,6 +608,45 @@ struct TodayView: View {
             }
             .padding(.horizontal)
             .padding(.top, 10)
+        }
+    }
+
+    // MARK: - Day Picker Pills (Weekend Mode)
+
+    private var dayPickerPills: some View {
+        HStack(spacing: 8) {
+            ForEach(viewModel.availablePlanDays, id: \.self) { day in
+                let isSelected = viewModel.selectedPlanDay == day
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewModel.selectedPlanDay = day
+                    }
+                } label: {
+                    Text(day.shortLabel(language: appState.language))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(isSelected ? .white : .znBody)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(isSelected ? Color.znNavy : Color.znNeutralTagBg)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .sensoryFeedback(.selection, trigger: isSelected)
+            }
+
+            Spacer()
+
+            // Exit weekend mode
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    viewModel.exitWeekendMode()
+                }
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(.znMuted)
+            }
+            .buttonStyle(.plain)
         }
     }
 

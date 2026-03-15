@@ -27,10 +27,50 @@ final class TodayViewModel {
 
     // MARK: - Agenda
 
-    var agenda: DayAgenda?
-    var agendaState: AgendaState = .idle
+    /// Internal storage: multiple agendas keyed by ISO date string.
+    private var _agendas: [String: DayAgenda] = [:]
+    private var _agendaStates: [String: AgendaState] = [:]
+
+    /// The currently selected plan day (today by default, weekend days in weekend mode).
+    var selectedPlanDay: PlanDay = .today
+
+    /// Whether the user activated weekend planning mode.
+    var isWeekendMode: Bool = false
+
+    /// Computed bridge — all existing code reads/writes `agenda` unchanged.
+    var agenda: DayAgenda? {
+        get { _agendas[selectedPlanDay.isoDate] }
+        set { _agendas[selectedPlanDay.isoDate] = newValue }
+    }
+
+    var agendaState: AgendaState {
+        get { _agendaStates[selectedPlanDay.isoDate] ?? .idle }
+        set { _agendaStates[selectedPlanDay.isoDate] = newValue }
+    }
+
     var agendaMode: AgendaMode = .browsing {
         didSet { persistAgendaMode() }
+    }
+
+    /// True on Friday 8PM+ or Saturday (before Sunday).
+    var canPlanWeekend: Bool {
+        let cal = Calendar.current
+        let now = Date()
+        let weekday = cal.component(.weekday, from: now) // 1=Sun, 7=Sat
+        let hour = cal.component(.hour, from: now)
+        // Friday (6) after 8 PM or Saturday (7) all day
+        return (weekday == 6 && hour >= 20) || weekday == 7
+    }
+
+    /// Available plan days based on current time/mode.
+    var availablePlanDays: [PlanDay] {
+        if isWeekendMode {
+            return [.saturday, .sunday]
+        }
+        if isNextDayMode {
+            return [.tomorrow]
+        }
+        return [.today]
     }
 
     // MARK: - Convenience
@@ -161,7 +201,12 @@ final class TodayViewModel {
 
         isLoading = false
 
-        // 3. Compose agenda after data is loaded
+        // 3. Set selectedPlanDay based on current time (if not in weekend mode)
+        if !isWeekendMode {
+            selectedPlanDay = isNextDayMode ? .tomorrow : .today
+        }
+
+        // 4. Compose agenda after data is loaded
         await composeAgenda(city: city, language: language, session: FamilySession.load())
     }
 
@@ -171,23 +216,43 @@ final class TodayViewModel {
     /// After 8 PM, plans for tomorrow instead of today.
     @MainActor
     func composeAgenda(city: City, language: AppLanguage, session: FamilySession) async {
-        let planDate = targetDate
-        let dateISO = Self.dateISO(planDate)
-        let currentAnchors = AnchorStore.shared.anchors()
+        await composeAgendaForDate(
+            dateISO: Self.dateISO(targetDate),
+            city: city,
+            language: language,
+            session: session,
+            extraRecentlyShown: [],
+            useAnchors: true
+        )
+    }
+
+    /// Compose an agenda for a specific date. Generalized for multi-day support.
+    @MainActor
+    private func composeAgendaForDate(
+        dateISO: String,
+        city: City,
+        language: AppLanguage,
+        session: FamilySession,
+        extraRecentlyShown: [String],
+        useAnchors: Bool
+    ) async {
+        let currentAnchors = useAnchors ? AnchorStore.shared.anchors() : []
+        let combinedRecent = Array(recentlyShownStore.recentlyShownIds()) + extraRecentlyShown
+        let isNotToday = dateISO != Self.dateISO(Date())
 
         // 1. Check cache (keyed by date + city + session)
         // Skip cache if anchors changed since last compose
         if currentAnchors.isEmpty,
            let cachedData = await agendaCache.get(date: dateISO, city: city.id, sessionHash: session.sessionHash),
            let cached = try? JSONDecoder().decode(DayAgenda.self, from: cachedData) {
-            self.agenda = cached
-            self.agendaState = .loaded
+            _agendas[dateISO] = cached
+            _agendaStates[dateISO] = .loaded
             syncAgendaToWidget()
             restoreAgendaMode()
             return
         }
 
-        self.agendaState = .loading
+        _agendaStates[dateISO] = .loading
 
         // 2. Try Worker API
         do {
@@ -197,12 +262,12 @@ final class TodayViewModel {
                 session: session,
                 weatherCode: weather?.weatherCode,
                 temperature: weather.map { Int($0.temperature) },
-                recentlyShown: Array(recentlyShownStore.recentlyShownIds()),
+                recentlyShown: combinedRecent,
                 anchors: currentAnchors,
-                targetDate: isNextDayMode ? dateISO : nil
+                targetDate: isNotToday ? dateISO : nil
             )
-            self.agenda = result
-            self.agendaState = .loaded
+            _agendas[dateISO] = result
+            _agendaStates[dateISO] = .loaded
             syncAgendaToWidget()
             restoreAgendaMode()
 
@@ -224,13 +289,76 @@ final class TodayViewModel {
             #endif
         }
 
-        // 3. Template engine fallback
-        buildTemplateFallback(session: session, language: language)
+        // 3. Template engine fallback (only for current selectedPlanDay)
+        buildTemplateFallback(session: session, language: language, dateISO: dateISO)
+    }
+
+    /// Compose weekend agendas (Saturday + Sunday) in sequence.
+    /// Sunday avoids repeating Saturday's venues.
+    @MainActor
+    func composeWeekend(city: City, language: AppLanguage, session: FamilySession) async {
+        isWeekendMode = true
+        selectedPlanDay = .saturday
+
+        let satISO = PlanDay.saturday.isoDate
+        let sunISO = PlanDay.sunday.isoDate
+
+        // Compose Saturday first
+        await composeAgendaForDate(
+            dateISO: satISO,
+            city: city,
+            language: language,
+            session: session,
+            extraRecentlyShown: [],
+            useAnchors: false  // Anchors are today-only
+        )
+
+        // Collect Saturday's venue IDs to avoid repeats on Sunday
+        let satVenueIds = (_agendas[satISO]?.slots ?? []).compactMap(\.venueId)
+
+        // Compose Sunday with Saturday's venues as extra recently shown
+        await composeAgendaForDate(
+            dateISO: sunISO,
+            city: city,
+            language: language,
+            session: session,
+            extraRecentlyShown: satVenueIds,
+            useAnchors: false
+        )
+
+        // Show Saturday first
+        selectedPlanDay = .saturday
+    }
+
+    /// Rebuild weekend agendas (invalidate cache, recompose both days).
+    @MainActor
+    func rebuildWeekend(city: City, language: AppLanguage, session: FamilySession) async {
+        await agendaCache.invalidate()
+        recentlyShownStore.clear()
+        let satISO = PlanDay.saturday.isoDate
+        let sunISO = PlanDay.sunday.isoDate
+        _agendas[satISO] = nil
+        _agendas[sunISO] = nil
+        _agendaStates[satISO] = .idle
+        _agendaStates[sunISO] = .idle
+        agendaMode = .browsing
+        await composeWeekend(city: city, language: language, session: session)
+    }
+
+    /// Exit weekend mode and return to today/tomorrow planning.
+    @MainActor
+    func exitWeekendMode() {
+        isWeekendMode = false
+        selectedPlanDay = isNextDayMode ? .tomorrow : .today
     }
 
     /// Invalidate cache and recompose the agenda.
     @MainActor
     func rebuildAgenda(city: City, language: AppLanguage, session: FamilySession) async {
+        if isWeekendMode {
+            await rebuildWeekend(city: city, language: language, session: session)
+            return
+        }
         await agendaCache.invalidate()
         recentlyShownStore.clear()
         agenda = nil
@@ -367,10 +495,11 @@ final class TodayViewModel {
     // MARK: - Template Engine Fallback
 
     @MainActor
-    private func buildTemplateFallback(session: FamilySession, language: AppLanguage) {
+    private func buildTemplateFallback(session: FamilySession, language: AppLanguage, dateISO: String? = nil) {
         guard let activities = activitiesData?.activities,
               let spots = lunchData?.spots else {
-            self.agendaState = .error("No data available for agenda")
+            let key = dateISO ?? selectedPlanDay.isoDate
+            _agendaStates[key] = .error("No data available for agenda")
             return
         }
 
@@ -385,8 +514,10 @@ final class TodayViewModel {
             recentlyShown: recentlyShownStore.recentlyShownIds(),
             language: language
         )
-        self.agenda = result
-        self.agendaState = .fallback
+
+        let key = dateISO ?? selectedPlanDay.isoDate
+        _agendas[key] = result
+        _agendaStates[key] = .fallback
         syncAgendaToWidget()
         restoreAgendaMode()
 
@@ -400,14 +531,23 @@ final class TodayViewModel {
 
     // MARK: - Widget Sync
 
-    /// Sync the current agenda to the shared app group UserDefaults so the widget can display it.
+    /// Sync the nearest upcoming agenda to the shared app group UserDefaults so the widget can display it.
     private func syncAgendaToWidget() {
-        guard let agenda else {
+        // Find the nearest agenda (today first, then tomorrow, then weekend)
+        let candidates: [String] = [
+            Self.dateISO(Date()),
+            Self.dateISO(Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()),
+            PlanDay.saturday.isoDate,
+            PlanDay.sunday.isoDate
+        ]
+        let nearestAgenda = candidates.compactMap { _agendas[$0] }.first
+
+        guard let nearest = nearestAgenda else {
             UserDefaults(suiteName: StorageKeys.widgetSuite)?.removeObject(forKey: "todayAgenda")
             WidgetCenter.shared.reloadTimelines(ofKind: "DayPlanWidget")
             return
         }
-        guard let data = try? JSONEncoder().encode(agenda) else { return }
+        guard let data = try? JSONEncoder().encode(nearest) else { return }
         UserDefaults(suiteName: StorageKeys.widgetSuite)?.set(data, forKey: "todayAgenda")
         WidgetCenter.shared.reloadTimelines(ofKind: "DayPlanWidget")
     }

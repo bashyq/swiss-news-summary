@@ -16,18 +16,10 @@ struct TodayHeroBanner: View {
     @Environment(AppState.self) private var appState
 
     let weather: Weather?
-    let contextText: String?
-    let sessionDisplay: String?
     let badWeatherMode: Bool
     let planningDate: Date
-    var anchors: [DayAnchor] = []
     @Binding var subView: TodaySubView
-    let onWeatherTap: () -> Void
-    var onSessionTap: (() -> Void)?
     var onHolidayTap: (() -> Void)?
-    var onAnchorAdd: (() -> Void)?
-    var onAnchorTap: ((DayAnchor) -> Void)?
-    var onAnchorRemove: ((UUID) -> Void)?
 
     // News mode properties
     var totalStoryCount: Int = 0
@@ -127,62 +119,11 @@ struct TodayHeroBanner: View {
         .clipShape(Capsule())
     }
 
-    // MARK: - Plan Header Content
+    // MARK: - Plan Header Content (moved to YourDayConfigSection)
 
     @ViewBuilder
     private var planHeaderContent: some View {
-        // Weather row
-        if let weather {
-            Button(action: onWeatherTap) {
-                weatherRow(weather)
-            }
-            .buttonStyle(.plain)
-        }
-
-        // Session pill
-        if let sessionDisplay, let onSessionTap {
-            Button(action: onSessionTap) {
-                HStack(spacing: 6) {
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 11, weight: .medium))
-
-                    Text(sessionDisplay)
-                        .font(.system(size: 12, weight: .medium))
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 8, weight: .semibold))
-                        .opacity(0.5)
-                }
-                .foregroundStyle(badWeatherMode
-                    ? Color(red: 0.96, green: 0.91, blue: 0.83).opacity(0.85)
-                    : .white.opacity(0.85))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(badWeatherMode
-                    ? Color(red: 0.96, green: 0.91, blue: 0.83).opacity(0.1)
-                    : .white.opacity(0.1))
-                .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 10)
-        }
-
-        // Anchor pills (between session pill and context banner)
-        if let onAnchorAdd {
-            AnchorPillRowView(
-                anchors: anchors,
-                onAdd: { onAnchorAdd() },
-                onTap: { anchor in onAnchorTap?(anchor) },
-                onRemove: { id in onAnchorRemove?(id) }
-            )
-            .padding(.top, 10)
-        }
-
-        // Context banner (weather-driven recommendation or agenda theme)
-        if let contextText {
-            contextBannerRow(contextText)
-                .padding(.top, 12)
-        }
+        EmptyView()
     }
 
     // MARK: - News Header Content
@@ -297,76 +238,6 @@ struct TodayHeroBanner: View {
         }
     }
 
-    // MARK: - Weather Row
-
-    private func weatherRow(_ weather: Weather) -> some View {
-        let tempColor: Color = badWeatherMode
-            ? Color(red: 0.94, green: 0.82, blue: 0.66)
-            : .white
-
-        return HStack(alignment: .center, spacing: 14) {
-            Text("\(Int(weather.temperature))°")
-                .font(.heroTemperature)
-                .foregroundStyle(tempColor)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(weather.description)
-                    .font(.system(size: 14))
-                    .foregroundStyle(tempColor.opacity(0.7))
-
-                if let high = weather.highTemp, let low = weather.lowTemp {
-                    Text("H: \(Int(high))°  ·  L: \(Int(low))°")
-                        .font(.system(size: 12))
-                        .foregroundStyle(tempColor.opacity(0.42))
-                }
-            }
-
-            Spacer()
-
-            Image(systemName: weather.sfSymbol)
-                .symbolRenderingMode(.multicolor)
-                .foregroundStyle(.yellow)
-                .font(.system(size: 36))
-        }
-    }
-
-    // MARK: - Context Banner
-
-    private func contextBannerRow(_ text: String) -> some View {
-        let bannerBg: Color = badWeatherMode
-            ? Color(red: 1, green: 0.31, blue: 0.16).opacity(0.1)
-            : .white.opacity(0.1)
-        let bannerBorder: Color = badWeatherMode
-            ? Color(red: 1, green: 0.39, blue: 0.24).opacity(0.2)
-            : .white.opacity(0.14)
-        let bannerText: Color = badWeatherMode
-            ? Color(red: 0.96, green: 0.91, blue: 0.83).opacity(0.8)
-            : .white.opacity(0.8)
-        let iconColor: Color = badWeatherMode
-            ? Color(red: 0.96, green: 0.91, blue: 0.83).opacity(0.6)
-            : .white.opacity(0.6)
-
-        return HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 14))
-                .foregroundStyle(iconColor)
-
-            Text(text)
-                .font(.system(size: 13, weight: .light))
-                .foregroundStyle(bannerText)
-                .lineSpacing(2)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(bannerBg)
-        .overlay(
-            RoundedRectangle(cornerRadius: 11)
-                .stroke(bannerBorder, lineWidth: 1)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 11))
-    }
-
     // MARK: - Holiday Row
 
     private func nextHolidayRow(_ holiday: Holiday) -> some View {
@@ -424,18 +295,10 @@ struct TodayHeroBanner: View {
             windSpeed: 12,
             hourly: nil
         ),
-        contextText: "Rainy day — good for museums or indoor play",
-        sessionDisplay: "Solo · Mia (5)",
         badWeatherMode: false,
         planningDate: Date(),
-        anchors: [],
         subView: .constant(.plan),
-        onWeatherTap: {},
-        onSessionTap: {},
         onHolidayTap: {},
-        onAnchorAdd: {},
-        onAnchorTap: { _ in },
-        onAnchorRemove: { _ in },
         totalStoryCount: 19,
         categoryKeys: ["topStories", "politics", "events"],
         selectedCategory: .constant("topStories"),

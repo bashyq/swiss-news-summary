@@ -404,6 +404,12 @@ struct ActivityCard: View {
     private var detailPanel: some View {
         if isExpanded {
             VStack(alignment: .leading, spacing: 0) {
+                // Real-time open/closed status
+                if activity.openingHours != nil {
+                    VenueStatusBadge(openingHours: activity.openingHours)
+                        .padding(.bottom, 10)
+                }
+
                 // 2×2 metadata grid
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                     detailCell(
@@ -564,12 +570,10 @@ struct ActivityCard: View {
     }
 
     private func openDirections(coordinate: CLLocationCoordinate2D, name: String? = nil) {
-        var urlString = "maps://?daddr=\(coordinate.latitude),\(coordinate.longitude)&dirflg=w"
-        if let name, let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
-            urlString += "&dname=\(encoded)"
+        let urlString = "https://maps.apple.com/directions?destination=\(coordinate.latitude),\(coordinate.longitude)&mode=walking"
+        if let url = URL(string: urlString) {
+            UIApplication.shared.open(url)
         }
-        let url = URL(string: urlString)!
-        UIApplication.shared.open(url)
     }
 }
 
