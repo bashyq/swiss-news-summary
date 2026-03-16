@@ -2,7 +2,7 @@
  * Lunch — Overpass API integration for nearby restaurants.
  */
 
-export const VERSION = '2.2.0';
+export const VERSION = '2.3.0';
 
 import { getCity } from './data.js';
 
@@ -82,6 +82,41 @@ function checkOpenForLunch(oh) {
   return found ? open : null;
 }
 
+function checkOpenForDinner(oh) {
+  if (!oh) return null;
+  if (oh.trim() === '24/7') return true;
+  const now = new Date();
+  const osmDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  const today = osmDays[now.getDay()];
+  const todayNum = now.getDay() === 0 ? 6 : now.getDay() - 1;
+  const rules = oh.split(';').map(r => r.trim()).filter(Boolean);
+  let found = false, open = false;
+
+  for (const rule of rules) {
+    const lr = rule.toLowerCase();
+    if (lr.includes('off') || lr.includes('closed')) { if (dayAppliesToday(rule, today, todayNum)) return false; continue; }
+    if (!dayAppliesToday(rule, today, todayNum)) continue;
+    found = true;
+    const ranges = rule.match(/\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}/g);
+    if (!ranges) continue;
+    for (const r of ranges) {
+      const [s, e] = r.split('-').map(x => parseTimeToMinutes(x.trim()));
+      const end = e <= s ? e + 1440 : e;
+      // Dinner window: 17:00–21:00 (1020–1260 minutes)
+      if (s < 1260 && end > 1020) open = true;
+    }
+  }
+  if (!found) {
+    for (const rule of rules) {
+      if (rule.match(/^[\d:;\-\s,]+$/)) {
+        const ranges = rule.match(/\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}/g);
+        if (ranges) { found = true; for (const r of ranges) { const [s, e] = r.split('-').map(x => parseTimeToMinutes(x.trim())); const end = e <= s ? e + 1440 : e; if (s < 1260 && end > 1020) open = true; } }
+      }
+    }
+  }
+  return found ? open : null;
+}
+
 async function fetchOverpass(lat, lon) {
   const q = `[out:json][timeout:25];(node["amenity"="restaurant"](around:3000,${lat},${lon});node["amenity"="cafe"](around:3000,${lat},${lon});node["amenity"="fast_food"](around:3000,${lat},${lon}););out body;`;
   const ctrl = new AbortController();
@@ -100,6 +135,10 @@ async function fetchOverpass(lat, lon) {
 function normalize(elements) {
   return elements.filter(el => el.tags?.name).map(el => {
     const t = el.tags;
+    const hasHighchairs = t.highchair === 'yes' || t.baby_feeding === 'yes';
+    const hasPlayArea = t.playground === 'yes' || t.kids_area === 'yes';
+    const kidFriendly = hasHighchairs || hasPlayArea ||
+      (t.amenity === 'restaurant' && t.wheelchair === 'yes') || false;
     return {
       id: `osm-${el.id}`, name: t.name, lat: el.lat, lon: el.lon,
       amenity: t.amenity, cuisine: t.cuisine || null,
@@ -108,6 +147,8 @@ function normalize(elements) {
       website: t.website || t['contact:website'] || null,
       openingHours: t.opening_hours || null,
       openForLunch: checkOpenForLunch(t.opening_hours),
+      openForDinner: checkOpenForDinner(t.opening_hours),
+      kidFriendly,
       wheelchair: t.wheelchair || null,
       outdoorSeating: t.outdoor_seating === 'yes',
       takeaway: t.takeaway === 'yes' || t.takeaway === 'only',
