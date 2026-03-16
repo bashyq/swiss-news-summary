@@ -7,6 +7,10 @@ struct AnchorSuggestion: Identifiable {
     let label: String
     let type: SuggestionType
     let coordinate: CLLocationCoordinate2D?
+    /// Suggested anchor category when this suggestion is selected.
+    let defaultCategory: AnchorCategory
+    /// Suggested duration in minutes when this suggestion is selected.
+    let defaultDuration: Int
 
     enum SuggestionType {
         case cityEvent

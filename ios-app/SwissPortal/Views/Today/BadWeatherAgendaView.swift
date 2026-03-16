@@ -16,6 +16,7 @@ struct BadWeatherAgendaView: View {
     var onAdvanceSlot: (() -> Void)?
     var onExitExecution: (() -> Void)?
     var onEditSlot: ((AgendaSlot) -> Void)?
+    var onSuggestAnother: ((String) -> Void)?
     var showReflowBanner: Bool = false
     var reflowSlotId: String?
     var onRebuild: (() -> Void)?
@@ -65,6 +66,7 @@ struct BadWeatherAgendaView: View {
                 onAdvanceSlot: onAdvanceSlot,
                 onExitExecution: onExitExecution,
                 onEditSlot: onEditSlot,
+                onSuggestAnother: onSuggestAnother,
                 showReflowBanner: showReflowBanner,
                 reflowSlotId: reflowSlotId,
                 onRebuild: onRebuild,

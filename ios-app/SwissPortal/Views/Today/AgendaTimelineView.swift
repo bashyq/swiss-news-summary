@@ -20,6 +20,7 @@ struct AgendaTimelineView: View {
     var onAdvanceSlot: (() -> Void)?
     var onExitExecution: (() -> Void)?
     var onEditSlot: ((AgendaSlot) -> Void)?
+    var onSuggestAnother: ((String) -> Void)?
     var showReflowBanner: Bool = false
     var reflowSlotId: String?
     var onRebuild: (() -> Void)?
@@ -67,6 +68,9 @@ struct AgendaTimelineView: View {
                     onEdit: slotExecState(for: index) == .browsing ? {
                         onEditSlot?(slot)
                     } : nil,
+                    onSuggestAnother: slotExecState(for: index) == .browsing
+                        && (slot.type == .lunch || slot.type == .dinner)
+                        ? { onSuggestAnother?(slot.id) } : nil,
                     activities: activities,
                     lunchSpots: lunchSpots,
                     location: location
@@ -105,7 +109,8 @@ struct AgendaTimelineView: View {
                         travelMinutes: slot.travelMinutesToNext,
                         execState: connectorExecState(afterSlotAt: index),
                         isTight: tight,
-                        nextVenueName: tight ? nextSlot.venueName : nil
+                        nextVenueName: tight ? nextSlot.venueName : nil,
+                        leaveAtTime: leaveAtTime(afterSlotAt: index)
                     )
                 }
             }
@@ -149,6 +154,20 @@ struct AgendaTimelineView: View {
         } else {
             return .future
         }
+    }
+
+    /// Compute "Leave at HH:MM" for the connector after `index`.
+    /// Only meaningful when the connector is `.upcoming` (between done and active slot).
+    private func leaveAtTime(afterSlotAt index: Int) -> String? {
+        guard index + 1 < agenda.slots.count else { return nil }
+        let slot = agenda.slots[index]
+        let nextSlot = agenda.slots[index + 1]
+        guard let travelMin = slot.travelMinutesToNext else { return nil }
+        let nextParts = nextSlot.time.split(separator: ":").compactMap { Int($0) }
+        guard nextParts.count == 2 else { return nil }
+        let totalMinutes = nextParts[0] * 60 + nextParts[1] - travelMin
+        guard totalMinutes >= 0 else { return nil }
+        return String(format: "%02d:%02d", totalMinutes / 60, totalMinutes % 60)
     }
 
     private func connectorExecState(afterSlotAt index: Int) -> ConnectorExecState {
@@ -213,8 +232,9 @@ struct AgendaTimelineView: View {
                 .foregroundStyle(Color.znMuted)
             }
             .buttonStyle(.plain)
-        } else {
+        } else if onStartExecuting != nil {
             // "Let's go →" button — disabled while reflow banner is showing
+            // Only shown when execution mode is supported (Today tab, not Weekend).
             Button {
                 onStartExecuting?()
             } label: {

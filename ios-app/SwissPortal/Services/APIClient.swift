@@ -120,7 +120,7 @@ final class APIClient: @unchecked Sendable {
         }
 
         let anchorPayloads: [AgendaRequest.AnchorPayload]? = anchors.isEmpty ? nil : anchors.map {
-            .init(label: $0.label, time: $0.timeString, neighbourhood: $0.neighbourhood, durationMinutes: $0.durationMinutes)
+            .init(label: $0.title, time: $0.timeString, neighbourhood: $0.neighbourhood, durationMinutes: $0.durationMinutes)
         }
 
         let payload = AgendaRequest(

@@ -23,10 +23,12 @@ struct TodayInSwitzerlandApp: App {
                 .task {
                     reminderManager.cleanupPastReminders()
                     AnchorStore.shared.purgeIfNewDay()
+                    AnchorStore.shared.purgeStaleKeys()
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
                         AnchorStore.shared.purgeIfNewDay()
+                        AnchorStore.shared.purgeStaleKeys()
                     }
                 }
         }

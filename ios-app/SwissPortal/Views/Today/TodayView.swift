@@ -23,6 +23,7 @@ struct TodayView: View {
     @State private var expandedNewsID: String?
     @State private var expandedSlotID: String?
     @State private var showNotificationPrompt = false
+    @State private var briefingDismissed = false
 
     var body: some View {
         content
@@ -115,13 +116,7 @@ struct TodayView: View {
                     }
                     anchors = AnchorStore.shared.anchors()
                     editingAnchor = nil
-                    Task {
-                        await viewModel.rebuildAgenda(
-                            city: appState.city,
-                            language: appState.language,
-                            session: appState.familySession
-                        )
-                    }
+                    // Rebuild is triggered automatically by AnchorStore.didChangeNotification
                 }
                 .environment(appState)
                 .presentationDetents([.large])
@@ -219,6 +214,13 @@ struct TodayView: View {
                         // Transport alert (both sub-views)
                         transportSection
 
+                        // AI summary + events (both modes, hidden in execution mode)
+                        if !viewModel.agendaMode.isExecuting {
+                            briefingSection
+                            eventsSection
+                        }
+
+                        // Mode-specific content
                         if subView == .plan {
                             planSubView
                         } else {
@@ -252,10 +254,9 @@ struct TodayView: View {
 
     @ViewBuilder
     private var planSubView: some View {
-        // Day config + events (hidden in execution mode)
+        // Day config (hidden in execution mode)
         if !viewModel.agendaMode.isExecuting {
             yourDayConfigSection
-            eventsSection
         }
 
         // Agenda section
@@ -270,6 +271,7 @@ struct TodayView: View {
             badWeatherMode: viewModel.isBadWeatherDay,
             contextText: viewModel.contextBannerText(language: appState.language),
             sessionDisplay: appState.familySession.childrenDisplay,
+            anchors: anchors,
             anchorCount: anchors.count,
             canPlanWeekend: viewModel.canPlanWeekend,
             isWeekendMode: viewModel.isWeekendMode,
@@ -278,6 +280,15 @@ struct TodayView: View {
             onAnchorAdd: {
                 editingAnchor = nil
                 showAnchorForm = true
+            },
+            onAnchorEdit: { anchor in
+                editingAnchor = anchor
+                showAnchorForm = true
+            },
+            onAnchorDelete: { anchor in
+                AnchorStore.shared.remove(id: anchor.id)
+                anchors = AnchorStore.shared.anchors()
+                // Rebuild is triggered automatically by AnchorStore.didChangeNotification
             },
             onPlanWeekend: {
                 Task {
@@ -356,8 +367,8 @@ struct TodayView: View {
                 .padding(.horizontal)
                 .padding(.bottom, 10)
 
-                // Day picker pills (weekend mode)
-                if viewModel.isWeekendMode {
+                // Day picker pills (today/tomorrow or weekend)
+                if viewModel.availablePlanDays.count > 1 {
                     dayPickerPills
                         .padding(.horizontal)
                         .padding(.bottom, 12)
@@ -383,6 +394,30 @@ struct TodayView: View {
 
     @ViewBuilder
     private var agendaContent: some View {
+        // Special states — no API call needed
+        if viewModel.isDayCompleteState {
+            DayCompleteView()
+                .environment(appState)
+        } else if viewModel.isAnchorOnlyState {
+            AnchorOnlyView(
+                anchors: anchors,
+                onEdit: { anchor in
+                    editingAnchor = anchor
+                    showAnchorForm = true
+                },
+                onDelete: { anchor in
+                    AnchorStore.shared.remove(id: anchor.id)
+                    anchors = AnchorStore.shared.anchors()
+                    // Rebuild is triggered automatically by AnchorStore.didChangeNotification
+                },
+                onAdd: {
+                    editingAnchor = nil
+                    showAnchorForm = true
+                }
+            )
+            .environment(appState)
+        } else {
+        // Normal agenda flow
         switch viewModel.agendaState {
         case .idle, .loading:
             AgendaLoadingView()
@@ -414,6 +449,11 @@ struct TodayView: View {
                         onEditSlot: { slot in
                             editingSlot = slot
                             showSlotEditSheet = true
+                        },
+                        onSuggestAnother: { slotId in
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                viewModel.suggestAnotherNearby(slotId: slotId)
+                            }
                         },
                         showReflowBanner: viewModel.showReflowBanner,
                         reflowSlotId: viewModel.reflowSlotId,
@@ -463,6 +503,11 @@ struct TodayView: View {
                             editingSlot = slot
                             showSlotEditSheet = true
                         },
+                        onSuggestAnother: { slotId in
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                viewModel.suggestAnotherNearby(slotId: slotId)
+                            }
+                        },
                         showReflowBanner: viewModel.showReflowBanner,
                         reflowSlotId: viewModel.reflowSlotId,
                         onRebuild: {
@@ -511,6 +556,24 @@ struct TodayView: View {
                 }
             }
             .padding()
+        }
+        } // end else (normal agenda flow)
+    }
+
+    // MARK: - AI Summary / Briefing
+
+    @ViewBuilder
+    private var briefingSection: some View {
+        if !briefingDismissed,
+           let briefing = viewModel.newsData?.briefing,
+           briefing.topStory != nil {
+            BriefingCard(briefing: briefing) {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    briefingDismissed = true
+                }
+            }
+            .padding(.horizontal)
+            .padding(.top, 16)
         }
     }
 

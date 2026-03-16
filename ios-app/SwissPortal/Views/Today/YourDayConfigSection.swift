@@ -11,6 +11,7 @@ struct YourDayConfigSection: View {
     let badWeatherMode: Bool
     let contextText: String?
     let sessionDisplay: String?
+    let anchors: [AnchorEvent]
     let anchorCount: Int
     let canPlanWeekend: Bool
     let isWeekendMode: Bool
@@ -18,84 +19,40 @@ struct YourDayConfigSection: View {
     let onWeatherTap: () -> Void
     let onSessionTap: () -> Void
     let onAnchorAdd: () -> Void
+    var onAnchorEdit: ((AnchorEvent) -> Void)?
+    var onAnchorDelete: ((AnchorEvent) -> Void)?
     var onPlanWeekend: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // Weather card — tappable
-            if let weather {
-                Button(action: onWeatherTap) {
-                    weatherCard(weather)
-                }
-                .buttonStyle(.plain)
-            }
-
-            // Session pill + Add plans — side by side
-            HStack(spacing: 8) {
-                // Session pill
-                if let sessionDisplay {
-                    Button(action: onSessionTap) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 11, weight: .medium))
-                            Text(sessionDisplay)
-                                .font(.system(size: 12, weight: .medium))
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 8, weight: .semibold))
-                                .opacity(0.4)
-                        }
-                        .foregroundStyle(Color.znInk)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(Color.znNeutralTagBg)
-                        .clipShape(Capsule())
+            // Session pill
+            if let sessionDisplay {
+                Button(action: onSessionTap) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "person.fill")
+                            .font(.system(size: 11, weight: .medium))
+                        Text(sessionDisplay)
+                            .font(.system(size: 12, weight: .medium))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 8, weight: .semibold))
+                            .opacity(0.4)
                     }
-                    .buttonStyle(.plain)
-                }
-
-                // Add plans pill
-                Button(action: onAnchorAdd) {
-                    HStack(spacing: 5) {
-                        if anchorCount == 0 {
-                            Image(systemName: "mappin.and.ellipse")
-                                .font(.system(size: 11, weight: .medium))
-                            Text(appState.localized(en: "Got plans?", de: "Schon was vor?"))
-                                .font(.system(size: 12, weight: .medium))
-                        } else {
-                            Text("📌")
-                                .font(.system(size: 11))
-                            Text(appState.localized(
-                                en: "\(anchorCount) plan\(anchorCount == 1 ? "" : "s")",
-                                de: "\(anchorCount) Plan\(anchorCount == 1 ? "" : "e")"
-                            ))
-                                .font(.system(size: 12, weight: .medium))
-                            if anchorCount < 3 {
-                                Text("·")
-                                    .foregroundStyle(Color.znMuted)
-                                Image(systemName: "plus")
-                                    .font(.system(size: 9, weight: .bold))
-                            }
-                        }
-                    }
-                    .foregroundStyle(anchorCount == 0 ? Color.znTerracotta : Color.znNavy)
+                    .foregroundStyle(Color.znInk)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 7)
-                    .background(anchorCount == 0 ? Color.clear : Color.znNavy.opacity(0.06))
+                    .background(Color.znNeutralTagBg)
                     .clipShape(Capsule())
-                    .overlay(
-                        Capsule()
-                            .stroke(
-                                anchorCount == 0
-                                    ? Color.znTerracotta.opacity(0.35)
-                                    : Color.znNavy.opacity(0.15),
-                                style: anchorCount == 0
-                                    ? StrokeStyle(lineWidth: 1, dash: [5, 3])
-                                    : StrokeStyle(lineWidth: 1)
-                            )
-                    )
                 }
                 .buttonStyle(.plain)
             }
+
+            // Anchor pills — inline list with add/edit/delete
+            AnchorPillRowView(
+                anchors: anchors,
+                onAdd: onAnchorAdd,
+                onEdit: { anchor in onAnchorEdit?(anchor) },
+                onDelete: { anchor in onAnchorDelete?(anchor) }
+            )
 
             // Context banner
             if let contextText {

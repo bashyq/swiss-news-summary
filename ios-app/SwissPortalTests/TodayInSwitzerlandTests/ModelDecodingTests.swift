@@ -306,15 +306,15 @@ final class ModelDecodingTests: XCTestCase {
     // MARK: - Activity Helpers
 
     func testActivityFreeDetection() {
-        let freeActivity = Activity(id: "test", name: "Test", nameDE: "Test", description: "Test", descriptionDE: "Test", indoor: false, ageRange: "2-5", duration: "1h", price: "Free entry", priceDE: nil, url: nil, lat: nil, lon: nil, category: "nature", minAge: nil, maxAge: nil, season: nil, free: nil, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil, addedDate: nil)
+        let freeActivity = Activity(id: "test", name: "Test", nameDE: "Test", description: "Test", descriptionDE: "Test", indoor: false, ageRange: "2-5", duration: "1h", price: "Free entry", priceDE: nil, url: nil, lat: nil, lon: nil, category: "nature", minAge: nil, maxAge: nil, season: nil, free: nil, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil, addedDate: nil, suggestibility: nil)
         XCTAssertTrue(freeActivity.isFree)
 
-        let paidActivity = Activity(id: "test2", name: "Test", nameDE: "Test", description: "Test", descriptionDE: "Test", indoor: false, ageRange: "2-5", duration: "2h", price: "CHF 15", priceDE: nil, url: nil, lat: nil, lon: nil, category: "museum", minAge: nil, maxAge: nil, season: nil, free: nil, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil, addedDate: nil)
+        let paidActivity = Activity(id: "test2", name: "Test", nameDE: "Test", description: "Test", descriptionDE: "Test", indoor: false, ageRange: "2-5", duration: "2h", price: "CHF 15", priceDE: nil, url: nil, lat: nil, lon: nil, category: "museum", minAge: nil, maxAge: nil, season: nil, free: nil, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil, addedDate: nil, suggestibility: nil)
         XCTAssertFalse(paidActivity.isFree)
     }
 
     func testActivityAgeFilter() {
-        let toddlerActivity = Activity(id: "t", name: "T", nameDE: "T", description: "T", descriptionDE: "T", indoor: false, ageRange: "2-3", duration: "1h", price: "Free", priceDE: nil, url: nil, lat: nil, lon: nil, category: "play", minAge: 2, maxAge: 3, season: nil, free: nil, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil, addedDate: nil)
+        let toddlerActivity = Activity(id: "t", name: "T", nameDE: "T", description: "T", descriptionDE: "T", indoor: false, ageRange: "2-3", duration: "1h", price: "Free", priceDE: nil, url: nil, lat: nil, lon: nil, category: "play", minAge: 2, maxAge: 3, season: nil, free: nil, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil, addedDate: nil, suggestibility: nil)
 
         XCTAssertTrue(toddlerActivity.matchesAge(.all))
         XCTAssertTrue(toddlerActivity.matchesAge(.toddler))
@@ -412,7 +412,7 @@ final class ModelDecodingTests: XCTestCase {
     // MARK: - CityEvent Date Overlap
 
     func testCityEventOverlap() {
-        let event = CityEvent(id: "test", name: "Festival", nameDE: "Festival", city: "zurich", startDate: "2026-02-20", endDate: "2026-02-22", description: "A festival", descriptionDE: "Ein Festival", toddlerFriendly: true, free: true, url: nil)
+        let event = CityEvent(id: "test", name: "Festival", nameDE: "Festival", city: "zurich", startDate: "2026-02-20", endDate: "2026-02-22", description: "A festival", descriptionDE: "Ein Festival", toddlerFriendly: true, free: true, plannable: true, url: nil)
 
         let feb21 = DateHelpers.parseISO("2026-02-21")!
         XCTAssertTrue(event.overlaps(with: feb21))

@@ -49,7 +49,15 @@ struct TodayHeroBanner: View {
 
             // Title row
             titleText
-                .padding(.bottom, 14)
+                .padding(.bottom, 6)
+
+            // Compact weather row (both modes)
+            if let weather {
+                weatherCompactRow(weather)
+                    .padding(.bottom, 12)
+            } else {
+                Spacer().frame(height: 8)
+            }
 
             // Mode-specific content
             if subView == .plan {
@@ -209,12 +217,15 @@ struct TodayHeroBanner: View {
         formatter.dateFormat = appState.language == .de
             ? "EEEE · d. MMMM"
             : "EEEE · d MMMM"
-        return formatter.string(from: planningDate)
+        // News mode always shows today; Plan mode uses planningDate
+        let displayDate = subView == .news ? Date() : planningDate
+        return formatter.string(from: displayDate)
     }
 
     /// Whether we're planning for a future date (e.g. tomorrow after 8 PM)
+    /// Only applies in Plan mode — News always shows "Today".
     private var isNextDayMode: Bool {
-        !Calendar.current.isDateInToday(planningDate)
+        subView == .plan && !Calendar.current.isDateInToday(planningDate)
     }
 
     // MARK: - Title
@@ -235,6 +246,34 @@ struct TodayHeroBanner: View {
             Text(cityName)
                 .font(.custom("Playfair", size: 28).italic())
                 .foregroundStyle(titleColor.opacity(0.6))
+        }
+    }
+
+    // MARK: - Weather Compact Row
+
+    private func weatherCompactRow(_ weather: Weather) -> some View {
+        let textColor: Color = badWeatherMode
+            ? Color(red: 0.96, green: 0.91, blue: 0.83)
+            : .white
+
+        return HStack(spacing: 8) {
+            Image(systemName: weather.sfSymbol)
+                .symbolRenderingMode(.multicolor)
+                .font(.system(size: 18))
+
+            Text("\(Int(weather.temperature))°")
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .foregroundStyle(textColor)
+
+            Text(weather.description)
+                .font(.system(size: 13))
+                .foregroundStyle(textColor.opacity(0.6))
+
+            if let high = weather.highTemp, let low = weather.lowTemp {
+                Text("H:\(Int(high))° L:\(Int(low))°")
+                    .font(.system(size: 12))
+                    .foregroundStyle(textColor.opacity(0.45))
+            }
         }
     }
 

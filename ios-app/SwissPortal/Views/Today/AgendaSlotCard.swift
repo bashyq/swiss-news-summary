@@ -34,6 +34,7 @@ struct AgendaSlotCard: View {
     var execState: SlotExecState = .browsing
     var onDone: (() -> Void)?
     var onEdit: (() -> Void)?
+    var onSuggestAnother: (() -> Void)?
 
     // Data for expand views — looked up by venueId
     var activities: [Activity]
@@ -532,6 +533,20 @@ struct AgendaSlotCard: View {
                             Text("⇄")
                                 .font(.system(size: 12))
                             Text("\(slot.swaps.count) swaps")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                        .foregroundStyle(Color.znTerracotta)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                // "Suggest another nearby" — lunch/dinner only, browsing mode
+                if (slot.type == .lunch || slot.type == .dinner), let onSuggestAnother {
+                    Button(action: onSuggestAnother) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.system(size: 10))
+                            Text(appState.localized(en: "Another nearby", de: "Andere in Nähe"))
                                 .font(.system(size: 11, weight: .medium))
                         }
                         .foregroundStyle(Color.znTerracotta)

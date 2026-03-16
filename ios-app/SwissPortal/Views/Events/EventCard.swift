@@ -3,12 +3,19 @@ import SwiftUI
 /// Card view for a city event or festival.
 ///
 /// Displays the event name (localized, bold), date range, description,
-/// badges (toddler-friendly, free), and an open URL button.
-/// Used in both the filtered events list and the day detail panel.
+/// badges (toddler-friendly, free), an open URL button,
+/// and an "Add to your plan" CTA for plannable events happening today.
 struct EventCard: View {
     @Environment(AppState.self) private var appState
 
     let event: CityEvent
+
+    @State private var showAnchorForm = false
+
+    /// Whether this event is plannable and overlaps with today.
+    private var showAddToPlan: Bool {
+        event.isPlannable && event.overlaps(with: Date())
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -27,6 +34,11 @@ struct EventCard: View {
 
             // Badges
             badgesRow
+
+            // "Add to your plan" CTA
+            if showAddToPlan {
+                addToPlanButton
+            }
         }
         .padding(AppSpacing.cardPadding)
         .background(Color.znSurface)
@@ -35,6 +47,16 @@ struct EventCard: View {
         .contentShape(Rectangle())
         .onTapGesture {
             openURL()
+        }
+        .sheet(isPresented: $showAnchorForm) {
+            AnchorFormSheet(
+                event: event,
+                language: appState.language
+            ) { anchor in
+                AnchorStore.shared.add(anchor)
+            }
+            .environment(appState)
+            .presentationDetents([.large])
         }
     }
 
@@ -101,6 +123,31 @@ struct EventCard: View {
                 color: .znNavy.opacity(0.7)
             )
         }
+    }
+
+    // MARK: - Add to Plan
+
+    private var addToPlanButton: some View {
+        Button {
+            showAnchorForm = true
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "calendar.badge.plus")
+                    .font(.caption2)
+                Text(appState.localized(
+                    en: "Add to your plan for today",
+                    de: "Zu deinem Tagesplan hinzufügen"
+                ))
+                .font(.system(size: 12, weight: .medium))
+            }
+            .foregroundStyle(.znNavy)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity)
+            .background(Color.znNavy.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Actions

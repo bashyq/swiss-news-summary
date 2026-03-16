@@ -13,6 +13,8 @@ struct DayDetailView: View {
     let date: Date
     @Bindable var viewModel: EventsViewModel
 
+    @State private var anchorFormEvent: CityEvent?
+
     private var dayEvents: DayEvents {
         viewModel.eventsForDate(date)
     }
@@ -55,6 +57,16 @@ struct DayDetailView: View {
         .padding(AppSpacing.cardPadding)
         .background(Color.znSurface)
         .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
+        .sheet(item: $anchorFormEvent) { event in
+            AnchorFormSheet(
+                event: event,
+                language: appState.language
+            ) { anchor in
+                AnchorStore.shared.add(anchor)
+            }
+            .environment(appState)
+            .presentationDetents([.large])
+        }
     }
 
     // MARK: - Date Header
@@ -190,6 +202,30 @@ struct DayDetailView: View {
                     if festival.free {
                         FreeBadge()
                     }
+                }
+
+                // "Add to your plan" CTA (only for plannable events on today)
+                if isToday && festival.isPlannable {
+                    Button {
+                        anchorFormEvent = festival
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "calendar.badge.plus")
+                                .font(.caption2)
+                            Text(appState.localized(
+                                en: "Add to your plan",
+                                de: "Zum Plan hinzufügen"
+                            ))
+                            .font(.system(size: 12, weight: .medium))
+                        }
+                        .foregroundStyle(.znNavy)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.znNavy.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             .padding(.leading, 10)

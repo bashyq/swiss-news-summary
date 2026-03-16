@@ -14,15 +14,15 @@ struct AnchorSuggestionProvider {
 
     // MARK: - Presets
 
-    private static let presets: [(en: String, de: String)] = [
-        ("Birthday party", "Geburtstagsfeier"),
-        ("Playdate", "Spielverabredung"),
-        ("Swimming", "Schwimmen"),
-        ("Doctor appointment", "Arzttermin"),
-        ("Music class", "Musikkurs"),
-        ("Kinderkrippe pickup", "Kita-Abholung"),
-        ("Nap time", "Mittagsschlaf"),
-        ("Grandparents visit", "Besuch bei Grosseltern"),
+    private static let presets: [(en: String, de: String, category: AnchorCategory, duration: Int)] = [
+        ("Birthday party", "Geburtstagsfeier", .social, 180),
+        ("Playdate", "Spielverabredung", .social, 120),
+        ("Swimming", "Schwimmen", .activity, 120),
+        ("Doctor appointment", "Arzttermin", .errand, 60),
+        ("Music class", "Musikkurs", .activity, 60),
+        ("Kinderkrippe pickup", "Kita-Abholung", .errand, 30),
+        ("Nap time", "Mittagsschlaf", .other, 90),
+        ("Grandparents visit", "Besuch bei Grosseltern", .social, 180),
     ]
 
     // MARK: - Build Suggestions
@@ -42,7 +42,9 @@ struct AnchorSuggestionProvider {
                     id: "event-\(event.id)",
                     label: event.localizedName(language: language),
                     type: .cityEvent,
-                    coordinate: nil // CityEvent has no coordinates
+                    coordinate: nil, // CityEvent has no coordinates
+                    defaultCategory: .social,
+                    defaultDuration: 120
                 ))
             }
         }
@@ -60,7 +62,9 @@ struct AnchorSuggestionProvider {
                     id: "activity-\(activity.id)",
                     label: activity.localizedName(language: language),
                     type: .recurringActivity,
-                    coordinate: coord
+                    coordinate: coord,
+                    defaultCategory: .activity,
+                    defaultDuration: 90
                 ))
             }
         }
@@ -72,7 +76,9 @@ struct AnchorSuggestionProvider {
                 id: "preset-\(i)",
                 label: label,
                 type: .preset,
-                coordinate: nil
+                coordinate: nil,
+                defaultCategory: preset.category,
+                defaultDuration: preset.duration
             ))
         }
 

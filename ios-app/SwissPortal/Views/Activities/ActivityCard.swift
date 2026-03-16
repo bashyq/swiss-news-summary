@@ -21,6 +21,7 @@ struct ActivityCard: View {
 
     @State private var showDeleteConfirmation = false
     @State private var showReminderSheet = false
+    @State private var markedAsVisited = false
 
     private var isExpanded: Bool { expandedID == activity.id }
 
@@ -470,6 +471,30 @@ struct ActivityCard: View {
                         .buttonStyle(.plain)
                     }
                 }
+
+                // Mark as visited
+                Button {
+                    markedAsVisited = true
+                    VenueVisitStore.shared.recordVisit(
+                        venueId: activity.id,
+                        venueName: activity.name,
+                        venueType: .activity,
+                        source: .manualMark
+                    )
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: markedAsVisited ? "checkmark.circle.fill" : "checkmark.circle")
+                            .font(.system(size: 13))
+                        Text(markedAsVisited
+                             ? appState.localized(en: "Visited", de: "Besucht")
+                             : appState.localized(en: "Mark as visited", de: "Als besucht markieren"))
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .foregroundStyle(markedAsVisited ? Color.znPositive : Color.znMuted)
+                }
+                .buttonStyle(.plain)
+                .disabled(markedAsVisited)
+                .padding(.top, 8)
             }
             .padding(.horizontal, 18)
             .padding(.bottom, 18)

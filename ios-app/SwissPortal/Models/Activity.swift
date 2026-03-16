@@ -40,6 +40,7 @@ struct Activity: Codable, Identifiable, Sendable {
     let materials: String?
     let materialsDE: String?
     let addedDate: String?
+    let suggestibility: String?
     var openingHours: String? = nil
     var openingHoursDE: String? = nil
 
@@ -87,6 +88,18 @@ struct Activity: Codable, Identifiable, Sendable {
     /// Whether this is a stay-home activity (detected from category field or stayHome bool)
     var isStayHome: Bool {
         category.lowercased() == "stayhome" || stayHome == true
+    }
+
+    /// Whether this activity should be excluded from the planning pool.
+    /// Feed-only activities (recurring, stayhome) never enter the scorer.
+    var isFeedOnly: Bool {
+        suggestibility == "feedOnly" || recurring != nil
+    }
+
+    /// Exclusion window in days based on suggestibility tier.
+    /// "oncePer30Days" = 30 days; default = 14 days.
+    var exclusionDays: Int {
+        suggestibility == "oncePer30Days" ? 30 : 14
     }
 
     /// Whether activity is free (auto-detected from price field)
@@ -287,6 +300,7 @@ struct CityEvent: Codable, Identifiable, Sendable {
     let descriptionDE: String
     let toddlerFriendly: Bool
     let free: Bool
+    let plannable: Bool?
     let url: String?
 
     var startDateParsed: Date? { DateHelpers.parseISO(startDate) }
@@ -304,6 +318,24 @@ struct CityEvent: Codable, Identifiable, Sendable {
         case .en: return description
         case .de: return descriptionDE
         }
+    }
+
+    /// Whether this event can be converted to an anchor for day planning.
+    /// Defaults to true when the field is absent from the API.
+    var isPlannable: Bool {
+        plannable ?? true
+    }
+
+    /// Best-guess anchor category when adding this event to the day plan.
+    var defaultAnchorCategory: AnchorCategory {
+        let lowId = id.lowercased()
+        if lowId.contains("markt") || lowId.contains("food") || lowId.contains("street-food") {
+            return .food
+        }
+        if lowId.contains("marathon") || lowId.contains("lauf") || lowId.contains("sport") {
+            return .activity
+        }
+        return .social
     }
 
     /// Whether this event overlaps with a given date

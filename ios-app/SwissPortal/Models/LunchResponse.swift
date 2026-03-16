@@ -22,6 +22,8 @@ struct LunchSpot: Codable, Identifiable, Sendable {
     let takeaway: Bool?
     let openingHours: String?
     let openForLunch: Bool?
+    let openForDinner: Bool?
+    let kidFriendly: Bool?
     let vegetarian: String?
     let vegan: String?
     let phone: String?

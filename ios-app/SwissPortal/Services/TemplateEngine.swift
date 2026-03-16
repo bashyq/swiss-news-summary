@@ -15,7 +15,8 @@ final class TemplateEngine {
         restaurants: [LunchSpot],
         cityEvents: [CityEvent],
         recentlyShown: Set<String>,
-        language: AppLanguage
+        language: AppLanguage,
+        visitStore: VenueVisitStore = .shared
     ) -> DayAgenda {
         let archetype = selectArchetype(
             weather: weather, session: session, cityEvents: cityEvents
@@ -27,7 +28,8 @@ final class TemplateEngine {
             restaurants: restaurants,
             cityEvents: cityEvents,
             recentlyShown: recentlyShown,
-            language: language
+            language: language,
+            visitStore: visitStore
         )
     }
 
@@ -91,36 +93,64 @@ private enum Archetype {
         restaurants: [LunchSpot],
         cityEvents: [CityEvent],
         recentlyShown: Set<String>,
-        language: AppLanguage
+        language: AppLanguage,
+        visitStore: VenueVisitStore
     ) -> DayAgenda {
         let today = Date()
         let dateISO = ISO8601DateFormatter.string(from: today, timeZone: .current, formatOptions: [.withFullDate])
         let dayName = dayOfWeekName(today, language: language)
         let childNames = session.children.map(\.name).joined(separator: " & ")
 
-        // Filter available activities
+        // Filter available activities (basic eligibility)
         let baseAvailable = activities.filter { activity in
             !activity.isStayHome
                 && activity.isAvailable(on: today)
-                && activity.isLikelyOpenToday
+                && OpeningHoursParser.status(from: activity.openingHours, at: today) != .closed
                 && (activity.season == nil || activity.isCurrentSeason)
         }
 
-        // Prefer activities not recently shown, but fall back to full pool if too few remain
-        let freshActivities = baseAvailable.filter { !recentlyShown.contains($0.id) }
-        let allAvailable = freshActivities.count >= 4 ? freshActivities : baseAvailable
-
-        // Cold weather (<10°C): strongly prefer indoor-only
-        let isCold = (weather?.temperature ?? 15) < 10
-        let indoorOnly = allAvailable.filter(\.indoor)
-        let available = (isCold && indoorOnly.count >= 4) ? indoorOnly : allAvailable
+        // Apply FreshnessScorer to rank and filter the activity pool
+        let available: [Activity]
+        if let w = weather {
+            let scored = baseAvailable
+                .map { ($0, FreshnessScorer.scoreActivity($0, visitStore: visitStore, weather: w, date: today)) }
+                .filter { $0.1.isEligible }
+                .sorted { $0.1.compositeScore > $1.1.compositeScore }
+                .map { $0.0 }
+            // Pool exhaustion reset: if all scored-out, fall back to base pool
+            available = scored.count >= 2 ? scored : baseAvailable
+        } else {
+            // No weather data — fall back to recentlyShown filtering
+            let freshActivities = baseAvailable.filter { !recentlyShown.contains($0.id) }
+            available = freshActivities.count >= 4 ? freshActivities : baseAvailable
+        }
 
         let stayHome = activities.filter { $0.isStayHome }
-        let openRestaurants = restaurants.filter {
-            $0.openForLunch == true && $0.permanentlyClosed != true && ($0.rating ?? 0) >= 4.0
+
+        // Apply FreshnessScorer to restaurant pools
+        let scoredLunch: [LunchSpot]
+        let scoredDinner: [LunchSpot]
+        let baseLunchPool = restaurants.filter {
+            $0.permanentlyClosed != true && ($0.rating == nil || $0.rating! >= 3.5)
         }
-        let allRestaurants = restaurants.filter {
-            $0.permanentlyClosed != true && ($0.rating ?? 0) >= 4.0
+        scoredLunch = baseLunchPool
+            .map { ($0, FreshnessScorer.scoreRestaurant($0, slotType: .lunch, visitStore: visitStore, date: today)) }
+            .filter { $0.1.isEligible }
+            .sorted { $0.1.compositeScore > $1.1.compositeScore }
+            .map { $0.0 }
+        scoredDinner = baseLunchPool
+            .map { ($0, FreshnessScorer.scoreRestaurant($0, slotType: .dinner, visitStore: visitStore, date: today)) }
+            .filter { $0.1.isEligible }
+            .sorted { $0.1.compositeScore > $1.1.compositeScore }
+            .map { $0.0 }
+        // Pool exhaustion reset for restaurants
+        let openRestaurants = scoredLunch.count >= 2 ? scoredLunch : baseLunchPool.filter {
+            $0.openForLunch == true
+                || ($0.openForLunch == nil && OpeningHoursParser.status(from: $0.openingHours, at: today) != .closed)
+        }
+        let allRestaurants = scoredDinner.count >= 2 ? scoredDinner : baseLunchPool.filter {
+            $0.openForDinner != false
+                && OpeningHoursParser.status(from: $0.openingHours, at: today) != .closed
         }
 
         let weatherDesc = weather.map { "\(Int($0.temperature))° and \($0.description.lowercased())" } ?? "mild"
@@ -586,8 +616,7 @@ private enum Archetype {
         }
         if !ageFiltered.isEmpty { filtered = ageFiltered }
 
-        // Diversify by category — shuffle then deduplicate
-        filtered.shuffle()
+        // Pool is pre-sorted by FreshnessScorer composite score — pick from top
         return filtered.first
     }
 

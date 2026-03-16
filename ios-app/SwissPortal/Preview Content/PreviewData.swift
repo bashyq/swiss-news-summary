@@ -72,7 +72,7 @@ enum PreviewData {
         history: HistoryFact(year: 1958, event: "The Swiss Pavilion opened at Expo 58 in Brussels", eventDE: "Der Schweizer Pavillon wurde an der Expo 58 in Brüssel eröffnet"),
         categories: categories,
         trending: TrendingTopic(topic: "SNB Interest Rates", topicDE: "SNB Leitzins", headline: nil, headlineDE: nil, url: nil),
-        briefing: Briefing(topStory: BriefingItem(headline: "SNB holds rates", summary: "Summary of top story", source: "NZZ", url: "https://www.nzz.ch", sentiment: "neutral"), suggestedActivity: Activity(id: "zoo-zurich", name: "Zoo Zürich", nameDE: "Zoo Zürich", description: "Award-winning zoo with Masoala rainforest", descriptionDE: "Preisgekrönter Zoo mit Masoala-Regenwald", indoor: false, ageRange: "2-5 years", duration: "2-4 hours", price: "CHF 29", priceDE: "CHF 29", url: "https://www.zoo.ch", lat: 47.3849, lon: 8.5743, category: "animals", minAge: 2, maxAge: 5, season: nil, free: false, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil, addedDate: nil)),
+        briefing: Briefing(topStory: BriefingItem(headline: "SNB holds rates", summary: "Summary of top story", source: "NZZ", url: "https://www.nzz.ch", sentiment: "neutral"), suggestedActivity: Activity(id: "zoo-zurich", name: "Zoo Zürich", nameDE: "Zoo Zürich", description: "Award-winning zoo with Masoala rainforest", descriptionDE: "Preisgekrönter Zoo mit Masoala-Regenwald", indoor: false, ageRange: "2-5 years", duration: "2-4 hours", price: "CHF 29", priceDE: "CHF 29", url: "https://www.zoo.ch", lat: 47.3849, lon: 8.5743, category: "animals", minAge: 2, maxAge: 5, season: nil, free: false, recurring: nil, stayHome: nil, availableMonths: nil, subcategory: nil, materials: nil, materialsDE: nil, addedDate: nil, suggestibility: "oncePer30Days")),
         weekendBrief: WeekendBrief(saturday: WeekendBriefDay(date: "2026-02-21", weatherCode: 1, tempMax: 8, tempMin: 2, description: "Mostly sunny"), sunday: WeekendBriefDay(date: "2026-02-22", weatherCode: 3, tempMax: 6, tempMin: 1, description: "Overcast"), events: [WeekendBriefEvent(name: "Fasnacht", nameDE: "Fasnacht", startDate: "2026-02-20", endDate: "2026-02-22", toddlerFriendly: true, free: true)], satDate: "2026-02-21", sunDate: "2026-02-22"),
         city: CityInfo(id: "zurich", name: "Zürich"),
         timestamp: "2026-02-21T12:00:00Z"
@@ -105,7 +105,8 @@ enum PreviewData {
         subcategory: nil,
         materials: nil,
         materialsDE: nil,
-        addedDate: nil
+        addedDate: nil,
+        suggestibility: "oncePer30Days"
     )
 
     static let stayHomeActivity = Activity(
@@ -133,7 +134,8 @@ enum PreviewData {
         subcategory: "sensory",
         materials: "Rice or pasta, Small toys, Container",
         materialsDE: "Reis oder Nudeln, Kleine Spielzeuge, Behälter",
-        addedDate: nil
+        addedDate: nil,
+        suggestibility: "feedOnly"
     )
 
     static let cityEvent = CityEvent(
@@ -147,6 +149,7 @@ enum PreviewData {
         descriptionDE: "Zürcher Frühlingsfest mit der Verbrennung des Böögg.",
         toddlerFriendly: true,
         free: true,
+        plannable: true,
         url: "https://www.sechselaeuten.ch/"
     )
 
@@ -212,6 +215,8 @@ enum PreviewData {
         takeaway: false,
         openingHours: "Mo-Sa 11:00-23:00",
         openForLunch: true,
+        openForDinner: true,
+        kidFriendly: true,
         vegetarian: nil,
         vegan: nil,
         phone: nil,

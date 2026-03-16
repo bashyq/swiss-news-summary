@@ -17,6 +17,7 @@ struct LunchCard: View {
     var onTap: (() -> Void)?
 
     @State private var showDeleteConfirmation = false
+    @State private var markedAsVisited = false
 
     private var isExpanded: Bool { expandedID == spot.id }
 
@@ -289,6 +290,29 @@ struct LunchCard: View {
 
             // Action buttons
             actionButtons
+
+            // Mark as visited
+            Button {
+                markedAsVisited = true
+                VenueVisitStore.shared.recordVisit(
+                    venueId: spot.id,
+                    venueName: spot.name,
+                    venueType: .restaurant,
+                    source: .manualMark
+                )
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: markedAsVisited ? "checkmark.circle.fill" : "checkmark.circle")
+                        .font(.system(size: 13))
+                    Text(markedAsVisited
+                         ? appState.localized(en: "Visited", de: "Besucht")
+                         : appState.localized(en: "Mark as visited", de: "Als besucht markieren"))
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .foregroundStyle(markedAsVisited ? Color.znPositive : Color.znMuted)
+            }
+            .buttonStyle(.plain)
+            .disabled(markedAsVisited)
         }
         .padding(.horizontal, AppSpacing.cardPadding)
         .padding(.vertical, 13)
@@ -525,6 +549,8 @@ struct LunchCard: View {
         takeaway: false,
         openingHours: "Mo-Sa 11:30-14:00",
         openForLunch: true,
+        openForDinner: true,
+        kidFriendly: true,
         vegetarian: "yes",
         vegan: nil,
         phone: "+41 44 262 99 00",

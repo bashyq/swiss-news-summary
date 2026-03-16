@@ -39,3 +39,6 @@ Pods/
 # Playgrounds
 timeline.xctimeline
 playground.xcworkspace
+
+# Secrets
+Config/Secrets.xcconfig

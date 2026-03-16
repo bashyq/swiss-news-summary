@@ -28,14 +28,27 @@ final class TodayViewModel {
     // MARK: - Agenda
 
     /// Internal storage: multiple agendas keyed by ISO date string.
-    private var _agendas: [String: DayAgenda] = [:]
-    private var _agendaStates: [String: AgendaState] = [:]
+    /// Internal (not private) so WeekendView can read day pill state.
+    var _agendas: [String: DayAgenda] = [:]
+    var _agendaStates: [String: AgendaState] = [:]
 
     /// The currently selected plan day (today by default, weekend days in weekend mode).
     var selectedPlanDay: PlanDay = .today
 
     /// Whether the user activated weekend planning mode.
     var isWeekendMode: Bool = false
+
+    /// Weekend weather data from the /weekend endpoint, used by Planner UI.
+    private(set) var _weekendWeather: WeekendResponse?
+
+    /// Weather for a specific weekend day, from the cached /weekend response.
+    func weekendDayWeather(for day: PlanDay) -> DayWeather? {
+        switch day {
+        case .saturday: return _weekendWeather?.saturday.weather
+        case .sunday: return _weekendWeather?.sunday.weather
+        default: return nil
+        }
+    }
 
     /// Computed bridge — all existing code reads/writes `agenda` unchanged.
     var agenda: DayAgenda? {
@@ -67,10 +80,7 @@ final class TodayViewModel {
         if isWeekendMode {
             return [.saturday, .sunday]
         }
-        if isNextDayMode {
-            return [.tomorrow]
-        }
-        return [.today]
+        return [.today, .tomorrow]
     }
 
     // MARK: - Convenience
@@ -93,10 +103,10 @@ final class TodayViewModel {
         return w.temperature < 10 && heavyCodes.contains(w.weatherCode)
     }
 
-    /// After 8 PM, plan for tomorrow instead of today
+    /// After 10 PM, default to tomorrow's plan instead of today's
     var isNextDayMode: Bool {
         let hour = Calendar.current.component(.hour, from: Date())
-        return hour >= 20
+        return hour >= 22
     }
 
     /// The date we're planning for (today, or tomorrow if after 8 PM)
@@ -109,6 +119,34 @@ final class TodayViewModel {
 
     private let recentlyShownStore = RecentlyShownStore()
     private let agendaCache = AgendaCache.shared
+
+    /// Last-used composition parameters, stored so the notification observer can rebuild.
+    private var _lastCity: City?
+    private var _lastLanguage: AppLanguage?
+    private var _lastSession: FamilySession?
+    private var _anchorObserver: NSObjectProtocol?
+
+    init() {
+        _anchorObserver = NotificationCenter.default.addObserver(
+            forName: AnchorStore.didChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self,
+                  let city = self._lastCity,
+                  let language = self._lastLanguage,
+                  let session = self._lastSession else { return }
+            Task { @MainActor in
+                await self.rebuildAgenda(city: city, language: language, session: session)
+            }
+        }
+    }
+
+    deinit {
+        if let observer = _anchorObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
 
     // MARK: - Loading
 
@@ -216,34 +254,40 @@ final class TodayViewModel {
     /// After 8 PM, plans for tomorrow instead of today.
     @MainActor
     func composeAgenda(city: City, language: AppLanguage, session: FamilySession) async {
+        _lastCity = city
+        _lastLanguage = language
+        _lastSession = session
         await composeAgendaForDate(
             dateISO: Self.dateISO(targetDate),
+            planDate: targetDate,
             city: city,
             language: language,
             session: session,
             extraRecentlyShown: [],
-            useAnchors: true
+            anchors: AnchorStore.shared.anchors(for: targetDate)
         )
     }
 
     /// Compose an agenda for a specific date. Generalized for multi-day support.
+    /// - Parameter planDate: The actual calendar date being planned (used for gap analysis).
+    /// - Parameter anchors: Pre-fetched anchors for this date (from AnchorStore).
+    /// - Parameter weatherOverride: If provided, used instead of `self.weather` for scoring/composition.
+    ///   This is used for weekend days where we have per-day forecasts from the `/weekend` endpoint.
     @MainActor
     private func composeAgendaForDate(
         dateISO: String,
+        planDate: Date,
         city: City,
         language: AppLanguage,
         session: FamilySession,
         extraRecentlyShown: [String],
-        useAnchors: Bool
+        anchors currentAnchors: [AnchorEvent],
+        weatherOverride: Weather? = nil
     ) async {
-        let currentAnchors = useAnchors ? AnchorStore.shared.anchors() : []
-        let combinedRecent = Array(recentlyShownStore.recentlyShownIds()) + extraRecentlyShown
-        let isNotToday = dateISO != Self.dateISO(Date())
 
-        // 1. Check cache (keyed by date + city + session)
-        // Skip cache if anchors changed since last compose
-        if currentAnchors.isEmpty,
-           let cachedData = await agendaCache.get(date: dateISO, city: city.id, sessionHash: session.sessionHash),
+        // 1. Check cache (keyed by date + city + session + anchors hash)
+        let anchorsHash = AgendaCache.hash(anchors: currentAnchors)
+        if let cachedData = await agendaCache.get(date: dateISO, city: city.id, sessionHash: session.sessionHash, anchorsHash: anchorsHash),
            let cached = try? JSONDecoder().decode(DayAgenda.self, from: cachedData) {
             _agendas[dateISO] = cached
             _agendaStates[dateISO] = .loaded
@@ -254,47 +298,128 @@ final class TodayViewModel {
 
         _agendaStates[dateISO] = .loading
 
-        // 2. Try Worker API
-        do {
-            let result = try await APIClient.shared.fetchAgenda(
-                city: city,
-                language: language,
-                session: session,
-                weatherCode: weather?.weatherCode,
-                temperature: weather.map { Int($0.temperature) },
-                recentlyShown: combinedRecent,
-                anchors: currentAnchors,
-                targetDate: isNotToday ? dateISO : nil
+        // Resolve effective weather for this date (override for weekend, else today's)
+        let effectiveWeather = weatherOverride ?? weather
+
+        // 2. Gap analysis — determine what free time exists around anchors
+        let allGaps = GapAnalysisEngine.analyse(anchors: currentAnchors, now: Date(), date: planDate)
+        let fillableGaps = allGaps.filter { $0.isFillable }
+
+        // Build weather note/theme using effective weather for this date
+        let dateWeatherNote: String = {
+            guard let w = effectiveWeather else { return "Weather unavailable" }
+            return "\(Int(w.temperature))° and \(w.description.lowercased())"
+        }()
+        let dateBadWeather: Bool = {
+            guard let w = effectiveWeather else { return false }
+            let heavyCodes: Set<Int> = [65, 67, 71, 73, 75, 77, 80, 81, 82, 85, 86, 95, 96, 99]
+            return w.temperature < 10 && heavyCodes.contains(w.weatherCode)
+        }()
+
+        // 3. Anchor-only agenda — no gaps to fill, just show anchors
+        if fillableGaps.isEmpty && !currentAnchors.isEmpty {
+            let anchorSlots = currentAnchors
+                .map { anchorToSlot($0, language: language) }
+                .sorted { $0.time < $1.time }
+            let agenda = DayAgenda(
+                date: dateISO,
+                theme: buildTheme(session: session, language: language),
+                weatherNote: dateWeatherNote,
+                badWeatherMode: dateBadWeather,
+                slots: anchorSlots,
+                homeActivities: nil
             )
-            _agendas[dateISO] = result
+            _agendas[dateISO] = agenda
             _agendaStates[dateISO] = .loaded
             syncAgendaToWidget()
             restoreAgendaMode()
-
-            // Cache the result (only when no anchors — anchor agendas are ephemeral)
-            if currentAnchors.isEmpty, let encoded = try? JSONEncoder().encode(result) {
-                await agendaCache.store(encoded, date: dateISO, city: city.id, sessionHash: session.sessionHash)
-            }
-
-            // Record shown venues
-            for slot in result.slots {
-                if let venueId = slot.venueId {
-                    recentlyShownStore.recordShown(venueId: venueId)
-                }
-            }
             return
-        } catch {
-            #if DEBUG
-            print("⚠️ Agenda API failed, falling back to template: \(error.localizedDescription)")
-            #endif
         }
 
-        // 3. Template engine fallback (only for current selectedPlanDay)
-        buildTemplateFallback(session: session, language: language, dateISO: dateISO)
+        // 4. AI path: scored pool → AgendaComposer → merge with anchors
+        if let w = effectiveWeather,
+           let activities = activitiesData?.activities,
+           let spots = lunchData?.spots,
+           let apiKey = Bundle.main.infoDictionary?["ANTHROPIC_API_KEY"] as? String,
+           !apiKey.isEmpty,
+           apiKey != "$(ANTHROPIC_API_KEY)",
+           !fillableGaps.isEmpty {
+
+            let pool = FreshnessScorer.buildScoredPool(
+                activities: activities,
+                restaurants: spots,
+                weather: w,
+                date: planDate,
+                fillableGaps: fillableGaps,
+                visitStore: .shared
+            )
+
+            do {
+                let aiSlots = try await AgendaComposer.compose(
+                    gaps: fillableGaps,
+                    activities: pool.activities,
+                    lunches: pool.lunches,
+                    dinners: pool.dinners,
+                    weather: w,
+                    session: session,
+                    language: language,
+                    apiKey: apiKey
+                )
+
+                // Merge: anchor display slots + AI slots → sorted by time
+                var allSlots = currentAnchors.map { anchorToSlot($0, language: language) }
+                allSlots.append(contentsOf: aiSlots)
+                allSlots.sort { $0.time < $1.time }
+
+                // Enrich AI slots with swap alternatives from the pool
+                allSlots = enrichWithSwaps(
+                    slots: allSlots,
+                    activityPool: pool.activities,
+                    lunchPool: pool.lunches,
+                    dinnerPool: pool.dinners,
+                    language: language
+                )
+
+                let result = DayAgenda(
+                    date: dateISO,
+                    theme: buildTheme(session: session, language: language),
+                    weatherNote: dateWeatherNote,
+                    badWeatherMode: dateBadWeather,
+                    slots: allSlots,
+                    homeActivities: nil
+                )
+
+                _agendas[dateISO] = result
+                _agendaStates[dateISO] = .loaded
+                syncAgendaToWidget()
+                restoreAgendaMode()
+
+                // Cache the result
+                if let encoded = try? JSONEncoder().encode(result) {
+                    await agendaCache.store(encoded, date: dateISO, city: city.id, sessionHash: session.sessionHash, anchorsHash: anchorsHash)
+                }
+
+                // Record shown venues
+                for slot in result.slots {
+                    if let venueId = slot.venueId {
+                        recentlyShownStore.recordShown(venueId: venueId)
+                    }
+                }
+                return
+            } catch {
+                #if DEBUG
+                print("⚠️ AgendaComposer failed, falling back to template: \(error.localizedDescription)")
+                #endif
+            }
+        }
+
+        // 5. Template engine fallback (now gap-aware)
+        buildTemplateFallback(session: session, language: language, dateISO: dateISO, fillableGaps: fillableGaps.isEmpty ? nil : fillableGaps)
     }
 
     /// Compose weekend agendas (Saturday + Sunday) in sequence.
     /// Sunday avoids repeating Saturday's venues.
+    /// Fetches per-day weather from the `/weekend` endpoint for accurate scoring.
     @MainActor
     func composeWeekend(city: City, language: AppLanguage, session: FamilySession) async {
         isWeekendMode = true
@@ -303,14 +428,40 @@ final class TodayViewModel {
         let satISO = PlanDay.saturday.isoDate
         let sunISO = PlanDay.sunday.isoDate
 
-        // Compose Saturday first
+        // Fetch weekend weather from the /weekend endpoint
+        var satWeather: Weather?
+        var sunWeather: Weather?
+        do {
+            let weekendResponse = try await APIClient.shared.fetchWeekend(
+                city: city, language: language
+            )
+            satWeather = weekendResponse.saturday.weather?.toWeather()
+            sunWeather = weekendResponse.sunday.weather?.toWeather()
+            // Store the response for WeekendView weather headers
+            _weekendWeather = weekendResponse
+        } catch {
+            // Fall back to today's weather if weekend fetch fails
+            #if DEBUG
+            print("⚠️ Weekend weather fetch failed, using today's weather: \(error.localizedDescription)")
+            #endif
+        }
+
+        // Load per-day anchors from date-keyed storage
+        let satDate = PlanDay.saturday.date()
+        let sunDate = PlanDay.sunday.date()
+        let satAnchors = AnchorStore.shared.anchors(for: satDate)
+        let sunAnchors = AnchorStore.shared.anchors(for: sunDate)
+
+        // Compose Saturday first (with Saturday's weather + anchors)
         await composeAgendaForDate(
             dateISO: satISO,
+            planDate: satDate,
             city: city,
             language: language,
             session: session,
             extraRecentlyShown: [],
-            useAnchors: false  // Anchors are today-only
+            anchors: satAnchors,
+            weatherOverride: satWeather
         )
 
         // Collect Saturday's venue IDs to avoid repeats on Sunday
@@ -319,11 +470,13 @@ final class TodayViewModel {
         // Compose Sunday with Saturday's venues as extra recently shown
         await composeAgendaForDate(
             dateISO: sunISO,
+            planDate: sunDate,
             city: city,
             language: language,
             session: session,
             extraRecentlyShown: satVenueIds,
-            useAnchors: false
+            anchors: sunAnchors,
+            weatherOverride: sunWeather
         )
 
         // Show Saturday first
@@ -377,11 +530,76 @@ final class TodayViewModel {
         current.slots[index].reason = swap.detail
         current.slots[index].source = .userSwapped
 
+        // Recalculate travel connectors for affected slots
+        recalcTravel(in: &current.slots, at: index)
+
         // Record the new venue
         if let venueId = swap.venueId {
             recentlyShownStore.recordShown(venueId: venueId)
         }
 
+        self.agenda = current
+        syncAgendaToWidget()
+    }
+
+    /// Suggest another nearby restaurant for a lunch/dinner slot.
+    /// Filters by same or adjacent ZurichArea, correct meal opening, and not recently shown.
+    @MainActor
+    func suggestAnotherNearby(slotId: String) {
+        guard var current = agenda,
+              let index = current.slots.firstIndex(where: { $0.id == slotId }),
+              let spots = lunchData?.spots else { return }
+
+        let slot = current.slots[index]
+        let isLunch = slot.type == .lunch
+
+        // Derive current venue's area from its LunchSpot coordinates
+        let currentSpot = spots.first { $0.id == slot.venueId }
+        let currentArea = currentSpot.flatMap { ZurichArea.from(lat: $0.lat, lon: $0.lon) }
+
+        // Build set of acceptable areas (same + adjacent)
+        var acceptableAreas: Set<ZurichArea> = []
+        if let area = currentArea {
+            acceptableAreas.insert(area)
+            for adj in area.adjacentAreas { acceptableAreas.insert(adj) }
+        }
+
+        let recentIds = recentlyShownStore.recentlyShownIds()
+        let currentVenueId = slot.venueId
+
+        // All venue IDs already in the agenda (avoid duplicates)
+        let agendaVenueIds = Set(current.slots.compactMap(\.venueId))
+
+        let candidates = spots.filter { spot in
+            // Not the current venue
+            guard spot.id != currentVenueId else { return false }
+            // Not already in agenda
+            guard !agendaVenueIds.contains(spot.id) else { return false }
+            // Not recently shown
+            guard !recentIds.contains(spot.id) else { return false }
+            // Correct meal opening
+            if isLunch, spot.openForLunch == false { return false }
+            if !isLunch, spot.openForDinner == false { return false }
+            // Same or adjacent area (skip filter if area unknown)
+            if !acceptableAreas.isEmpty {
+                guard let spotArea = ZurichArea.from(lat: spot.lat, lon: spot.lon),
+                      acceptableAreas.contains(spotArea) else { return false }
+            }
+            return true
+        }
+
+        guard let pick = candidates.randomElement() else { return }
+
+        // Replace slot content
+        current.slots[index].venueName = pick.name
+        current.slots[index].venueId = pick.id
+        current.slots[index].reason = pick.cuisineCategory ?? "restaurant"
+        current.slots[index].source = .userSwapped
+
+        // Recalculate travel connectors for affected slots
+        recalcTravel(in: &current.slots, at: index)
+
+        recentlyShownStore.recordShown(venueId: pick.id)
         self.agenda = current
         syncAgendaToWidget()
     }
@@ -427,16 +645,28 @@ final class TodayViewModel {
         guard var current = agenda,
               let index = current.slots.firstIndex(where: { $0.id == slotId }) else { return }
 
+        let oldTime = current.slots[index].time
         current.slots[index].time = newTime
 
-        // Mark downstream AI-generated slots as stale if time changed significantly
+        // Mark downstream AI-generated slots as stale and show reflow banner
+        var hasStaleDownstream = false
         for i in (index + 1)..<current.slots.count {
             if current.slots[i].source == .aiGenerated {
                 current.slots[i].isStale = true
+                hasStaleDownstream = true
             }
         }
 
+        // Recalculate travel connectors around the edited slot
+        recalcTravel(in: &current.slots, at: index)
+
         self.agenda = current
+
+        // Show reflow banner if time actually changed and there are stale downstream slots
+        if oldTime != newTime && hasStaleDownstream {
+            showReflowBanner = true
+            reflowSlotId = slotId
+        }
     }
 
     /// Toggle the lock state of a slot.
@@ -449,11 +679,25 @@ final class TodayViewModel {
         self.agenda = current
     }
 
-    /// Remove a slot from the agenda.
+    /// Remove a slot from the agenda and recalculate travel connectors.
     @MainActor
     func removeSlot(slotId: String) {
-        guard var current = agenda else { return }
-        current.slots.removeAll { $0.id == slotId }
+        guard var current = agenda,
+              let index = current.slots.firstIndex(where: { $0.id == slotId }) else { return }
+
+        current.slots.remove(at: index)
+
+        // Recalculate travel connector for the predecessor (now points to a new next slot)
+        if index > 0 && index < current.slots.count {
+            current.slots[index - 1].travelMinutesToNext = estimateWalkingMinutes(
+                from: current.slots[index - 1].venueId,
+                to: current.slots[index].venueId
+            )
+        } else if index > 0 {
+            // Removed the last slot — predecessor has no next
+            current.slots[index - 1].travelMinutesToNext = nil
+        }
+
         self.agenda = current
     }
 
@@ -475,15 +719,51 @@ final class TodayViewModel {
         showReflowBanner = false
         reflowSlotId = nil
 
-        // Mark stale slots as loading (keep them but show skeleton)
+        // Save locked/custom/anchor slots to preserve during rebuild
+        let preservedSlots = agenda?.slots.filter {
+            $0.isLocked || $0.source == .userCustom || $0.source == .userAnchor
+        } ?? []
+
+        // Clear stale state
         guard var current = agenda else { return }
         for i in 0..<current.slots.count {
             current.slots[i].isStale = false
         }
         self.agenda = current
 
-        // Full rebuild preserving locked slots
-        await rebuildAgenda(city: city, language: language, session: session)
+        // Rebuild the agenda from scratch
+        await agendaCache.invalidate()
+        recentlyShownStore.clear()
+        agenda = nil
+        agendaMode = .browsing
+        await composeAgenda(city: city, language: language, session: session)
+
+        // Merge preserved slots back — replace matching slot IDs with the preserved versions
+        guard var rebuilt = agenda, !preservedSlots.isEmpty else { return }
+        for preserved in preservedSlots {
+            if let idx = rebuilt.slots.firstIndex(where: { $0.id == preserved.id }) {
+                rebuilt.slots[idx] = preserved
+                // Ensure stale flag is cleared
+                rebuilt.slots[idx].isStale = false
+            } else {
+                // Preserved slot has no matching ID (e.g. custom replaced lunch) — insert and re-sort
+                rebuilt.slots.append(preserved)
+            }
+        }
+        rebuilt.slots.sort { $0.time < $1.time }
+
+        // Recalculate all travel connectors
+        for i in 0..<rebuilt.slots.count {
+            if i + 1 < rebuilt.slots.count {
+                rebuilt.slots[i].travelMinutesToNext = estimateWalkingMinutes(
+                    from: rebuilt.slots[i].venueId, to: rebuilt.slots[i + 1].venueId
+                )
+            } else {
+                rebuilt.slots[i].travelMinutesToNext = nil
+            }
+        }
+
+        self.agenda = rebuilt
     }
 
     /// Whether the reflow banner should be shown.
@@ -495,7 +775,12 @@ final class TodayViewModel {
     // MARK: - Template Engine Fallback
 
     @MainActor
-    private func buildTemplateFallback(session: FamilySession, language: AppLanguage, dateISO: String? = nil) {
+    private func buildTemplateFallback(
+        session: FamilySession,
+        language: AppLanguage,
+        dateISO: String? = nil,
+        fillableGaps: [FreeGap]? = nil
+    ) {
         guard let activities = activitiesData?.activities,
               let spots = lunchData?.spots else {
             let key = dateISO ?? selectedPlanDay.isoDate
@@ -505,7 +790,7 @@ final class TodayViewModel {
 
         let events = activitiesData?.cityEvents ?? []
         let engine = TemplateEngine()
-        let result = engine.buildAgenda(
+        var result = engine.buildAgenda(
             weather: weather,
             session: session,
             activities: activities,
@@ -514,6 +799,33 @@ final class TodayViewModel {
             recentlyShown: recentlyShownStore.recentlyShownIds(),
             language: language
         )
+
+        // Gap-aware filtering: only keep slots whose type matches a fillable gap
+        if let gaps = fillableGaps, !gaps.isEmpty {
+            let allowedSlotTypes: Set<AgendaSlot.SlotType> = Set(gaps.compactMap { gap -> AgendaSlot.SlotType? in
+                switch gap.suggestedType {
+                case .morningActivity, .afternoonActivity, .quickActivity:
+                    return .activity
+                case .lunch:
+                    return .lunch
+                case .dinner:
+                    return .dinner
+                case nil:
+                    return nil
+                }
+            })
+
+            var filtered = result.slots.filter { allowedSlotTypes.contains($0.type) }
+
+            // Merge anchor display slots
+            let anchors = AnchorStore.shared.anchors()
+            if !anchors.isEmpty {
+                filtered.append(contentsOf: anchors.map { anchorToSlot($0, language: language) })
+                filtered.sort { $0.time < $1.time }
+            }
+
+            result = result.with(slots: filtered)
+        }
 
         let key = dateISO ?? selectedPlanDay.isoDate
         _agendas[key] = result
@@ -527,6 +839,182 @@ final class TodayViewModel {
                 recentlyShownStore.recordShown(venueId: venueId)
             }
         }
+    }
+
+    // MARK: - Agenda Composition Helpers
+
+    /// Convert an AnchorEvent into a display-ready AgendaSlot.
+    private func anchorToSlot(_ anchor: AnchorEvent, language: AppLanguage) -> AgendaSlot {
+        let hour = Calendar.current.component(.hour, from: anchor.startTime)
+        let slotType: AgendaSlot.SlotType = {
+            switch anchor.category {
+            case .food:
+                return hour < 15 ? .lunch : .dinner
+            default:
+                return .activity
+            }
+        }()
+
+        let categoryLabel = language == .de
+            ? anchor.category.displayNameDE
+            : anchor.category.displayName
+
+        return AgendaSlot(
+            id: "anchor-\(anchor.id.uuidString.prefix(8))",
+            time: anchor.timeString,
+            type: slotType,
+            venueName: anchor.title,
+            venueId: nil,
+            reason: anchor.neighbourhood ?? categoryLabel,
+            durationDisplay: "\(anchor.durationMinutes) min",
+            tags: [categoryLabel],
+            swaps: [],
+            source: .userAnchor,
+            isLocked: true
+        )
+    }
+
+    /// Enrich AI-generated slots with swap alternatives from the scored pool.
+    private func enrichWithSwaps(
+        slots: [AgendaSlot],
+        activityPool: [Activity],
+        lunchPool: [LunchSpot],
+        dinnerPool: [LunchSpot],
+        language: AppLanguage
+    ) -> [AgendaSlot] {
+        let usedVenueIds = Set(slots.compactMap(\.venueId))
+        return slots.map { slot in
+            guard slot.source == .aiGenerated else { return slot }
+            var mutable = slot
+            switch slot.type {
+            case .activity:
+                let candidates = activityPool
+                    .filter { !usedVenueIds.contains($0.id) && $0.id != slot.venueId }
+                    .prefix(3)
+                mutable = AgendaSlot(
+                    id: mutable.id, time: mutable.time, type: mutable.type,
+                    venueName: mutable.venueName, venueId: mutable.venueId,
+                    reason: mutable.reason, durationDisplay: mutable.durationDisplay,
+                    travelNote: mutable.travelNote, tags: mutable.tags,
+                    swaps: candidates.map { act in
+                        AgendaSlot.SwapOption(
+                            id: act.id,
+                            venueName: act.localizedName(language: language),
+                            detail: (act.indoor ? "Indoor" : "Outdoor") +
+                                    (act.isFree ? " · Free" : ""),
+                            venueId: act.id
+                        )
+                    },
+                    source: mutable.source, isLocked: mutable.isLocked
+                )
+            case .lunch:
+                let candidates = lunchPool
+                    .filter { !usedVenueIds.contains($0.id) && $0.id != slot.venueId }
+                    .prefix(3)
+                mutable = AgendaSlot(
+                    id: mutable.id, time: mutable.time, type: mutable.type,
+                    venueName: mutable.venueName, venueId: mutable.venueId,
+                    reason: mutable.reason, durationDisplay: mutable.durationDisplay,
+                    travelNote: mutable.travelNote, tags: mutable.tags,
+                    swaps: candidates.map { spot in
+                        AgendaSlot.SwapOption(
+                            id: spot.id,
+                            venueName: spot.name,
+                            detail: "\(spot.cuisineDisplay) · \(String(repeating: "$", count: spot.priceTier))",
+                            venueId: spot.id
+                        )
+                    },
+                    source: mutable.source, isLocked: mutable.isLocked
+                )
+            case .dinner:
+                let candidates = dinnerPool
+                    .filter { !usedVenueIds.contains($0.id) && $0.id != slot.venueId }
+                    .prefix(3)
+                mutable = AgendaSlot(
+                    id: mutable.id, time: mutable.time, type: mutable.type,
+                    venueName: mutable.venueName, venueId: mutable.venueId,
+                    reason: mutable.reason, durationDisplay: mutable.durationDisplay,
+                    travelNote: mutable.travelNote, tags: mutable.tags,
+                    swaps: candidates.map { spot in
+                        AgendaSlot.SwapOption(
+                            id: spot.id,
+                            venueName: spot.name,
+                            detail: "\(spot.cuisineDisplay) · \(String(repeating: "$", count: spot.priceTier))",
+                            venueId: spot.id
+                        )
+                    },
+                    source: mutable.source, isLocked: mutable.isLocked
+                )
+            case .homeActivity:
+                break
+            }
+            return mutable
+        }
+    }
+
+    /// Look up coordinates for a venue by ID from activities or restaurant data.
+    private func venueCoordinates(for venueId: String?) -> (lat: Double, lon: Double)? {
+        guard let id = venueId else { return nil }
+        if let act = activitiesData?.activities.first(where: { $0.id == id }),
+           let lat = act.lat, let lon = act.lon {
+            return (lat, lon)
+        }
+        if let spot = lunchData?.spots.first(where: { $0.id == id }) {
+            return (spot.lat, spot.lon)
+        }
+        return nil
+    }
+
+    /// Estimate walking minutes between two venues using straight-line distance.
+    /// Assumes ~80m/min walking pace with 1.3× detour factor.
+    private func estimateWalkingMinutes(from fromId: String?, to toId: String?) -> Int? {
+        guard let a = venueCoordinates(for: fromId),
+              let b = venueCoordinates(for: toId) else { return nil }
+        let locA = CLLocation(latitude: a.lat, longitude: a.lon)
+        let locB = CLLocation(latitude: b.lat, longitude: b.lon)
+        let meters = locA.distance(from: locB)
+        let walkMinutes = Int(ceil(meters * 1.3 / 80.0))
+        return max(walkMinutes, 1)
+    }
+
+    /// Recalculate travelMinutesToNext for a slot and its predecessor after a swap.
+    private func recalcTravel(in slots: inout [AgendaSlot], at index: Int) {
+        // Update this slot's travel to next
+        if index + 1 < slots.count {
+            slots[index].travelMinutesToNext = estimateWalkingMinutes(
+                from: slots[index].venueId, to: slots[index + 1].venueId
+            )
+        }
+        // Update previous slot's travel to this slot
+        if index > 0 {
+            slots[index - 1].travelMinutesToNext = estimateWalkingMinutes(
+                from: slots[index - 1].venueId, to: slots[index].venueId
+            )
+        }
+    }
+
+    /// Human-readable weather note for the agenda theme.
+    private func weatherNoteString() -> String {
+        guard let w = weather else { return "Weather unavailable" }
+        return "\(Int(w.temperature))° and \(w.description.lowercased())"
+    }
+
+    /// Build a personalised theme string for the agenda.
+    private func buildTheme(session: FamilySession, language: AppLanguage) -> String {
+        let childNames = session.children.map(\.name).joined(separator: " & ")
+        let f = DateFormatter()
+        f.locale = language == .de ? Locale(identifier: "de_CH") : Locale(identifier: "en_US")
+        f.dateFormat = "EEEE"
+        let dayName = f.string(from: targetDate)
+
+        if let w = weather, w.temperature >= 18 {
+            return language == .de
+                ? "Sonniger \(dayName) mit \(childNames)"
+                : "Sunny \(dayName) with \(childNames)"
+        }
+        return language == .de
+            ? "\(dayName)-Plan mit \(childNames)"
+            : "\(dayName) plan with \(childNames)"
     }
 
     // MARK: - Widget Sync
@@ -552,38 +1040,113 @@ final class TodayViewModel {
         WidgetCenter.shared.reloadTimelines(ofKind: "DayPlanWidget")
     }
 
-    // MARK: - Context Banner (driven by agenda theme)
+    // MARK: - Context Banner (gap-aware)
 
-    /// Context banner text — always derived from current weather conditions.
-    /// The agenda theme is decorative and may not match updated slot content,
-    /// so the banner uses live weather data for accuracy.
+    /// Current fillable gaps based on anchors and time of day.
+    /// Computed on demand for the context banner and header display.
+    var currentFillableGaps: [FreeGap] {
+        let anchors = AnchorStore.shared.anchors()
+        let now = Date()
+        return GapAnalysisEngine.analyse(anchors: anchors, now: now, date: targetDate)
+            .filter { $0.isFillable }
+    }
+
+    /// True when anchors exist but zero fillable gaps remain.
+    /// Triggers AnchorOnlyView — no API call, no AI suggestions.
+    var isAnchorOnlyState: Bool {
+        let anchors = AnchorStore.shared.anchors()
+        guard !anchors.isEmpty else { return false }
+        return currentFillableGaps.isEmpty
+    }
+
+    /// True when zero anchors AND zero fillable gaps (late evening, all elapsed).
+    /// Triggers DayCompleteView.
+    var isDayCompleteState: Bool {
+        let anchors = AnchorStore.shared.anchors()
+        guard anchors.isEmpty else { return false }
+        return currentFillableGaps.isEmpty
+    }
+
+    /// Gap-aware context banner text.
+    /// Priority: gap state → weather → nil.
     func contextBannerText(language: AppLanguage) -> String? {
+        let gaps = currentFillableGaps
+        let anchors = AnchorStore.shared.anchors()
+
+        // All gaps elapsed — evening mode
+        if gaps.isEmpty && !anchors.isEmpty {
+            return language == .en
+                ? "That's your day — enjoy your evening."
+                : "Das war's — geniess den Abend."
+        }
+
+        // Anchors fill the whole day — no gaps
+        if gaps.isEmpty && anchors.isEmpty {
+            // Late in the day, no anchors
+            let hour = Calendar.current.component(.hour, from: Date())
+            if hour >= 20 {
+                return language == .en
+                    ? "That's your day — enjoy your evening."
+                    : "Das war's — geniess den Abend."
+            }
+        }
+
+        // Day is full (anchors but no fillable gaps)
+        if gaps.isEmpty && !anchors.isEmpty {
+            return language == .en
+                ? "Your day is pretty full — enjoy what you have."
+                : "Dein Tag ist ziemlich voll — geniess was du hast."
+        }
+
+        // Bad weather — indoor only
+        if isBadWeatherDay {
+            return language == .en
+                ? "Cold and wet today — indoor suggestions only."
+                : "Kalt und nass heute — nur Indoor-Vorschläge."
+        }
+
+        // Single gap remaining
+        if gaps.count == 1, let type = gaps[0].suggestedType {
+            let typeName: String
+            switch type {
+            case .morningActivity:
+                typeName = language == .en ? "morning activity" : "Morgenaktivität"
+            case .lunch:
+                typeName = language == .en ? "lunch" : "Mittagessen"
+            case .afternoonActivity:
+                typeName = language == .en ? "afternoon activity" : "Nachmittagsaktivität"
+            case .dinner:
+                typeName = language == .en ? "dinner" : "Abendessen"
+            case .quickActivity:
+                typeName = language == .en ? "quick activity" : "kurze Aktivität"
+            }
+            return language == .en
+                ? "Most of today is covered — one \(typeName) suggestion left."
+                : "Der Tag ist fast geplant — noch ein Vorschlag für \(typeName)."
+        }
+
+        // Weather-based fallback for good days
         guard let weather else { return nil }
 
-        if weather.isBadWeather {
-            return language == .en
-                ? "Rainy day — good for museums or indoor play"
-                : "Regentag — perfekt für Museen oder Indoor-Spiele"
-        }
         if weather.temperature < 0 {
             return language == .en
-                ? "Freezing! Bundle up for a cozy indoor adventure"
-                : "Eiskalt! Einpacken für ein Indoor-Abenteuer"
+                ? "Freezing! Bundle up for a cozy indoor adventure."
+                : "Eiskalt! Einpacken für ein Indoor-Abenteuer."
         }
         if weather.temperature < 10 {
             return language == .en
-                ? "Cold day — indoor activities recommended"
-                : "Kalter Tag — Indoor-Aktivitäten empfohlen"
+                ? "Cold day — indoor activities recommended."
+                : "Kalter Tag — Indoor-Aktivitäten empfohlen."
         }
         if weather.temperature > 28 {
             return language == .en
-                ? "Hot day! Head to a splash pad or lake"
-                : "Heisser Tag! Ab ins Planschbecken oder an den See"
+                ? "Hot day! Head to a splash pad or lake."
+                : "Heisser Tag! Ab ins Planschbecken oder an den See."
         }
         if weather.temperature > 18 {
             return language == .en
-                ? "Beautiful day for the park or playground"
-                : "Schöner Tag für Park oder Spielplatz"
+                ? "Beautiful day for the park or playground."
+                : "Schöner Tag für Park oder Spielplatz."
         }
         return nil
     }
@@ -803,7 +1366,16 @@ final class TodayViewModel {
             date: Calendar.current.startOfDay(for: Date())
         ))
 
-        // 3. Shift timeline if delta is meaningful (> 10 min)
+        // 3. Record to VenueVisitStore for freshness scoring
+        let venueType: VenueType = (slot.type == .lunch || slot.type == .dinner) ? .restaurant : .activity
+        VenueVisitStore.shared.recordVisit(
+            venueId: slot.venueId ?? slot.venueName,
+            venueName: slot.venueName,
+            venueType: venueType,
+            source: .executionCheckIn
+        )
+
+        // 4. Shift timeline if delta is meaningful (> 10 min)
         if abs(delta) > 600 {
             let shifted = TimelineShifter.shift(
                 slots: currentAgenda.slots,
@@ -815,11 +1387,11 @@ final class TodayViewModel {
             // Trigger time shift animation
             timelineDidShift = true
 
-            // 4. Check feasibility
+            // 5. Check feasibility
             let warnings = FeasibilityChecker.check(slots: currentAgenda.slots)
             activeWarning = warnings.first
 
-            // 5. Reschedule notifications
+            // 6. Reschedule notifications
             Task {
                 if await AgendaNotificationScheduler.isAuthorized() {
                     AgendaNotificationScheduler.shared.reschedule(for: currentAgenda.slots)
@@ -829,7 +1401,7 @@ final class TodayViewModel {
 
         agenda = currentAgenda
 
-        // 6. Advance to next slot
+        // 7. Advance to next slot
         let nextIdx = idx + 1
         if nextIdx < currentAgenda.slots.count {
             agendaMode = .executing(currentSlotIndex: nextIdx)

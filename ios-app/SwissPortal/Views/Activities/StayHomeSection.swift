@@ -262,7 +262,7 @@ struct StayHomeCard: View {
 }
 
 private func _stayHomeSample(_ id: String, _ name: String, _ desc: String, _ sub: String, _ mats: String?) -> Activity {
-    Activity(id: id, name: name, nameDE: name, description: desc, descriptionDE: desc, indoor: true, ageRange: "2-5 years", duration: "30 min", price: "Free", priceDE: "Gratis", url: nil, lat: nil, lon: nil, category: "creative", minAge: 2, maxAge: 5, season: nil, free: true, recurring: nil, stayHome: true, availableMonths: nil, subcategory: sub, materials: mats, materialsDE: mats, addedDate: nil)
+    Activity(id: id, name: name, nameDE: name, description: desc, descriptionDE: desc, indoor: true, ageRange: "2-5 years", duration: "30 min", price: "Free", priceDE: "Gratis", url: nil, lat: nil, lon: nil, category: "creative", minAge: 2, maxAge: 5, season: nil, free: true, recurring: nil, stayHome: true, availableMonths: nil, subcategory: sub, materials: mats, materialsDE: mats, addedDate: nil, suggestibility: "feedOnly")
 }
 
 #Preview {

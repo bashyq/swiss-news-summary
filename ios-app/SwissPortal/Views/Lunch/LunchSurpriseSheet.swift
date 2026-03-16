@@ -240,6 +240,8 @@ struct LunchSurpriseSheet: View {
             takeaway: false,
             openingHours: "Mo-Sa 11:30-14:00",
             openForLunch: true,
+            openForDinner: true,
+            kidFriendly: true,
             vegetarian: "yes",
             vegan: nil,
             phone: "+41 44 262 99 00",

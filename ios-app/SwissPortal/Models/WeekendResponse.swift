@@ -31,6 +31,18 @@ struct DayWeather: Codable, Sendable {
     func localizedDescription(language: AppLanguage) -> String {
         return description
     }
+
+    /// Convert weekend day weather into the `Weather` struct used by the
+    /// scoring / composition pipeline (FreshnessScorer, AgendaComposer, etc.).
+    func toWeather() -> Weather {
+        Weather(
+            temperature: (tempMax + tempMin) / 2.0,
+            description: description,
+            weatherCode: weatherCode,
+            windSpeed: 0,
+            hourly: nil
+        )
+    }
 }
 
 struct DayPlan: Codable, Sendable {

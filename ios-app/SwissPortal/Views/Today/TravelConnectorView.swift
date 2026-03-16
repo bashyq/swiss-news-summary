@@ -15,6 +15,8 @@ struct TravelConnectorView: View {
     var execState: ConnectorExecState = .browsing
     var isTight: Bool = false
     var nextVenueName: String?
+    /// "Leave at HH:MM" — shown only on the `.upcoming` connector in execution mode.
+    var leaveAtTime: String?
 
     var body: some View {
         HStack(spacing: 10) {
@@ -26,6 +28,10 @@ struct TravelConnectorView: View {
             // Travel chip
             if isTight, let minutes = travelMinutes {
                 tightChip(minutes: minutes)
+            } else if execState == .upcoming, let leaveAt = leaveAtTime {
+                // Upcoming connector: "Leave at HH:MM · X min walk"
+                let suffix = travelMinutes.map { " · \($0) min" } ?? ""
+                travelChip("Leave at \(leaveAt)\(suffix)")
             } else if let note = travelNote, !note.isEmpty {
                 travelChip(note)
             } else if let minutes = travelMinutes, execState == .upcoming {
