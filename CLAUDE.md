@@ -93,14 +93,15 @@ swiss-news-summary/
 │       │   ├── Explore/          # ExploreView, ExploreHeroBanner, NearYouSection, BrowseByTypeSection, CategoryDetailView, ExploreMapOverlay
 │       │   ├── Lunch/            # LunchView, LunchCard, LunchMapView, LunchSurpriseSheet, AddRestaurantSheet
 │       │   ├── News/             # NewsView, NewsHeroBanner, NewsCard, BriefingCard, HistoryBanner, TransportWidget, etc.
-│       │   ├── Settings/         # SettingsView
+│       │   ├── Settings/         # SettingsView, HomeAddressSheet
 │       │   ├── Shared/           # Reusable components (Skeleton, Toast, MapLegend, FlowLayout, etc.)
 │       │   ├── Snow/
 │       │   ├── Sunshine/
+│       │   ├── Today/            # TodayView, TodayHeroBanner, AgendaTimelineView, AgendaSlotCard, CalendarSwipeView, CalendarSyncBanner, YourDayConfigSection, ExecHeaderView, TravelConnectorView
 │       │   └── Weekend/          # WeekendView, WeekendDayCard
 │       ├── Resources/            # DealsData, DestinationHighlights, SnowResorts, SunshineDestinations, Fonts/
-│       ├── Services/             # LocationManager, CacheManager, APIClient, ReminderManager
-│       └── Info.plist            # URL scheme (swissportal://)
+│       ├── Services/             # LocationManager, CacheManager, APIClient, ReminderManager, CalendarService, AnchorStore, AgendaComposer, TemplateEngine, GapAnalysisEngine, FreshnessScorer
+│       └── Info.plist            # URL scheme (swissportal://), NSCalendarsFullAccessUsageDescription
 ├── CLAUDE.md
 └── README.md
 ```
@@ -240,6 +241,19 @@ VStack(alignment: .leading, spacing: 0) {
 - **Task cancellation**: `.task(id:)` auto-cancels in-flight requests on city/language change (News, Activities, Lunch)
 - **Stale cache fallback**: On network failure, shows expired cached data instead of error screen
 - **Cached DateFormatters**: Sunshine/Snow date range formatting uses static cached formatters via `DateHelpers.formatDateRange()`
+- **Today tab — Plan mode**: AI-powered agenda composer builds a full-day plan (morning activity, lunch, afternoon activity, dinner) around user-defined anchors. Two sub-modes toggled by "News / Plan" pills: News mode (default landing) and Plan mode (agenda composer). `TodayHeroBanner` with greeting, weather, and mode toggle.
+- **Anchor system**: `AnchorEvent` entries represent immovable commitments (manual, calendar-imported, or city events). `AnchorStore` persists anchors per date. `AnchorFormSheet` for add/edit. Anchors feed into `GapAnalysisEngine` which determines open planning slots.
+- **Agenda composer**: `AgendaComposer` sends anchor context + gap analysis to Claude API, which selects venues to fill open slots. `TemplateEngine` provides 7 day archetypes (Chill, Explorer, Foodie, Culture, Nature, Budget, Social) as fallback when API unavailable. `AgendaCache` disk-caches composed plans per date.
+- **Agenda timeline**: `AgendaTimelineView` renders the composed plan as a vertical timeline with `AgendaSlotCard` entries. Slot cards show venue name, time, duration, reason. Swappable via `SlotSwapSheet`. `FreshnessScorer` rates plan freshness.
+- **Your Day config section** (`YourDayConfigSection.swift`): Inline configuration panel in Plan mode showing active anchors, kid count, vibe selector, and compose trigger. Left-aligned layout.
+- **Execution mode**: Real-time day execution with check-in system. `ExecHeaderView` shows current/next slot with countdown. `TravelConnectorView` shows transit between slots.
+- **Multi-day planning**: `MultiDayPlanStore` persists plans across days. Day pill selector for switching between today/tomorrow/weekend dates. Timeline shift detection adjusts plans when time passes.
+- **Home address**: `HomeAddressSheet` in Settings for setting home location, used for travel time calculations in execution mode.
+- **Calendar Sync — Read flow**: Two-way EventKit integration. `CalendarService` wraps `EKEventStore` for permission + CRUD. `CalendarSyncChecker` detects new calendar events not yet imported or discarded. On Plan mode appear, presents `CalendarSwipeView` (Tinder-style card stack) for accept/discard. Accepted events become `AnchorEvent` entries with `source: .calendar`. `CalendarDiscardStore` persists discarded event IDs. `CalendarSyncBanner` shows "New calendar event detected" for second-open case.
+- **Calendar Sync — Write flow**: "Save to Calendar" ghost button exports composed plan slots as EKEvents. `CalendarExportStore` tracks exported event IDs per slot. Auto-updates calendar events on slot swap. Plan rebuild clears exported events.
+- **Calendar Sync — Sync button**: "Sync" pill alongside "Rebuild" in agenda header. Runs `CalendarSyncChecker`, presents swipe screen or "up to date" toast.
+- **Calendar Sync — Settings**: Calendar section in SettingsView with default calendar picker and "Clear discarded events" button with confirmation alert.
+- **Calendar Sync — Conflict detection**: Post-accept check for overlapping anchor time ranges. Warning banner displayed above agenda when conflicts detected.
 
 ### Architecture
 - **@Observable** view models (iOS 17 Observation framework)
@@ -253,6 +267,19 @@ VStack(alignment: .leading, spacing: 0) {
 - **LunchViewModel**: `sortOrder: LunchSort` (default `.topRated`), `activeToggles: Set<LunchToggle>`, `cuisineFilter: CuisineFilter`, `filteredSpots()` applies all filters
 - **Briefing model**: `NewsResponse` includes `briefing: Briefing?` with `topStory: BriefingItem?` and `suggestedActivity: Activity?` (raw Activity object from worker's `suggestedActivity` field)
 - **SwissHolidayCalculator**: Utility for computing upcoming Swiss holidays, used in SettingsView
+- **TodayViewModel**: Central view model for Today tab. Manages plan/news mode toggle, agenda composition, anchor CRUD, calendar sync, execution mode, multi-day planning. `composeAgendaForDate()` orchestrates gap analysis → Claude API → template fallback → cache. `swapSlot()`, `rebuildAgenda()`, `handleCalendarSync()`, `exportPlanToCalendar()`.
+- **AnchorStore**: Persists `AnchorEvent` entries per date in UserDefaults. `anchors(for:)`, `add(_:)`, `remove(id:)`, `purgeOld()`. Calendar anchors use same flow as manual anchors.
+- **AgendaComposer**: Builds Claude API prompt from anchors + gaps + preferences, parses structured JSON response into `DayAgenda` with `AgendaSlot` entries. Threads `planDate: Date` to set stored `slotDate` on each slot.
+- **TemplateEngine**: Offline fallback with 7 day archetypes (Chill, Explorer, Foodie, Culture, Nature, Budget, Social). Each archetype has morning/lunch/afternoon/dinner venue selections. Threads `planDate: Date` for `slotDate` computation.
+- **GapAnalysisEngine**: Analyzes anchors to find open time slots for planning. Returns `PlanningGap` entries with start/end times and suggested slot types.
+- **FreshnessScorer**: Rates plan freshness based on age, weather changes, and anchor modifications. Drives "plan may be stale" indicators.
+- **AgendaCache**: Disk cache for composed `DayAgenda` plans keyed by date. Invalidated on anchor changes, calendar sync accepts, and explicit rebuild.
+- **CalendarService**: Singleton `EKEventStore` wrapper. `requestAccess()` (iOS 17+ full access), `fetchEvents(for:)` (filters all-day), `createEvent()`, `updateEvent()`, `deleteEvent()`. Reads/writes user's default or selected calendar.
+- **CalendarSyncChecker**: Stateless filter — calendar events minus already-anchored minus discarded. Also provides `detectConflicts()` for overlapping anchor detection.
+- **CalendarDiscardStore**: UserDefaults-backed `Set<String>` of discarded EKEvent IDs. Persists across sessions. Clearable from Settings.
+- **CalendarExportStore**: UserDefaults-backed `[String: String]` mapping slotId → exported EKEvent ID. Tracks write-flow exports for update-on-swap and cleanup-on-rebuild.
+- **TimelineShifter**: Detects when current time has passed planned slot times and adjusts the agenda display accordingly.
+- **MultiDayPlanStore**: Persists composed plans for multiple dates (today, tomorrow, weekend). Enables day pill switching without recomposing.
 - **PBXFileSystemSynchronizedRootGroup**: Xcode auto-discovers source files (no manual file references)
 - **FlowLayout**: Custom SwiftUI `Layout` for wrapping tag pills in ActivityCard
 
