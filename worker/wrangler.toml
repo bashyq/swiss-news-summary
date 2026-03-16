@@ -15,5 +15,11 @@ ALLOWED_ORIGIN = "*"
 binding = "ACTIVITIES_KV"
 id = "5ed6acfc2de944a38ee9a767080b4290"
 
+# R2 bucket for activity venue photos
+[[r2_buckets]]
+bucket_name = "swiss-news-images"
+binding = "PHOTOS_BUCKET"
+
 # IMPORTANT: Add your Claude API key as a secret, NOT here!
 # Run: wrangler secret put CLAUDE_API_KEY
+# Run: wrangler secret put GOOGLE_PLACES_KEY

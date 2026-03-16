@@ -3,9 +3,129 @@
  * Uses Open-Meteo multi-location API (single request for all destinations).
  */
 
-export const VERSION = '1.1.0';
+export const VERSION = '1.2.0';
 
 import { getWeatherDescription } from './weather.js';
+
+const DEST_HIGHLIGHTS = {
+  lugano: [
+    { name:'Parco Ciani', nameDE:'Parco Ciani', desc:'Lakeside park with large playground and duck pond', descDE:'Park am See mit grossem Spielplatz und Ententeich', indoor:false, cat:'playground', lat:46.0053, lon:8.9580 },
+    { name:'Swissminiatur', nameDE:'Swissminiatur', desc:'Miniature Switzerland park with 120+ scale models', descDE:'Miniatur-Schweiz-Park mit über 120 Modellen', indoor:false, cat:'outdoor', lat:45.9553, lon:8.9468 },
+    { name:'Lido di Lugano', nameDE:'Lido di Lugano', desc:'Sandy beach with kids pool and playground', descDE:'Sandstrand mit Kinderplanschbecken und Spielplatz', indoor:false, cat:'outdoor', lat:46.0005, lon:8.9625 },
+  ],
+  locarno: [
+    { name:'Lido Locarno', nameDE:'Lido Locarno', desc:'Family pool complex with slides and sandy beach', descDE:'Familien-Schwimmbad mit Rutschen und Sandstrand', indoor:false, cat:'outdoor', lat:46.1660, lon:8.7935 },
+    { name:'Cardada Playground', nameDE:'Spielplatz Cardada', desc:'Mountain playground at 1340m with cable car ride', descDE:'Bergspielplatz auf 1340m mit Seilbahnfahrt', indoor:false, cat:'playground', lat:46.1835, lon:8.7640 },
+  ],
+  bellinzona: [
+    { name:'Castelgrande', nameDE:'Castelgrande', desc:'UNESCO castle with grassy courtyards, lift access', descDE:'UNESCO-Burg mit Grünflächen und Liftanschluss', indoor:false, cat:'outdoor', lat:46.1944, lon:9.0168 },
+    { name:'Castello Montebello', nameDE:'Castello Montebello', desc:'Medieval castle with playground and picnic area', descDE:'Mittelalterliche Burg mit Spielplatz und Picknick', indoor:false, cat:'playground', lat:46.1943, lon:9.0244 },
+  ],
+  ascona: [
+    { name:'Lakefront Playground', nameDE:'Spielplatz Seepromenade', desc:'Lakefront playground with trampolines and swings', descDE:'Spielplatz am See mit Trampolinen und Schaukeln', indoor:false, cat:'playground', lat:46.1570, lon:8.7730 },
+    { name:'Brissago Islands', nameDE:'Brissago-Inseln', desc:'Botanical island with treasure hunt, boat ride over', descDE:'Botanische Insel mit Schatzsuche, per Boot erreichbar', indoor:false, cat:'nature', lat:46.1317, lon:8.7344 },
+  ],
+  chur: [
+    { name:'Brambrüesch Playground', nameDE:'Spielplatz Brambrüesch', desc:'Mountain playground with cable car and theme trail', descDE:'Bergspielplatz mit Seilbahn und Themenweg', indoor:false, cat:'playground', lat:46.8670, lon:9.5025 },
+    { name:'Bündner Naturmuseum', nameDE:'Bündner Naturmuseum', desc:'Interactive alpine animal exhibits for kids', descDE:'Interaktive Ausstellung alpiner Tiere für Kinder', indoor:true, cat:'museum', lat:46.8494, lon:9.5362 },
+  ],
+  davos: [
+    { name:'Schatzalp Alpine Garden', nameDE:'Alpengarten Schatzalp', desc:'Alpine garden at 1864m with funicular ride up', descDE:'Alpengarten auf 1864m mit Standseilbahn', indoor:false, cat:'nature', lat:46.7927, lon:9.8204 },
+    { name:'Rinerhorn Petting Zoo', nameDE:'Rinerhorn Streichelzoo', desc:'Free alpine petting zoo with goats and alpacas', descDE:'Gratis Streichelzoo mit Ziegen und Alpakas', indoor:false, cat:'animals', lat:46.7560, lon:9.8630 },
+  ],
+  stmoritz: [
+    { name:'Muottas Muragl Playground', nameDE:'Spielplatz Muottas Muragl', desc:'Mountain playground at 2456m with epic Engadin view', descDE:'Bergspielplatz auf 2456m mit Engadin-Panorama', indoor:false, cat:'playground', lat:46.5237, lon:9.9092 },
+    { name:'Lake St. Moritz Promenade', nameDE:'St. Moritzer See Promenade', desc:'Flat lakeside walk with playground and duck feeding', descDE:'Flacher Seeweg mit Spielplatz und Enten füttern', indoor:false, cat:'outdoor', lat:46.4935, lon:9.8410 },
+  ],
+  flims: [
+    { name:'Caumasee', nameDE:'Caumasee', desc:'Turquoise alpine lake with playground and paddleboats', descDE:'Türkiser Bergsee mit Spielplatz und Tretbooten', indoor:false, cat:'outdoor', lat:46.8188, lon:9.2908 },
+    { name:'Spielplatz Prau la Selva', nameDE:'Spielplatz Prau la Selva', desc:'Large forest playground with water play features', descDE:'Grosser Waldspielplatz mit Wasserspiel', indoor:false, cat:'playground', lat:46.8340, lon:9.2810 },
+  ],
+  sion: [
+    { name:'Domaine des Îles', nameDE:'Domaine des Îles', desc:'Huge park with playground, mini-golf and mini train', descDE:'Grosser Park mit Spielplatz, Minigolf und Bähnli', indoor:false, cat:'playground', lat:46.2131, lon:7.3332 },
+    { name:'Musée de la Nature', nameDE:'Naturmuseum Wallis', desc:'Interactive alpine exhibits, free first Sunday', descDE:'Interaktive Alpen-Ausstellung, 1. Sonntag gratis', indoor:true, cat:'museum', lat:46.2330, lon:7.3601 },
+  ],
+  brig: [
+    { name:'Stockalperschloss Garden', nameDE:'Stockalperschloss Garten', desc:'Castle garden with playground, free courtyard access', descDE:'Schlossgarten mit Spielplatz, Hof frei zugänglich', indoor:false, cat:'playground', lat:46.3150, lon:7.9873 },
+    { name:'Brigerbad Thermal Baths', nameDE:'Thermalbad Brigerbad', desc:'Thermal pools with toddler area and water slides', descDE:'Therme mit Kleinkinderbereich und Wasserrutschen', indoor:false, cat:'indoor-play', lat:46.3025, lon:7.9240 },
+  ],
+  zermatt: [
+    { name:'Wolli Park Sunnegga', nameDE:'Wolli Park Sunnegga', desc:'Mountain playground with lake beach, by funicular', descDE:'Bergspielplatz mit Seestrand, per Standseilbahn', indoor:false, cat:'playground', lat:46.0300, lon:7.7701 },
+    { name:'Obere Matten Playground', nameDE:'Spielplatz Obere Matten', desc:'Village playground near shops and restaurants', descDE:'Spielplatz im Dorf nahe Läden und Restaurants', indoor:false, cat:'playground', lat:46.0207, lon:7.7480 },
+  ],
+  luzern: [
+    { name:'Verkehrshaus', nameDE:'Verkehrshaus der Schweiz', desc:'Transport museum with hands-on exhibits and playground', descDE:'Verkehrsmuseum mit Mitmach-Stationen und Spielplatz', indoor:true, cat:'museum', lat:47.0531, lon:8.3356 },
+    { name:'Vögeligärtli Park', nameDE:'Vögeligärtli', desc:'Central playground near train station with sandbox', descDE:'Zentraler Spielplatz beim Bahnhof mit Sandkasten', indoor:false, cat:'playground', lat:47.0485, lon:8.3068 },
+  ],
+  interlaken: [
+    { name:'Harder Kulm Playground', nameDE:'Spielplatz Harder Kulm', desc:'Alpine playground at 1322m with Jungfrau panorama', descDE:'Bergspielplatz auf 1322m mit Jungfrau-Panorama', indoor:false, cat:'playground', lat:46.6974, lon:7.8519 },
+    { name:'Höhematte Park', nameDE:'Spielplatz Höhematte', desc:'Free central park playground with mountain views', descDE:'Gratis Spielplatz im Zentrum mit Bergpanorama', indoor:false, cat:'playground', lat:46.6859, lon:7.8598 },
+  ],
+  engelberg: [
+    { name:'Globi Playground Ristis', nameDE:'Globi Spielplatz Ristis', desc:'Alpine playground with rope park and bouncy castle', descDE:'Bergspielplatz mit Seilpark und Hüpfburg', indoor:false, cat:'playground', lat:46.8130, lon:8.3820 },
+    { name:'Trübsee Playground', nameDE:'Spielplatz Trübsee', desc:'Smuggler-themed playground by mountain lake', descDE:'Schmuggler-Spielplatz am Bergsee', indoor:false, cat:'playground', lat:46.7890, lon:8.3920 },
+  ],
+  schwyz: [
+    { name:'Swiss Knife Valley Center', nameDE:'Swiss Knife Valley Besucherzentrum', desc:'Victorinox museum where kids can build a knife', descDE:'Victorinox-Museum, Kinder bauen ein Messer', indoor:true, cat:'museum', lat:46.9944, lon:8.6054 },
+    { name:'Swiss Holiday Park', nameDE:'Swiss Holiday Park', desc:'Indoor waterpark with slides and toddler pool', descDE:'Erlebnisbad mit Rutschen und Kleinkinderbecken', indoor:true, cat:'indoor-play', lat:46.9830, lon:8.6160 },
+  ],
+  altdorf: [
+    { name:'Tell Monument Square', nameDE:'Telldenkmal', desc:'Iconic William Tell statue with playground nearby', descDE:'Ikonisches Telldenkmal mit Spielplatz in der Nähe', indoor:false, cat:'outdoor', lat:46.8802, lon:8.6393 },
+    { name:'Schwimmbad Altdorf', nameDE:'Schwimmbad Altdorf', desc:'Indoor/outdoor pool with slides and paddling pool', descDE:'Hallen-/Freibad mit Rutschen und Planschbecken', indoor:false, cat:'indoor-play', lat:46.8760, lon:8.6500 },
+  ],
+  lausanne: [
+    { name:'Olympic Museum', nameDE:'Olympisches Museum', desc:'Interactive sports museum with lakeside park', descDE:'Interaktives Sportmuseum mit Seeuferpark', indoor:true, cat:'museum', lat:46.5088, lon:6.6340 },
+    { name:'Ouchy Playground', nameDE:'Spielplatz Ouchy', desc:'Lakefront playground with paddleboats and ducks', descDE:'Spielplatz am See mit Tretbooten und Enten', indoor:false, cat:'playground', lat:46.5075, lon:6.6282 },
+  ],
+  montreux: [
+    { name:'Château de Chillon', nameDE:'Schloss Chillon', desc:'Fairy-tale lakeside castle with kids activity booklet', descDE:'Märchenschloss am See mit Kinder-Aktivheft', indoor:true, cat:'museum', lat:46.4142, lon:6.9276 },
+    { name:'Lakefront Playground', nameDE:'Spielplatz Seepromenade', desc:'Flower-lined lakefront promenade with playground', descDE:'Blumengesäumte Seepromenade mit Spielplatz', indoor:false, cat:'playground', lat:46.4340, lon:6.9120 },
+  ],
+  vevey: [
+    { name:'Alimentarium', nameDE:'Alimentarium', desc:'Interactive food museum with hands-on kids exhibits', descDE:'Interaktives Ernährungsmuseum mit Kinderstationen', indoor:true, cat:'museum', lat:46.4583, lon:6.8464 },
+    { name:'Lakefront Playground', nameDE:'Spielplatz am See', desc:'Large jungle gym by lake with swing sets', descDE:'Grosses Klettergerüst am See mit Schaukeln', indoor:false, cat:'playground', lat:46.4610, lon:6.8430 },
+  ],
+  basel: [
+    { name:'Zoo Basel (Zolli)', nameDE:'Zoo Basel (Zolli)', desc:'Historic zoo with petting area and kids playground', descDE:'Historischer Zoo mit Streichelzoo und Spielplatz', indoor:false, cat:'animals', lat:47.5472, lon:7.5789 },
+    { name:'Tierpark Lange Erlen', nameDE:'Tierpark Lange Erlen', desc:'Free animal park with deer, ponies and playground', descDE:'Gratis Tierpark mit Hirschen, Ponys und Spielplatz', indoor:false, cat:'animals', lat:47.5760, lon:7.6230 },
+  ],
+  solothurn: [
+    { name:'Naturmuseum Solothurn', nameDE:'Naturmuseum Solothurn', desc:'Regional nature exhibits for families', descDE:'Regionale Naturausstellung für Familien', indoor:true, cat:'museum', lat:47.2078, lon:7.5372 },
+    { name:'Verenaschlucht', nameDE:'Verenaschlucht', desc:'Atmospheric gorge walk to hermitage, stroller-friendly', descDE:'Stimmungsvolle Schluchtwanderung, kinderwagentauglich', indoor:false, cat:'nature', lat:47.2200, lon:7.5415 },
+  ],
+  delemont: [
+    { name:'Préhisto-Parc', nameDE:'Préhisto-Parc', desc:'Dinosaur park with 45 life-size models in forest', descDE:'Dinosaurierpark mit 45 lebensgrossen Modellen', indoor:false, cat:'outdoor', lat:47.3013, lon:7.0532 },
+    { name:'Parc du Château', nameDE:'Parc du Château', desc:'Castle park with playground and shaded picnic area', descDE:'Schlosspark mit Spielplatz und schattigem Picknick', indoor:false, cat:'playground', lat:47.3650, lon:7.3450 },
+  ],
+  konstanz: [
+    { name:'SEA LIFE Konstanz', nameDE:'SEA LIFE Konstanz', desc:'Aquarium with underwater tunnel and touch pools', descDE:'Aquarium mit Unterwassertunnel und Streichelbecken', indoor:true, cat:'museum', lat:47.6605, lon:9.1770 },
+    { name:'Stadtgarten Playground', nameDE:'Spielplatz Stadtgarten', desc:'Large lakeside playground with water play area', descDE:'Grosser Seespielplatz mit Wasserspielbereich', indoor:false, cat:'playground', lat:47.6615, lon:9.1790 },
+  ],
+  lindau: [
+    { name:'Harbour Playground', nameDE:'Spielplatz am Hafen', desc:'Harbour playground with slides and lake views', descDE:'Hafenspielplatz mit Rutschen und Seeblick', indoor:false, cat:'playground', lat:47.5450, lon:9.6840 },
+    { name:'Lindenhofpark', nameDE:'Lindenhofpark', desc:'Lakeside park with paddleboats and shaded playground', descDE:'Seepark mit Tretbooten und schattigem Spielplatz', indoor:false, cat:'outdoor', lat:47.5510, lon:9.6920 },
+  ],
+  como: [
+    { name:'Villa Olmo Park', nameDE:'Park Villa Olmo', desc:'Grand lakefront park with playground, free entry', descDE:'Grosser Seeuferpark mit Spielplatz, Eintritt frei', indoor:false, cat:'outdoor', lat:45.8180, lon:9.0598 },
+    { name:'Harbour Playground', nameDE:'Spielplatz am Hafen', desc:'Modern playground by boat dock with lake views', descDE:'Moderner Spielplatz beim Anleger mit Seeblick', indoor:false, cat:'playground', lat:45.8110, lon:9.0720 },
+  ],
+  schaffhausen: [
+    { name:'Rhine Falls', nameDE:'Rheinfall', desc:'Europe\'s largest waterfall with playground and boat rides', descDE:'Grösster Wasserfall Europas mit Spielplatz und Boot', indoor:false, cat:'nature', lat:47.6778, lon:8.6152 },
+    { name:'Munot Fortress', nameDE:'Munot Festung', desc:'Circular fortress with playground and deer park', descDE:'Runde Festung mit Spielplatz und Hirschgehege', indoor:false, cat:'outdoor', lat:47.6965, lon:8.6390 },
+  ],
+  frauenfeld: [
+    { name:'Plättli Zoo', nameDE:'Plättli Zoo', desc:'Small zoo with petting area and pony rides', descDE:'Kleiner Zoo mit Streichelzoo und Ponyreiten', indoor:false, cat:'animals', lat:47.5605, lon:8.9157 },
+    { name:'Schloss Frauenfeld', nameDE:'Schloss Frauenfeld', desc:'Historic castle with nature museum and park', descDE:'Historisches Schloss mit Naturmuseum und Park', indoor:true, cat:'museum', lat:47.5565, lon:8.8980 },
+  ],
+  rapperswil: [
+    { name:'Knies Kinderzoo', nameDE:'Knies Kinderzoo', desc:'Children\'s zoo with camel rides and adventure playground', descDE:'Kinderzoo mit Kamelreiten und Abenteuerspielplatz', indoor:false, cat:'animals', lat:47.2290, lon:8.8210 },
+    { name:'Castle Playground', nameDE:'Spielplatz Lindenhof', desc:'Lakefront playground below castle with climbing tower', descDE:'Seespielplatz unter dem Schloss mit Kletterturm', indoor:false, cat:'playground', lat:47.2267, lon:8.8180 },
+  ],
+};
+
+export function getSunshineDestById(id) {
+  return DESTINATIONS.find(d => d.id === id) || null;
+}
 
 const DESTINATIONS = [
   // Baseline (Zürich — always pinned first)
@@ -137,10 +257,12 @@ async function fetchAllDestinations(weekendDates) {
     const parsed = parseLocationData(locations[i], dates);
     if (!parsed) continue;
 
+    const dest = DESTINATIONS[i];
     results.push({
-      ...DESTINATIONS[i],
+      ...dest,
       forecast: parsed.forecast,
       sunshineHoursTotal: parsed.sunshineHoursTotal,
+      highlights: DEST_HIGHLIGHTS[dest.id] || [],
     });
   }
 

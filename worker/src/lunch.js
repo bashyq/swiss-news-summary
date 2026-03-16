@@ -2,7 +2,7 @@
  * Lunch — Overpass API integration for nearby restaurants.
  */
 
-export const VERSION = '2.0.0';
+export const VERSION = '2.3.0';
 
 import { getCity } from './data.js';
 
@@ -135,7 +135,6 @@ async function fetchOverpass(lat, lon) {
 function normalize(elements) {
   return elements.filter(el => el.tags?.name).map(el => {
     const t = el.tags;
-    // kidFriendly heuristic: restaurants (not fast_food) with high chairs, or cafes with play area
     const hasHighchairs = t.highchair === 'yes' || t.baby_feeding === 'yes';
     const hasPlayArea = t.playground === 'yes' || t.kids_area === 'yes';
     const kidFriendly = hasHighchairs || hasPlayArea ||
@@ -159,14 +158,73 @@ function normalize(elements) {
   });
 }
 
+async function fetchGoogleRating(name, lat, lon, apiKey) {
+  const searchUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(name)}&inputtype=textquery&locationbias=point:${lat},${lon}&fields=rating,user_ratings_total,business_status,price_level&key=${apiKey}`;
+  const res = await fetch(searchUrl);
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (data.status !== 'OK' || !data.candidates?.length) return null;
+  const c = data.candidates[0];
+  return {
+    rating: c.rating || null,
+    ratingCount: c.user_ratings_total || 0,
+    priceLevel: c.price_level ?? null,
+    closed: c.business_status === 'CLOSED_PERMANENTLY',
+    cachedAt: Date.now()
+  };
+}
+
+async function enrichWithRatings(spots, cityId, env) {
+  if (!env.GOOGLE_PLACES_KEY || !env.PHOTOS_BUCKET) return spots;
+
+  // Single R2 object per city holds all ratings — avoids 1000s of individual R2 reads
+  const r2Key = `ratings/city-${cityId}.json`;
+  let cache = {};
+  try {
+    const obj = await env.PHOTOS_BUCKET.get(r2Key);
+    if (obj) cache = JSON.parse(await obj.text());
+  } catch {}
+
+  const now = Date.now();
+  // Fetch spots not cached or missing priceLevel (added in v2.2)
+  const uncached = spots.filter(s => !cache[s.id] || cache[s.id].priceLevel === undefined);
+
+  // Fetch up to 20 uncached ratings per request (each = 1 Google subrequest)
+  const MAX_GOOGLE = 20;
+  const toFetch = uncached.slice(0, MAX_GOOGLE);
+  if (toFetch.length > 0) {
+    const fetches = toFetch.map(async (s) => {
+      const rating = await fetchGoogleRating(s.name, s.lat, s.lon, env.GOOGLE_PLACES_KEY);
+      cache[s.id] = rating || { rating: null, ratingCount: 0, priceLevel: null, closed: false, cachedAt: now };
+    });
+    await Promise.allSettled(fetches);
+
+    // Write updated cache back to R2
+    await env.PHOTOS_BUCKET.put(r2Key, JSON.stringify(cache), {
+      httpMetadata: { contentType: 'application/json' }
+    });
+  }
+
+  return spots.map(s => {
+    const r = cache[s.id];
+    if (!r) return s;
+    const enriched = { ...s };
+    if (r.rating) { enriched.rating = r.rating; enriched.ratingCount = r.ratingCount; }
+    if (r.priceLevel !== null && r.priceLevel !== undefined) enriched.priceLevel = r.priceLevel;
+    if (r.closed) enriched.permanentlyClosed = true;
+    return enriched;
+  });
+}
+
 export async function handleLunch(url, env) {
   const cityId = url.searchParams.get('city') || 'zurich';
   const city = getCity(cityId);
 
   const cache = caches.default;
-  const cacheKey = new Request(`https://cache.local/lunch-${cityId}`, { method: 'GET' });
+  const cacheKey = new Request(`https://cache.local/lunch-v3-${cityId}`, { method: 'GET' });
+  const forceRefresh = url.searchParams.has('refresh');
 
-  let cached = await cache.match(cacheKey);
+  let cached = !forceRefresh && await cache.match(cacheKey);
   if (cached) {
     const body = await cached.text();
     return new Response(body, {
@@ -175,7 +233,8 @@ export async function handleLunch(url, env) {
   }
 
   const elements = await fetchOverpass(city.lat, city.lon);
-  const spots = normalize(elements);
+  let spots = normalize(elements);
+  spots = await enrichWithRatings(spots, cityId, env);
 
   const body = JSON.stringify({
     spots, center: { lat: city.lat, lon: city.lon },

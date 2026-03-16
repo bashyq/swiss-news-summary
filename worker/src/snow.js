@@ -7,6 +7,10 @@ export const VERSION = '1.0.0';
 
 import { getWeatherDescription } from './weather.js';
 
+export function getSnowResortById(id) {
+  return RESORTS.find(r => r.id === id) || null;
+}
+
 const RESORTS = [
   { id: 'zermatt', name: 'Zermatt', nameDE: 'Zermatt', lat: 46.0207, lon: 7.7491, region: 'Valais', regionDE: 'Wallis', driveMinutes: 195, altitude: 1620 },
   { id: 'verbier', name: 'Verbier', nameDE: 'Verbier', lat: 46.0967, lon: 7.2286, region: 'Valais', regionDE: 'Wallis', driveMinutes: 170, altitude: 1500 },

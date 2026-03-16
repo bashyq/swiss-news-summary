@@ -2,12 +2,13 @@
  * News — RSS parsing, Claude API categorization, news assembly.
  */
 
-export const VERSION = '2.0.0';
+export const VERSION = '2.2.0';
 
 import { NATIONAL_SOURCES, getCity, getUpcomingHolidays, getThisDayInHistory, getSchoolHolidays } from './data.js';
-import { fetchWeather, RAINY_CODES } from './weather.js';
+import { fetchWeather, fetchWeekendWeather, RAINY_CODES } from './weather.js';
 import { fetchTransportDisruptions } from './transport.js';
 import { getCuratedActivities } from './activities.js';
+import { getCityEvents } from './events.js';
 
 /* ── RSS helpers ── */
 
@@ -27,24 +28,31 @@ function stripHTML(html) {
 
 function parseRSSItems(xml) {
   const items = [];
-  const itemRe = /<item>([\s\S]*?)<\/item>/gi;
+  // Match both RSS <item> and Atom <entry> elements
+  const itemRe = /<(?:item|entry)>([\s\S]*?)<\/(?:item|entry)>/gi;
   const field = (tag, str) => {
-    const m = new RegExp(`<${tag}>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/${tag}>`, 'i').exec(str);
+    const m = new RegExp(`<${tag}[^>]*>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?<\\/${tag}>`, 'i').exec(str);
     return m ? m[1].trim() : '';
+  };
+  // Atom <link href="..."/> (self-closing)
+  const atomLink = (str) => {
+    const m = /<link[^>]*href="([^"]+)"[^>]*(?:rel="alternate")?/i.exec(str);
+    return m ? m[1] : '';
   };
 
   let m;
-  while ((m = itemRe.exec(xml)) !== null && items.length < 10) {
+  while ((m = itemRe.exec(xml)) !== null && items.length < 15) {
     const x = m[1];
     const title = field('title', x);
     if (!title) continue;
-    const dateStr = field('pubDate', x) || field('dc:date', x);
+    const dateStr = field('pubDate', x) || field('dc:date', x) || field('published', x) || field('updated', x);
     let publishedAt = null;
     if (dateStr) { try { const d = new Date(dateStr); if (!isNaN(d)) publishedAt = d.toISOString(); } catch {} }
+    const url = field('link', x) || atomLink(x);
     items.push({
       title: decodeEntities(title),
-      url: field('link', x),
-      description: stripHTML(decodeEntities(field('description', x))).substring(0, 200),
+      url,
+      description: stripHTML(decodeEntities(field('description', x) || field('summary', x) || field('content', x))).substring(0, 200),
       publishedAt
     });
   }
@@ -71,7 +79,7 @@ async function fetchFeed(source) {
 
 async function fetchAllFeeds(sources) {
   const results = await Promise.allSettled(
-    sources.map(async s => ({ source: s.name, headlines: await fetchFeed(s) }))
+    sources.map(async s => ({ source: s.name, type: s.type || null, headlines: await fetchFeed(s) }))
   );
   const all = [];
   for (const r of results) {
@@ -80,19 +88,41 @@ async function fetchAllFeeds(sources) {
   return all;
 }
 
-function formatHeadlinesForPrompt(allHeadlines) {
-  const flat = [];
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+  return arr;
+}
+
+function splitHeadlinesByType(allHeadlines) {
+  const sourceName = (s) => s.source.replace(/^(NZZ|Reddit r\/).*/, m => m.startsWith('NZZ') ? 'NZZ' : 'Reddit').replace(/ Zürich| Schweiz/g, '');
+  const general = [], culture = [], events = [], local = [];
   for (const s of allHeadlines) {
-    for (const item of s.headlines) {
-      flat.push({ source: s.source.replace(/^(NZZ|Reddit r\/).*/, m => m.startsWith('NZZ') ? 'NZZ' : 'Reddit').replace(/ Zürich| Schweiz/g, ''), ...item });
+    const type = s.type || 'general';
+    const name = sourceName(s);
+    for (const item of s.headlines.slice(0, 8)) {
+      const entry = { source: name, ...item };
+      if (type === 'culture') culture.push(entry);
+      else if (type === 'events') events.push(entry);
+      else if (type === 'police') local.push({ source: `${name} (Police)`, ...item });
+      else if (type !== 'trends') general.push(entry);
     }
   }
-  // Shuffle
-  for (let i = flat.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [flat[i], flat[j]] = [flat[j], flat[i]];
-  }
-  return '\n' + flat.slice(0, 40).map(h => `- [${h.source}] ${h.title}${h.url ? ` [URL: ${h.url}]` : ''}`).join('\n');
+  return { general: shuffle(general), culture: shuffle(culture), events: shuffle(events), local: shuffle(local) };
+}
+
+function formatHeadlinesForPrompt(generalHeadlines) {
+  return '\n' + generalHeadlines.slice(0, 45).map(h => `- [${h.source}] ${h.title}${h.url ? ` [URL: ${h.url}]` : ''}`).join('\n');
+}
+
+function buildPreAssigned(items, maxItems) {
+  return shuffle(items).slice(0, maxItems).map(h => ({
+    headline: h.title,
+    summary: h.description || h.title,
+    detail: '',
+    source: h.source,
+    url: h.url || '',
+    sentiment: 'neutral'
+  }));
 }
 
 /* ── Claude API ── */
@@ -105,53 +135,71 @@ async function getCategorizedNews(headlinesText, lang, apiKey, cityName) {
 CRITICAL: ALL output must be in ENGLISH. Translate ALL German headlines and summaries to English.
 
 RULES:
-1. Categorize by TOPIC, not source
+1. Categorize by TOPIC, not source — a story about elections goes to "politics" even if it's the biggest story of the day
 2. TRANSLATE EVERYTHING TO ENGLISH - no German words allowed
-3. 5-8 items per category
+3. 5-8 items per category. Spread stories evenly — don't put everything in topStories.
 4. Swiss news only
 5. For each item, assess sentiment: "positive" (good news, progress), "negative" (accidents, crises), or "neutral" (informational)
 6. Identify the single biggest story/trending topic across all headlines. Include the URL of the best-matching article for the trending topic.
-7. For each item, provide "summary" (1 short sentence) AND "detail" (2-3 sentences with more context and background)
+7. De-duplicate: if multiple sources report the same story, keep the best version only
 
-CATEGORIES:
-- topStories: The most important, impactful, or breaking news stories of the day — regardless of topic. Lead with the biggest headline.
-- politics: Government, elections, laws, voting, diplomacy
-- events: Concerts, exhibitions, festivals, sports
-- culture: Entertainment, celebrities, reviews, lifestyle, arts
-- local: ${cityName}-specific news
+WRITING STYLE — CRITICAL:
+- "summary": 1 punchy sentence. State the fact directly. NEVER start with "An article about", "This reports", "An overview of". Just say what happened.
+  BAD: "An article about criticism of the coach's decision to substitute the goalkeeper."
+  GOOD: "Tottenham's coach faces backlash for substituting the goalkeeper mid-match."
+- "detail": 2-3 sentences expanding with specifics — names, numbers, consequences, context. No filler. No meta-language. Write like a journalist, not a librarian.
+  BAD: "The article provides an overview of the criticism surrounding the decision."
+  GOOD: "Manager Ange Postecoglou pulled keeper Guglielmo Vicario at half-time despite a 1-0 lead. Former players called the move 'disrespectful' and fans booed the decision."
+- "headline": Sharp, concise. Active voice. No source attribution in the headline.
+
+CATEGORIES — categorize by primary topic:
+- topStories: Breaking or unusual news that doesn't fit other categories. NOT a catch-all.
+- politics: Government, parliament, elections, referendums, voting, party politics, laws, diplomacy. Election news ALWAYS goes here.
+- events: Sports results, concerts, exhibitions, festivals
+- culture: Entertainment, celebrities, lifestyle, arts, food, travel
+- local: ${cityName}-specific news, local infrastructure, city council
 
 Headlines:
 ${headlinesText}
 
 Respond with ONLY this JSON (ALL IN ENGLISH):
-{"trending":{"topic":"short topic","topicDE":"German topic","headline":"dominant headline","url":"best matching article URL"},"topStories":[{"headline":"English headline here","summary":"One sentence summary","detail":"2-3 sentences with more context and background","source":"SourceName","url":"url","sentiment":"positive|neutral|negative"}],"politics":[],"events":[],"culture":[],"local":[]}`
+{"trending":{"topic":"short topic","topicDE":"German topic","headline":"dominant headline","url":"best matching article URL"},"topStories":[{"headline":"English headline","summary":"Direct fact, no fluff.","detail":"2-3 sentences with specifics.","source":"SourceName","url":"url","sentiment":"positive|neutral|negative"}],"politics":[],"events":[],"culture":[],"local":[]}`
     : `Du bist eine JSON API. Kategorisiere Schweizer Nachrichten und antworte NUR mit gültigem JSON.
 
 REGELN:
-1. Nach THEMA kategorisieren, nicht Quelle
-2. 5-8 Einträge pro Kategorie
+1. Nach THEMA kategorisieren, nicht Quelle — Wahlnachrichten gehören immer zu "politics", auch wenn sie die größte Story sind
+2. 5-8 Einträge pro Kategorie. Gleichmässig verteilen — nicht alles in topStories.
 3. Nur Schweizer Nachrichten
 4. Für jeden Eintrag die Stimmung bewerten: "positive" (gute Nachrichten), "negative" (Unfälle, Krisen), oder "neutral" (informativ)
-5. Das größte/dominanteste Thema über alle Schlagzeilen identifizieren. Die URL des passendsten Artikels für das Trending-Thema angeben.
-6. Für jeden Eintrag "summary" (1 kurzer Satz) UND "detail" (2-3 Sätze mit mehr Kontext und Hintergrund) angeben
+5. Das größte/dominanteste Thema über alle Schlagzeilen identifizieren. Die URL des passendsten Artikels angeben.
+6. Duplikate entfernen: bei gleicher Story aus mehreren Quellen nur die beste Version behalten
 
-KATEGORIEN:
-- topStories: Die wichtigsten, bedeutendsten oder aktuellsten Nachrichten des Tages — themenübergreifend. Die größte Schlagzeile zuerst.
-- politics: Regierung, Wahlen, Gesetze, Diplomatie
-- events: Konzerte, Ausstellungen, Sport
-- culture: Unterhaltung, Prominente, Lifestyle, Kunst
-- local: ${cityName}-spezifische Nachrichten
+SCHREIBSTIL — WICHTIG:
+- "summary": 1 knapper Satz. Direkt die Fakten nennen. NIEMALS mit "Ein Artikel über", "Es wird berichtet", "Ein Überblick über" beginnen. Einfach sagen was passiert ist.
+  SCHLECHT: "Ein Artikel über die Kritik an der Entscheidung des Trainers."
+  GUT: "Tottenham-Trainer steht nach Torhüter-Auswechslung in der Kritik."
+- "detail": 2-3 Sätze mit konkreten Details — Namen, Zahlen, Konsequenzen, Hintergrund. Kein Fülltext. Keine Meta-Sprache. Wie ein Journalist schreiben.
+  SCHLECHT: "Der Artikel gibt einen Überblick über die Kritik an der Entscheidung."
+  GUT: "Trainer Postecoglou nahm Keeper Vicario trotz 1:0-Führung zur Halbzeit vom Platz. Ex-Spieler nannten die Aktion 'respektlos', Fans buhten."
+- "headline": Kurz, prägnant, aktiv formuliert. Keine Quellennennung in der Schlagzeile.
+
+KATEGORIEN — nach Hauptthema:
+- topStories: Aktuelle oder ungewöhnliche Nachrichten. KEIN Sammelbecken.
+- politics: Regierung, Wahlen, Abstimmungen, Parteipolitik, Gesetze, Diplomatie. Wahlnachrichten IMMER hierher.
+- events: Sport, Konzerte, Ausstellungen, Festivals
+- culture: Unterhaltung, Prominente, Lifestyle, Kunst, Essen, Reisen
+- local: ${cityName}-spezifische Nachrichten, lokale Infrastruktur
 
 Schlagzeilen:
 ${headlinesText}
 
 Antworte NUR mit diesem JSON:
-{"trending":{"topic":"Kurzes Thema","topicDE":"Kurzes Thema DE","headline":"Dominante Schlagzeile","url":"URL des passendsten Artikels"},"topStories":[{"headline":"...","summary":"Ein Satz Zusammenfassung","detail":"2-3 Sätze mit mehr Kontext und Hintergrund","source":"...","url":"...","sentiment":"positive|neutral|negative"}],"politics":[],"events":[],"culture":[],"local":[]}`;
+{"trending":{"topic":"Kurzes Thema","topicDE":"Kurzes Thema DE","headline":"Dominante Schlagzeile","url":"URL des passendsten Artikels"},"topStories":[{"headline":"Prägnante Schlagzeile","summary":"Direkte Fakten, kein Fülltext.","detail":"2-3 Sätze mit konkreten Details.","source":"...","url":"...","sentiment":"positive|neutral|negative"}],"politics":[],"events":[],"culture":[],"local":[]}`;
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: 'claude-3-haiku-20240307', max_tokens: 2048, messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify({ model: 'claude-3-haiku-20240307', max_tokens: 4096, messages: [{ role: 'user', content: prompt }] })
   });
   if (!res.ok) { const e = await res.text(); throw new Error(`Claude API ${res.status}: ${e}`); }
 
@@ -188,6 +236,104 @@ function recoverPartialJSON(str) {
   return result;
 }
 
+/* ── Daily Pick — weather-aware activity recommendation ── */
+
+const PICK_EMOJIS = { animals:'🦁', museum:'🏛️', playground:'🛝', outdoor:'🌳', nature:'🌿', 'indoor-play':'🎪', event:'📅', seasonal:'🎄', cafe:'☕' };
+
+function buildDailyPick(activities, weather, lang) {
+  if (!activities?.length) return null;
+  const cands = activities.filter(a => a.category !== 'stayhome');
+  if (!cands.length) return null;
+
+  const hour = new Date().getHours();
+  const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+  const isRainy = weather && RAINY_CODES.includes(weather.weatherCode);
+  const isCold = weather && weather.temperature < 5;
+  const isHot = weather && weather.temperature > 28;
+  const weatherType = isRainy ? 'rainy' : isCold ? 'cold' : isHot ? 'hot' : 'nice';
+
+  // Score activities
+  const scored = cands.map(a => {
+    let score = 0;
+    if ((isRainy || isCold) && a.indoor) score += 3;
+    if (!isRainy && !isCold && !a.indoor) score += 2;
+    if (timeOfDay === 'evening' && a.duration && a.duration.includes('1')) score += 1;
+    if (timeOfDay === 'morning' && !a.indoor) score += 1;
+    score += Math.random(); // tiebreak
+    return { activity: a, score };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  const pick = scored[0].activity;
+
+  const reasons = {
+    rainy_morning: { en: `Rainy morning? ${pick.name} is the perfect indoor escape.`, de: `Regnerischer Morgen? ${pick.nameDE || pick.name} ist das perfekte Indoor-Ziel.` },
+    rainy_afternoon: { en: `Rainy afternoon — head to ${pick.name} and stay dry!`, de: `Regnerischer Nachmittag — ab zu ${pick.nameDE || pick.name}!` },
+    rainy_evening: { en: `Rainy evening? Cosy up at ${pick.name}.`, de: `Regnerischer Abend? Gemütlich in ${pick.nameDE || pick.name}.` },
+    cold_morning: { en: `Cold outside! Warm up at ${pick.name}.`, de: `Kalt draussen! Aufwärmen in ${pick.nameDE || pick.name}.` },
+    cold_afternoon: { en: `Bundle up or stay warm at ${pick.name}.`, de: `Warm einpacken oder aufwärmen in ${pick.nameDE || pick.name}.` },
+    cold_evening: { en: `Cold evening — ${pick.name} is a great indoor choice.`, de: `Kalter Abend — ${pick.nameDE || pick.name} ist eine tolle Indoor-Wahl.` },
+    hot_morning: { en: `Hot day ahead! Cool off at ${pick.name}.`, de: `Heisser Tag! Abkühlen in ${pick.nameDE || pick.name}.` },
+    hot_afternoon: { en: `Beat the heat at ${pick.name}.`, de: `Der Hitze entfliehen in ${pick.nameDE || pick.name}.` },
+    hot_evening: { en: `Warm evening — enjoy ${pick.name}.`, de: `Warmer Abend — geniesse ${pick.nameDE || pick.name}.` },
+    nice_morning: { en: `Beautiful morning — head to ${pick.name}!`, de: `Schöner Morgen — ab zu ${pick.nameDE || pick.name}!` },
+    nice_afternoon: { en: `Perfect afternoon for ${pick.name}.`, de: `Perfekter Nachmittag für ${pick.nameDE || pick.name}.` },
+    nice_evening: { en: `Lovely evening — why not ${pick.name}?`, de: `Schöner Abend — wie wäre es mit ${pick.nameDE || pick.name}?` },
+  };
+  const key = `${weatherType}_${timeOfDay}`;
+  const r = reasons[key] || reasons[`nice_${timeOfDay}`];
+
+  return {
+    activityId: pick.id,
+    name: pick.name,
+    nameDE: pick.nameDE || pick.name,
+    reason: r.en,
+    reasonDE: r.de,
+    emoji: PICK_EMOJIS[pick.category] || '📍',
+    indoor: pick.indoor,
+    category: pick.category
+  };
+}
+
+/* ── Weekend Brief — Sat+Sun weather + events ── */
+
+function buildWeekendBrief(weekendWeather, cityEvents, cityId) {
+  if (!weekendWeather?.length) return null;
+  // Don't show on Sunday (ambiguous "this weekend")
+  const dow = new Date().getDay();
+  if (dow === 0) return null;
+
+  const today = new Date();
+  // Find next Saturday and Sunday
+  const daysUntilSat = (6 - today.getDay() + 7) % 7 || 7;
+  const satDate = new Date(today);
+  satDate.setDate(today.getDate() + daysUntilSat);
+  const sunDate = new Date(satDate);
+  sunDate.setDate(satDate.getDate() + 1);
+
+  const satStr = satDate.toISOString().split('T')[0];
+  const sunStr = sunDate.toISOString().split('T')[0];
+
+  const satWeather = weekendWeather.find(d => d.date === satStr);
+  const sunWeather = weekendWeather.find(d => d.date === sunStr);
+
+  if (!satWeather && !sunWeather) return null;
+
+  // Find weekend events
+  const weekendEvents = (cityEvents || []).filter(e => {
+    const start = e.startDate;
+    const end = e.endDate || e.startDate;
+    return start <= sunStr && end >= satStr;
+  }).slice(0, 3);
+
+  return {
+    saturday: satWeather || null,
+    sunday: sunWeather || null,
+    events: weekendEvents,
+    satDate: satStr,
+    sunDate: sunStr
+  };
+}
+
 /* ── Main handler ── */
 
 export async function handleNews(url, env) {
@@ -219,20 +365,37 @@ export async function handleNews(url, env) {
   const schoolHolidays = getSchoolHolidays();
   const historyFact = getThisDayInHistory();
 
-  const [weather, transport, allHeadlines] = await Promise.all([
+  const [weather, transport, allHeadlines, weekendWeather] = await Promise.all([
     fetchWeather(city.lat, city.lon),
     fetchTransportDisruptions(city.station),
-    fetchAllFeeds(allSources)
+    fetchAllFeeds(allSources),
+    fetchWeekendWeather(city.lat, city.lon)
   ]);
 
   if (allHeadlines.length === 0) throw new Error('Failed to fetch any news feeds');
 
-  let categories = await getCategorizedNews(formatHeadlinesForPrompt(allHeadlines), lang, env.CLAUDE_API_KEY, city.name);
+  // Split headlines: general → Claude, culture/events/local → pre-assigned (DE) or Claude-translated (EN)
+  const split = splitHeadlinesByType(allHeadlines);
+
+  // When lang=en, include all headlines in Claude prompt for translation
+  // When lang=de, only send general headlines (pre-assigned German items are fine as-is)
+  const claudeHeadlines = lang === 'de'
+    ? split.general
+    : [...split.general, ...split.culture, ...split.events, ...split.local];
+
+  let categories = await getCategorizedNews(formatHeadlinesForPrompt(claudeHeadlines), lang, env.CLAUDE_API_KEY, city.name);
 
   // Retry with fewer headlines if empty
   const totalItems = Object.values(categories).flat().filter(i => i?.headline).length;
   if (totalItems === 0) {
-    categories = await getCategorizedNews(formatHeadlinesForPrompt(allHeadlines.slice(0, 4)), lang, env.CLAUDE_API_KEY, city.name);
+    categories = await getCategorizedNews(formatHeadlinesForPrompt(claudeHeadlines.slice(0, 20)), lang, env.CLAUDE_API_KEY, city.name);
+  }
+
+  // Merge pre-assigned items only for German (English items already went through Claude)
+  if (lang === 'de') {
+    categories.culture = [...(categories.culture || []), ...buildPreAssigned(split.culture, 5)].slice(0, 8);
+    categories.events = [...(categories.events || []), ...buildPreAssigned(split.events, 5)].slice(0, 8);
+    categories.local = [...(categories.local || []), ...buildPreAssigned(split.local, 5)].slice(0, 8);
   }
 
   // Build publishedAt map + normalize sentiment
@@ -249,31 +412,28 @@ export async function handleNews(url, env) {
   const trending = categories.trending || null;
   delete categories.trending;
 
-  // Morning briefing
+  // Morning briefing + daily pick
   let briefing = null;
   try {
     let topStory = null;
     for (const cat of ['topStories', 'politics', 'events']) {
       if (categories[cat]?.length > 0) { topStory = { ...categories[cat][0], category: cat }; break; }
     }
-    let suggestedActivity = null;
+    let dailyPick = null;
     try {
       const activities = await getCuratedActivities(env, cityId);
-      if (activities?.length) {
-        let cands = activities.filter(a => a.category !== 'stayhome');
-        if (weather) {
-          const bad = RAINY_CODES.includes(weather.weatherCode) || weather.temperature < 5;
-          if (bad) { const indoor = cands.filter(a => a.indoor); if (indoor.length) cands = indoor; }
-        }
-        suggestedActivity = cands[Math.floor(Math.random() * cands.length)];
-      }
+      dailyPick = buildDailyPick(activities, weather, lang);
     } catch {}
-    if (topStory || suggestedActivity) briefing = { topStory, suggestedActivity };
+    if (topStory || dailyPick) briefing = { topStory, dailyPick };
   } catch {}
+
+  // Weekend brief
+  const cityEvents = getCityEvents(cityId);
+  const weekendBrief = buildWeekendBrief(weekendWeather, cityEvents, cityId);
 
   const body = JSON.stringify({
     categories, weather, holidays, schoolHolidays, history: historyFact,
-    transport, trending, briefing,
+    transport, trending, briefing, weekendBrief,
     city: { id: cityId, name: city.name },
     timestamp: new Date().toISOString()
   });
