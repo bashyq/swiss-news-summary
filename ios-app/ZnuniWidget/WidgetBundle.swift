@@ -2,7 +2,7 @@ import SwiftUI
 import WidgetKit
 
 @main
-struct TodayInSwitzerlandWidgetBundle: WidgetBundle {
+struct ZnuniWidgetBundle: WidgetBundle {
     var body: some Widget {
         TodayWidget()
         NewsWidget()

@@ -1,6 +1,6 @@
 import XCTest
 import CoreLocation
-@testable import SwissPortal
+@testable import Znuni
 
 /// Tests that all Codable models decode correctly from JSON
 /// matching the actual Cloudflare Worker API response shapes.

@@ -1,5 +1,5 @@
 import XCTest
-@testable import SwissPortal
+@testable import Znuni
 
 final class FreshnessScoreTests: XCTestCase {
 

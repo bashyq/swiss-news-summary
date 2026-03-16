@@ -1,5 +1,5 @@
 import XCTest
-@testable import SwissPortal
+@testable import Znuni
 
 /// Tests for ViewModel logic (filtering, sorting, computed properties).
 /// Note: These tests don't hit the network — they test pure logic on the ViewModels.

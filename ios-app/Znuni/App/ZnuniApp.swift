@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct TodayInSwitzerlandApp: App {
+struct ZnuniApp: App {
     @State private var appState = AppState()
     @State private var locationManager = LocationManager()
     @State private var toastManager = ToastManager()

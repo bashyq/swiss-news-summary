@@ -1,13 +1,13 @@
 //
-//  SwissPortalUITests.swift
-//  SwissPortalUITests
+//  ZnuniUITests.swift
+//  ZnuniUITests
 //
 //  Created by bq on 22.02.2026.
 //
 
 import XCTest
 
-final class SwissPortalUITests: XCTestCase {
+final class ZnuniUITests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.

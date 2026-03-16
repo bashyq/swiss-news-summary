@@ -1,13 +1,13 @@
 //
-//  SwissPortalUITestsLaunchTests.swift
-//  SwissPortalUITests
+//  ZnuniUITestsLaunchTests.swift
+//  ZnuniUITests
 //
 //  Created by bq on 22.02.2026.
 //
 
 import XCTest
 
-final class SwissPortalUITestsLaunchTests: XCTestCase {
+final class ZnuniUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

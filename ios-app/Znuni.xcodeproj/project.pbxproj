@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		03CD276C2F4B12400011395A /* TodayInSwitzerlandWidgetExtension.appex in Embed Widget Extension */ = {isa = PBXBuildFile; fileRef = 03CD27602F4B12400011395A /* TodayInSwitzerlandWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		03CD276C2F4B12400011395A /* ZnuniWidgetExtension.appex in Embed Widget Extension */ = {isa = PBXBuildFile; fileRef = 03CD27602F4B12400011395A /* ZnuniWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -16,21 +16,21 @@
 			containerPortal = 03CD27252F4B123E0011395A /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 03CD272C2F4B123E0011395A;
-			remoteInfo = SwissPortal;
+			remoteInfo = Znuni;
 		};
 		03CD27452F4B123F0011395A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 03CD27252F4B123E0011395A /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 03CD272C2F4B123E0011395A;
-			remoteInfo = SwissPortal;
+			remoteInfo = Znuni;
 		};
 		03CD27692F4B12400011395A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 03CD27252F4B123E0011395A /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 03CD27622F4B12400011395A;
-			remoteInfo = TodayInSwitzerlandWidgetExtension;
+			remoteInfo = ZnuniWidgetExtension;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -41,7 +41,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				03CD276C2F4B12400011395A /* TodayInSwitzerlandWidgetExtension.appex in Embed Widget Extension */,
+				03CD276C2F4B12400011395A /* ZnuniWidgetExtension.appex in Embed Widget Extension */,
 			);
 			name = "Embed Widget Extension";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -49,54 +49,54 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		03CD272D2F4B123E0011395A /* SwissPortal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwissPortal.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		03CD273A2F4B123F0011395A /* SwissPortalTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SwissPortalTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		03CD27442F4B123F0011395A /* SwissPortalUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SwissPortalUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		03CD27602F4B12400011395A /* TodayInSwitzerlandWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TodayInSwitzerlandWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		03CD272D2F4B123E0011395A /* Znuni.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Znuni.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		03CD273A2F4B123F0011395A /* ZnuniTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ZnuniTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		03CD27442F4B123F0011395A /* ZnuniUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ZnuniUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		03CD27602F4B12400011395A /* ZnuniWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ZnuniWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		03CD276D2F4B12400011395A /* Exceptions for "TodayInSwitzerlandWidget" folder in "TodayInSwitzerlandWidgetExtension" target */ = {
+		03CD276D2F4B12400011395A /* Exceptions for "ZnuniWidget" folder in "ZnuniWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 03CD27622F4B12400011395A /* TodayInSwitzerlandWidgetExtension */;
+			target = 03CD27622F4B12400011395A /* ZnuniWidgetExtension */;
 		};
-		03CD27802F4B12400011395A /* Exceptions for "SwissPortal" folder in "SwissPortal" target */ = {
+		03CD27802F4B12400011395A /* Exceptions for "Znuni" folder in "Znuni" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 03CD272C2F4B123E0011395A /* SwissPortal */;
+			target = 03CD272C2F4B123E0011395A /* Znuni */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		03CD272F2F4B123E0011395A /* SwissPortal */ = {
+		03CD272F2F4B123E0011395A /* Znuni */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				03CD27802F4B12400011395A /* Exceptions for "SwissPortal" folder in "SwissPortal" target */,
+				03CD27802F4B12400011395A /* Exceptions for "Znuni" folder in "Znuni" target */,
 			);
-			path = SwissPortal;
+			path = Znuni;
 			sourceTree = "<group>";
 		};
-		03CD273D2F4B123F0011395A /* SwissPortalTests */ = {
+		03CD273D2F4B123F0011395A /* ZnuniTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = SwissPortalTests;
+			path = ZnuniTests;
 			sourceTree = "<group>";
 		};
-		03CD27472F4B123F0011395A /* SwissPortalUITests */ = {
+		03CD27472F4B123F0011395A /* ZnuniUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = SwissPortalUITests;
+			path = ZnuniUITests;
 			sourceTree = "<group>";
 		};
-		03CD27612F4B12400011395A /* TodayInSwitzerlandWidget */ = {
+		03CD27612F4B12400011395A /* ZnuniWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				03CD276D2F4B12400011395A /* Exceptions for "TodayInSwitzerlandWidget" folder in "TodayInSwitzerlandWidgetExtension" target */,
+				03CD276D2F4B12400011395A /* Exceptions for "ZnuniWidget" folder in "ZnuniWidgetExtension" target */,
 			);
-			path = TodayInSwitzerlandWidget;
+			path = ZnuniWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -136,10 +136,10 @@
 		03CD27242F4B123E0011395A = {
 			isa = PBXGroup;
 			children = (
-				03CD272F2F4B123E0011395A /* SwissPortal */,
-				03CD27612F4B12400011395A /* TodayInSwitzerlandWidget */,
-				03CD273D2F4B123F0011395A /* SwissPortalTests */,
-				03CD27472F4B123F0011395A /* SwissPortalUITests */,
+				03CD272F2F4B123E0011395A /* Znuni */,
+				03CD27612F4B12400011395A /* ZnuniWidget */,
+				03CD273D2F4B123F0011395A /* ZnuniTests */,
+				03CD27472F4B123F0011395A /* ZnuniUITests */,
 				03CD272E2F4B123E0011395A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -147,10 +147,10 @@
 		03CD272E2F4B123E0011395A /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				03CD272D2F4B123E0011395A /* SwissPortal.app */,
-				03CD273A2F4B123F0011395A /* SwissPortalTests.xctest */,
-				03CD27442F4B123F0011395A /* SwissPortalUITests.xctest */,
-				03CD27602F4B12400011395A /* TodayInSwitzerlandWidgetExtension.appex */,
+				03CD272D2F4B123E0011395A /* Znuni.app */,
+				03CD273A2F4B123F0011395A /* ZnuniTests.xctest */,
+				03CD27442F4B123F0011395A /* ZnuniUITests.xctest */,
+				03CD27602F4B12400011395A /* ZnuniWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -158,9 +158,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		03CD272C2F4B123E0011395A /* SwissPortal */ = {
+		03CD272C2F4B123E0011395A /* Znuni */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 03CD274E2F4B123F0011395A /* Build configuration list for PBXNativeTarget "SwissPortal" */;
+			buildConfigurationList = 03CD274E2F4B123F0011395A /* Build configuration list for PBXNativeTarget "Znuni" */;
 			buildPhases = (
 				03CD27292F4B123E0011395A /* Sources */,
 				03CD272A2F4B123E0011395A /* Frameworks */,
@@ -173,18 +173,18 @@
 				03CD276A2F4B12400011395A /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				03CD272F2F4B123E0011395A /* SwissPortal */,
+				03CD272F2F4B123E0011395A /* Znuni */,
 			);
-			name = SwissPortal;
+			name = Znuni;
 			packageProductDependencies = (
 			);
-			productName = SwissPortal;
-			productReference = 03CD272D2F4B123E0011395A /* SwissPortal.app */;
+			productName = Znuni;
+			productReference = 03CD272D2F4B123E0011395A /* Znuni.app */;
 			productType = "com.apple.product-type.application";
 		};
-		03CD27392F4B123F0011395A /* SwissPortalTests */ = {
+		03CD27392F4B123F0011395A /* ZnuniTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 03CD27512F4B123F0011395A /* Build configuration list for PBXNativeTarget "SwissPortalTests" */;
+			buildConfigurationList = 03CD27512F4B123F0011395A /* Build configuration list for PBXNativeTarget "ZnuniTests" */;
 			buildPhases = (
 				03CD27362F4B123F0011395A /* Sources */,
 				03CD27372F4B123F0011395A /* Frameworks */,
@@ -196,18 +196,18 @@
 				03CD273C2F4B123F0011395A /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				03CD273D2F4B123F0011395A /* SwissPortalTests */,
+				03CD273D2F4B123F0011395A /* ZnuniTests */,
 			);
-			name = SwissPortalTests;
+			name = ZnuniTests;
 			packageProductDependencies = (
 			);
-			productName = SwissPortalTests;
-			productReference = 03CD273A2F4B123F0011395A /* SwissPortalTests.xctest */;
+			productName = ZnuniTests;
+			productReference = 03CD273A2F4B123F0011395A /* ZnuniTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		03CD27432F4B123F0011395A /* SwissPortalUITests */ = {
+		03CD27432F4B123F0011395A /* ZnuniUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 03CD27542F4B123F0011395A /* Build configuration list for PBXNativeTarget "SwissPortalUITests" */;
+			buildConfigurationList = 03CD27542F4B123F0011395A /* Build configuration list for PBXNativeTarget "ZnuniUITests" */;
 			buildPhases = (
 				03CD27402F4B123F0011395A /* Sources */,
 				03CD27412F4B123F0011395A /* Frameworks */,
@@ -219,18 +219,18 @@
 				03CD27462F4B123F0011395A /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				03CD27472F4B123F0011395A /* SwissPortalUITests */,
+				03CD27472F4B123F0011395A /* ZnuniUITests */,
 			);
-			name = SwissPortalUITests;
+			name = ZnuniUITests;
 			packageProductDependencies = (
 			);
-			productName = SwissPortalUITests;
-			productReference = 03CD27442F4B123F0011395A /* SwissPortalUITests.xctest */;
+			productName = ZnuniUITests;
+			productReference = 03CD27442F4B123F0011395A /* ZnuniUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
-		03CD27622F4B12400011395A /* TodayInSwitzerlandWidgetExtension */ = {
+		03CD27622F4B12400011395A /* ZnuniWidgetExtension */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 03CD27682F4B12400011395A /* Build configuration list for PBXNativeTarget "TodayInSwitzerlandWidgetExtension" */;
+			buildConfigurationList = 03CD27682F4B12400011395A /* Build configuration list for PBXNativeTarget "ZnuniWidgetExtension" */;
 			buildPhases = (
 				03CD27632F4B12400011395A /* Sources */,
 				03CD27642F4B12400011395A /* Frameworks */,
@@ -241,13 +241,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				03CD27612F4B12400011395A /* TodayInSwitzerlandWidget */,
+				03CD27612F4B12400011395A /* ZnuniWidget */,
 			);
-			name = TodayInSwitzerlandWidgetExtension;
+			name = ZnuniWidgetExtension;
 			packageProductDependencies = (
 			);
-			productName = TodayInSwitzerlandWidgetExtension;
-			productReference = 03CD27602F4B12400011395A /* TodayInSwitzerlandWidgetExtension.appex */;
+			productName = ZnuniWidgetExtension;
+			productReference = 03CD27602F4B12400011395A /* ZnuniWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -276,7 +276,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 03CD27282F4B123E0011395A /* Build configuration list for PBXProject "SwissPortal" */;
+			buildConfigurationList = 03CD27282F4B123E0011395A /* Build configuration list for PBXProject "Znuni" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -290,10 +290,10 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				03CD272C2F4B123E0011395A /* SwissPortal */,
-				03CD27622F4B12400011395A /* TodayInSwitzerlandWidgetExtension */,
-				03CD27392F4B123F0011395A /* SwissPortalTests */,
-				03CD27432F4B123F0011395A /* SwissPortalUITests */,
+				03CD272C2F4B123E0011395A /* Znuni */,
+				03CD27622F4B12400011395A /* ZnuniWidgetExtension */,
+				03CD27392F4B123F0011395A /* ZnuniTests */,
+				03CD27432F4B123F0011395A /* ZnuniUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -363,17 +363,17 @@
 /* Begin PBXTargetDependency section */
 		03CD273C2F4B123F0011395A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 03CD272C2F4B123E0011395A /* SwissPortal */;
+			target = 03CD272C2F4B123E0011395A /* Znuni */;
 			targetProxy = 03CD273B2F4B123F0011395A /* PBXContainerItemProxy */;
 		};
 		03CD27462F4B123F0011395A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 03CD272C2F4B123E0011395A /* SwissPortal */;
+			target = 03CD272C2F4B123E0011395A /* Znuni */;
 			targetProxy = 03CD27452F4B123F0011395A /* PBXContainerItemProxy */;
 		};
 		03CD276A2F4B12400011395A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 03CD27622F4B12400011395A /* TodayInSwitzerlandWidgetExtension */;
+			target = 03CD27622F4B12400011395A /* ZnuniWidgetExtension */;
 			targetProxy = 03CD27692F4B12400011395A /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -508,8 +508,8 @@
 				DEVELOPMENT_TEAM = 83YV88VTB8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = SwissPortal/Info.plist;
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "SwissPortal uses your location to show nearby activities and calculate distances.";
+				INFOPLIST_FILE = Znuni/Info.plist;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Znüni uses your location to show nearby activities and calculate distances.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -520,7 +520,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Bashar.SwissPortal;
+				PRODUCT_BUNDLE_IDENTIFIER = Bashar.Znuni;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -542,8 +542,8 @@
 				DEVELOPMENT_TEAM = 83YV88VTB8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = SwissPortal/Info.plist;
-				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "SwissPortal uses your location to show nearby activities and calculate distances.";
+				INFOPLIST_FILE = Znuni/Info.plist;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Znüni uses your location to show nearby activities and calculate distances.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -554,7 +554,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Bashar.SwissPortal;
+				PRODUCT_BUNDLE_IDENTIFIER = Bashar.Znuni;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -576,7 +576,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Bashar.SwissPortalTests;
+				PRODUCT_BUNDLE_IDENTIFIER = Bashar.ZnuniTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -584,7 +584,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SwissPortal.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SwissPortal";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Znuni.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Znuni";
 			};
 			name = Debug;
 		};
@@ -598,7 +598,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Bashar.SwissPortalTests;
+				PRODUCT_BUNDLE_IDENTIFIER = Bashar.ZnuniTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -606,7 +606,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SwissPortal.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/SwissPortal";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Znuni.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Znuni";
 			};
 			name = Release;
 		};
@@ -618,7 +618,7 @@
 				DEVELOPMENT_TEAM = 83YV88VTB8;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Bashar.SwissPortalUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = Bashar.ZnuniUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -626,7 +626,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = SwissPortal;
+				TEST_TARGET_NAME = Znuni;
 			};
 			name = Debug;
 		};
@@ -638,7 +638,7 @@
 				DEVELOPMENT_TEAM = 83YV88VTB8;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Bashar.SwissPortalUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = Bashar.ZnuniUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -646,7 +646,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = SwissPortal;
+				TEST_TARGET_NAME = Znuni;
 			};
 			name = Release;
 		};
@@ -657,8 +657,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 83YV88VTB8;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = TodayInSwitzerlandWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Today in Switzerland";
+				INFOPLIST_FILE = ZnuniWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Znüni Widget";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -667,7 +667,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Bashar.SwissPortal.TodayInSwitzerlandWidgetExtension;
+				PRODUCT_BUNDLE_IDENTIFIER = Bashar.Znuni.ZnuniWidgetExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -684,8 +684,8 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 83YV88VTB8;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = TodayInSwitzerlandWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Today in Switzerland";
+				INFOPLIST_FILE = ZnuniWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Znüni Widget";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -694,7 +694,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = Bashar.SwissPortal.TodayInSwitzerlandWidgetExtension;
+				PRODUCT_BUNDLE_IDENTIFIER = Bashar.Znuni.ZnuniWidgetExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -707,7 +707,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		03CD27282F4B123E0011395A /* Build configuration list for PBXProject "SwissPortal" */ = {
+		03CD27282F4B123E0011395A /* Build configuration list for PBXProject "Znuni" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				03CD274C2F4B123F0011395A /* Debug */,
@@ -716,7 +716,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		03CD274E2F4B123F0011395A /* Build configuration list for PBXNativeTarget "SwissPortal" */ = {
+		03CD274E2F4B123F0011395A /* Build configuration list for PBXNativeTarget "Znuni" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				03CD274F2F4B123F0011395A /* Debug */,
@@ -725,7 +725,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		03CD27512F4B123F0011395A /* Build configuration list for PBXNativeTarget "SwissPortalTests" */ = {
+		03CD27512F4B123F0011395A /* Build configuration list for PBXNativeTarget "ZnuniTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				03CD27522F4B123F0011395A /* Debug */,
@@ -734,7 +734,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		03CD27542F4B123F0011395A /* Build configuration list for PBXNativeTarget "SwissPortalUITests" */ = {
+		03CD27542F4B123F0011395A /* Build configuration list for PBXNativeTarget "ZnuniUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				03CD27552F4B123F0011395A /* Debug */,
@@ -743,7 +743,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		03CD27682F4B12400011395A /* Build configuration list for PBXNativeTarget "TodayInSwitzerlandWidgetExtension" */ = {
+		03CD27682F4B12400011395A /* Build configuration list for PBXNativeTarget "ZnuniWidgetExtension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				03CD27662F4B12400011395A /* Debug */,
