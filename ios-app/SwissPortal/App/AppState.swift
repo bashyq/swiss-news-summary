@@ -1,5 +1,6 @@
 import SwiftUI
 import WidgetKit
+import CoreLocation
 
 // MARK: - UserDefaults Keys
 
@@ -12,6 +13,9 @@ enum StorageKeys {
     static let customActivities = "customActivities"
     static let customLunch = "customLunch"
     static let familySession = "familySession"
+    static let homeAddressName = "homeAddressName"
+    static let homeLatitude = "homeLatitude"
+    static let homeLongitude = "homeLongitude"
 
     /// App group suite for sharing settings with widgets
     static let widgetSuite = "group.com.todayinswitzerland"
@@ -39,6 +43,47 @@ final class AppState {
     // Family session for agenda composer
     var familySession: FamilySession {
         didSet { familySession.save() }
+    }
+
+    // Home address for "travel home" in agenda timeline
+    var homeAddressName: String? {
+        didSet { UserDefaults.standard.set(homeAddressName, forKey: StorageKeys.homeAddressName) }
+    }
+    var homeLatitude: Double? {
+        didSet {
+            if let lat = homeLatitude {
+                UserDefaults.standard.set(lat, forKey: StorageKeys.homeLatitude)
+            } else {
+                UserDefaults.standard.removeObject(forKey: StorageKeys.homeLatitude)
+            }
+        }
+    }
+    var homeLongitude: Double? {
+        didSet {
+            if let lon = homeLongitude {
+                UserDefaults.standard.set(lon, forKey: StorageKeys.homeLongitude)
+            } else {
+                UserDefaults.standard.removeObject(forKey: StorageKeys.homeLongitude)
+            }
+        }
+    }
+
+    /// Home location as CLLocation, if set.
+    var homeLocation: CLLocation? {
+        guard let lat = homeLatitude, let lon = homeLongitude else { return nil }
+        return CLLocation(latitude: lat, longitude: lon)
+    }
+
+    func setHomeAddress(name: String, latitude: Double, longitude: Double) {
+        homeAddressName = name
+        homeLatitude = latitude
+        homeLongitude = longitude
+    }
+
+    func clearHomeAddress() {
+        homeAddressName = nil
+        homeLatitude = nil
+        homeLongitude = nil
     }
 
     // Transient UI state
@@ -76,6 +121,12 @@ final class AppState {
         self.savedLunchIDs = Set(savedLunch)
 
         self.familySession = FamilySession.load()
+
+        self.homeAddressName = UserDefaults.standard.string(forKey: StorageKeys.homeAddressName)
+        let storedLat = UserDefaults.standard.object(forKey: StorageKeys.homeLatitude) as? Double
+        let storedLon = UserDefaults.standard.object(forKey: StorageKeys.homeLongitude) as? Double
+        self.homeLatitude = storedLat
+        self.homeLongitude = storedLon
 
         // Sync current settings to widget shared defaults on launch
         Self.syncToWidgetDefaults(key: StorageKeys.city, value: self.city.rawValue)

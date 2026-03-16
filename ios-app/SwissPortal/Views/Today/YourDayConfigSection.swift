@@ -25,6 +25,29 @@ struct YourDayConfigSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            // Context banner (AI summary — e.g. "Cold day — indoor activities recommended")
+            if let contextText {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.znNavy.opacity(0.5))
+
+                    Text(contextText)
+                        .font(.system(size: 13, weight: .light))
+                        .foregroundStyle(Color.znBody)
+                        .lineSpacing(2)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 11)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.znNavy.opacity(0.03))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.znBorder, lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+
             // Session pill
             if let sessionDisplay {
                 Button(action: onSessionTap) {
@@ -54,29 +77,6 @@ struct YourDayConfigSection: View {
                 onDelete: { anchor in onAnchorDelete?(anchor) }
             )
 
-            // Context banner
-            if let contextText {
-                HStack(alignment: .top, spacing: 10) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 13))
-                        .foregroundStyle(Color.znNavy.opacity(0.5))
-
-                    Text(contextText)
-                        .font(.system(size: 13, weight: .light))
-                        .foregroundStyle(Color.znBody)
-                        .lineSpacing(2)
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 11)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.znNavy.opacity(0.03))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.znBorder, lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-            }
-
             // "Plan the weekend" CTA
             if canPlanWeekend, !isWeekendMode, let onPlanWeekend {
                 Button(action: onPlanWeekend) {
@@ -101,8 +101,9 @@ struct YourDayConfigSection: View {
                 .buttonStyle(.plain)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal)
-        .padding(.top, 12)
+        .padding(.top, 6)
     }
 
     // MARK: - Weather Card

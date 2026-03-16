@@ -12,9 +12,10 @@ struct CheckInRecord: Codable, Identifiable {
 
     let venueId: String
     let venueName: String
-    let scheduledTime: Date         // when the slot was originally scheduled
-    let actualTime: Date            // when the user actually checked in
-    let delta: TimeInterval         // positive = late, negative = early
+    let scheduledTime: Date             // when the slot was originally scheduled to start
+    let scheduledEndTime: Date          // when the slot was expected to end (start + duration)
+    let actualDepartureTime: Date       // when the user actually tapped Done ✓
+    let delta: TimeInterval             // positive = left late (ran over), negative = left early
     let source: CheckInSource
-    let date: Date                  // calendar start-of-day
+    let date: Date                      // calendar start-of-day
 }

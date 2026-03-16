@@ -96,10 +96,15 @@ struct WeekendView: View {
 
     @ViewBuilder
     private var content: some View {
-        if !hasPlanned {
-            entryState
-        } else {
-            plannedContent
+        Group {
+            if !hasPlanned {
+                entryState
+            } else {
+                plannedContent
+            }
+        }
+        .onAppear {
+            restorePersistedPlan()
         }
     }
 
@@ -473,6 +478,36 @@ struct WeekendView: View {
         weekendAnchors[.sunday] = AnchorStore.shared.anchors(for: PlanDay.sunday.date())
     }
 
+    /// Restore a persisted weekend plan from MultiDayPlanStore.
+    /// If a plan exists for the current weekend dates, restore agendas and show planned content.
+    private func restorePersistedPlan() {
+        guard !hasPlanned else { return }
+        guard let plan = MultiDayPlanStore.shared.mostRecentWeekendPlan() else { return }
+
+        let satISO = PlanDay.saturday.isoDate
+        let sunISO = PlanDay.sunday.isoDate
+
+        // Check if the persisted plan matches the current weekend
+        let planDates = Set(plan.days.map(\.isoDate))
+        guard planDates.contains(satISO) || planDates.contains(sunISO) else { return }
+
+        // Restore agendas
+        for day in plan.days {
+            if let agenda = day.agenda {
+                todayVM._agendas[day.isoDate] = agenda
+                todayVM._agendaStates[day.isoDate] = .loaded
+            }
+        }
+
+        // Restore anchors
+        refreshAnchors()
+
+        // Show planned content
+        todayVM.isWeekendMode = true
+        todayVM.selectedPlanDay = .saturday
+        hasPlanned = true
+    }
+
     // MARK: - Helpers
 
     private var isComposing: Bool {
@@ -536,6 +571,9 @@ struct WeekendView: View {
         }
     }
 }
+
+/// Multi-day planner view — alias for WeekendView (Step 16 naming convention).
+typealias MultiDayPlannerView = WeekendView
 
 #Preview {
     NavigationStack {

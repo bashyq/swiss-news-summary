@@ -16,10 +16,12 @@ final class TemplateEngine {
         cityEvents: [CityEvent],
         recentlyShown: Set<String>,
         language: AppLanguage,
-        visitStore: VenueVisitStore = .shared
+        visitStore: VenueVisitStore = .shared,
+        planDate: Date = Date()
     ) -> DayAgenda {
         let archetype = selectArchetype(
-            weather: weather, session: session, cityEvents: cityEvents
+            weather: weather, session: session, cityEvents: cityEvents,
+            planDate: planDate
         )
         return archetype.build(
             weather: weather,
@@ -29,7 +31,8 @@ final class TemplateEngine {
             cityEvents: cityEvents,
             recentlyShown: recentlyShown,
             language: language,
-            visitStore: visitStore
+            visitStore: visitStore,
+            planDate: planDate
         )
     }
 
@@ -38,13 +41,14 @@ final class TemplateEngine {
     private func selectArchetype(
         weather: Weather?,
         session: FamilySession,
-        cityEvents: [CityEvent]
+        cityEvents: [CityEvent],
+        planDate: Date = Date()
     ) -> Archetype {
         let isBad = isBadWeatherDay(weather: weather)
         let isCold = (weather?.temperature ?? 15) < 10
         let isSunny = weather.map { !isCold && !$0.isBadWeather && $0.temperature >= 15 } ?? false
-        let hasEvents = !todayCityEvents(cityEvents).isEmpty
-        let isWeekend = Calendar.current.isDateInWeekend(Date())
+        let hasEvents = !cityEvents.filter({ $0.overlaps(with: planDate) }).isEmpty
+        let isWeekend = Calendar.current.isDateInWeekend(planDate)
 
         switch (isBad, isCold, isSunny, session.soloParent, session.youngestAge, hasEvents && isWeekend) {
         case (true, _, _, _, _, _):          return .badWeatherHomeDay
@@ -94,18 +98,18 @@ private enum Archetype {
         cityEvents: [CityEvent],
         recentlyShown: Set<String>,
         language: AppLanguage,
-        visitStore: VenueVisitStore
+        visitStore: VenueVisitStore,
+        planDate: Date = Date()
     ) -> DayAgenda {
-        let today = Date()
-        let dateISO = ISO8601DateFormatter.string(from: today, timeZone: .current, formatOptions: [.withFullDate])
-        let dayName = dayOfWeekName(today, language: language)
+        let dateISO = ISO8601DateFormatter.string(from: planDate, timeZone: .current, formatOptions: [.withFullDate])
+        let dayName = dayOfWeekName(planDate, language: language)
         let childNames = session.children.map(\.name).joined(separator: " & ")
 
         // Filter available activities (basic eligibility)
         let baseAvailable = activities.filter { activity in
             !activity.isStayHome
-                && activity.isAvailable(on: today)
-                && OpeningHoursParser.status(from: activity.openingHours, at: today) != .closed
+                && activity.isAvailable(on: planDate)
+                && OpeningHoursParser.status(from: activity.openingHours, at: planDate) != .closed
                 && (activity.season == nil || activity.isCurrentSeason)
         }
 
@@ -113,7 +117,7 @@ private enum Archetype {
         let available: [Activity]
         if let w = weather {
             let scored = baseAvailable
-                .map { ($0, FreshnessScorer.scoreActivity($0, visitStore: visitStore, weather: w, date: today)) }
+                .map { ($0, FreshnessScorer.scoreActivity($0, visitStore: visitStore, weather: w, date: planDate)) }
                 .filter { $0.1.isEligible }
                 .sorted { $0.1.compositeScore > $1.1.compositeScore }
                 .map { $0.0 }
@@ -134,23 +138,23 @@ private enum Archetype {
             $0.permanentlyClosed != true && ($0.rating == nil || $0.rating! >= 3.5)
         }
         scoredLunch = baseLunchPool
-            .map { ($0, FreshnessScorer.scoreRestaurant($0, slotType: .lunch, visitStore: visitStore, date: today)) }
+            .map { ($0, FreshnessScorer.scoreRestaurant($0, slotType: .lunch, visitStore: visitStore, date: planDate)) }
             .filter { $0.1.isEligible }
             .sorted { $0.1.compositeScore > $1.1.compositeScore }
             .map { $0.0 }
         scoredDinner = baseLunchPool
-            .map { ($0, FreshnessScorer.scoreRestaurant($0, slotType: .dinner, visitStore: visitStore, date: today)) }
+            .map { ($0, FreshnessScorer.scoreRestaurant($0, slotType: .dinner, visitStore: visitStore, date: planDate)) }
             .filter { $0.1.isEligible }
             .sorted { $0.1.compositeScore > $1.1.compositeScore }
             .map { $0.0 }
         // Pool exhaustion reset for restaurants
         let openRestaurants = scoredLunch.count >= 2 ? scoredLunch : baseLunchPool.filter {
             $0.openForLunch == true
-                || ($0.openForLunch == nil && OpeningHoursParser.status(from: $0.openingHours, at: today) != .closed)
+                || ($0.openForLunch == nil && OpeningHoursParser.status(from: $0.openingHours, at: planDate) != .closed)
         }
         let allRestaurants = scoredDinner.count >= 2 ? scoredDinner : baseLunchPool.filter {
             $0.openForDinner != false
-                && OpeningHoursParser.status(from: $0.openingHours, at: today) != .closed
+                && OpeningHoursParser.status(from: $0.openingHours, at: planDate) != .closed
         }
 
         let weatherDesc = weather.map { "\(Int($0.temperature))° and \($0.description.lowercased())" } ?? "mild"
@@ -163,7 +167,8 @@ private enum Archetype {
                 available: available.filter(\.indoor),
                 stayHome: stayHome,
                 restaurants: openRestaurants.isEmpty ? allRestaurants : openRestaurants,
-                language: language
+                language: language,
+                planDate: planDate
             )
         case .sunnyOutdoorDay:
             return buildGoodWeatherDay(
@@ -175,7 +180,8 @@ private enum Archetype {
                 theme: language == .en
                     ? "Sunny \(dayName) with \(childNames)"
                     : "Sonniger \(dayName) mit \(childNames)",
-                language: language
+                language: language,
+                planDate: planDate
             )
         case .rainyMuseumDay:
             return buildGoodWeatherDay(
@@ -187,7 +193,8 @@ private enum Archetype {
                 theme: language == .en
                     ? "Cozy indoor \(dayName) with \(childNames)"
                     : "Gemütlicher Indoor-\(dayName) mit \(childNames)",
-                language: language
+                language: language,
+                planDate: planDate
             )
         case .mixedIndoorOutdoor:
             return buildGoodWeatherDay(
@@ -199,7 +206,8 @@ private enum Archetype {
                 theme: language == .en
                     ? "Mixed \(dayName) with \(childNames)"
                     : "\(dayName) mit \(childNames) — Mix",
-                language: language
+                language: language,
+                planDate: planDate
             )
         case .freeDay:
             let freeActivities = available.filter(\.isFree)
@@ -212,7 +220,8 @@ private enum Archetype {
                 theme: language == .en
                     ? "Free day with \(childNames)"
                     : "Gratis-Tag mit \(childNames)",
-                language: language
+                language: language,
+                planDate: planDate
             )
         case .toddlerFocused:
             return buildToddlerDay(
@@ -220,17 +229,19 @@ private enum Archetype {
                 weatherDesc: weatherDesc, session: session,
                 available: available,
                 restaurants: openRestaurants.isEmpty ? allRestaurants : openRestaurants,
-                language: language
+                language: language,
+                planDate: planDate
             )
         case .weekendSpecial:
-            let todayEvents = cityEvents.filter { $0.overlaps(with: today) }
+            let todayEvents = cityEvents.filter { $0.overlaps(with: planDate) }
             return buildWeekendSpecialDay(
                 date: dateISO, dayName: dayName, childNames: childNames,
                 weatherDesc: weatherDesc, session: session,
                 available: available,
                 cityEvents: todayEvents,
                 restaurants: openRestaurants.isEmpty ? allRestaurants : openRestaurants,
-                language: language
+                language: language,
+                planDate: planDate
             )
         }
     }
@@ -242,7 +253,8 @@ private enum Archetype {
         weatherDesc: String, session: FamilySession,
         morningPool: [Activity], afternoonPool: [Activity],
         restaurants: [LunchSpot],
-        theme: String, language: AppLanguage
+        theme: String, language: AppLanguage,
+        planDate: Date
     ) -> DayAgenda {
         let morning = pickActivity(from: morningPool, excluding: [], session: session, language: language)
         let afternoon = pickActivity(
@@ -261,7 +273,7 @@ private enum Archetype {
                 id: "morning", time: "10:00", activity: act,
                 timeLabel: language == .en ? "🌅 Morning · Activity" : "🌅 Morgen · Aktivität",
                 travelNote: language == .en ? "From home" : "Von zu Hause",
-                swaps: swaps, session: session, language: language
+                swaps: swaps, session: session, language: language, planDate: planDate
             ))
         }
 
@@ -269,7 +281,7 @@ private enum Archetype {
             let travel = travelBetween(morning, restaurantLat: spot.lat, restaurantLon: spot.lon)
             let swaps = buildRestaurantSwaps(from: restaurants, excluding: [spot.id, dinnerSpot?.id].compactMap { $0 }, near: morning, language: language)
             slots.append(makeLunchSlot(
-                spot: spot, time: "11:45", travelNote: travel, swaps: swaps, language: language
+                spot: spot, time: "11:45", travelNote: travel, swaps: swaps, language: language, planDate: planDate
             ))
         }
 
@@ -279,7 +291,7 @@ private enum Archetype {
             slots.append(makeActivitySlot(
                 id: "afternoon", time: "13:30", activity: act,
                 timeLabel: language == .en ? "☀️ Afternoon · Activity" : "☀️ Nachmittag · Aktivität",
-                travelNote: travel, swaps: swaps, session: session, language: language
+                travelNote: travel, swaps: swaps, session: session, language: language, planDate: planDate
             ))
         }
 
@@ -287,7 +299,7 @@ private enum Archetype {
             let travel = travelBetween(afternoon, restaurantLat: spot.lat, restaurantLon: spot.lon)
             let swaps = buildRestaurantSwaps(from: restaurants, excluding: [lunchSpot?.id, spot.id].compactMap { $0 }, near: afternoon, language: language)
             slots.append(makeDinnerSlot(
-                spot: spot, time: "18:00", travelNote: travel, swaps: swaps, language: language
+                spot: spot, time: "18:00", travelNote: travel, swaps: swaps, language: language, planDate: planDate
             ))
         }
 
@@ -303,7 +315,8 @@ private enum Archetype {
         date: String, dayName: String, childNames: String,
         weatherDesc: String, session: FamilySession,
         available: [Activity], stayHome: [Activity],
-        restaurants: [LunchSpot], language: AppLanguage
+        restaurants: [LunchSpot], language: AppLanguage,
+        planDate: Date
     ) -> DayAgenda {
         let theme = language == .en
             ? "Stay-home \(dayName) with \(childNames)"
@@ -323,7 +336,7 @@ private enum Archetype {
             slots.append(makeActivitySlot(
                 id: "afternoon", time: "14:30", activity: act,
                 timeLabel: language == .en ? "🌨 Afternoon outing" : "🌨 Nachmittags-Ausflug",
-                travelNote: nil, swaps: swaps, session: session, language: language
+                travelNote: nil, swaps: swaps, session: session, language: language, planDate: planDate
             ))
         }
 
@@ -331,7 +344,7 @@ private enum Archetype {
             let travel = travelBetween(afternoon, restaurantLat: spot.lat, restaurantLon: spot.lon)
             let swaps = buildRestaurantSwaps(from: restaurants, excluding: [spot.id], near: afternoon, language: language)
             slots.append(makeDinnerSlot(
-                spot: spot, time: "17:30", travelNote: travel, swaps: swaps, language: language
+                spot: spot, time: "17:30", travelNote: travel, swaps: swaps, language: language, planDate: planDate
             ))
         }
 
@@ -347,7 +360,8 @@ private enum Archetype {
         date: String, dayName: String, childNames: String,
         weatherDesc: String, session: FamilySession,
         available: [Activity], restaurants: [LunchSpot],
-        language: AppLanguage
+        language: AppLanguage,
+        planDate: Date
     ) -> DayAgenda {
         let theme = language == .en
             ? "Toddler-friendly \(dayName) with \(childNames)"
@@ -369,7 +383,7 @@ private enum Archetype {
             slots.append(makeActivitySlot(
                 id: "morning", time: "09:30", activity: act,
                 timeLabel: language == .en ? "🌅 Morning · Activity" : "🌅 Morgen · Aktivität",
-                travelNote: nil, swaps: swaps, session: session, language: language
+                travelNote: nil, swaps: swaps, session: session, language: language, planDate: planDate
             ))
         }
 
@@ -377,7 +391,7 @@ private enum Archetype {
             let travel = travelBetween(morning, restaurantLat: spot.lat, restaurantLon: spot.lon)
             let swaps = buildRestaurantSwaps(from: restaurants, excluding: [spot.id, dinnerSpot?.id].compactMap { $0 }, near: morning, language: language)
             slots.append(makeLunchSlot(
-                spot: spot, time: "11:30", travelNote: travel, swaps: swaps, language: language
+                spot: spot, time: "11:30", travelNote: travel, swaps: swaps, language: language, planDate: planDate
             ))
         }
 
@@ -387,7 +401,7 @@ private enum Archetype {
             slots.append(makeActivitySlot(
                 id: "afternoon", time: "14:00", activity: act,
                 timeLabel: language == .en ? "☀️ Afternoon · Activity" : "☀️ Nachmittag · Aktivität",
-                travelNote: travel, swaps: swaps, session: session, language: language
+                travelNote: travel, swaps: swaps, session: session, language: language, planDate: planDate
             ))
         }
 
@@ -395,7 +409,7 @@ private enum Archetype {
             let travel = travelBetween(afternoon ?? morning, restaurantLat: spot.lat, restaurantLon: spot.lon)
             let swaps = buildRestaurantSwaps(from: restaurants, excluding: [lunchSpot?.id, spot.id].compactMap { $0 }, near: afternoon, language: language)
             slots.append(makeDinnerSlot(
-                spot: spot, time: "17:30", travelNote: travel, swaps: swaps, language: language
+                spot: spot, time: "17:30", travelNote: travel, swaps: swaps, language: language, planDate: planDate
             ))
         }
 
@@ -411,7 +425,8 @@ private enum Archetype {
         date: String, dayName: String, childNames: String,
         weatherDesc: String, session: FamilySession,
         available: [Activity], cityEvents: [CityEvent],
-        restaurants: [LunchSpot], language: AppLanguage
+        restaurants: [LunchSpot], language: AppLanguage,
+        planDate: Date
     ) -> DayAgenda {
         let theme = language == .en
             ? "Weekend special with \(childNames)"
@@ -438,14 +453,15 @@ private enum Archetype {
                     event.toddlerFriendly ? (language == .en ? "Kid-friendly" : "Kinderfreundlich") : "",
                     event.free ? (language == .en ? "Free" : "Gratis") : ""
                 ].filter { !$0.isEmpty },
-                swaps: []
+                swaps: [],
+                slotDate: AgendaSlot.resolveSlotDate(time: "10:00", planDate: planDate)
             ))
         } else if let act = pickActivity(from: available, excluding: [], session: session, language: language) {
             let swaps = buildSwaps(from: available, excluding: [act.id], language: language)
             slots.append(makeActivitySlot(
                 id: "morning", time: "10:00", activity: act,
                 timeLabel: language == .en ? "🌅 Morning · Activity" : "🌅 Morgen · Aktivität",
-                travelNote: nil, swaps: swaps, session: session, language: language
+                travelNote: nil, swaps: swaps, session: session, language: language, planDate: planDate
             ))
         }
 
@@ -453,7 +469,7 @@ private enum Archetype {
         if let spot = pickRestaurant(near: nil, from: restaurants, language: language) {
             let swaps = buildRestaurantSwaps(from: restaurants, excluding: [spot.id], near: nil, language: language)
             slots.append(makeLunchSlot(
-                spot: spot, time: "12:00", travelNote: nil, swaps: swaps, language: language
+                spot: spot, time: "12:00", travelNote: nil, swaps: swaps, language: language, planDate: planDate
             ))
         }
 
@@ -465,7 +481,7 @@ private enum Archetype {
             slots.append(makeActivitySlot(
                 id: "afternoon", time: "14:00", activity: act,
                 timeLabel: language == .en ? "☀️ Afternoon · Activity" : "☀️ Nachmittag · Aktivität",
-                travelNote: nil, swaps: swaps, session: session, language: language
+                travelNote: nil, swaps: swaps, session: session, language: language, planDate: planDate
             ))
         }
 
@@ -476,7 +492,7 @@ private enum Archetype {
             let travel = travelBetween(afternoon, restaurantLat: spot.lat, restaurantLon: spot.lon)
             let swaps = buildRestaurantSwaps(from: restaurants, excluding: [lunchId, spot.id].compactMap { $0 }, near: afternoon, language: language)
             slots.append(makeDinnerSlot(
-                spot: spot, time: "18:00", travelNote: travel, swaps: swaps, language: language
+                spot: spot, time: "18:00", travelNote: travel, swaps: swaps, language: language, planDate: planDate
             ))
         }
 
@@ -492,7 +508,7 @@ private enum Archetype {
         id: String, time: String, activity: Activity,
         timeLabel: String, travelNote: String?,
         swaps: [AgendaSlot.SwapOption], session: FamilySession,
-        language: AppLanguage
+        language: AppLanguage, planDate: Date = Date()
     ) -> AgendaSlot {
         let name = activity.localizedName(language: language)
         let tags = buildActivityTags(activity, language: language)
@@ -502,13 +518,16 @@ private enum Archetype {
             id: id, time: time, type: .activity,
             venueName: name, venueId: activity.id,
             reason: reason, durationDisplay: activity.duration,
-            travelNote: travelNote, tags: tags, swaps: swaps
+            travelNote: travelNote, tags: tags, swaps: swaps,
+            durationMinutes: 100,
+            slotDate: AgendaSlot.resolveSlotDate(time: time, planDate: planDate)
         )
     }
 
     private func makeLunchSlot(
         spot: LunchSpot, time: String, travelNote: String?,
-        swaps: [AgendaSlot.SwapOption], language: AppLanguage
+        swaps: [AgendaSlot.SwapOption], language: AppLanguage,
+        planDate: Date = Date()
     ) -> AgendaSlot {
         let cuisine = spot.cuisineDisplay
         let price = String(repeating: "$", count: spot.priceTier)
@@ -525,13 +544,16 @@ private enum Archetype {
                 ? "\(cuisine) restaurant, \(price). Good for families."
                 : "\(cuisine)-Restaurant, \(price). Gut für Familien.",
             durationDisplay: nil, travelNote: travelNote,
-            tags: tags, swaps: swaps
+            tags: tags, swaps: swaps,
+            durationMinutes: 90,
+            slotDate: AgendaSlot.resolveSlotDate(time: time, planDate: planDate)
         )
     }
 
     private func makeDinnerSlot(
         spot: LunchSpot, time: String, travelNote: String?,
-        swaps: [AgendaSlot.SwapOption], language: AppLanguage
+        swaps: [AgendaSlot.SwapOption], language: AppLanguage,
+        planDate: Date = Date()
     ) -> AgendaSlot {
         let cuisine = spot.cuisineDisplay
         let price = String(repeating: "$", count: spot.priceTier)
@@ -544,7 +566,9 @@ private enum Archetype {
                 : "\(cuisine), \(price). Früher Tisch passt gut mit Kindern.",
             durationDisplay: nil, travelNote: travelNote,
             tags: ["🏠 Indoor", "~CHF \(spot.priceTier * 20)–\(spot.priceTier * 35)"],
-            swaps: swaps
+            swaps: swaps,
+            durationMinutes: 120,
+            slotDate: AgendaSlot.resolveSlotDate(time: time, planDate: planDate)
         )
     }
 
@@ -616,8 +640,11 @@ private enum Archetype {
         }
         if !ageFiltered.isEmpty { filtered = ageFiltered }
 
-        // Pool is pre-sorted by FreshnessScorer composite score — pick from top
-        return filtered.first
+        // Pool is pre-sorted by FreshnessScorer composite score — pick randomly
+        // from top candidates to add variety across rebuilds
+        let topCount = min(filtered.count, 5)
+        guard topCount > 0 else { return nil }
+        return filtered[Int.random(in: 0..<topCount)]
     }
 
     private func pickRestaurant(
@@ -640,7 +667,10 @@ private enum Archetype {
             pool.sort { ($0.rating ?? 0) > ($1.rating ?? 0) }
         }
 
-        return pool.first
+        // Pick randomly from top candidates for variety
+        let topCount = min(pool.count, 5)
+        guard topCount > 0 else { return nil }
+        return pool[Int.random(in: 0..<topCount)]
     }
 
     // MARK: - Swap Builders

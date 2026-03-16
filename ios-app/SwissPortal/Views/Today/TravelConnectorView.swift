@@ -71,12 +71,17 @@ struct TravelConnectorView: View {
         .clipShape(Capsule())
     }
 
+    /// Whether the travel note indicates public transit rather than walking.
+    private var isTransitMode: Bool {
+        travelNote?.contains("transit") == true
+    }
+
     @ViewBuilder
     private func travelChip(_ text: String) -> some View {
         if execState == .upcoming {
             // Urgent style — terracotta bg with icon
             HStack(spacing: 5) {
-                Image(systemName: "figure.walk")
+                Image(systemName: isTransitMode ? "tram.fill" : "figure.walk")
                     .font(.system(size: 10))
                 Text(text)
                     .font(.system(size: 11, weight: .medium))
@@ -92,13 +97,19 @@ struct TravelConnectorView: View {
             .clipShape(Capsule())
         } else {
             // Default style
-            Text(text)
-                .font(.system(size: 11))
-                .foregroundStyle(Color.znMuted)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(Color.znBorder.opacity(0.5))
-                .clipShape(Capsule())
+            HStack(spacing: 5) {
+                if isTransitMode {
+                    Image(systemName: "tram.fill")
+                        .font(.system(size: 10))
+                }
+                Text(text)
+                    .font(.system(size: 11))
+            }
+            .foregroundStyle(Color.znMuted)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(Color.znBorder.opacity(0.5))
+            .clipShape(Capsule())
         }
     }
 

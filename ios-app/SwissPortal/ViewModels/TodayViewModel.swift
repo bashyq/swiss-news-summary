@@ -1,5 +1,6 @@
 import Foundation
 import CoreLocation
+import EventKit
 import WidgetKit
 
 /// State of the agenda composition pipeline.
@@ -22,6 +23,9 @@ final class TodayViewModel {
     var activitiesData: ActivitiesResponse?
     var lunchData: LunchResponse?
 
+    /// Multi-day daily forecast from Open-Meteo (today + next 2 days).
+    var dailyForecast: [DayWeather] = []
+
     var isLoading = false
     var error: String?
 
@@ -37,6 +41,23 @@ final class TodayViewModel {
 
     /// Whether the user activated weekend planning mode.
     var isWeekendMode: Bool = false
+
+    // MARK: - Calendar Sync
+
+    /// Calendar events pending user review (swipe screen).
+    var pendingCalendarEvents: [EKEvent] = []
+
+    /// Whether to show the CalendarSwipeView modal.
+    var showCalendarSwipe = false
+
+    /// Whether to show the sync banner (new events detected after plan is built).
+    var showCalendarSyncBanner = false
+
+    /// Number of new events for the banner text.
+    var pendingBannerEventCount = 0
+
+    /// Conflict warning message (if overlapping anchors detected after accept).
+    var conflictWarning: String?
 
     /// Weekend weather data from the /weekend endpoint, used by Planner UI.
     private(set) var _weekendWeather: WeekendResponse?
@@ -86,6 +107,28 @@ final class TodayViewModel {
     // MARK: - Convenience
 
     var weather: Weather? { newsData?.weather }
+
+    /// Weather for the currently selected plan day.
+    /// Today: live weather from news endpoint. Future days: daily forecast from Open-Meteo.
+    var weatherForSelectedDay: Weather? {
+        if selectedPlanDay == .today { return weather }
+        let iso = selectedPlanDay.isoDate
+        guard let dayW = dailyForecast.first(where: { $0.date == iso }) else { return weather }
+        return Weather(
+            temperature: dayW.tempMax,
+            description: dayW.description,
+            weatherCode: dayW.weatherCode,
+            windSpeed: 0,
+            hourly: nil
+        )
+    }
+
+    /// Whether the selected plan day has bad weather (for hero tinting).
+    var isBadWeatherForSelectedDay: Bool {
+        guard let w = weatherForSelectedDay else { return false }
+        let heavyCodes: Set<Int> = [65, 67, 71, 73, 75, 77, 80, 81, 82, 85, 86, 95, 96, 99]
+        return w.temperature < 10 && heavyCodes.contains(w.weatherCode)
+    }
 
     /// Whether to prefer indoor activities based on weather.
     /// True when temperature is below 10°C (cold) OR when it's raining/snowing.
@@ -237,6 +280,11 @@ final class TodayViewModel {
             }
         }
 
+        // Daily forecast (fire-and-forget, non-blocking)
+        Task { @MainActor in
+            await fetchDailyForecast(city: city)
+        }
+
         isLoading = false
 
         // 3. Set selectedPlanDay based on current time (if not in weekend mode)
@@ -265,6 +313,45 @@ final class TodayViewModel {
             session: session,
             extraRecentlyShown: [],
             anchors: AnchorStore.shared.anchors(for: targetDate)
+        )
+    }
+
+    /// Compose agenda for the currently selected plan day (used when switching day pills).
+    @MainActor
+    func composeAgendaForSelectedDay(city: City, language: AppLanguage, session: FamilySession) async {
+        let planDate = selectedPlanDay.date()
+        let dateISO = selectedPlanDay.isoDate
+        // Skip if already loaded or currently loading
+        let state = _agendaStates[dateISO] ?? .idle
+        guard state == .idle || state == .error("No data available for agenda") else { return }
+
+        // Wait for data to finish loading before composing
+        // (user may switch day pill while activities/lunch are still being fetched)
+        if activitiesData == nil || lunchData == nil {
+            _agendaStates[dateISO] = .loading
+            // Poll briefly while loadAll is still in-flight
+            for _ in 0..<30 {
+                try? await Task.sleep(nanoseconds: 200_000_000) // 0.2s
+                if activitiesData != nil && lunchData != nil { break }
+                if !isLoading { break } // loadAll finished (even if data stayed nil)
+            }
+        }
+
+        _lastCity = city
+        _lastLanguage = language
+        _lastSession = session
+        // For future days, pass forecast weather so the agenda's weatherNote
+        // matches the hero banner instead of showing today's live weather.
+        let forecastOverride: Weather? = (selectedPlanDay == .today) ? nil : weatherForSelectedDay
+        await composeAgendaForDate(
+            dateISO: dateISO,
+            planDate: planDate,
+            city: city,
+            language: language,
+            session: session,
+            extraRecentlyShown: [],
+            anchors: AnchorStore.shared.anchors(for: planDate),
+            weatherOverride: forecastOverride
         )
     }
 
@@ -302,7 +389,14 @@ final class TodayViewModel {
         let effectiveWeather = weatherOverride ?? weather
 
         // 2. Gap analysis — determine what free time exists around anchors
-        let allGaps = GapAnalysisEngine.analyse(anchors: currentAnchors, now: Date(), date: planDate)
+        // For future dates, use midnight so no gaps are clipped by current time
+        // (GapAnalysisEngine adds 15min to now, so midnight ensures 00:15 < 08:00 day start)
+        let effectiveNow: Date = {
+            let cal = Calendar.current
+            if cal.isDateInToday(planDate) { return Date() }
+            return cal.startOfDay(for: planDate)
+        }()
+        let allGaps = GapAnalysisEngine.analyse(anchors: currentAnchors, now: effectiveNow, date: planDate)
         let fillableGaps = allGaps.filter { $0.isFillable }
 
         // Build weather note/theme using effective weather for this date
@@ -363,7 +457,8 @@ final class TodayViewModel {
                     weather: w,
                     session: session,
                     language: language,
-                    apiKey: apiKey
+                    apiKey: apiKey,
+                    planDate: planDate
                 )
 
                 // Merge: anchor display slots + AI slots → sorted by time
@@ -414,12 +509,13 @@ final class TodayViewModel {
         }
 
         // 5. Template engine fallback (now gap-aware)
-        buildTemplateFallback(session: session, language: language, dateISO: dateISO, fillableGaps: fillableGaps.isEmpty ? nil : fillableGaps)
+        buildTemplateFallback(session: session, language: language, dateISO: dateISO, fillableGaps: fillableGaps.isEmpty ? nil : fillableGaps, planDate: planDate)
     }
 
     /// Compose weekend agendas (Saturday + Sunday) in sequence.
     /// Sunday avoids repeating Saturday's venues.
     /// Fetches per-day weather from the `/weekend` endpoint for accurate scoring.
+    /// Builds a `MultiDayPlan` and applies cross-day duplicate resolution.
     @MainActor
     func composeWeekend(city: City, language: AppLanguage, session: FamilySession) async {
         isWeekendMode = true
@@ -479,6 +575,28 @@ final class TodayViewModel {
             weatherOverride: sunWeather
         )
 
+        // Build MultiDayPlan and apply cross-day duplicate resolution
+        let weekendPlan = MultiDayPlan(
+            title: "Weekend",
+            days: [
+                PlannedDay(date: satDate, anchors: satAnchors, agenda: _agendas[satISO]),
+                PlannedDay(date: sunDate, anchors: sunAnchors, agenda: _agendas[sunISO])
+            ]
+        )
+
+        let resolved = weekendPlan.resolvingCrossDayDuplicates()
+
+        // Apply resolved agendas back to the state
+        if let satAgenda = resolved.days.first?.agenda {
+            _agendas[satISO] = satAgenda
+        }
+        if resolved.days.count > 1, let sunAgenda = resolved.days[1].agenda {
+            _agendas[sunISO] = sunAgenda
+        }
+
+        // Persist the plan
+        MultiDayPlanStore.shared.store(resolved)
+
         // Show Saturday first
         selectedPlanDay = .saturday
     }
@@ -505,18 +623,34 @@ final class TodayViewModel {
         selectedPlanDay = isNextDayMode ? .tomorrow : .today
     }
 
-    /// Invalidate cache and recompose the agenda.
+    /// Invalidate cache and recompose the agenda for the currently selected day.
     @MainActor
     func rebuildAgenda(city: City, language: AppLanguage, session: FamilySession) async {
         if isWeekendMode {
             await rebuildWeekend(city: city, language: language, session: session)
             return
         }
+        clearExportedEvents()
         await agendaCache.invalidate()
         recentlyShownStore.clear()
         agenda = nil
         agendaMode = .browsing
-        await composeAgenda(city: city, language: language, session: session)
+        let planDate = selectedPlanDay.date()
+        let dateISO = selectedPlanDay.isoDate
+        _lastCity = city
+        _lastLanguage = language
+        _lastSession = session
+        let forecastOverride: Weather? = (selectedPlanDay == .today) ? nil : weatherForSelectedDay
+        await composeAgendaForDate(
+            dateISO: dateISO,
+            planDate: planDate,
+            city: city,
+            language: language,
+            session: session,
+            extraRecentlyShown: [],
+            anchors: AnchorStore.shared.anchors(for: planDate),
+            weatherOverride: forecastOverride
+        )
     }
 
     /// Swap a slot's content with one of its swap options.
@@ -538,8 +672,154 @@ final class TodayViewModel {
             recentlyShownStore.recordShown(venueId: venueId)
         }
 
+        // Auto-update exported calendar event if plan was saved
+        if let eventId = CalendarExportStore.shared.eventId(for: slotId) {
+            let slot = current.slots[index]
+            let duration = slot.durationMinutes ?? 90
+            try? CalendarService.shared.updateEvent(
+                id: eventId,
+                title: swap.venueName,
+                startDate: slot.slotDate,
+                endDate: slot.slotDate.addingTimeInterval(Double(duration) * 60),
+                notes: swap.detail
+            )
+        }
+
         self.agenda = current
         syncAgendaToWidget()
+    }
+
+    // MARK: - Calendar Sync Methods
+
+    /// Check for new calendar events on the selected plan day.
+    /// If plan exists → show banner. If no plan yet → set pending for swipe sheet.
+    @MainActor
+    func checkCalendarSync() {
+        guard CalendarService.shared.hasAccess else { return }
+        let planDate = selectedPlanDay.date()
+        let anchors = AnchorStore.shared.anchors(for: planDate)
+        let newEvents = CalendarSyncChecker.newEvents(
+            for: planDate,
+            existingAnchors: anchors
+        )
+
+        guard !newEvents.isEmpty else {
+            showCalendarSyncBanner = false
+            return
+        }
+
+        if agenda != nil {
+            // Plan already built — show banner instead of auto-presenting
+            pendingBannerEventCount = newEvents.count
+            showCalendarSyncBanner = true
+        } else {
+            // No plan yet — present swipe sheet
+            pendingCalendarEvents = newEvents
+            showCalendarSwipe = true
+        }
+    }
+
+    /// User tapped "Sync" button — request access if needed, then check.
+    @MainActor
+    func handleCalendarSync(toast: ToastManager) async {
+        if !CalendarService.shared.hasAccess {
+            let granted = await CalendarService.shared.requestAccess()
+            guard granted else {
+                toast.show("Calendar access needed", type: .error)
+                return
+            }
+        }
+
+        let planDate = selectedPlanDay.date()
+        let anchors = AnchorStore.shared.anchors(for: planDate)
+        let newEvents = CalendarSyncChecker.newEvents(
+            for: planDate,
+            existingAnchors: anchors
+        )
+
+        if newEvents.isEmpty {
+            toast.show("Calendar is up to date", type: .info)
+        } else {
+            pendingCalendarEvents = newEvents
+            showCalendarSwipe = true
+            showCalendarSyncBanner = false
+        }
+    }
+
+    /// Handle accepted anchors from the swipe view.
+    @MainActor
+    func handleCalendarSwipeComplete(
+        acceptedAnchors: [AnchorEvent],
+        city: City, language: AppLanguage, session: FamilySession
+    ) async {
+        guard !acceptedAnchors.isEmpty else { return }
+
+        let planDate = selectedPlanDay.date()
+
+        // Add accepted anchors to store
+        for anchor in acceptedAnchors {
+            AnchorStore.shared.add(anchor, for: planDate)
+        }
+
+        // Check for conflicts
+        let allAnchors = AnchorStore.shared.anchors(for: planDate)
+        let conflicts = CalendarSyncChecker.detectConflicts(anchors: allAnchors)
+        if let first = conflicts.first {
+            conflictWarning = "\(first.0.title) and \(first.1.title) overlap — check your plan"
+        } else {
+            conflictWarning = nil
+        }
+
+        // Invalidate cache and recompose
+        await agendaCache.invalidate()
+        await rebuildAgenda(city: city, language: language, session: session)
+    }
+
+    /// Export the current plan to iOS Calendar.
+    @MainActor
+    func exportPlanToCalendar(toast: ToastManager) async {
+        guard let current = agenda else { return }
+
+        if !CalendarService.shared.hasAccess {
+            let granted = await CalendarService.shared.requestAccess()
+            guard granted else {
+                toast.show("Calendar access needed", type: .error)
+                return
+            }
+        }
+
+        // Remove previously exported events
+        for (_, eventId) in CalendarExportStore.shared.all() {
+            try? CalendarService.shared.deleteEvent(id: eventId)
+        }
+        CalendarExportStore.shared.removeAll()
+
+        // Create one event per slot
+        let store = CalendarService.shared.store
+        for slot in current.slots {
+            let event = EKEvent(eventStore: store)
+            event.title = slot.venueName
+            event.startDate = slot.slotDate
+            let duration = slot.durationMinutes ?? 90
+            event.endDate = slot.slotDate.addingTimeInterval(Double(duration) * 60)
+            event.notes = slot.reason
+            event.calendar = store.defaultCalendarForNewEvents
+
+            if let eventId = try? CalendarService.shared.createEvent(event) {
+                CalendarExportStore.shared.store(slotId: slot.id, eventId: eventId)
+            }
+        }
+
+        toast.show("Plan saved to Calendar", type: .success)
+    }
+
+    /// Clear exported calendar events (called before plan rebuild).
+    private func clearExportedEvents() {
+        guard CalendarExportStore.shared.hasExportedPlan else { return }
+        for (_, eventId) in CalendarExportStore.shared.all() {
+            try? CalendarService.shared.deleteEvent(id: eventId)
+        }
+        CalendarExportStore.shared.removeAll()
     }
 
     /// Suggest another nearby restaurant for a lunch/dinner slot.
@@ -689,13 +969,16 @@ final class TodayViewModel {
 
         // Recalculate travel connector for the predecessor (now points to a new next slot)
         if index > 0 && index < current.slots.count {
-            current.slots[index - 1].travelMinutesToNext = estimateWalkingMinutes(
+            let est = estimateTravelBetween(
                 from: current.slots[index - 1].venueId,
                 to: current.slots[index].venueId
             )
+            current.slots[index - 1].travelMinutesToNext = est?.minutes
+            current.slots[index - 1].travelNote = est.map { travelNoteText(for: $0) }
         } else if index > 0 {
             // Removed the last slot — predecessor has no next
             current.slots[index - 1].travelMinutesToNext = nil
+            current.slots[index - 1].travelNote = nil
         }
 
         self.agenda = current
@@ -755,9 +1038,11 @@ final class TodayViewModel {
         // Recalculate all travel connectors
         for i in 0..<rebuilt.slots.count {
             if i + 1 < rebuilt.slots.count {
-                rebuilt.slots[i].travelMinutesToNext = estimateWalkingMinutes(
+                let est = estimateTravelBetween(
                     from: rebuilt.slots[i].venueId, to: rebuilt.slots[i + 1].venueId
                 )
+                rebuilt.slots[i].travelMinutesToNext = est?.minutes
+                rebuilt.slots[i].travelNote = est.map { travelNoteText(for: $0) }
             } else {
                 rebuilt.slots[i].travelMinutesToNext = nil
             }
@@ -779,7 +1064,8 @@ final class TodayViewModel {
         session: FamilySession,
         language: AppLanguage,
         dateISO: String? = nil,
-        fillableGaps: [FreeGap]? = nil
+        fillableGaps: [FreeGap]? = nil,
+        planDate: Date = Date()
     ) {
         guard let activities = activitiesData?.activities,
               let spots = lunchData?.spots else {
@@ -797,28 +1083,34 @@ final class TodayViewModel {
             restaurants: spots,
             cityEvents: events,
             recentlyShown: recentlyShownStore.recentlyShownIds(),
-            language: language
+            language: language,
+            planDate: planDate
         )
 
-        // Gap-aware filtering: only keep slots whose type matches a fillable gap
+        // Gap-aware filtering: only keep slots whose ID matches a fillable gap's suggestion type
         if let gaps = fillableGaps, !gaps.isEmpty {
-            let allowedSlotTypes: Set<AgendaSlot.SlotType> = Set(gaps.compactMap { gap -> AgendaSlot.SlotType? in
+            // Map gap suggestion types to the slot IDs they correspond to
+            let allowedSlotIDs: Set<String> = Set(gaps.compactMap { gap -> String? in
                 switch gap.suggestedType {
-                case .morningActivity, .afternoonActivity, .quickActivity:
-                    return .activity
-                case .lunch:
-                    return .lunch
-                case .dinner:
-                    return .dinner
-                case nil:
-                    return nil
+                case .morningActivity:  return "morning"
+                case .afternoonActivity: return "afternoon"
+                case .quickActivity:    return "morning"  // quick fills morning slot
+                case .lunch:            return "lunch"
+                case .dinner:           return "dinner"
+                case nil:               return nil
                 }
             })
 
-            var filtered = result.slots.filter { allowedSlotTypes.contains($0.type) }
+            var filtered = result.slots.filter { allowedSlotIDs.contains($0.id) }
 
             // Merge anchor display slots
-            let anchors = AnchorStore.shared.anchors()
+            let dateForAnchors = dateISO.flatMap { iso -> Date? in
+                let f = DateFormatter()
+                f.dateFormat = "yyyy-MM-dd"
+                f.timeZone = TimeZone(identifier: "Europe/Zurich")
+                return f.date(from: iso)
+            } ?? Date()
+            let anchors = AnchorStore.shared.anchors(for: dateForAnchors)
             if !anchors.isEmpty {
                 filtered.append(contentsOf: anchors.map { anchorToSlot($0, language: language) })
                 filtered.sort { $0.time < $1.time }
@@ -859,6 +1151,12 @@ final class TodayViewModel {
             ? anchor.category.displayNameDE
             : anchor.category.displayName
 
+        // Format end time for range display
+        let endFormatter = DateFormatter()
+        endFormatter.dateFormat = "HH:mm"
+        endFormatter.timeZone = TimeZone(identifier: "Europe/Zurich")
+        let endTimeString = endFormatter.string(from: anchor.endTime)
+
         return AgendaSlot(
             id: "anchor-\(anchor.id.uuidString.prefix(8))",
             time: anchor.timeString,
@@ -870,7 +1168,8 @@ final class TodayViewModel {
             tags: [categoryLabel],
             swaps: [],
             source: .userAnchor,
-            isLocked: true
+            isLocked: true,
+            anchorEndTime: endTimeString
         )
     }
 
@@ -965,31 +1264,39 @@ final class TodayViewModel {
         return nil
     }
 
-    /// Estimate walking minutes between two venues using straight-line distance.
-    /// Assumes ~80m/min walking pace with 1.3× detour factor.
-    private func estimateWalkingMinutes(from fromId: String?, to toId: String?) -> Int? {
+    /// Estimate travel time between two venues.
+    /// Short distances (< 2 km) use walking pace; longer distances estimate public transit.
+    private func estimateTravelBetween(from fromId: String?, to toId: String?) -> TravelEstimate? {
         guard let a = venueCoordinates(for: fromId),
               let b = venueCoordinates(for: toId) else { return nil }
         let locA = CLLocation(latitude: a.lat, longitude: a.lon)
         let locB = CLLocation(latitude: b.lat, longitude: b.lon)
-        let meters = locA.distance(from: locB)
-        let walkMinutes = Int(ceil(meters * 1.3 / 80.0))
-        return max(walkMinutes, 1)
+        return TravelEstimate.estimate(from: locA, to: locB)
     }
 
     /// Recalculate travelMinutesToNext for a slot and its predecessor after a swap.
     private func recalcTravel(in slots: inout [AgendaSlot], at index: Int) {
         // Update this slot's travel to next
         if index + 1 < slots.count {
-            slots[index].travelMinutesToNext = estimateWalkingMinutes(
-                from: slots[index].venueId, to: slots[index + 1].venueId
-            )
+            let est = estimateTravelBetween(from: slots[index].venueId, to: slots[index + 1].venueId)
+            slots[index].travelMinutesToNext = est?.minutes
+            slots[index].travelNote = est.map { travelNoteText(for: $0) }
         }
         // Update previous slot's travel to this slot
         if index > 0 {
-            slots[index - 1].travelMinutesToNext = estimateWalkingMinutes(
-                from: slots[index - 1].venueId, to: slots[index].venueId
-            )
+            let est = estimateTravelBetween(from: slots[index - 1].venueId, to: slots[index].venueId)
+            slots[index - 1].travelMinutesToNext = est?.minutes
+            slots[index - 1].travelNote = est.map { travelNoteText(for: $0) }
+        }
+    }
+
+    /// Format a travel note string from a TravelEstimate.
+    private func travelNoteText(for estimate: TravelEstimate) -> String {
+        switch estimate.mode {
+        case .walk:
+            return "\(estimate.minutes) min walk"
+        case .transit:
+            return "~\(estimate.minutes) min by transit"
         }
     }
 
@@ -1340,7 +1647,12 @@ final class TodayViewModel {
         }
     }
 
-    /// Handle check-in: record, shift timeline if needed, check feasibility, advance.
+    /// Handle check-in (Done ✓): record departure, shift timeline if late, advance.
+    ///
+    /// Delta is computed as `actualDepartureTime − scheduledEndDate`:
+    /// - positive → left late (ran over), shift downstream slots forward
+    /// - negative → left early, NO shift (show early-finish banner if next venue closed)
+    /// - |delta| ≤ 10 min → ignore, no shift
     @MainActor
     func handleCheckIn(source: CheckInSource = .manual) {
         guard var currentAgenda = agenda,
@@ -1348,11 +1660,11 @@ final class TodayViewModel {
               idx < currentAgenda.slots.count else { return }
 
         let slot = currentAgenda.slots[idx]
-        let actualTime = Date()
-        let delta = TimelineShifter.computeDelta(actualTime: actualTime, slot: slot)
+        let actualDepartureTime = Date()
+        let delta = TimelineShifter.computeDelta(actualDepartureTime: actualDepartureTime, slot: slot)
 
-        // 1. Record check-in time on the slot
-        currentAgenda.slots[idx].checkInTime = actualTime
+        // 1. Mark departure on the slot
+        currentAgenda.slots[idx].checkOutTime = actualDepartureTime
         currentAgenda.slots[idx].wasAutoCheckedIn = (source == .geofence)
 
         // 2. Record to CheckInStore
@@ -1360,7 +1672,8 @@ final class TodayViewModel {
             venueId: slot.venueId ?? slot.venueName,
             venueName: slot.venueName,
             scheduledTime: slot.slotDate,
-            actualTime: actualTime,
+            scheduledEndTime: slot.scheduledEndDate,
+            actualDepartureTime: actualDepartureTime,
             delta: delta,
             source: source,
             date: Calendar.current.startOfDay(for: Date())
@@ -1375,8 +1688,10 @@ final class TodayViewModel {
             source: .executionCheckIn
         )
 
-        // 4. Shift timeline if delta is meaningful (> 10 min)
-        if abs(delta) > 600 {
+        // 4. Timeline shift logic
+        // Only shift downstream when LATE by more than 10 min.
+        // Early finish (delta < 0) never shifts — we don't pull slots earlier.
+        if delta > 600 {
             let shifted = TimelineShifter.shift(
                 slots: currentAgenda.slots,
                 fromIndex: idx,
@@ -1387,7 +1702,7 @@ final class TodayViewModel {
             // Trigger time shift animation
             timelineDidShift = true
 
-            // 5. Check feasibility
+            // 5. Check feasibility after shift
             let warnings = FeasibilityChecker.check(slots: currentAgenda.slots)
             activeWarning = warnings.first
 
@@ -1395,6 +1710,28 @@ final class TodayViewModel {
             Task {
                 if await AgendaNotificationScheduler.isAuthorized() {
                     AgendaNotificationScheduler.shared.reschedule(for: currentAgenda.slots)
+                }
+            }
+        } else if delta < -600 {
+            // Early finish — check if next venue is still open at the earlier arrival time
+            let nextIdx = idx + 1
+            if nextIdx < currentAgenda.slots.count {
+                let nextSlot = currentAgenda.slots[nextIdx]
+                let earlyArrival = actualDepartureTime.addingTimeInterval(
+                    TimeInterval((nextSlot.travelMinutesToNext ?? slot.travelMinutesToNext ?? 10) * 60)
+                )
+                // Show advisory banner if next venue may not be open yet
+                let nextHour = Calendar.current.component(.hour, from: earlyArrival)
+                let nextMinute = Calendar.current.component(.minute, from: earlyArrival)
+                let nextSlotHour = Calendar.current.component(.hour, from: nextSlot.slotDate)
+                if nextHour < nextSlotHour || (nextHour == nextSlotHour && nextMinute < Calendar.current.component(.minute, from: nextSlot.slotDate)) {
+                    // Arrived well before next slot's scheduled time — show early finish info
+                    activeWarning = FeasibilityWarning(
+                        slotId: nextSlot.id,
+                        type: .venueClosedAtShiftedTime,
+                        message: "You're early! \(nextSlot.venueName) is scheduled for \(nextSlot.time). Head there or enjoy some free time.",
+                        suggestedResolution: nil
+                    )
                 }
             }
         }
@@ -1410,12 +1747,34 @@ final class TodayViewModel {
             agendaMode = .executing(currentSlotIndex: currentAgenda.slots.count)
             // Flush check-ins to RecentlyShownStore
             CheckInStore.shared.flushToRecentlyShown(RecentlyShownStore.shared)
+            // Record planCompletion visits for any AI slots that were NOT manually checked in
+            recordPlanCompletionVisits(slots: currentAgenda.slots)
         }
 
         // Reset shift animation flag after a delay
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(0.5))
             timelineDidShift = false
+        }
+    }
+
+    /// Record planCompletion visits for AI-generated slots that were not manually checked in.
+    /// Called when the user reaches the end of execution mode.
+    /// These visits have 50% weight in freshness scoring per the spec.
+    private func recordPlanCompletionVisits(slots: [AgendaSlot]) {
+        for slot in slots {
+            // Only record for AI-generated/swapped slots that have a venueId and were NOT already checked in
+            guard slot.source == .aiGenerated || slot.source == .userSwapped,
+                  let venueId = slot.venueId,
+                  slot.checkOutTime == nil else { continue }
+
+            let venueType: VenueType = (slot.type == .lunch || slot.type == .dinner) ? .restaurant : .activity
+            VenueVisitStore.shared.recordVisit(
+                venueId: venueId,
+                venueName: slot.venueName,
+                venueType: venueType,
+                source: .planCompletion
+            )
         }
     }
 
@@ -1514,6 +1873,56 @@ final class TodayViewModel {
             cos(lat1 * .pi / 180) * cos(lat2 * .pi / 180) *
             sin(dLon / 2) * sin(dLon / 2)
         return R * 2 * atan2(sqrt(a), sqrt(1 - a))
+    }
+
+    // MARK: - Daily Forecast
+
+    /// Fetch a 3-day daily forecast from Open-Meteo for the selected city.
+    /// Populates `dailyForecast` with `DayWeather` entries for today, tomorrow, etc.
+    @MainActor
+    private func fetchDailyForecast(city: City) async {
+        let coord = city.coordinate
+        let urlString = "https://api.open-meteo.com/v1/forecast"
+            + "?latitude=\(coord.latitude)&longitude=\(coord.longitude)"
+            + "&daily=weather_code,temperature_2m_max,temperature_2m_min"
+            + "&forecast_days=3&timezone=Europe/Zurich"
+        guard let url = URL(string: urlString) else { return }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            guard let daily = json?["daily"] as? [String: Any],
+                  let dates = daily["time"] as? [String],
+                  let codes = daily["weather_code"] as? [Int],
+                  let maxTemps = daily["temperature_2m_max"] as? [Double],
+                  let minTemps = daily["temperature_2m_min"] as? [Double]
+            else { return }
+
+            let descriptions: [String: String] = [
+                "0": "Clear sky", "1": "Mainly clear", "2": "Partly cloudy", "3": "Overcast",
+                "45": "Foggy", "48": "Foggy",
+                "51": "Light drizzle", "53": "Drizzle", "55": "Heavy drizzle",
+                "61": "Light rain", "63": "Rain", "65": "Heavy rain",
+                "71": "Light snow", "73": "Snow", "75": "Heavy snow",
+                "80": "Rain showers", "81": "Rain showers", "82": "Heavy showers",
+                "85": "Snow showers", "86": "Heavy snow showers",
+                "95": "Thunderstorm", "96": "Thunderstorm with hail", "99": "Thunderstorm with hail"
+            ]
+
+            var forecast: [DayWeather] = []
+            for i in 0..<dates.count {
+                let desc = descriptions["\(codes[i])"] ?? "Unknown"
+                forecast.append(DayWeather(
+                    date: dates[i],
+                    weatherCode: codes[i],
+                    tempMax: maxTemps[i],
+                    tempMin: minTemps[i],
+                    description: desc
+                ))
+            }
+            self.dailyForecast = forecast
+        } catch {
+            // Silently fail — weather display will fall back to today's weather
+        }
     }
 }
 

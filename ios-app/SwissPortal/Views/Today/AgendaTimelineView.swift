@@ -40,12 +40,166 @@ struct AgendaTimelineView: View {
         return idx >= agenda.slots.count
     }
 
+    /// Travel estimate from user's current location to the first slot's venue.
+    private var travelToFirstSlot: TravelEstimate? {
+        guard let userLoc = location, let firstSlot = agenda.slots.first,
+              let venueId = firstSlot.venueId else { return nil }
+
+        // Resolve venue coordinates
+        let venueLoc: CLLocation?
+        if firstSlot.type == .activity {
+            if let activity = activities.first(where: { $0.id == venueId }),
+               let lat = activity.lat, let lon = activity.lon {
+                venueLoc = CLLocation(latitude: lat, longitude: lon)
+            } else {
+                venueLoc = nil
+            }
+        } else {
+            // lunch or dinner
+            if let spot = lunchSpots.first(where: { $0.id == venueId }) {
+                venueLoc = CLLocation(latitude: spot.lat, longitude: spot.lon)
+            } else {
+                venueLoc = nil
+            }
+        }
+
+        guard let dest = venueLoc else { return nil }
+        return TravelEstimate.estimate(from: userLoc, to: dest)
+    }
+
+    /// Connector showing travel from user's current location to the first slot.
+    private func initialTravelConnector(estimate: TravelEstimate) -> some View {
+        let execSt: ConnectorExecState = agendaMode.isExecuting
+            ? (currentSlotIndex == 0 ? .upcoming : .done)
+            : .browsing
+        let isTransit = estimate.mode == .transit
+        let icon = execSt == .upcoming
+            ? (isTransit ? "tram.fill" : "figure.walk")
+            : "location.fill"
+        let modeLabel = isTransit ? "transit" : "walk"
+        let label = execSt == .upcoming
+            ? "Leave now · \(estimate.minutes) min \(modeLabel)"
+            : "~\(estimate.minutes) min from you"
+
+        return HStack(spacing: 10) {
+            // Vertical dashed line
+            dashedLineSegment(color: execSt == .upcoming ? .znTerracotta : .znBorder)
+                .frame(width: 2, height: execSt == .upcoming ? 40 : 32)
+                .padding(.leading, 14)
+
+            // Travel chip
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 10))
+                Text(label)
+                    .font(.system(size: 11, weight: execSt == .upcoming ? .medium : .regular))
+            }
+            .foregroundStyle(execSt == .upcoming ? Color.znTerracotta : Color.znMuted)
+            .padding(.horizontal, 10)
+            .padding(.vertical, execSt == .upcoming ? 5 : 4)
+            .background(execSt == .upcoming
+                        ? Color.znTerracotta.opacity(0.1)
+                        : Color.znBorder.opacity(0.5))
+            .overlay(
+                execSt == .upcoming
+                    ? Capsule().stroke(Color.znTerracotta.opacity(0.2), lineWidth: 1)
+                    : nil
+            )
+            .clipShape(Capsule())
+
+            Spacer()
+        }
+        .opacity(execSt == .done ? 0.4 : 1.0)
+    }
+
+    /// Small dashed line segment for the initial travel connector.
+    private func dashedLineSegment(color: Color) -> some View {
+        GeometryReader { geo in
+            Path { path in
+                let dashLength: CGFloat = 3
+                let gapLength: CGFloat = 3
+                var y: CGFloat = 0
+                while y < geo.size.height {
+                    path.move(to: CGPoint(x: 1, y: y))
+                    path.addLine(to: CGPoint(x: 1, y: min(y + dashLength, geo.size.height)))
+                    y += dashLength + gapLength
+                }
+            }
+            .stroke(color, lineWidth: 2)
+        }
+    }
+
+    /// Travel estimate from the last slot's venue to the user's home address.
+    private var travelToHome: TravelEstimate? {
+        guard let homeLoc = appState.homeLocation,
+              let lastSlot = agenda.slots.last,
+              let venueId = lastSlot.venueId else { return nil }
+
+        // Resolve last venue coordinates
+        let venueLoc: CLLocation?
+        if lastSlot.type == .activity {
+            if let activity = activities.first(where: { $0.id == venueId }),
+               let lat = activity.lat, let lon = activity.lon {
+                venueLoc = CLLocation(latitude: lat, longitude: lon)
+            } else {
+                venueLoc = nil
+            }
+        } else {
+            if let spot = lunchSpots.first(where: { $0.id == venueId }) {
+                venueLoc = CLLocation(latitude: spot.lat, longitude: spot.lon)
+            } else {
+                venueLoc = nil
+            }
+        }
+
+        guard let origin = venueLoc else { return nil }
+        return TravelEstimate.estimate(from: origin, to: homeLoc)
+    }
+
+    /// Connector showing travel from the last slot to home.
+    private func travelHomeConnector(estimate: TravelEstimate) -> some View {
+        let execSt: ConnectorExecState = agendaMode.isExecuting
+            ? (isComplete ? .done : .future)
+            : .browsing
+        let isTransit = estimate.mode == .transit
+        let icon = isTransit ? "tram.fill" : "house.fill"
+        let modeHint = isTransit
+            ? appState.localized(en: "home by transit", de: "nach Hause (ÖV)")
+            : appState.localized(en: "home", de: "nach Hause")
+
+        return HStack(spacing: 10) {
+            dashedLineSegment(color: execSt == .done ? .znPositive : .znBorder)
+                .frame(width: 2, height: 32)
+                .padding(.leading, 14)
+
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.system(size: 10))
+                Text("~\(estimate.minutes) min \(modeHint)")
+                    .font(.system(size: 11))
+            }
+            .foregroundStyle(Color.znMuted)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(Color.znBorder.opacity(0.5))
+            .clipShape(Capsule())
+
+            Spacer()
+        }
+        .opacity(execSt == .done ? 0.4 : (execSt == .future ? 0.5 : 1.0))
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Completion banner
             if isComplete {
                 completionBanner
                     .padding(.bottom, 12)
+            }
+
+            // Travel from current location to first slot
+            if let estimate = travelToFirstSlot {
+                initialTravelConnector(estimate: estimate)
             }
 
             ForEach(Array(agenda.slots.enumerated()), id: \.element.id) { index, slot in
@@ -113,6 +267,11 @@ struct AgendaTimelineView: View {
                         leaveAtTime: leaveAtTime(afterSlotAt: index)
                     )
                 }
+            }
+
+            // Travel home connector after last slot
+            if let estimate = travelToHome {
+                travelHomeConnector(estimate: estimate)
             }
 
             // Bottom controls

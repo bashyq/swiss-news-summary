@@ -23,7 +23,7 @@ struct FamilySession: Codable, Equatable {
     var oldestAge: Int { children.map(\.age).max() ?? 5 }
 
     var childrenDisplay: String {
-        children.map { "\($0.name) (\($0.age))" }.joined(separator: " & ")
+        children.map(\.name).joined(separator: " & ")
     }
 
     /// Compact description for the Claude prompt

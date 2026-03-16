@@ -79,6 +79,20 @@ final class AnchorStore {
         save(list)
     }
 
+    /// Update an existing anchor for today.
+    /// If the anchor is not found, this is a no-op.
+    func update(_ anchor: AnchorEvent, for date: Date) {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) {
+            update(anchor)
+            return
+        }
+        var list = anchors(for: date)
+        guard let index = list.firstIndex(where: { $0.id == anchor.id }) else { return }
+        list[index] = anchor
+        saveDateKeyed(list, for: date)
+    }
+
     // MARK: - Write (date-keyed)
 
     /// Add an anchor for a specific date (max 5 per day).

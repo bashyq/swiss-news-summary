@@ -42,10 +42,19 @@ struct ExecHeaderView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Small segment control — top right, subdued
-            HStack {
+            // Eyebrow + segment control + city selector — matches TodayHeroBanner layout
+            HStack(alignment: .center) {
+                Text(eyebrowDate)
+                    .font(.znEyebrow)
+                    .tracking(1.3)
+                    .textCase(.uppercase)
+                    .foregroundStyle(.white.opacity(0.42))
+
                 Spacer()
+
                 execSegmentControl
+
+                CityMenuButton()
             }
             .padding(.bottom, 6)
 
@@ -68,7 +77,7 @@ struct ExecHeaderView: View {
         }
         .padding(.horizontal, 24)
         .padding(.top, 18)
-        .padding(.bottom, 20)
+        .padding(.bottom, 24)
         .background {
             ZStack {
                 // Dark execution background
@@ -98,18 +107,19 @@ struct ExecHeaderView: View {
                     }
                 } label: {
                     Text(label)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(isActive ? .white.opacity(0.85) : .white.opacity(0.4))
-                        .padding(.horizontal, 11)
-                        .padding(.vertical, 4)
-                        .background(isActive ? .white.opacity(0.15) : .clear)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(isActive ? Color.znNavy : .white.opacity(0.5))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 5)
+                        .background(isActive ? .white : .clear)
                         .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
+                .sensoryFeedback(.selection, trigger: isActive)
             }
         }
         .padding(3)
-        .background(.white.opacity(0.08))
+        .background(.white.opacity(0.1))
         .clipShape(Capsule())
     }
 
@@ -261,6 +271,19 @@ struct ExecHeaderView: View {
         .padding(.vertical, 10)
         .background(.white.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    // MARK: - Eyebrow Date
+
+    private var eyebrowDate: String {
+        let formatter = DateFormatter()
+        formatter.locale = appState.language == .de
+            ? Locale(identifier: "de_CH")
+            : Locale(identifier: "en_US")
+        formatter.dateFormat = appState.language == .de
+            ? "EEEE · d. MMMM"
+            : "EEEE · d MMMM"
+        return formatter.string(from: Date())
     }
 
     // MARK: - Grid Texture

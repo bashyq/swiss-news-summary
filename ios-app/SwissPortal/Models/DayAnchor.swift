@@ -42,6 +42,15 @@ enum AnchorCategory: String, Codable, CaseIterable {
     }
 }
 
+// MARK: - Anchor Source
+
+/// Origin of an anchor event.
+enum AnchorSource: String, Codable {
+    case manual      // user entered via AnchorFormSheet
+    case calendar    // imported from EventKit
+    case cityEvent   // came from a Znüni CityEvent
+}
+
 // MARK: - Anchor Event
 
 /// A pre-existing commitment the user adds before agenda composition.
@@ -56,7 +65,30 @@ struct AnchorEvent: Codable, Identifiable, Equatable {
     var neighbourhood: String?
     var kreis: Int?
     var sourceEventId: String?
+    var source: AnchorSource
+    var calendarEventId: String?
     let createdDate: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, category, startTime, durationMinutes
+        case neighbourhood, kreis, sourceEventId
+        case source, calendarEventId, createdDate
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        category = try container.decode(AnchorCategory.self, forKey: .category)
+        startTime = try container.decode(Date.self, forKey: .startTime)
+        durationMinutes = try container.decode(Int.self, forKey: .durationMinutes)
+        neighbourhood = try container.decodeIfPresent(String.self, forKey: .neighbourhood)
+        kreis = try container.decodeIfPresent(Int.self, forKey: .kreis)
+        sourceEventId = try container.decodeIfPresent(String.self, forKey: .sourceEventId)
+        source = try container.decodeIfPresent(AnchorSource.self, forKey: .source) ?? .manual
+        calendarEventId = try container.decodeIfPresent(String.self, forKey: .calendarEventId)
+        createdDate = try container.decode(Date.self, forKey: .createdDate)
+    }
 
     init(
         id: UUID = UUID(),
@@ -67,6 +99,8 @@ struct AnchorEvent: Codable, Identifiable, Equatable {
         neighbourhood: String? = nil,
         kreis: Int? = nil,
         sourceEventId: String? = nil,
+        source: AnchorSource = .manual,
+        calendarEventId: String? = nil,
         createdDate: Date = Date()
     ) {
         self.id = id
@@ -77,6 +111,8 @@ struct AnchorEvent: Codable, Identifiable, Equatable {
         self.neighbourhood = neighbourhood
         self.kreis = kreis
         self.sourceEventId = sourceEventId
+        self.source = source
+        self.calendarEventId = calendarEventId
         self.createdDate = createdDate
     }
 

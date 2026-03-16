@@ -43,7 +43,7 @@ final class AgendaNotificationScheduler {
 
             // Fallback check-in prompt — 30 min after scheduled start
             let promptAt = slot.slotDate.addingTimeInterval(30 * 60)
-            if promptAt > Date() && slot.checkInTime == nil {
+            if promptAt > Date() && slot.checkOutTime == nil {
                 scheduleCheckInPrompt(
                     slotId: slot.id,
                     venue: slot.venueName,

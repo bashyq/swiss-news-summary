@@ -38,7 +38,8 @@ struct AgendaComposer {
         weather: Weather?,
         session: FamilySession,
         language: AppLanguage,
-        apiKey: String
+        apiKey: String,
+        planDate: Date = Date()
     ) async throws -> [AgendaSlot] {
         guard !apiKey.isEmpty else { throw ComposerError.noAPIKey }
 
@@ -58,7 +59,7 @@ struct AgendaComposer {
         #endif
 
         let responseText = try await callAnthropic(system: system, user: user, apiKey: apiKey)
-        let slots = try parseSlots(json: responseText, gaps: gaps)
+        let slots = try parseSlots(json: responseText, gaps: gaps, planDate: planDate)
 
         #if DEBUG
         print("✅ AgendaComposer returned \(slots.count) slots")
@@ -75,7 +76,8 @@ struct AgendaComposer {
 
         Rules:
         1. Return ONLY a JSON array — no markdown, no explanation.
-        2. Each object: { "id": "slot-id", "time": "HH:MM", "type": "activity|lunch|dinner", "venueId": "exact-id-from-list", "venueName": "exact-name", "reason": "1-2 sentences why this fits", "tags": ["Indoor","Free",...] }
+        2. Each object: { "id": "slot-id", "time": "HH:MM", "type": "activity|lunch|dinner", "venueId": "exact-id-from-list", "venueName": "exact-name", "reason": "1-2 sentences why this fits", "durationMinutes": 90, "tags": ["Indoor","Free",...] }
+        The "durationMinutes" field is how long the family should spend there. Defaults: activity=100, lunch=90, dinner=120. Adjust based on venue type and gap size.
         3. You MUST produce exactly one slot per gap line provided.
         4. For lunch gaps → pick from the lunch restaurant pool. For dinner gaps → pick from the dinner restaurant pool.
         5. Prefer outdoor activities when temp ≥ 15°C and no rain; prefer indoor when temp < 8°C or rain.
@@ -200,7 +202,7 @@ struct AgendaComposer {
 
     // MARK: - Response Parser
 
-    private static func parseSlots(json: String, gaps: [FreeGap]) throws -> [AgendaSlot] {
+    private static func parseSlots(json: String, gaps: [FreeGap], planDate: Date = Date()) throws -> [AgendaSlot] {
         // Strip any accidental markdown fencing
         var cleaned = json.trimmingCharacters(in: .whitespacesAndNewlines)
         if cleaned.hasPrefix("```") {
@@ -254,6 +256,16 @@ struct AgendaComposer {
             case nil: slotId = raw.id
             }
 
+            // Use AI-provided duration or fall back to type defaults
+            let duration = raw.durationMinutes ?? {
+                switch slotType {
+                case .activity: return 100
+                case .lunch: return 90
+                case .dinner: return 120
+                case .homeActivity: return 60
+                }
+            }()
+
             let slot = AgendaSlot(
                 id: slotId,
                 time: raw.time,
@@ -263,8 +275,10 @@ struct AgendaComposer {
                 reason: raw.reason,
                 tags: raw.tags,
                 swaps: [],
+                durationMinutes: duration,
                 source: .aiGenerated,
-                isLocked: false
+                isLocked: false,
+                slotDate: AgendaSlot.resolveSlotDate(time: raw.time, planDate: planDate)
             )
             result.append(slot)
         }
@@ -296,6 +310,7 @@ struct AgendaComposer {
         let venueId: String
         let venueName: String
         let reason: String
+        let durationMinutes: Int?
         let tags: [String]
     }
 }

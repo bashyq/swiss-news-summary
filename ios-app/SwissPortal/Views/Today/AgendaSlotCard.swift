@@ -79,7 +79,7 @@ struct AgendaSlotCard: View {
 
             // Main card content
             HStack(alignment: .top, spacing: 12) {
-                // Timeline dot
+                // Timeline dot — vertically centered with first line of text
                 ZStack {
                     Circle()
                         .fill(effectiveAccentColor)
@@ -92,7 +92,7 @@ struct AgendaSlotCard: View {
                             .frame(width: 20, height: 20)
                     }
                 }
-                .padding(.top, 5)
+                .padding(.top, (hasBadge && !isExpanded && (execState == .browsing || execState == .active)) ? 5 : 3)
 
                 // Content
                 VStack(alignment: .leading, spacing: 8) {
@@ -169,12 +169,18 @@ struct AgendaSlotCard: View {
         if isCustomSlot {
             return Color.znPositive.opacity(0.03)
         }
+        if isAnchorSlot {
+            return Color.znNavy.opacity(0.04)
+        }
         return Color.znSurface
     }
 
     private var cardBorderStyle: Color {
         if isCustomSlot {
             return Color.znPositive.opacity(0.35)
+        }
+        if isAnchorSlot {
+            return Color.znNavy.opacity(0.18)
         }
         if isLockedSlot {
             return Color.znNavy.opacity(0.15)
@@ -249,7 +255,7 @@ struct AgendaSlotCard: View {
     private var doneContent: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                Text(slot.time)
+                Text(timeDisplay)
                     .font(.znMono)
                     .foregroundStyle(Color.znMuted)
                     .contentTransition(.numericText())
@@ -310,13 +316,17 @@ struct AgendaSlotCard: View {
         }
     }
 
+    /// Whether the badge row has a visible badge (anchor/custom/locked/stale).
+    private var hasBadge: Bool {
+        isAnchorSlot || isCustomSlot || isLockedSlot || slot.isStale
+    }
+
     // Browsing/Active: full interactive content
     private var browsingContent: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Badge row for custom/locked/stale + edit button
-            if !isExpanded {
+            // Badge row — only when a badge is visible (avoids empty row for regular slots)
+            if !isExpanded, hasBadge {
                 HStack(spacing: 6) {
-                    // Source badge
                     if isAnchorSlot {
                         badgePill(text: "📌 Your plans", color: .znNavy)
                     } else if isCustomSlot {
@@ -329,7 +339,7 @@ struct AgendaSlotCard: View {
 
                     Spacer()
 
-                    // ··· edit button (browsing only)
+                    // ··· edit button alongside badge
                     if execState == .browsing, let onEdit {
                         Button(action: onEdit) {
                             Image(systemName: "ellipsis")
@@ -344,7 +354,7 @@ struct AgendaSlotCard: View {
                 }
             }
 
-            // Eyebrow: time + type
+            // Eyebrow: time + type (with edit button when no badge row)
             if !isExpanded {
                 eyebrowRow
             }
@@ -354,7 +364,7 @@ struct AgendaSlotCard: View {
                 .font(.custom("Playfair", size: isExpanded ? 17 : 15, relativeTo: .body).weight(.semibold))
                 .foregroundStyle(Color.znInk)
 
-            // Compact star rating for restaurant slots (collapsed)
+            // Compact star rating + cuisine + open/closed for restaurant slots (collapsed)
             if !isExpanded, !isCustomSlot, let spot = resolvedSpot, let rating = spot.rating {
                 HStack(spacing: 4) {
                     Image(systemName: "star.fill")
@@ -373,18 +383,19 @@ struct AgendaSlotCard: View {
                     Text(spot.cuisineDisplay)
                         .font(.system(size: 11))
                         .foregroundStyle(.znMuted)
+                    // Inline open/closed status for restaurant slots
+                    VenueStatusBadge(
+                        openingHours: spot.openingHours,
+                        serverOpenForLunch: spot.openForLunch,
+                        inline: true
+                    )
                 }
             }
 
-            // Real-time open/closed status
-            if !isCustomSlot, !isAnchorSlot {
+            // Real-time open/closed status (activity slots only — restaurants handled inline above)
+            if !isCustomSlot, !isAnchorSlot, resolvedSpot == nil {
                 if let activity = resolvedActivity, activity.openingHours != nil {
                     VenueStatusBadge(openingHours: activity.openingHours)
-                } else if let spot = resolvedSpot {
-                    VenueStatusBadge(
-                        openingHours: spot.openingHours,
-                        serverOpenForLunch: spot.openForLunch
-                    )
                 }
             }
 
@@ -452,9 +463,17 @@ struct AgendaSlotCard: View {
 
     // MARK: - Eyebrow
 
+    /// Time display string — shows range for anchor slots, start time otherwise.
+    private var timeDisplay: String {
+        if isAnchorSlot, let endTime = slot.anchorEndTime {
+            return "\(slot.time) – \(endTime)"
+        }
+        return slot.time
+    }
+
     private var eyebrowRow: some View {
         HStack(spacing: 6) {
-            Text(slot.time)
+            Text(timeDisplay)
                 .font(.znMono)
                 .foregroundStyle(Color.znMuted)
                 .contentTransition(.numericText())
@@ -483,6 +502,20 @@ struct AgendaSlotCard: View {
                             .foregroundStyle(Color.znNavy)
                     }
                 }
+            }
+
+            // Edit button in eyebrow row when no badge row is shown
+            if !hasBadge, execState == .browsing, let onEdit {
+                if slot.weatherAtSlot == nil { Spacer() }
+                Button(action: onEdit) {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.znMuted)
+                        .frame(width: 24, height: 24)
+                        .background(Color.znCream)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -656,21 +689,19 @@ struct AgendaSlotCard: View {
                     activityPhotoFallback(activity)
                 }
 
-                // Close button
-                Button {
-                    withAnimation(AppAnimation.spring) {
-                        expandedSlotID = nil
+                // Edit button (replaces close — tap card to collapse)
+                if execState == .browsing, let onEdit {
+                    Button(action: onEdit) {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.white)
+                            .frame(width: 28, height: 28)
+                            .background(.black.opacity(0.5))
+                            .clipShape(Circle())
                     }
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 28, height: 28)
-                        .background(.black.opacity(0.5))
-                        .clipShape(Circle())
+                    .buttonStyle(.plain)
+                    .padding(12)
                 }
-                .buttonStyle(.plain)
-                .padding(12)
             }
             .transition(.opacity.combined(with: .move(edge: .top)))
         }
@@ -701,21 +732,19 @@ struct AgendaSlotCard: View {
                     restaurantPhotoFallback(spot)
                 }
 
-                // Close button
-                Button {
-                    withAnimation(AppAnimation.spring) {
-                        expandedSlotID = nil
+                // Edit button (replaces close — tap card to collapse)
+                if execState == .browsing, let onEdit {
+                    Button(action: onEdit) {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.white)
+                            .frame(width: 28, height: 28)
+                            .background(.black.opacity(0.5))
+                            .clipShape(Circle())
                     }
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 28, height: 28)
-                        .background(.black.opacity(0.5))
-                        .clipShape(Circle())
+                    .buttonStyle(.plain)
+                    .padding(12)
                 }
-                .buttonStyle(.plain)
-                .padding(12)
             }
             .transition(.opacity.combined(with: .move(edge: .top)))
         }

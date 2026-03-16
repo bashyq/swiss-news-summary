@@ -28,9 +28,9 @@ struct TimelineShifter {
         return result
     }
 
-    /// Compute the delta between actual check-in time and scheduled slot time.
-    /// Positive = late, negative = early.
-    static func computeDelta(actualTime: Date, slot: AgendaSlot) -> TimeInterval {
-        actualTime.timeIntervalSince(slot.slotDate)
+    /// Compute the delta between actual departure time and scheduled end time.
+    /// Positive = leaving late (ran over), negative = leaving early.
+    static func computeDelta(actualDepartureTime: Date, slot: AgendaSlot) -> TimeInterval {
+        actualDepartureTime.timeIntervalSince(slot.scheduledEndDate)
     }
 }

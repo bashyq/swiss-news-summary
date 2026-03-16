@@ -12,6 +12,9 @@ struct VenueStatusBadge: View {
     /// Optional server-computed value (for lunch spots with no parseable hours).
     var serverOpenForLunch: Bool? = nil
 
+    /// When true, renders with a leading "·" separator for embedding in an HStack row.
+    var inline: Bool = false
+
     private var status: VenueStatus {
         // Prefer client-side parsing when openingHours string exists
         let parsed = OpeningHoursParser.status(from: openingHours)
@@ -42,6 +45,10 @@ struct VenueStatusBadge: View {
 
     private func badge(color: Color, text: String) -> some View {
         HStack(spacing: 4) {
+            if inline {
+                Text("·")
+                    .foregroundStyle(.znMuted)
+            }
             Circle()
                 .fill(color)
                 .frame(width: 6, height: 6)

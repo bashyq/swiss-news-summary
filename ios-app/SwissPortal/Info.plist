@@ -13,6 +13,8 @@
 		<string>Playfair-VariableFont_opsz,wdth,wght.ttf</string>
 		<string>Playfair-Italic-VariableFont_opsz,wdth,wght.ttf</string>
 	</array>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Znüni uses your calendar to detect events and build your day plan around them.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

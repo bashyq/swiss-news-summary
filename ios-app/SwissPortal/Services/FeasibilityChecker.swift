@@ -58,17 +58,25 @@ struct FeasibilityChecker {
                 ))
             }
 
-            // 2. Activity duration squeezed — less than 30 min gap before next slot
+            // 2. Activity duration squeezed — less than 30 min gap between end of this slot and start of next
             if index < slots.count - 1 {
                 let nextSlot = slots[index + 1]
                 let nextDate = nextSlot.slotDate
-                let gapMinutes = nextDate.timeIntervalSince(slotDate) / 60
+                let gapMinutes = nextDate.timeIntervalSince(slot.scheduledEndDate) / 60
 
                 // Account for travel time
                 let travelMins = Double(slot.travelMinutesToNext ?? 0)
                 let usableMinutes = gapMinutes - travelMins
 
-                if usableMinutes < 30 && usableMinutes > 0 {
+                if usableMinutes < 0 {
+                    // Overlap — next slot starts before this one ends + travel
+                    warnings.append(FeasibilityWarning(
+                        slotId: slot.id,
+                        type: .activityDurationSqueezed,
+                        message: "Not enough time at \(slot.venueName) before heading to \(nextSlot.venueName). Skip it?",
+                        suggestedResolution: .skipSlot(slotId: slot.id)
+                    ))
+                } else if usableMinutes < 30 {
                     warnings.append(FeasibilityWarning(
                         slotId: slot.id,
                         type: .activityDurationSqueezed,

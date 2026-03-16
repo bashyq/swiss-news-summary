@@ -175,12 +175,13 @@ struct AgendaSlot: Codable, Identifiable {
     var travelMinutesToNext: Int?       // Travel time to the next slot
     var weatherAtSlot: SlotWeather?     // Forecasted weather at this slot's time
 
+    /// Expected duration at this venue in minutes (activity: 100, lunch: 90, dinner: 120).
+    /// Used to compute `scheduledEndDate` for timeline shift delta calculation.
+    var durationMinutes: Int?
+
     // MARK: - Check-In Tracking
 
-    /// Actual arrival time (set when user taps Done or geofence fires).
-    var checkInTime: Date?
-
-    /// Actual departure time (set on geofence exit, if available).
+    /// Actual departure time (set when user taps Done ✓ or geofence fires).
     var checkOutTime: Date?
 
     /// True if geofence triggered, false if manual Done tap.
@@ -203,24 +204,51 @@ struct AgendaSlot: Codable, Identifiable {
     /// Whether downstream AI slots are stale after an upstream custom edit.
     var isStale: Bool
 
-    // MARK: - Computed Date
+    // MARK: - Anchor Fields
 
-    /// Full Date combining today's date with the slot's "HH:mm" time string.
-    /// Used by TimelineShifter and notification scheduling.
-    var slotDate: Date {
-        let parts = time.split(separator: ":").compactMap { Int($0) }
-        guard parts.count == 2 else { return Date() }
-        var cal = Calendar.current
-        cal.timeZone = .current
-        let today = cal.startOfDay(for: Date())
-        return cal.date(bySettingHour: parts[0], minute: parts[1], second: 0, of: today) ?? Date()
+    /// End time for anchor slots — used to show "11:15 – 12:45" time range display.
+    var anchorEndTime: String?
+
+    // MARK: - Stored Date
+
+    /// The actual Date for this slot (plan date + time).
+    /// Set at creation time — NOT computed from `time` string.
+    var slotDate: Date
+
+    /// Scheduled end date = slotDate + durationMinutes (or type default).
+    /// Used by TimelineShifter to compute the departure delta.
+    var scheduledEndDate: Date {
+        let dur = durationMinutes ?? defaultDurationMinutes
+        return slotDate.addingTimeInterval(TimeInterval(dur * 60))
     }
 
-    /// Update the time string from a Date.
+    /// Fallback duration when `durationMinutes` is nil.
+    private var defaultDurationMinutes: Int {
+        switch type {
+        case .activity: return 100
+        case .lunch:    return 90
+        case .dinner:   return 120
+        case .homeActivity: return 60
+        }
+    }
+
+    /// Update the time string and slotDate from a Date.
     mutating func updateTime(from date: Date) {
         let f = DateFormatter()
         f.dateFormat = "HH:mm"
         time = f.string(from: date)
+        slotDate = date
+    }
+
+    /// Resolve a slot date from a time string and plan date.
+    /// Used as fallback for cached data that doesn't have a stored slotDate.
+    static func resolveSlotDate(time: String, planDate: Date) -> Date {
+        let parts = time.split(separator: ":").compactMap { Int($0) }
+        guard parts.count == 2 else { return planDate }
+        var cal = Calendar.current
+        cal.timeZone = TimeZone(identifier: "Europe/Zurich") ?? .current
+        let dayStart = cal.startOfDay(for: planDate)
+        return cal.date(bySettingHour: parts[0], minute: parts[1], second: 0, of: dayStart) ?? planDate
     }
 
     enum SlotType: String, Codable {
@@ -240,8 +268,9 @@ struct AgendaSlot: Codable, Identifiable {
     enum CodingKeys: String, CodingKey {
         case id, time, type, venueName, venueId, reason, durationDisplay
         case travelNote, tags, swaps, travelMinutesToNext, weatherAtSlot
-        case checkInTime, checkOutTime, wasAutoCheckedIn
+        case durationMinutes, checkOutTime, wasAutoCheckedIn
         case source, isLocked, customVenueName, customNeighbourhood, isStale
+        case anchorEndTime, slotDate
     }
 
     init(from decoder: Decoder) throws {
@@ -258,8 +287,8 @@ struct AgendaSlot: Codable, Identifiable {
         swaps = try container.decode([SwapOption].self, forKey: .swaps)
         travelMinutesToNext = try container.decodeIfPresent(Int.self, forKey: .travelMinutesToNext)
         weatherAtSlot = try container.decodeIfPresent(SlotWeather.self, forKey: .weatherAtSlot)
+        durationMinutes = try container.decodeIfPresent(Int.self, forKey: .durationMinutes)
         // Check-in fields with defaults for backward compatibility
-        checkInTime = try container.decodeIfPresent(Date.self, forKey: .checkInTime)
         checkOutTime = try container.decodeIfPresent(Date.self, forKey: .checkOutTime)
         wasAutoCheckedIn = try container.decodeIfPresent(Bool.self, forKey: .wasAutoCheckedIn) ?? false
         // New fields with defaults for backward compatibility
@@ -268,6 +297,13 @@ struct AgendaSlot: Codable, Identifiable {
         customVenueName = try container.decodeIfPresent(String.self, forKey: .customVenueName)
         customNeighbourhood = try container.decodeIfPresent(String.self, forKey: .customNeighbourhood)
         isStale = try container.decodeIfPresent(Bool.self, forKey: .isStale) ?? false
+        anchorEndTime = try container.decodeIfPresent(String.self, forKey: .anchorEndTime)
+        // slotDate: decode if present, fallback to computing from time string for cached data
+        if let decoded = try container.decodeIfPresent(Date.self, forKey: .slotDate) {
+            slotDate = decoded
+        } else {
+            slotDate = AgendaSlot.resolveSlotDate(time: time, planDate: Date())
+        }
     }
 
     init(
@@ -275,10 +311,13 @@ struct AgendaSlot: Codable, Identifiable {
         reason: String, durationDisplay: String? = nil, travelNote: String? = nil,
         tags: [String], swaps: [SwapOption], travelMinutesToNext: Int? = nil,
         weatherAtSlot: SlotWeather? = nil,
-        checkInTime: Date? = nil, checkOutTime: Date? = nil, wasAutoCheckedIn: Bool = false,
+        durationMinutes: Int? = nil,
+        checkOutTime: Date? = nil, wasAutoCheckedIn: Bool = false,
         source: SlotSource = .aiGenerated, isLocked: Bool = false,
         customVenueName: String? = nil, customNeighbourhood: String? = nil,
-        isStale: Bool = false
+        isStale: Bool = false,
+        anchorEndTime: String? = nil,
+        slotDate: Date = Date()
     ) {
         self.id = id
         self.time = time
@@ -292,7 +331,7 @@ struct AgendaSlot: Codable, Identifiable {
         self.swaps = swaps
         self.travelMinutesToNext = travelMinutesToNext
         self.weatherAtSlot = weatherAtSlot
-        self.checkInTime = checkInTime
+        self.durationMinutes = durationMinutes
         self.checkOutTime = checkOutTime
         self.wasAutoCheckedIn = wasAutoCheckedIn
         self.source = source
@@ -300,6 +339,8 @@ struct AgendaSlot: Codable, Identifiable {
         self.customVenueName = customVenueName
         self.customNeighbourhood = customNeighbourhood
         self.isStale = isStale
+        self.anchorEndTime = anchorEndTime
+        self.slotDate = slotDate
     }
 }
 

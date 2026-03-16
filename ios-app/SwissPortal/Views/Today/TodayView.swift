@@ -9,6 +9,7 @@ import CoreLocation
 struct TodayView: View {
     @Environment(AppState.self) private var appState
     @Environment(LocationManager.self) private var locationManager
+    @Environment(ToastManager.self) private var toastManager
     @State private var viewModel = TodayViewModel()
     @State private var subView: TodaySubView = .news
     @State private var showWeatherDetail = false
@@ -39,6 +40,16 @@ struct TodayView: View {
                     city: appState.city,
                     language: appState.language
                 )
+            }
+            .onChange(of: viewModel.selectedPlanDay) { _, newDay in
+                anchors = AnchorStore.shared.anchors(for: newDay.date())
+                Task {
+                    await viewModel.composeAgendaForSelectedDay(
+                        city: appState.city,
+                        language: appState.language,
+                        session: appState.familySession
+                    )
+                }
             }
             .sheet(isPresented: $showWeatherDetail) {
                 if let weather = viewModel.weather {
@@ -109,12 +120,13 @@ struct TodayView: View {
             }
             .sheet(isPresented: $showAnchorForm) {
                 AnchorFormSheet(existingAnchor: editingAnchor, activitiesData: viewModel.activitiesData) { anchor in
+                    let planDate = viewModel.selectedPlanDay.date()
                     if editingAnchor != nil {
-                        AnchorStore.shared.update(anchor)
+                        AnchorStore.shared.update(anchor, for: planDate)
                     } else {
-                        AnchorStore.shared.add(anchor)
+                        AnchorStore.shared.add(anchor, for: planDate)
                     }
-                    anchors = AnchorStore.shared.anchors()
+                    anchors = AnchorStore.shared.anchors(for: planDate)
                     editingAnchor = nil
                     // Rebuild is triggered automatically by AnchorStore.didChangeNotification
                 }
@@ -130,9 +142,25 @@ struct TodayView: View {
                 .presentationDetents([.height(280)])
                 .interactiveDismissDisabled()
             }
+            .fullScreenCover(isPresented: $viewModel.showCalendarSwipe) {
+                CalendarSwipeView(
+                    events: viewModel.pendingCalendarEvents,
+                    planDate: viewModel.selectedPlanDay.date()
+                ) { acceptedAnchors in
+                    Task {
+                        await viewModel.handleCalendarSwipeComplete(
+                            acceptedAnchors: acceptedAnchors,
+                            city: appState.city,
+                            language: appState.language,
+                            session: appState.familySession
+                        )
+                        anchors = AnchorStore.shared.anchors(for: viewModel.selectedPlanDay.date())
+                    }
+                }
+            }
             .onAppear {
                 AnchorStore.shared.purgeIfNewDay()
-                anchors = AnchorStore.shared.anchors()
+                anchors = AnchorStore.shared.anchors(for: viewModel.selectedPlanDay.date())
             }
     }
 
@@ -188,9 +216,9 @@ struct TodayView: View {
             )
         } else {
             TodayHeroBanner(
-                weather: viewModel.weather,
-                badWeatherMode: viewModel.isBadWeatherDay,
-                planningDate: viewModel.targetDate,
+                weather: viewModel.weatherForSelectedDay,
+                badWeatherMode: viewModel.isBadWeatherForSelectedDay,
+                planningDate: viewModel.selectedPlanDay.date(),
                 subView: $subView,
                 onHolidayTap: { showHolidayDetail = true },
                 totalStoryCount: viewModel.totalNewsCount,
@@ -210,13 +238,15 @@ struct TodayView: View {
 
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(spacing: 0) {
+                    VStack(spacing: 0) {
                         // Transport alert (both sub-views)
                         transportSection
 
-                        // AI summary + events (both modes, hidden in execution mode)
+                        // AI summary (news mode only) + events (both modes)
                         if !viewModel.agendaMode.isExecuting {
-                            briefingSection
+                            if subView == .news {
+                                briefingSection
+                            }
                             eventsSection
                         }
 
@@ -261,14 +291,18 @@ struct TodayView: View {
 
         // Agenda section
         agendaSection
+            .onAppear {
+                // Calendar sync: check for new events when Plan mode appears
+                viewModel.checkCalendarSync()
+            }
     }
 
     // MARK: - Your Day Config Section
 
     private var yourDayConfigSection: some View {
         YourDayConfigSection(
-            weather: viewModel.weather,
-            badWeatherMode: viewModel.isBadWeatherDay,
+            weather: viewModel.weatherForSelectedDay,
+            badWeatherMode: viewModel.isBadWeatherForSelectedDay,
             contextText: viewModel.contextBannerText(language: appState.language),
             sessionDisplay: appState.familySession.childrenDisplay,
             anchors: anchors,
@@ -286,8 +320,9 @@ struct TodayView: View {
                 showAnchorForm = true
             },
             onAnchorDelete: { anchor in
-                AnchorStore.shared.remove(id: anchor.id)
-                anchors = AnchorStore.shared.anchors()
+                let planDate = viewModel.selectedPlanDay.date()
+                AnchorStore.shared.remove(id: anchor.id, for: planDate)
+                anchors = AnchorStore.shared.anchors(for: planDate)
                 // Rebuild is triggered automatically by AnchorStore.didChangeNotification
             },
             onPlanWeekend: {
@@ -340,32 +375,79 @@ struct TodayView: View {
                     Spacer()
 
                     if viewModel.agenda != nil {
-                        Button {
-                            Task {
-                                await viewModel.rebuildAgenda(
-                                    city: appState.city,
-                                    language: appState.language,
-                                    session: appState.familySession
-                                )
+                        HStack(spacing: 8) {
+                            Button {
+                                Task {
+                                    await viewModel.rebuildAgenda(
+                                        city: appState.city,
+                                        language: appState.language,
+                                        session: appState.familySession
+                                    )
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "arrow.triangle.2.circlepath")
+                                        .font(.system(size: 10, weight: .semibold))
+                                    Text(appState.localized(en: "Rebuild", de: "Neu planen"))
+                                        .font(.system(size: 12, weight: .medium))
+                                }
+                                .foregroundStyle(Color.znNavy)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(Color.znNeutralTagBg)
+                                .clipShape(Capsule())
                             }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "arrow.triangle.2.circlepath")
-                                    .font(.system(size: 10, weight: .semibold))
-                                Text(appState.localized(en: "Rebuild", de: "Neu planen"))
-                                    .font(.system(size: 12, weight: .medium))
+                            .buttonStyle(.plain)
+
+                            Button {
+                                Task {
+                                    await viewModel.handleCalendarSync(toast: toastManager)
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "calendar.badge.plus")
+                                        .font(.system(size: 10, weight: .semibold))
+                                    Text(appState.localized(en: "Sync", de: "Sync"))
+                                        .font(.system(size: 12, weight: .medium))
+                                }
+                                .foregroundStyle(Color.znNavy)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(Color.znNeutralTagBg)
+                                .clipShape(Capsule())
                             }
-                            .foregroundStyle(Color.znNavy)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Color.znNeutralTagBg)
-                            .clipShape(Capsule())
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal)
-                .padding(.bottom, 10)
+                .padding(.bottom, 6)
+
+                // Save to Calendar ghost button
+                if viewModel.agenda != nil && !viewModel.agendaMode.isExecuting {
+                    Button {
+                        Task {
+                            await viewModel.exportPlanToCalendar(toast: toastManager)
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "calendar")
+                                .font(.system(size: 12))
+                            Text(appState.localized(en: "Save to Calendar", de: "Im Kalender speichern"))
+                                .font(.system(size: 12, weight: .medium))
+                        }
+                        .foregroundStyle(Color.znNavy)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.znNavy.opacity(0.4), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal)
+                    .padding(.bottom, 6)
+                }
 
                 // Day picker pills (today/tomorrow or weekend)
                 if viewModel.availablePlanDays.count > 1 {
@@ -373,6 +455,38 @@ struct TodayView: View {
                         .padding(.horizontal)
                         .padding(.bottom, 12)
                 }
+            }
+
+            // Calendar sync banner (new events detected after plan built)
+            if viewModel.showCalendarSyncBanner {
+                CalendarSyncBanner(
+                    eventCount: viewModel.pendingBannerEventCount,
+                    onSync: {
+                        Task {
+                            await viewModel.handleCalendarSync(toast: toastManager)
+                        }
+                    }
+                )
+                .padding(.bottom, 8)
+            }
+
+            // Conflict warning (overlapping anchors)
+            if let warning = viewModel.conflictWarning {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.orange)
+                    Text(warning)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.znBody)
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.znAlertBg)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .padding(.horizontal)
+                .padding(.bottom, 8)
             }
 
             // Weather note (if agenda has one, and not executing)
@@ -389,7 +503,7 @@ struct TodayView: View {
             agendaContent
                 .padding(.horizontal)
         }
-        .padding(.top, 20)
+        .padding(.top, 10)
     }
 
     @ViewBuilder
@@ -406,8 +520,9 @@ struct TodayView: View {
                     showAnchorForm = true
                 },
                 onDelete: { anchor in
-                    AnchorStore.shared.remove(id: anchor.id)
-                    anchors = AnchorStore.shared.anchors()
+                    let planDate = viewModel.selectedPlanDay.date()
+                    AnchorStore.shared.remove(id: anchor.id, for: planDate)
+                    anchors = AnchorStore.shared.anchors(for: planDate)
                     // Rebuild is triggered automatically by AnchorStore.didChangeNotification
                 },
                 onAdd: {
@@ -619,7 +734,7 @@ struct TodayView: View {
                 }
                 .padding(.horizontal)
             }
-            .padding(.top, 20)
+            .padding(.top, 12)
         }
     }
 
@@ -698,18 +813,6 @@ struct TodayView: View {
             }
 
             Spacer()
-
-            // Exit weekend mode
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    viewModel.exitWeekendMode()
-                }
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 16))
-                    .foregroundStyle(.znMuted)
-            }
-            .buttonStyle(.plain)
         }
     }
 
