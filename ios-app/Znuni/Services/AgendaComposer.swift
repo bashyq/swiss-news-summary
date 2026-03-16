@@ -87,6 +87,7 @@ struct AgendaComposer {
         9. "tags" should include relevant attributes: Indoor/Outdoor, Free if price mentions "free", age range.
         10. If no suitable venue exists for a gap, use venueId "surprise" with venueName "Surprise me!" and a creative reason.
         11. Response language: \(language == .de ? "German" : "English")
+        12. When an anchor has coordinates, prefer venues geographically close to it for adjacent slots. Mention proximity in the reason if applicable.
         """
     }
 
@@ -181,11 +182,13 @@ struct AgendaComposer {
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
+            ZnuniEvent.apiError(endpoint: "agenda_compose", error: "Invalid response")
             throw ComposerError.httpError(0, "Invalid response")
         }
 
         guard httpResponse.statusCode == 200 else {
             let errorBody = String(data: data, encoding: .utf8)
+            ZnuniEvent.apiError(endpoint: "agenda_compose", error: "HTTP \(httpResponse.statusCode)")
             throw ComposerError.httpError(httpResponse.statusCode, errorBody)
         }
 

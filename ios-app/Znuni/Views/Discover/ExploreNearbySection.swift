@@ -33,7 +33,10 @@ struct ExploreNearbySection: View {
     }
 
     private func browseTile(_ title: String, icon: String, route: DiscoverRoute) -> some View {
-        Button { path.append(route) } label: {
+        Button {
+            ZnuniEvent.discoverCategoryTapped(category: title.lowercased())
+            path.append(route)
+        } label: {
             VStack(alignment: .leading, spacing: 6) {
                 Image(systemName: icon)
                     .font(.title2)

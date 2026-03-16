@@ -15,6 +15,7 @@ struct ExecHeaderView: View {
     let isComplete: Bool
     let onSessionTap: () -> Void
     @Binding var subView: TodaySubView
+    @State private var showShareSheet = false
 
     private var currentSlot: AgendaSlot? {
         guard currentSlotIndex < agenda.slots.count else { return nil }
@@ -53,6 +54,16 @@ struct ExecHeaderView: View {
                 Spacer()
 
                 execSegmentControl
+
+                Button { showShareSheet = true } label: {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+                .sheet(isPresented: $showShareSheet) {
+                    ShareSheet(items: [PlanShareFormatter.format(agenda, city: appState.city.displayName)])
+                }
 
                 CityMenuButton()
             }

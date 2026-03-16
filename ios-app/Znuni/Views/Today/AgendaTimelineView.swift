@@ -392,9 +392,16 @@ struct AgendaTimelineView: View {
             }
             .buttonStyle(.plain)
         } else if onStartExecuting != nil {
+            // Share plan button — above "Let's go"
+            SharePlanButton(
+                agenda: agenda,
+                city: appState.city.displayName
+            )
+
             // "Let's go →" button — disabled while reflow banner is showing
             // Only shown when execution mode is supported (Today tab, not Weekend).
             Button {
+                ZnuniEvent.planLetsGo()
                 onStartExecuting?()
             } label: {
                 HStack(spacing: 8) {

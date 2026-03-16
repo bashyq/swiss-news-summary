@@ -9,6 +9,10 @@ struct ZnuniApp: App {
 
     @Environment(\.scenePhase) private var scenePhase
 
+    init() {
+        Analytics.initialize()
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()

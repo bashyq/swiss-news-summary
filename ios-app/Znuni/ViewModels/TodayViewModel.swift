@@ -36,11 +36,15 @@ final class TodayViewModel {
     var _agendas: [String: DayAgenda] = [:]
     var _agendaStates: [String: AgendaState] = [:]
 
-    /// The currently selected plan day (today by default, weekend days in weekend mode).
+    /// The currently selected plan day (today by default).
     var selectedPlanDay: PlanDay = .today
 
-    /// Whether the user activated weekend planning mode.
-    var isWeekendMode: Bool = false
+    /// The city being planned for (defaults to the app's selected city).
+    /// Set when user taps "Plan a day here" on a sunshine/snow card.
+    var planningCity: PlanningCity = .zurich
+
+    /// Whether the calendar date picker sheet is shown.
+    var showDatePicker: Bool = false
 
     // MARK: - Calendar Sync
 
@@ -59,8 +63,8 @@ final class TodayViewModel {
     /// Conflict warning message (if overlapping anchors detected after accept).
     var conflictWarning: String?
 
-    /// Weekend weather data from the /weekend endpoint, used by Planner UI.
-    private(set) var _weekendWeather: WeekendResponse?
+    /// Weather for a specific weekend day (fetched on demand via /weekend endpoint).
+    private var _weekendWeather: WeekendResponse?
 
     /// Weather for a specific weekend day, from the cached /weekend response.
     func weekendDayWeather(for day: PlanDay) -> DayWeather? {
@@ -86,22 +90,21 @@ final class TodayViewModel {
         didSet { persistAgendaMode() }
     }
 
-    /// True on Friday 8PM+ or Saturday (before Sunday).
-    var canPlanWeekend: Bool {
+    /// Quick-pick plan days shown in the date picker row.
+    /// Always shows Today, Tomorrow, and the upcoming Sat/Sun.
+    /// Deduplicates if today or tomorrow already IS Saturday/Sunday.
+    var availablePlanDays: [PlanDay] {
         let cal = Calendar.current
         let now = Date()
         let weekday = cal.component(.weekday, from: now) // 1=Sun, 7=Sat
-        let hour = cal.component(.hour, from: now)
-        // Friday (6) after 8 PM or Saturday (7) all day
-        return (weekday == 6 && hour >= 20) || weekday == 7
-    }
+        var days: [PlanDay] = [.today, .tomorrow]
 
-    /// Available plan days based on current time/mode.
-    var availablePlanDays: [PlanDay] {
-        if isWeekendMode {
-            return [.saturday, .sunday]
-        }
-        return [.today, .tomorrow]
+        // Only add weekend days if they aren't already covered by today/tomorrow
+        let tomorrowWeekday = cal.component(.weekday, from: cal.date(byAdding: .day, value: 1, to: now) ?? now)
+        if weekday != 7 && tomorrowWeekday != 7 { days.append(.saturday) }
+        if weekday != 1 && tomorrowWeekday != 1 { days.append(.sunday) }
+
+        return days
     }
 
     // MARK: - Convenience
@@ -287,8 +290,10 @@ final class TodayViewModel {
 
         isLoading = false
 
-        // 3. Set selectedPlanDay based on current time (if not in weekend mode)
-        if !isWeekendMode {
+        // 3. Set selectedPlanDay based on current time
+        if case .specific = selectedPlanDay {
+            // Keep user's specific date selection
+        } else {
             selectedPlanDay = isNextDayMode ? .tomorrow : .today
         }
 
@@ -340,9 +345,26 @@ final class TodayViewModel {
         _lastCity = city
         _lastLanguage = language
         _lastSession = session
-        // For future days, pass forecast weather so the agenda's weatherNote
-        // matches the hero banner instead of showing today's live weather.
-        let forecastOverride: Weather? = (selectedPlanDay == .today) ? nil : weatherForSelectedDay
+
+        // For weekend days, fetch per-day weather from the /weekend endpoint if not cached
+        var forecastOverride: Weather? = nil
+        if selectedPlanDay == .saturday || selectedPlanDay == .sunday {
+            if _weekendWeather == nil {
+                do {
+                    _weekendWeather = try await APIClient.shared.fetchWeekend(
+                        city: city, language: language
+                    )
+                } catch {
+                    #if DEBUG
+                    print("⚠️ Weekend weather fetch failed: \(error.localizedDescription)")
+                    #endif
+                }
+            }
+            forecastOverride = weekendDayWeather(for: selectedPlanDay)?.toWeather()
+        } else if selectedPlanDay != .today {
+            forecastOverride = weatherForSelectedDay
+        }
+
         await composeAgendaForDate(
             dateISO: dateISO,
             planDate: planDate,
@@ -486,6 +508,7 @@ final class TodayViewModel {
 
                 _agendas[dateISO] = result
                 _agendaStates[dateISO] = .loaded
+                ZnuniEvent.planGenerated(source: "api", city: city.id, slotCount: result.slots.count, badWeather: result.badWeatherMode)
                 syncAgendaToWidget()
                 restoreAgendaMode()
 
@@ -512,124 +535,10 @@ final class TodayViewModel {
         buildTemplateFallback(session: session, language: language, dateISO: dateISO, fillableGaps: fillableGaps.isEmpty ? nil : fillableGaps, planDate: planDate)
     }
 
-    /// Compose weekend agendas (Saturday + Sunday) in sequence.
-    /// Sunday avoids repeating Saturday's venues.
-    /// Fetches per-day weather from the `/weekend` endpoint for accurate scoring.
-    /// Builds a `MultiDayPlan` and applies cross-day duplicate resolution.
-    @MainActor
-    func composeWeekend(city: City, language: AppLanguage, session: FamilySession) async {
-        isWeekendMode = true
-        selectedPlanDay = .saturday
-
-        let satISO = PlanDay.saturday.isoDate
-        let sunISO = PlanDay.sunday.isoDate
-
-        // Fetch weekend weather from the /weekend endpoint
-        var satWeather: Weather?
-        var sunWeather: Weather?
-        do {
-            let weekendResponse = try await APIClient.shared.fetchWeekend(
-                city: city, language: language
-            )
-            satWeather = weekendResponse.saturday.weather?.toWeather()
-            sunWeather = weekendResponse.sunday.weather?.toWeather()
-            // Store the response for weather headers
-            _weekendWeather = weekendResponse
-        } catch {
-            // Fall back to today's weather if weekend fetch fails
-            #if DEBUG
-            print("⚠️ Weekend weather fetch failed, using today's weather: \(error.localizedDescription)")
-            #endif
-        }
-
-        // Load per-day anchors from date-keyed storage
-        let satDate = PlanDay.saturday.date()
-        let sunDate = PlanDay.sunday.date()
-        let satAnchors = AnchorStore.shared.anchors(for: satDate)
-        let sunAnchors = AnchorStore.shared.anchors(for: sunDate)
-
-        // Compose Saturday first (with Saturday's weather + anchors)
-        await composeAgendaForDate(
-            dateISO: satISO,
-            planDate: satDate,
-            city: city,
-            language: language,
-            session: session,
-            extraRecentlyShown: [],
-            anchors: satAnchors,
-            weatherOverride: satWeather
-        )
-
-        // Collect Saturday's venue IDs to avoid repeats on Sunday
-        let satVenueIds = (_agendas[satISO]?.slots ?? []).compactMap(\.venueId)
-
-        // Compose Sunday with Saturday's venues as extra recently shown
-        await composeAgendaForDate(
-            dateISO: sunISO,
-            planDate: sunDate,
-            city: city,
-            language: language,
-            session: session,
-            extraRecentlyShown: satVenueIds,
-            anchors: sunAnchors,
-            weatherOverride: sunWeather
-        )
-
-        // Build MultiDayPlan and apply cross-day duplicate resolution
-        let weekendPlan = MultiDayPlan(
-            title: "Weekend",
-            days: [
-                PlannedDay(date: satDate, anchors: satAnchors, agenda: _agendas[satISO]),
-                PlannedDay(date: sunDate, anchors: sunAnchors, agenda: _agendas[sunISO])
-            ]
-        )
-
-        let resolved = weekendPlan.resolvingCrossDayDuplicates()
-
-        // Apply resolved agendas back to the state
-        if let satAgenda = resolved.days.first?.agenda {
-            _agendas[satISO] = satAgenda
-        }
-        if resolved.days.count > 1, let sunAgenda = resolved.days[1].agenda {
-            _agendas[sunISO] = sunAgenda
-        }
-
-        // Persist the plan
-        MultiDayPlanStore.shared.store(resolved)
-
-        // Show Saturday first
-        selectedPlanDay = .saturday
-    }
-
-    /// Rebuild weekend agendas (invalidate cache, recompose both days).
-    @MainActor
-    func rebuildWeekend(city: City, language: AppLanguage, session: FamilySession) async {
-        await agendaCache.invalidate()
-        recentlyShownStore.clear()
-        let satISO = PlanDay.saturday.isoDate
-        let sunISO = PlanDay.sunday.isoDate
-        _agendas[satISO] = nil
-        _agendas[sunISO] = nil
-        _agendaStates[satISO] = .idle
-        _agendaStates[sunISO] = .idle
-        agendaMode = .browsing
-        await composeWeekend(city: city, language: language, session: session)
-    }
-
-    /// Exit weekend mode and return to today/tomorrow planning.
-    @MainActor
-    func exitWeekendMode() {
-        isWeekendMode = false
-        selectedPlanDay = isNextDayMode ? .tomorrow : .today
-    }
-
     /// Invalidate cache and recompose the agenda for the currently selected day.
     @MainActor
     func rebuildAgenda(city: City, language: AppLanguage, session: FamilySession) async {
-        if isWeekendMode {
-            await rebuildWeekend(city: city, language: language, session: session)
-            return
-        }
+        ZnuniEvent.planRebuilt()
         clearExportedEvents()
         await agendaCache.invalidate()
         recentlyShownStore.clear()
@@ -663,6 +572,7 @@ final class TodayViewModel {
         current.slots[index].venueId = swap.venueId
         current.slots[index].reason = swap.detail
         current.slots[index].source = .userSwapped
+        ZnuniEvent.planSlotSwapped(slotType: current.slots[index].type.rawValue)
 
         // Recalculate travel connectors for affected slots
         recalcTravel(in: &current.slots, at: index)
@@ -1122,6 +1032,7 @@ final class TodayViewModel {
         let key = dateISO ?? selectedPlanDay.isoDate
         _agendas[key] = result
         _agendaStates[key] = .fallback
+        ZnuniEvent.planGenerated(source: "template_fallback", city: _lastCity?.id ?? "unknown", slotCount: result.slots.count, badWeather: result.badWeatherMode)
         syncAgendaToWidget()
         restoreAgendaMode()
 

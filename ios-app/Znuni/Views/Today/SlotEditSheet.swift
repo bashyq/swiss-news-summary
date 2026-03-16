@@ -101,6 +101,7 @@ struct SlotEditSheet: View {
                     label: appState.localized(en: "Replace with my own", de: "Eigenen Vorschlag"),
                     color: .znNavy
                 ) {
+                    ZnuniEvent.planSlotEdited(action: "replaceCustom")
                     dismiss()
                     onReplaceWithCustom()
                 }
@@ -127,6 +128,7 @@ struct SlotEditSheet: View {
                         : appState.localized(en: "Lock this slot", de: "Slot sperren"),
                     color: .znNavy
                 ) {
+                    ZnuniEvent.planSlotEdited(action: "lock")
                     onToggleLock()
                     dismiss()
                 }
@@ -142,6 +144,7 @@ struct SlotEditSheet: View {
                 label: appState.localized(en: "Remove slot", de: "Slot entfernen"),
                 color: .znNegative
             ) {
+                ZnuniEvent.planSlotEdited(action: "remove")
                 onRemove()
                 dismiss()
             }
@@ -187,6 +190,7 @@ struct SlotEditSheet: View {
             // Save button
             Button {
                 let timeStr = String(format: "%02d:%02d", selectedHour, selectedMinute)
+                ZnuniEvent.planSlotEdited(action: "editTime")
                 onEditTime(timeStr)
                 dismiss()
             } label: {

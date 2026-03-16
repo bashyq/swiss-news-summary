@@ -107,6 +107,7 @@ struct SessionConfigSheet: View {
                                 session.children[i].name = "Child \(i + 1)"
                             }
                         }
+                        ZnuniEvent.sessionChanged(childCount: session.children.count, soloParent: session.soloParent)
                         onSave(session)
                         dismiss()
                     }

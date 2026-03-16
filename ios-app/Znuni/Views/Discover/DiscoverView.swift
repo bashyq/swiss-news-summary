@@ -4,25 +4,53 @@ struct DiscoverView: View {
     @Environment(AppState.self) private var appState
     @Binding var path: NavigationPath
 
+    var weather: Weather?
+    var sunshineDestinations: [SunshineDestination]?
+    var snowDestinations: [SnowDestination]?
+    var cityEvents: [CityEvent]?
+    var upcomingEventCount: Int = 0
+
+    @State private var nudge: Nudge?
+
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
                 discoverHero
 
                 VStack(spacing: 16) {
+                    // Smart nudge card
+                    if let nudge {
+                        SmartNudgeCard(nudge: nudge) {
+                            switch nudge.type {
+                            case .sunshineEscape:
+                                path.append(DiscoverRoute.sunshine)
+                            case .freshSnow:
+                                path.append(DiscoverRoute.snow)
+                            case .upcomingEvent:
+                                path.append(DiscoverRoute.events)
+                            }
+                        }
+                    }
+
                     // Hero cards
-                    Button { path.append(DiscoverRoute.sunshine) } label: {
+                    Button {
+                        ZnuniEvent.discoverSunshineOpened()
+                        path.append(DiscoverRoute.sunshine)
+                    } label: {
                         SunshineHeroCard()
                     }
                     .buttonStyle(.plain)
 
-                    Button { path.append(DiscoverRoute.snow) } label: {
+                    Button {
+                        ZnuniEvent.discoverSnowOpened()
+                        path.append(DiscoverRoute.snow)
+                    } label: {
                         SnowHeroCard()
                     }
                     .buttonStyle(.plain)
 
                     Button { path.append(DiscoverRoute.events) } label: {
-                        EventsHeroCard(upcomingCount: 0) // TODO: wire real count
+                        EventsHeroCard(upcomingCount: upcomingEventCount)
                     }
                     .buttonStyle(.plain)
 
@@ -37,6 +65,15 @@ struct DiscoverView: View {
         .background(Color.znCream)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .navigationBar)
+        .onAppear {
+            nudge = NudgeEngine.evaluate(
+                weather: weather,
+                sunshineDestinations: sunshineDestinations,
+                snowDestinations: snowDestinations,
+                events: cityEvents,
+                language: appState.language
+            )
+        }
     }
 
     // MARK: - Hero Banner

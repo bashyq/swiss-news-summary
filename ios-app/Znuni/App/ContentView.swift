@@ -83,14 +83,41 @@ private struct DiscoverNavigationStack: View {
     @Environment(AppState.self) private var appState
     @State private var path = NavigationPath()
     @State private var exploreViewModel = ExploreViewModel()
+    @State private var sunshineViewModel = SunshineViewModel()
+    @State private var snowViewModel = SnowViewModel()
+    @State private var eventsViewModel = EventsViewModel()
     @Environment(LocationManager.self) private var locationManager
+
+    /// Count of upcoming city events (starting within the next 7 days)
+    private var upcomingEventCount: Int {
+        let now = Date()
+        let weekFromNow = Calendar.current.date(byAdding: .day, value: 7, to: now) ?? now
+        return eventsViewModel.cityEvents.filter { event in
+            guard let start = event.startDateParsed else { return false }
+            return start >= now && start <= weekFromNow
+        }.count
+    }
 
     var body: some View {
         NavigationStack(path: $path) {
-            DiscoverView(path: $path)
-                .navigationDestination(for: DiscoverRoute.self) { route in
-                    destinationView(for: route)
-                }
+            DiscoverView(
+                path: $path,
+                weather: eventsViewModel.newsData?.weather,
+                sunshineDestinations: sunshineViewModel.sunshineData?.destinations,
+                snowDestinations: snowViewModel.snowData?.destinations,
+                cityEvents: eventsViewModel.cityEvents,
+                upcomingEventCount: upcomingEventCount
+            )
+            .navigationDestination(for: DiscoverRoute.self) { route in
+                destinationView(for: route)
+            }
+            .task {
+                // Load sunshine/snow/events data for nudge engine
+                async let s: () = sunshineViewModel.loadSunshine(language: appState.language)
+                async let n: () = snowViewModel.loadSnow(language: appState.language)
+                async let e: () = eventsViewModel.loadData(city: appState.city, language: appState.language)
+                _ = await (s, n, e)
+            }
         }
         .onChange(of: appState.tabRetapCount) {
             if appState.selectedTab == .discover && !path.isEmpty {
@@ -197,6 +224,7 @@ struct ZnuniTabBar: View {
         Button {
             if selectedTab != tab {
                 selectedTab = tab
+                ZnuniEvent.tabSwitched(to: tab.rawValue)
             } else {
                 appState.tabRetapCount += 1
             }
