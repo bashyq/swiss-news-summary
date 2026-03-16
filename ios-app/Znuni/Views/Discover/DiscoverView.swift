@@ -10,14 +10,28 @@ struct DiscoverView: View {
                 discoverHero
 
                 VStack(spacing: 16) {
-                    // Hero cards and browse grid will be added in Tasks 2-3
-                    Text(appState.localized(en: "Discover content coming soon", de: "Inhalte folgen"))
-                        .font(.body)
-                        .foregroundColor(.znMuted)
-                        .padding(.top, 40)
+                    // Hero cards
+                    Button { path.append(DiscoverRoute.sunshine) } label: {
+                        SunshineHeroCard()
+                    }
+                    .buttonStyle(.plain)
+
+                    Button { path.append(DiscoverRoute.snow) } label: {
+                        SnowHeroCard()
+                    }
+                    .buttonStyle(.plain)
+
+                    Button { path.append(DiscoverRoute.events) } label: {
+                        EventsHeroCard(upcomingCount: 0) // TODO: wire real count
+                    }
+                    .buttonStyle(.plain)
+
+                    // Explore nearby
+                    ExploreNearbySection(path: $path)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
+                .padding(.bottom, 32)
             }
         }
         .background(Color.znCream)
