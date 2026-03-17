@@ -142,6 +142,18 @@ struct TodayView: View {
                 .presentationDetents([.height(280)])
                 .interactiveDismissDisabled()
             }
+            .sheet(isPresented: Binding(
+                get: { viewModel.showDatePicker },
+                set: { viewModel.showDatePicker = $0 }
+            )) {
+                DatePickerSheet(
+                    selectedPlanDay: Binding(
+                        get: { viewModel.selectedPlanDay },
+                        set: { viewModel.selectedPlanDay = $0 }
+                    )
+                )
+                .environment(appState)
+            }
             .fullScreenCover(isPresented: $viewModel.showCalendarSwipe) {
                 CalendarSwipeView(
                     events: viewModel.pendingCalendarEvents,
@@ -161,6 +173,29 @@ struct TodayView: View {
             .onAppear {
                 AnchorStore.shared.purgeIfNewDay()
                 anchors = AnchorStore.shared.anchors(for: viewModel.selectedPlanDay.date())
+            }
+            .onChange(of: appState.pendingPlanRequest) { _, request in
+                guard let request else { return }
+                // Set the planning city
+                if let planCity = PlanningCity.from(destinationId: request.cityId) {
+                    viewModel.planningCity = planCity
+                }
+                // Set the date if specified, otherwise keep current selection
+                if let date = request.date {
+                    viewModel.selectedPlanDay = .specific(date)
+                }
+                // Switch to Plan mode
+                subView = .plan
+                // Clear the request
+                appState.pendingPlanRequest = nil
+                // Recompose for the new city
+                Task {
+                    await viewModel.rebuildAgenda(
+                        city: City(rawValue: request.cityId) ?? appState.city,
+                        language: appState.language,
+                        session: appState.familySession
+                    )
+                }
             }
     }
 
@@ -219,8 +254,11 @@ struct TodayView: View {
                 weather: viewModel.weatherForSelectedDay,
                 badWeatherMode: viewModel.isBadWeatherForSelectedDay,
                 planningDate: viewModel.selectedPlanDay.date(),
+                planningCityName: viewModel.planningCity.localizedName(language: appState.language),
                 subView: $subView,
+                onWeatherTap: { showWeatherDetail = true },
                 onHolidayTap: { showHolidayDetail = true },
+                contextText: viewModel.contextBannerText(language: appState.language),
                 totalStoryCount: viewModel.totalNewsCount,
                 categoryKeys: viewModel.categoryKeys,
                 selectedCategory: $viewModel.selectedCategory,
@@ -242,12 +280,12 @@ struct TodayView: View {
                         // Transport alert (both sub-views)
                         transportSection
 
-                        // AI summary (news mode only) + events (both modes)
+                        // AI summary (news mode only)
                         if !viewModel.agendaMode.isExecuting {
                             if subView == .news {
                                 briefingSection
                             }
-                            eventsSection
+                            // "What's on today" removed — events now live in Discover tab
                         }
 
                         // Mode-specific content
@@ -303,12 +341,9 @@ struct TodayView: View {
         YourDayConfigSection(
             weather: viewModel.weatherForSelectedDay,
             badWeatherMode: viewModel.isBadWeatherForSelectedDay,
-            contextText: viewModel.contextBannerText(language: appState.language),
             sessionDisplay: appState.familySession.childrenDisplay,
             anchors: anchors,
             anchorCount: anchors.count,
-            canPlanWeekend: viewModel.canPlanWeekend,
-            isWeekendMode: viewModel.isWeekendMode,
             onWeatherTap: { showWeatherDetail = true },
             onSessionTap: { showSessionConfig = true },
             onAnchorAdd: {
@@ -324,15 +359,6 @@ struct TodayView: View {
                 AnchorStore.shared.remove(id: anchor.id, for: planDate)
                 anchors = AnchorStore.shared.anchors(for: planDate)
                 // Rebuild is triggered automatically by AnchorStore.didChangeNotification
-            },
-            onPlanWeekend: {
-                Task {
-                    await viewModel.composeWeekend(
-                        city: appState.city,
-                        language: appState.language,
-                        session: appState.familySession
-                    )
-                }
             }
         )
     }
@@ -449,12 +475,10 @@ struct TodayView: View {
                     .padding(.bottom, 6)
                 }
 
-                // Day picker pills (today/tomorrow or weekend)
-                if viewModel.availablePlanDays.count > 1 {
-                    dayPickerPills
-                        .padding(.horizontal)
-                        .padding(.bottom, 12)
-                }
+                // Date picker row (today/tomorrow/weekend + pick date)
+                datePickerRow
+                    .padding(.horizontal)
+                    .padding(.bottom, 12)
             }
 
             // Calendar sync banner (new events detected after plan built)
@@ -487,16 +511,6 @@ struct TodayView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .padding(.horizontal)
                 .padding(.bottom, 8)
-            }
-
-            // Weather note (if agenda has one, and not executing)
-            if !viewModel.agendaMode.isExecuting,
-               let weatherNote = viewModel.agenda?.weatherNote, !weatherNote.isEmpty {
-                Text(weatherNote)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.znMuted)
-                    .padding(.horizontal)
-                    .padding(.bottom, 8)
             }
 
             // Agenda content
@@ -789,31 +803,19 @@ struct TodayView: View {
         }
     }
 
-    // MARK: - Day Picker Pills (Weekend Mode)
+    // MARK: - Date Picker Row
 
-    private var dayPickerPills: some View {
-        HStack(spacing: 8) {
-            ForEach(viewModel.availablePlanDays, id: \.self) { day in
-                let isSelected = viewModel.selectedPlanDay == day
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        viewModel.selectedPlanDay = day
-                    }
-                } label: {
-                    Text(day.shortLabel(language: appState.language))
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(isSelected ? .white : .znBody)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 7)
-                        .background(isSelected ? Color.znNavy : Color.znNeutralTagBg)
-                        .clipShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .sensoryFeedback(.selection, trigger: isSelected)
+    private var datePickerRow: some View {
+        DatePickerRow(
+            selectedPlanDay: Binding(
+                get: { viewModel.selectedPlanDay },
+                set: { viewModel.selectedPlanDay = $0 }
+            ),
+            availableDays: viewModel.availablePlanDays,
+            onPickDate: {
+                viewModel.showDatePicker = true
             }
-
-            Spacer()
-        }
+        )
     }
 
     // MARK: - Section Header
