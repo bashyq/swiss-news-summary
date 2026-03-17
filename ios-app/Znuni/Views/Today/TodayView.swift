@@ -299,11 +299,21 @@ struct TodayView: View {
                     }
                 }
                 .refreshable {
-                    await viewModel.loadAll(
-                        city: appState.city,
-                        language: appState.language,
-                        forceRefresh: true
-                    )
+                    if subView == .plan {
+                        // Pull-to-refresh in Plan mode rebuilds the agenda
+                        await viewModel.rebuildAgenda(
+                            city: appState.city,
+                            language: appState.language,
+                            session: appState.familySession
+                        )
+                    } else {
+                        // Pull-to-refresh in News mode reloads data
+                        await viewModel.loadAll(
+                            city: appState.city,
+                            language: appState.language,
+                            forceRefresh: true
+                        )
+                    }
                 }
                 .onChange(of: expandedSlotID) { _, newID in
                     if let newID {
@@ -391,7 +401,8 @@ struct TodayView: View {
     @ViewBuilder
     private var agendaSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Section header with rebuild button (hidden in execution mode)
+            // Section header with sync button (hidden in execution mode)
+            // Rebuild is now via pull-to-refresh on the scroll view
             if !viewModel.agendaMode.isExecuting {
                 HStack(alignment: .center) {
                     Text(viewModel.selectedPlanDay.headerTitle(language: appState.language))
@@ -401,49 +412,24 @@ struct TodayView: View {
                     Spacer()
 
                     if viewModel.agenda != nil {
-                        HStack(spacing: 8) {
-                            Button {
-                                Task {
-                                    await viewModel.rebuildAgenda(
-                                        city: appState.city,
-                                        language: appState.language,
-                                        session: appState.familySession
-                                    )
-                                }
-                            } label: {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "arrow.triangle.2.circlepath")
-                                        .font(.system(size: 10, weight: .semibold))
-                                    Text(appState.localized(en: "Rebuild", de: "Neu planen"))
-                                        .font(.system(size: 12, weight: .medium))
-                                }
-                                .foregroundStyle(Color.znNavy)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(Color.znNeutralTagBg)
-                                .clipShape(Capsule())
+                        Button {
+                            Task {
+                                await viewModel.handleCalendarSync(toast: toastManager)
                             }
-                            .buttonStyle(.plain)
-
-                            Button {
-                                Task {
-                                    await viewModel.handleCalendarSync(toast: toastManager)
-                                }
-                            } label: {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "calendar.badge.plus")
-                                        .font(.system(size: 10, weight: .semibold))
-                                    Text(appState.localized(en: "Sync", de: "Sync"))
-                                        .font(.system(size: 12, weight: .medium))
-                                }
-                                .foregroundStyle(Color.znNavy)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(Color.znNeutralTagBg)
-                                .clipShape(Capsule())
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "calendar.badge.plus")
+                                    .font(.system(size: 10, weight: .semibold))
+                                Text(appState.localized(en: "Sync", de: "Sync"))
+                                    .font(.system(size: 12, weight: .medium))
                             }
-                            .buttonStyle(.plain)
+                            .foregroundStyle(Color.znNavy)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color.znNeutralTagBg)
+                            .clipShape(Capsule())
                         }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal)

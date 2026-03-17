@@ -73,13 +73,12 @@ struct AgendaTimelineView: View {
             ? (currentSlotIndex == 0 ? .upcoming : .done)
             : .browsing
         let isTransit = estimate.mode == .transit
-        let icon = execSt == .upcoming
-            ? (isTransit ? "tram.fill" : "figure.walk")
-            : "location.fill"
-        let modeLabel = isTransit ? "transit" : "walk"
+        let modeIcon = isTransit ? "tram.fill" : "figure.walk"
+        let modeLabel = isTransit ? "by tram" : "walk"
+        let icon = execSt == .upcoming ? modeIcon : modeIcon
         let label = execSt == .upcoming
             ? "Leave now · \(estimate.minutes) min \(modeLabel)"
-            : "~\(estimate.minutes) min from you"
+            : "~\(estimate.minutes) min \(modeLabel) from home"
 
         return HStack(spacing: 10) {
             // Vertical dashed line
