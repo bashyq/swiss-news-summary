@@ -106,10 +106,14 @@ private enum Archetype {
         let childNames = session.children.map(\.name).joined(separator: " & ")
 
         // Filter available activities (basic eligibility)
+        // Note: Don't check opening hours at planDate here — planDate may be midnight
+        // (for future dates) or early morning (for today). The FreshnessScorer already
+        // checks opening hours at the actual gap midpoint time, which is the correct check.
+        // Checking at planDate incorrectly excludes activities that have defined hours
+        // (e.g., "Daily 9:00-18:00" is "closed" at midnight).
         let baseAvailable = activities.filter { activity in
             !activity.isStayHome
                 && activity.isAvailable(on: planDate)
-                && OpeningHoursParser.status(from: activity.openingHours, at: planDate) != .closed
                 && (activity.season == nil || activity.isCurrentSeason)
         }
 
@@ -135,7 +139,9 @@ private enum Archetype {
         let scoredLunch: [LunchSpot]
         let scoredDinner: [LunchSpot]
         let baseLunchPool = restaurants.filter {
-            $0.permanentlyClosed != true && ($0.rating == nil || $0.rating! >= 3.5)
+            $0.permanentlyClosed != true
+                && ($0.rating == nil || $0.rating! >= 3.5)
+                && ($0.ratingCount == nil || $0.ratingCount! >= 10)
         }
         scoredLunch = baseLunchPool
             .map { ($0, FreshnessScorer.scoreRestaurant($0, slotType: .lunch, visitStore: visitStore, date: planDate)) }
@@ -176,6 +182,7 @@ private enum Archetype {
                 weatherDesc: weatherDesc, session: session,
                 morningPool: available.filter { !$0.indoor },
                 afternoonPool: available.filter { !$0.indoor },
+                stayHome: stayHome,
                 restaurants: openRestaurants.isEmpty ? allRestaurants : openRestaurants,
                 theme: language == .en
                     ? "Sunny \(dayName) with \(childNames)"
@@ -189,6 +196,7 @@ private enum Archetype {
                 weatherDesc: weatherDesc, session: session,
                 morningPool: available.filter(\.indoor),
                 afternoonPool: available.filter(\.indoor),
+                stayHome: stayHome,
                 restaurants: openRestaurants.isEmpty ? allRestaurants : openRestaurants,
                 theme: language == .en
                     ? "Cozy indoor \(dayName) with \(childNames)"
@@ -202,6 +210,7 @@ private enum Archetype {
                 weatherDesc: weatherDesc, session: session,
                 morningPool: available.filter { !$0.indoor },
                 afternoonPool: available.filter(\.indoor),
+                stayHome: stayHome,
                 restaurants: openRestaurants.isEmpty ? allRestaurants : openRestaurants,
                 theme: language == .en
                     ? "Mixed \(dayName) with \(childNames)"
@@ -216,6 +225,7 @@ private enum Archetype {
                 weatherDesc: weatherDesc, session: session,
                 morningPool: freeActivities,
                 afternoonPool: freeActivities,
+                stayHome: stayHome,
                 restaurants: openRestaurants.isEmpty ? allRestaurants : openRestaurants,
                 theme: language == .en
                     ? "Free day with \(childNames)"
@@ -246,12 +256,13 @@ private enum Archetype {
         }
     }
 
-    // MARK: - Good Weather Day (4 slots)
+    // MARK: - Good Weather Day (4 slots + optional stay-home)
 
     private func buildGoodWeatherDay(
         date: String, dayName: String, childNames: String,
         weatherDesc: String, session: FamilySession,
         morningPool: [Activity], afternoonPool: [Activity],
+        stayHome: [Activity] = [],
         restaurants: [LunchSpot],
         theme: String, language: AppLanguage,
         planDate: Date
@@ -266,6 +277,18 @@ private enum Archetype {
         let dinnerSpot = pickRestaurant(near: afternoon, from: restaurants, excluding: lunchSpot?.id, language: language)
 
         var slots: [AgendaSlot] = []
+
+        // ~70% chance of a stay-home activity in morning (before outing) or evening (after dinner)
+        let includeStayHome = !stayHome.isEmpty && Double.random(in: 0...1) < 0.7
+        let stayHomeMorning = includeStayHome && Bool.random() // 50/50 morning vs evening
+
+        if includeStayHome && stayHomeMorning, let homeAct = stayHome.randomElement() {
+            slots.append(makeStayHomeSlot(
+                id: "home-morning", time: "09:00", activity: homeAct,
+                timeLabel: language == .en ? "🏠 Morning · At home" : "🏠 Morgen · Zuhause",
+                language: language, planDate: planDate
+            ))
+        }
 
         if let act = morning {
             let swaps = buildSwaps(from: morningPool, excluding: [act.id, afternoon?.id].compactMap { $0 }, language: language)
@@ -300,6 +323,14 @@ private enum Archetype {
             let swaps = buildRestaurantSwaps(from: restaurants, excluding: [lunchSpot?.id, spot.id].compactMap { $0 }, near: afternoon, language: language)
             slots.append(makeDinnerSlot(
                 spot: spot, time: "18:00", travelNote: travel, swaps: swaps, language: language, planDate: planDate
+            ))
+        }
+
+        if includeStayHome && !stayHomeMorning, let homeAct = stayHome.randomElement() {
+            slots.append(makeStayHomeSlot(
+                id: "home-evening", time: "19:30", activity: homeAct,
+                timeLabel: language == .en ? "🏠 Evening · At home" : "🏠 Abend · Zuhause",
+                language: language, planDate: planDate
             ))
         }
 
@@ -520,6 +551,31 @@ private enum Archetype {
             reason: reason, durationDisplay: activity.duration,
             travelNote: travelNote, tags: tags, swaps: swaps,
             durationMinutes: 100,
+            slotDate: AgendaSlot.resolveSlotDate(time: time, planDate: planDate)
+        )
+    }
+
+    private func makeStayHomeSlot(
+        id: String, time: String, activity: Activity,
+        timeLabel: String, language: AppLanguage,
+        planDate: Date = Date()
+    ) -> AgendaSlot {
+        let name = activity.localizedName(language: language)
+        let subcategory = activity.subcategory?.capitalized ?? ""
+        let reason = language == .en
+            ? "A fun at-home activity\(subcategory.isEmpty ? "" : " — \(subcategory.lowercased())")"
+            : "Spaß zu Hause\(subcategory.isEmpty ? "" : " — \(subcategory)")"
+        var tags = [language == .en ? "🏠 At home" : "🏠 Zuhause"]
+        if let materials = activity.materials, !materials.isEmpty {
+            tags.append(language == .en ? "🎨 \(materials)" : "🎨 \(activity.materialsDE ?? materials)")
+        }
+
+        return AgendaSlot(
+            id: id, time: time, type: .activity,
+            venueName: name, venueId: activity.id,
+            reason: reason, durationDisplay: language == .en ? "~1 hour" : "~1 Stunde",
+            travelNote: nil, tags: tags, swaps: [],
+            durationMinutes: 60,
             slotDate: AgendaSlot.resolveSlotDate(time: time, planDate: planDate)
         )
     }
