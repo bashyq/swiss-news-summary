@@ -15,7 +15,7 @@ struct TodayView: View {
     @State private var showWeatherDetail = false
     @State private var showHolidayDetail = false
     @State private var showSessionConfig = false
-    @State private var showSlotEditSheet = false
+    // SlotEditSheet is presented via .sheet(item: $editingSlot)
     @State private var showCustomSlotForm = false
     @State private var showAnchorForm = false
     @State private var editingSlot: AgendaSlot?
@@ -74,29 +74,27 @@ struct TodayView: View {
                 }
                 .presentationDetents([.medium, .large])
             }
-            .sheet(isPresented: $showSlotEditSheet) {
-                if let slot = editingSlot {
-                    SlotEditSheet(
-                        slot: slot,
-                        onEditTime: { newTime in
-                            viewModel.editSlotTime(slotId: slot.id, newTime: newTime)
-                        },
-                        onReplaceWithCustom: {
-                            // Delay slightly to allow edit sheet to dismiss first
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                showCustomSlotForm = true
-                            }
-                        },
-                        onToggleLock: {
-                            viewModel.toggleSlotLock(slotId: slot.id)
-                        },
-                        onRemove: {
-                            viewModel.removeSlot(slotId: slot.id)
+            .sheet(item: $editingSlot) { slot in
+                SlotEditSheet(
+                    slot: slot,
+                    onEditTime: { newTime in
+                        viewModel.editSlotTime(slotId: slot.id, newTime: newTime)
+                    },
+                    onReplaceWithCustom: {
+                        // Delay slightly to allow edit sheet to dismiss first
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            showCustomSlotForm = true
                         }
-                    )
-                    .environment(appState)
-                    .presentationDetents([.medium])
-                }
+                    },
+                    onToggleLock: {
+                        viewModel.toggleSlotLock(slotId: slot.id)
+                    },
+                    onRemove: {
+                        viewModel.removeSlot(slotId: slot.id)
+                    }
+                )
+                .environment(appState)
+                .presentationDetents([.medium])
             }
             .sheet(isPresented: $showCustomSlotForm) {
                 if let slot = editingSlot {
@@ -401,7 +399,7 @@ struct TodayView: View {
     @ViewBuilder
     private var agendaSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Section header with sync button (hidden in execution mode)
+            // Section header (hidden in execution mode)
             // Rebuild is now via pull-to-refresh on the scroll view
             if !viewModel.agendaMode.isExecuting {
                 HStack(alignment: .center) {
@@ -410,53 +408,57 @@ struct TodayView: View {
                         .foregroundStyle(.znInk)
 
                     Spacer()
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 6)
 
-                    if viewModel.agenda != nil {
+                // Save + Sync ghost buttons
+                if viewModel.agenda != nil && !viewModel.agendaMode.isExecuting {
+                    HStack(spacing: 8) {
+                        Button {
+                            Task {
+                                await viewModel.exportPlanToCalendar(toast: toastManager)
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "calendar")
+                                    .font(.system(size: 12))
+                                Text(appState.localized(en: "Save", de: "Speichern"))
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                            .foregroundStyle(Color.znNavy)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 6)
+                            .overlay(
+                                Capsule()
+                                    .stroke(Color.znNavy.opacity(0.4), lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
+
                         Button {
                             Task {
                                 await viewModel.handleCalendarSync(toast: toastManager)
                             }
                         } label: {
-                            HStack(spacing: 4) {
+                            HStack(spacing: 6) {
                                 Image(systemName: "calendar.badge.plus")
-                                    .font(.system(size: 10, weight: .semibold))
+                                    .font(.system(size: 12))
                                 Text(appState.localized(en: "Sync", de: "Sync"))
                                     .font(.system(size: 12, weight: .medium))
                             }
                             .foregroundStyle(Color.znNavy)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Color.znNeutralTagBg)
-                            .clipShape(Capsule())
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 6)
+                            .overlay(
+                                Capsule()
+                                    .stroke(Color.znNavy.opacity(0.4), lineWidth: 1)
+                            )
                         }
                         .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.bottom, 6)
 
-                // Save to Calendar ghost button
-                if viewModel.agenda != nil && !viewModel.agendaMode.isExecuting {
-                    Button {
-                        Task {
-                            await viewModel.exportPlanToCalendar(toast: toastManager)
-                        }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "calendar")
-                                .font(.system(size: 12))
-                            Text(appState.localized(en: "Save to Calendar", de: "Im Kalender speichern"))
-                                .font(.system(size: 12, weight: .medium))
-                        }
-                        .foregroundStyle(Color.znNavy)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 6)
-                        .overlay(
-                            Capsule()
-                                .stroke(Color.znNavy.opacity(0.4), lineWidth: 1)
-                        )
+                        Spacer()
                     }
-                    .buttonStyle(.plain)
                     .padding(.horizontal)
                     .padding(.bottom, 6)
                 }
@@ -563,7 +565,7 @@ struct TodayView: View {
                         },
                         onEditSlot: { slot in
                             editingSlot = slot
-                            showSlotEditSheet = true
+                            // sheet(item:) triggers automatically
                         },
                         onSuggestAnother: { slotId in
                             withAnimation(.easeInOut(duration: 0.2)) {
@@ -616,7 +618,7 @@ struct TodayView: View {
                         },
                         onEditSlot: { slot in
                             editingSlot = slot
-                            showSlotEditSheet = true
+                            // sheet(item:) triggers automatically
                         },
                         onSuggestAnother: { slotId in
                             withAnimation(.easeInOut(duration: 0.2)) {
