@@ -778,6 +778,14 @@ final class TodayViewModel {
             }
         }
 
+        // Lock all slots — saving to calendar means you've committed to the plan
+        if var locked = agenda {
+            for i in 0..<locked.slots.count where locked.slots[i].source != .userAnchor {
+                locked.slots[i].isLocked = true
+            }
+            self.agenda = locked
+        }
+
         toast.show("Plan saved to Calendar", type: .success)
     }
 
