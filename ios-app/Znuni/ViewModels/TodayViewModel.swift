@@ -671,6 +671,9 @@ final class TodayViewModel {
             existingAnchors: anchors
         )
 
+        // Always update pending events so the Sync button visibility is correct
+        pendingCalendarEvents = newEvents
+
         guard !newEvents.isEmpty else {
             showCalendarSyncBanner = false
             return
@@ -682,7 +685,6 @@ final class TodayViewModel {
             showCalendarSyncBanner = true
         } else {
             // No plan yet — present swipe sheet
-            pendingCalendarEvents = newEvents
             showCalendarSwipe = true
         }
     }
