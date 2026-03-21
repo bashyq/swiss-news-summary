@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0348D4EA2F68AD00004FA174 /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = 0348D4EB2F68AD00004FA174 /* TelemetryDeck */; };
 		03CD276C2F4B12400011395A /* ZnuniWidgetExtension.appex in Embed Widget Extension */ = {isa = PBXBuildFile; fileRef = 03CD27602F4B12400011395A /* ZnuniWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -106,6 +107,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0348D4EA2F68AD00004FA174 /* TelemetryDeck in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -177,6 +179,7 @@
 			);
 			name = Znuni;
 			packageProductDependencies = (
+				0348D4EB2F68AD00004FA174 /* TelemetryDeck */,
 			);
 			productName = Znuni;
 			productReference = 03CD272D2F4B123E0011395A /* Znuni.app */;
@@ -285,6 +288,9 @@
 			);
 			mainGroup = 03CD27242F4B123E0011395A;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				0348D4E92F68ACF0004FA174 /* XCRemoteSwiftPackageReference "SwiftSDK" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 03CD272E2F4B123E0011395A /* Products */;
 			projectDirPath = "";
@@ -753,6 +759,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		0348D4E92F68ACF0004FA174 /* XCRemoteSwiftPackageReference "SwiftSDK" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/TelemetryDeck/SwiftSDK";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.11.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		0348D4EB2F68AD00004FA174 /* TelemetryDeck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0348D4E92F68ACF0004FA174 /* XCRemoteSwiftPackageReference "SwiftSDK" */;
+			productName = TelemetryDeck;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 03CD27252F4B123E0011395A /* Project object */;
 }
