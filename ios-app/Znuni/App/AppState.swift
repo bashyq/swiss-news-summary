@@ -97,6 +97,10 @@ final class AppState {
     /// When set, Today tab reads this to configure planningCity + selectedPlanDay, then clears it.
     var pendingPlanRequest: PlanRequest?
 
+    /// Pending date to plan from events calendar empty state.
+    /// When set + tab switches to Today, TodayView picks it up and enters Plan mode for that date.
+    var pendingPlanDate: Date?
+
     /// Request to plan a day in a specific city on a specific date.
     struct PlanRequest: Equatable {
         let cityId: String

@@ -105,15 +105,47 @@ struct DayDetailView: View {
     // MARK: - Empty State
 
     private var emptyDayMessage: some View {
-        HStack {
-            Spacer()
+        VStack(spacing: 12) {
             Text(appState.localized(
                 en: "No events on this day",
                 de: "Keine Events an diesem Tag"
             ))
-            .font(.caption)
-            .foregroundStyle(.tertiary)
-            Spacer()
+            .font(.system(size: 14))
+            .foregroundStyle(Color.znMuted)
+
+            HStack(spacing: 16) {
+                Button {
+                    appState.pendingDiscoverRoute = "activities"
+                    appState.selectedTab = .discover
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "star")
+                            .font(.system(size: 11))
+                        Text(appState.localized(
+                            en: "Browse activities",
+                            de: "Aktivitäten entdecken"
+                        ))
+                        .font(.system(size: 13, weight: .medium))
+                    }
+                    .foregroundStyle(Color.znNavy)
+                }
+
+                Button {
+                    appState.pendingPlanDate = date
+                    appState.selectedTab = .today
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "calendar.badge.plus")
+                            .font(.system(size: 11))
+                        Text(appState.localized(
+                            en: "Plan this day",
+                            de: "Tag planen"
+                        ))
+                        .font(.system(size: 13, weight: .medium))
+                    }
+                    .foregroundStyle(Color.znNavy)
+                }
+            }
         }
         .padding(.vertical, 8)
     }

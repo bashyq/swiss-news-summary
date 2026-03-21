@@ -195,6 +195,13 @@ struct TodayView: View {
                     )
                 }
             }
+            .onChange(of: appState.pendingPlanDate) { _, planDate in
+                guard let planDate else { return }
+                viewModel.selectedPlanDay = .specific(planDate)
+                subView = .plan
+                appState.pendingPlanDate = nil
+                anchors = AnchorStore.shared.anchors(for: planDate)
+            }
     }
 
     // MARK: - Content
