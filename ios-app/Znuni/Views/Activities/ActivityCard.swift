@@ -3,12 +3,12 @@ import CoreLocation
 
 /// Expanding activity card with accordion behavior.
 ///
-/// **Collapsed**: Category eyebrow, Playfair title, 2-line description, tag pills,
-/// footer with distance + "Tap to expand" CTA, 3px left accent bar, background photo wash.
+/// **Collapsed**: Compact horizontal row — 76×76 photo thumbnail with category badge,
+/// activity name, 2-line description, meta tags (Free/Indoor/Outdoor + distance), chevron.
+/// Matches the vcard pattern from CategoryDetailView.
 ///
 /// **Expanded**: Photo panel slides in from top, description un-clamps,
 /// detail panel slides in from bottom with 2×2 metadata grid, action buttons.
-/// Accent bar fades out when photo is visible.
 struct ActivityCard: View {
     @Environment(AppState.self) private var appState
     @Environment(ToastManager.self) private var toastManager
@@ -28,41 +28,38 @@ struct ActivityCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Photo panel — slides in from top when expanded
-            photoPanel
+            if isExpanded {
+                // Photo panel — slides in from top when expanded
+                photoPanel
 
-            // Always-visible core content
-            coreContent
+                // Expanded core content
+                expandedContent
 
-            // Detail panel — slides in from bottom when expanded
-            detailPanel
-        }
-        .background {
-            // Background photo wash (collapsed only)
-            if !isExpanded {
-                venuePhotoBackground
+                // Detail panel — slides in from bottom when expanded
+                detailPanel
+            } else {
+                // Compact face (vcard style)
+                compactFace
             }
-            Color.znSurface
         }
+        .background(Color.znSurface)
         .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
-        .overlay(alignment: .leading) {
-            // Left accent bar — fades out when expanded (photo visible)
-            RoundedRectangle(cornerRadius: 1.5)
-                .fill(accentBarColor)
-                .frame(width: AppSpacing.borderStripWidth)
-                .padding(.vertical, 8)
-                .opacity(isExpanded ? 0 : 1)
-        }
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSpacing.cardRadius)
+                .stroke(Color.znBorder, lineWidth: 1)
+        )
         .shadow(
-            color: isExpanded ? AppShadow.cardExpanded.color : AppShadow.card.color,
-            radius: isExpanded ? AppShadow.cardExpanded.radius : AppShadow.card.radius,
+            color: isExpanded ? AppShadow.cardExpanded.color : .clear,
+            radius: isExpanded ? AppShadow.cardExpanded.radius : 0,
             x: 0,
-            y: isExpanded ? AppShadow.cardExpanded.y : AppShadow.card.y
+            y: isExpanded ? AppShadow.cardExpanded.y : 0
         )
         .contentShape(Rectangle())
         .onTapGesture {
-            if !isExpanded {
-                withAnimation(AppAnimation.spring) {
+            withAnimation(AppAnimation.spring) {
+                if isExpanded {
+                    expandedID = nil
+                } else {
                     expandedID = activity.id
                 }
             }
@@ -114,7 +111,143 @@ struct ActivityCard: View {
         Color.activityBorderColor(indoor: activity.indoor, isFree: activity.isFree)
     }
 
-    // MARK: - Photo Panel (slides in from top)
+    // MARK: - Compact Face (collapsed state)
+
+    private var compactFace: some View {
+        HStack(spacing: 0) {
+            // Photo thumbnail (76×76)
+            compactPhoto
+                .padding(10)
+
+            // Body
+            VStack(alignment: .leading, spacing: 4) {
+                Text(activity.localizedName(language: language))
+                    .font(.newsCardHeadline)
+                    .foregroundStyle(.znInk)
+                    .lineLimit(1)
+
+                Text(activity.localizedDescription(language: language))
+                    .font(.system(size: 11.5, weight: .light))
+                    .foregroundStyle(.znBody)
+                    .lineLimit(2)
+                    .lineSpacing(2)
+
+                // Meta row: price + indoor/outdoor + distance
+                HStack(spacing: 6) {
+                    if activity.isFree {
+                        Text(appState.localized(en: "Free", de: "Gratis"))
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.znPositive)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 2)
+                            .background(Color.znPositive.opacity(0.1))
+                            .clipShape(Capsule())
+                    }
+
+                    Text(activity.indoor
+                        ? appState.localized(en: "Indoor", de: "Indoor")
+                        : appState.localized(en: "Outdoor", de: "Outdoor"))
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.znNavy)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 2)
+                        .background(Color.znNavy.opacity(0.08))
+                        .clipShape(Capsule())
+
+                    Spacer(minLength: 0)
+
+                    if let dist = distanceBadgeText {
+                        Text("↗ \(dist)")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.znMuted)
+                    }
+                }
+                .padding(.top, 2)
+            }
+            .padding(.leading, 4)
+            .padding(.trailing, 4)
+            .padding(.vertical, 13)
+
+            // Chevron
+            Image(systemName: "chevron.right")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(Color.znChevron)
+                .frame(width: 34)
+        }
+    }
+
+    // MARK: - Compact Photo Thumbnail
+
+    @ViewBuilder
+    private var compactPhoto: some View {
+        if !activity.id.hasPrefix("custom-"),
+           activity.category.lowercased() != "stayhome",
+           let photoURL = APIClient.shared.photoURL(for: activity.id) {
+            ZStack(alignment: .bottomLeading) {
+                AsyncImage(url: photoURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    case .failure:
+                        photoFallback
+                    default:
+                        Rectangle()
+                            .fill(Color.znBorder.opacity(0.5))
+                            .overlay { ProgressView().tint(.znMuted) }
+                    }
+                }
+                .frame(width: 76, height: 76)
+                .clipped()
+
+                // Category badge
+                Text(categoryLabel.uppercased())
+                    .font(.system(size: 7, weight: .bold))
+                    .tracking(0.5)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Color.znNavy.opacity(0.82))
+                    .clipShape(Capsule())
+                    .padding(4)
+            }
+            .frame(width: 76, height: 76)
+            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        } else {
+            ZStack(alignment: .bottomLeading) {
+                photoFallback
+
+                // Category badge
+                Text(categoryLabel.uppercased())
+                    .font(.system(size: 7, weight: .bold))
+                    .tracking(0.5)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Color.znNavy.opacity(0.82))
+                    .clipShape(Capsule())
+                    .padding(4)
+            }
+            .frame(width: 76, height: 76)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+    }
+
+    private var photoFallback: some View {
+        ZStack {
+            LinearGradient(
+                colors: [accentBarColor.opacity(0.3), Color.znSurface],
+                startPoint: .topLeading, endPoint: .bottomTrailing
+            )
+            Image(systemName: categoryIcon)
+                .font(.title2)
+                .foregroundStyle(accentBarColor.opacity(0.5))
+        }
+    }
+
+    // MARK: - Photo Panel (slides in from top, expanded only)
 
     @ViewBuilder
     private var photoPanel: some View {
@@ -189,28 +322,17 @@ struct ActivityCard: View {
         }
     }
 
-    // MARK: - Core Content (always visible)
+    // MARK: - Expanded Content (title, description, tags, footer)
 
-    private var coreContent: some View {
+    private var expandedContent: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Top row: category + title + heart
+            // Top row: title + action buttons
             HStack(alignment: .top, spacing: 8) {
-                VStack(alignment: .leading, spacing: 3) {
-                    // Category eyebrow — hidden when expanded (shown on photo badge instead)
-                    if !isExpanded {
-                        Text(categoryLabel.uppercased())
-                            .font(.znEyebrow)
-                            .tracking(0.9)
-                            .foregroundStyle(Color.znMuted)
-                    }
-
-                    // Title — grows slightly when expanded
-                    Text(activity.localizedName(language: language))
-                        .font(isExpanded ? .expandedCardTitle : .compactCardTitle)
-                        .foregroundStyle(Color.znInk)
-                        .lineLimit(isExpanded ? nil : 2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                // Title
+                Text(activity.localizedName(language: language))
+                    .font(.expandedCardTitle)
+                    .foregroundStyle(Color.znInk)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Spacer()
 
@@ -273,12 +395,11 @@ struct ActivityCard: View {
             }
             .padding(.bottom, 5)
 
-            // Description — 2-line clamp when collapsed, full when expanded
+            // Description — full when expanded
             Text(activity.localizedDescription(language: language))
                 .font(.system(size: 12.5, weight: .light))
                 .foregroundStyle(Color.znBody)
                 .lineSpacing(3)
-                .lineLimit(isExpanded ? nil : 2)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.bottom, 10)
 
@@ -286,12 +407,11 @@ struct ActivityCard: View {
             tagsRow
                 .padding(.bottom, 10)
 
-            // Footer divider + distance/CTA
+            // Footer divider + distance
             footerRow
         }
         .padding(.top, 15)
-        .padding(.horizontal, isExpanded ? 18 : 22)
-        .padding(.leading, isExpanded ? 0 : 0) // accent bar space handled by overlay
+        .padding(.horizontal, 18)
         .padding(.bottom, 13)
     }
 
@@ -401,17 +521,6 @@ struct ActivityCard: View {
                 }
 
                 Spacer()
-
-                // CTA hint
-                if !isExpanded {
-                    HStack(spacing: 3) {
-                        Text(appState.localized(en: "Tap to expand", de: "Antippen"))
-                            .font(.system(size: 12, weight: .medium))
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 10))
-                    }
-                    .foregroundStyle(Color.znChevron)
-                }
             }
         }
     }
@@ -553,24 +662,6 @@ struct ActivityCard: View {
         .padding(10)
         .background(Color.znCream)
         .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-
-    // MARK: - Background Photo Wash (collapsed state)
-
-    @ViewBuilder
-    private var venuePhotoBackground: some View {
-        if !activity.id.hasPrefix("custom-"),
-           activity.category.lowercased() != "stayhome",
-           let photoURL = APIClient.shared.photoURL(for: activity.id) {
-            AsyncImage(url: photoURL) { phase in
-                if case .success(let image) = phase {
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .overlay(Color.znSurface.opacity(0.83))
-                }
-            }
-        }
     }
 
     // MARK: - Helpers
