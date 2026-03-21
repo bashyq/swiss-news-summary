@@ -94,28 +94,26 @@ enum ZurichArea: String, CaseIterable, Codable {
     }
 
     /// Estimate travel description between two coordinates.
+    /// Walking assumed for <1km, transit for longer distances.
+    /// Transit estimate uses ~15 km/h average (includes waiting, stops, transfers)
+    /// which is realistic for Zürich ZVV.
     static func travelDescription(
         fromLat: Double, fromLon: Double,
         toLat: Double, toLon: Double
     ) -> String {
-        let fromArea = ZurichArea.from(lat: fromLat, lon: fromLon)
-        let toArea = ZurichArea.from(lat: toLat, lon: toLon)
-
         let fromLoc = CLLocation(latitude: fromLat, longitude: fromLon)
         let toLoc = CLLocation(latitude: toLat, longitude: toLon)
-        let distanceMeters = fromLoc.distance(from: toLoc)
+        let distanceKm = fromLoc.distance(from: toLoc) / 1000.0
 
-        if distanceMeters < 800 {
-            let walkMin = max(2, Int(distanceMeters / 80)) // ~80m/min walking
+        if distanceKm < 1.0 {
+            // Walking: ~5 km/h = ~83 m/min
+            let walkMin = max(3, Int(distanceKm * 1000 / 83))
             return "🚶 \(walkMin) min walk"
         }
 
-        if let walkTime = walkTimeMinutes(from: fromArea, to: toArea) {
-            return "🚶 \(walkTime) min walk"
-        }
-
-        // Estimate tram time (~250m/min with stops)
-        let tramMin = max(5, Int(distanceMeters / 250))
-        return "🚃 ~\(tramMin) min by tram"
+        // Transit: ~15 km/h average including wait + walk to/from stops
+        // Add 5 min base for walking to stop + waiting
+        let transitMin = 5 + Int(distanceKm / 0.25) // 0.25 km/min = 15 km/h
+        return "🚃 ~\(transitMin) min by tram"
     }
 }
