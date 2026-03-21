@@ -575,6 +575,12 @@ final class TodayViewModel {
         ZnuniEvent.planRebuilt()
         clearExportedEvents()
         conflictWarning = nil
+
+        // Preserve locked and custom slots across rebuild
+        let preservedSlots = agenda?.slots.filter {
+            $0.isLocked || $0.source == .userCustom
+        } ?? []
+
         await agendaCache.invalidate()
         recentlyShownStore.clear()
         agenda = nil
@@ -595,6 +601,21 @@ final class TodayViewModel {
             anchors: AnchorStore.shared.anchors(for: planDate),
             weatherOverride: forecastOverride
         )
+
+        // Merge preserved slots back into the rebuilt agenda
+        if var rebuilt = agenda, !preservedSlots.isEmpty {
+            for preserved in preservedSlots {
+                if let idx = rebuilt.slots.firstIndex(where: { $0.id == preserved.id }) {
+                    rebuilt.slots[idx] = preserved
+                    rebuilt.slots[idx].isStale = false
+                } else {
+                    // Preserved slot has no matching ID — insert and re-sort
+                    rebuilt.slots.append(preserved)
+                }
+            }
+            rebuilt.slots.sort { $0.time < $1.time }
+            self.agenda = rebuilt
+        }
     }
 
     /// Swap a slot's content with one of its swap options.
