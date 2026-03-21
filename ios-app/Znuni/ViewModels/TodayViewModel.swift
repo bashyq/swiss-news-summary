@@ -573,7 +573,9 @@ final class TodayViewModel {
     @MainActor
     func rebuildAgenda(city: City, language: AppLanguage, session: FamilySession) async {
         ZnuniEvent.planRebuilt()
-        clearExportedEvents()
+        // Don't clear exported calendar events on rebuild — the user saved
+        // them intentionally. They'll be updated if slots change via swap,
+        // or cleared manually via "Save to Calendar" (which replaces all).
         conflictWarning = nil
 
         // Preserve locked and custom slots across rebuild
@@ -1128,6 +1130,16 @@ final class TodayViewModel {
         ZnuniEvent.planGenerated(source: "template_fallback", city: _lastCity?.id ?? "unknown", slotCount: result.slots.count, badWeather: result.badWeatherMode)
         syncAgendaToWidget()
         restoreAgendaMode()
+
+        // Cache the template result so it persists across app relaunches
+        if let encoded = try? JSONEncoder().encode(result) {
+            let cityId = _lastCity?.id ?? "zurich"
+            let sessionHash = _lastSession?.sessionHash ?? ""
+            let anchorsHash = AgendaCache.hash(anchors: AnchorStore.shared.anchors(for: planDate))
+            Task {
+                await agendaCache.store(encoded, date: key, city: cityId, sessionHash: sessionHash, anchorsHash: anchorsHash)
+            }
+        }
 
         // Record shown venues
         for slot in result.slots {

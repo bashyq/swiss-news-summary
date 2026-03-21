@@ -83,7 +83,10 @@ struct FreshnessScorer {
         gapMidpoint: Date? = nil
     ) -> VenueScore {
 
-        // 1. Minimum review threshold — skip restaurants with too few reviews
+        // 1. Minimum quality threshold — skip low-rated and low-review restaurants
+        if let rating = restaurant.rating, rating < 4.0 {
+            return ineligible(restaurant.id)
+        }
         if let count = restaurant.ratingCount, count < 10 {
             return ineligible(restaurant.id)
         }
