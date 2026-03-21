@@ -36,6 +36,8 @@ struct TodayView: View {
                 }
             }
             .task(id: "\(appState.city.id)-\(appState.language)") {
+                // Sync planning city with app's selected city on load/city change
+                viewModel.planningCity = PlanningCity(city: appState.city)
                 await viewModel.loadAll(
                     city: appState.city,
                     language: appState.language
@@ -186,12 +188,12 @@ struct TodayView: View {
                 subView = .plan
                 // Clear the request
                 appState.pendingPlanRequest = nil
-                // Recompose for the new city
+                // Reload venue data for the planning city, then recompose
+                let planCity = City(rawValue: request.cityId) ?? appState.city
                 Task {
-                    await viewModel.rebuildAgenda(
-                        city: City(rawValue: request.cityId) ?? appState.city,
-                        language: appState.language,
-                        session: appState.familySession
+                    await viewModel.loadAll(
+                        city: planCity,
+                        language: appState.language
                     )
                 }
             }

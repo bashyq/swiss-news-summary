@@ -65,15 +65,20 @@ struct DiscoverView: View {
         .background(Color.znCream)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .navigationBar)
-        .onAppear {
-            nudge = NudgeEngine.evaluate(
-                weather: weather,
-                sunshineDestinations: sunshineDestinations,
-                snowDestinations: snowDestinations,
-                events: cityEvents,
-                language: appState.language
-            )
-        }
+        .onAppear { evaluateNudge() }
+        .onChange(of: weather?.temperature) { _, _ in evaluateNudge() }
+        .onChange(of: sunshineDestinations?.count) { _, _ in evaluateNudge() }
+        .onChange(of: snowDestinations?.count) { _, _ in evaluateNudge() }
+    }
+
+    private func evaluateNudge() {
+        nudge = NudgeEngine.evaluate(
+            weather: weather,
+            sunshineDestinations: sunshineDestinations,
+            snowDestinations: snowDestinations,
+            events: cityEvents,
+            language: appState.language
+        )
     }
 
     // MARK: - Hero Banner

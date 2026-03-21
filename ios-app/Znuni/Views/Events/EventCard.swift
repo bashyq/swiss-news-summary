@@ -55,7 +55,12 @@ struct EventCard: View {
                 event: event,
                 language: appState.language
             ) { anchor in
-                AnchorStore.shared.add(anchor)
+                AnchorStore.shared.add(anchor, for: anchor.startTime)
+                // Navigate to Today tab with the event's date
+                if let startDate = DateHelpers.parseISO(event.startDate) {
+                    appState.pendingPlanDate = startDate
+                }
+                appState.selectedTab = .today
             }
             .environment(appState)
             .presentationDetents([.large])
