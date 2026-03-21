@@ -783,15 +783,33 @@ final class TodayViewModel {
         CalendarExportStore.shared.removeAll()
 
         // Create one event per slot
-        let store = CalendarService.shared.store
+        let ekStore = CalendarService.shared.store
         for slot in current.slots {
-            let event = EKEvent(eventStore: store)
+            let event = EKEvent(eventStore: ekStore)
             event.title = slot.venueName
             event.startDate = slot.slotDate
             let duration = slot.durationMinutes ?? 90
             event.endDate = slot.slotDate.addingTimeInterval(Double(duration) * 60)
             event.notes = slot.reason
-            event.calendar = store.defaultCalendarForNewEvents
+            event.calendar = ekStore.defaultCalendarForNewEvents
+
+            // Set location from venue coordinates
+            if let venueId = slot.venueId {
+                var lat: Double?
+                var lon: Double?
+                if let activity = activitiesData?.activities.first(where: { $0.id == venueId }) {
+                    lat = activity.lat
+                    lon = activity.lon
+                } else if let spot = lunchData?.spots.first(where: { $0.id == venueId }) {
+                    lat = spot.lat
+                    lon = spot.lon
+                }
+                if let lat, let lon {
+                    let location = EKStructuredLocation(title: slot.venueName)
+                    location.geoLocation = CLLocation(latitude: lat, longitude: lon)
+                    event.structuredLocation = location
+                }
+            }
 
             if let eventId = try? CalendarService.shared.createEvent(event) {
                 CalendarExportStore.shared.store(slotId: slot.id, eventId: eventId)
