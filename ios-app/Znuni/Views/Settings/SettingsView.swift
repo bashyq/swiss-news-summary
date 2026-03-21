@@ -17,30 +17,49 @@ struct SettingsView: View {
     var body: some View {
         @Bindable var state = appState
 
-        List {
-            // 1. City picker
-            citySection(state: $state)
+        VStack(spacing: 0) {
+            // Compact navy hero
+            VStack(alignment: .leading, spacing: 4) {
+                Text(appState.localized(en: "Settings", de: "Einstellungen"))
+                    .font(.custom("Playfair", size: 24, relativeTo: .title).weight(.regular))
+                    .foregroundStyle(.white)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 14)
+            .padding(.bottom, 18)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background {
+                ZStack(alignment: .bottomTrailing) {
+                    Color.znNavy.ignoresSafeArea(.container, edges: .top)
+                    RadialGradient(colors: [Color.znTerracotta.opacity(0.12), .clear],
+                                   center: UnitPoint(x: 1.2, y: -0.3), startRadius: 0, endRadius: 220)
+                }
+            }
 
-            // 2. Home address
-            homeAddressSection
+            List {
+                // 1. City picker
+                citySection(state: $state)
 
-            // 3. Language picker
-            languageSection(state: $state)
+                // 2. Home address
+                homeAddressSection
 
-            // 3. Theme picker
-            themeSection(state: $state)
+                // 3. Language picker
+                languageSection(state: $state)
 
-            // 4. Calendar
-            calendarSection
+                // 3. Theme picker
+                themeSection(state: $state)
 
-            // 5. About section
-            aboutSection
+                // 4. Calendar
+                calendarSection
 
-            // 8. Clear cache
-            cacheSection
+                // 5. About section
+                aboutSection
+
+                // 8. Clear cache
+                cacheSection
+            }
         }
-        .navigationTitle(navigationTitle)
-        .navigationBarTitleDisplayMode(.large)
+        .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $showHomeAddressSheet) {
             HomeAddressSheet()
                 .environment(appState)

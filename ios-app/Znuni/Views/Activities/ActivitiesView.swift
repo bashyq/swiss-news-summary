@@ -74,24 +74,22 @@ struct ActivitiesView: View {
         }
     }
 
+    @Environment(\.dismiss) private var dismiss
+
     // MARK: - Hero Banner
 
     private var heroBanner: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Title row + icon buttons
-            HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 4) {
-                    // Eyebrow
-                    Text(heroEyebrow)
-                        .font(.znEyebrow)
-                        .tracking(1.3)
-                        .textCase(.uppercase)
-                        .foregroundStyle(.white.opacity(0.42))
-
-                    // Title: "What to _do?_"
-                    heroTitle
+            // Back button row
+            HStack {
+                Button { dismiss() } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 34, height: 34)
+                        .background(.white.opacity(0.18))
+                        .clipShape(Circle())
                 }
-
                 Spacer()
 
                 HStack(spacing: 8) {
@@ -100,27 +98,38 @@ struct ActivitiesView: View {
                     CityMenuButton()
                 }
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 6)
+
+            // Title row
+            VStack(alignment: .leading, spacing: 4) {
+                // Eyebrow
+                Text(heroEyebrow)
+                    .font(.znEyebrow)
+                    .tracking(1.3)
+                    .textCase(.uppercase)
+                    .foregroundStyle(.white.opacity(0.55))
+
+                // Title: "What to _do?_"
+                heroTitle
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
 
             // Filter pills inside hero (matching Explore style)
             heroFilterPills
                 .padding(.top, 12)
+                .padding(.horizontal, 20)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 14)
+        .padding(.top, 0)
         .padding(.bottom, 22)
         .background {
-            ZStack(alignment: .bottomTrailing) {
-                Color.znNavy
+            ZStack {
+                LinearGradient(colors: [.znNavy, .znNavy.opacity(0.7)],
+                               startPoint: .topLeading, endPoint: .bottomTrailing)
                     .ignoresSafeArea(.container, edges: .top)
-                RadialGradient(
-                    colors: [Color.znTerracotta.opacity(0.22), .clear],
-                    center: UnitPoint(x: 1.2, y: -0.3),
-                    startRadius: 0,
-                    endRadius: 220
-                )
-                SkylineIllustration()
-                    .frame(width: 200, height: 110)
-                    .opacity(0.09)
+                LinearGradient(colors: [.black.opacity(0.2), .clear, .black.opacity(0.3)],
+                               startPoint: .top, endPoint: .bottom)
             }
         }
     }

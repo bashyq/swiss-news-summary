@@ -15,6 +15,8 @@ struct SunshineView: View {
 
     var body: some View {
         content
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
             .task {
                 await viewModel.loadSunshine(language: appState.language)
             }
@@ -60,10 +62,66 @@ struct SunshineView: View {
         }
     }
 
+    // MARK: - Hero Banner
+
+    @Environment(\.dismiss) private var dismiss
+
+    private var heroBanner: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Back button row
+            HStack {
+                Button { dismiss() } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 34, height: 34)
+                        .background(.white.opacity(0.18))
+                        .clipShape(Circle())
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 6)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(appState.localized(en: "SUNSHINE FORECAST", de: "SONNENSCHEIN"))
+                    .font(.znEyebrow)
+                    .tracking(1.3)
+                    .textCase(.uppercase)
+                    .foregroundStyle(.white.opacity(0.55))
+
+                (
+                    Text(appState.localized(en: "Where's the ", de: "Wo scheint die "))
+                        .font(.bannerTitle)
+                        .foregroundStyle(.white)
+                    + Text(appState.localized(en: "sun?", de: "Sonne?"))
+                        .font(.custom("Playfair", size: 28).italic())
+                        .foregroundStyle(.white.opacity(0.65))
+                )
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 22)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            ZStack(alignment: .bottomTrailing) {
+                Color.znNavy.ignoresSafeArea(.container, edges: .top)
+                // Stronger warm glow for sunshine identity
+                RadialGradient(colors: [Color.sunshineGradientStart.opacity(0.4), .clear],
+                               center: UnitPoint(x: 1.0, y: 0.0), startRadius: 0, endRadius: 280)
+                SkylineIllustration().frame(width: 200, height: 110).opacity(0.09)
+            }
+        }
+    }
+
     // MARK: - Sunshine Content
 
     private var sunshineContent: some View {
-        ScrollViewReader { proxy in
+        VStack(spacing: 0) {
+            heroBanner
+
+            ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
                     // 1. Sunny escape banner
@@ -121,19 +179,26 @@ struct SunshineView: View {
                             language: appState.language,
                             isExpanded: viewModel.expandedDestinationID == destination.id,
                             userLocation: locationManager.location,
-                            highlightID: scrollToID
-                        ) {
-                            withAnimation(AppAnimation.expandEase) {
-                                viewModel.toggleExpanded(destination.id)
-                            }
-                            if viewModel.expandedDestinationID == destination.id {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                                    withAnimation {
-                                        proxy.scrollTo(destination.id, anchor: .top)
+                            highlightID: scrollToID,
+                            onTap: {
+                                withAnimation(AppAnimation.expandEase) {
+                                    viewModel.toggleExpanded(destination.id)
+                                }
+                                if viewModel.expandedDestinationID == destination.id {
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                        withAnimation {
+                                            proxy.scrollTo(destination.id, anchor: .top)
+                                        }
                                     }
                                 }
-                            }
-                        }
+                            },
+                            onPlanHere: PlanningCity.isCovered(destination.id) ? {
+                                appState.pendingPlanRequest = AppState.PlanRequest(
+                                    cityId: destination.id, date: nil
+                                )
+                                appState.selectedTab = .today
+                            } : nil
+                        )
                         .id(destination.id)
                         .padding(.horizontal)
                         .padding(.top, 12)
@@ -150,7 +215,8 @@ struct SunshineView: View {
                     .padding(.bottom, 24)
                 }
             }
-        }
+            } // ScrollViewReader
+        } // VStack
     }
 
     // MARK: - Weekend Dates Header

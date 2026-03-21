@@ -14,6 +14,8 @@ struct SnowView: View {
 
     var body: some View {
         content
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
             .task {
                 await viewModel.loadSnow(language: appState.language)
             }
@@ -59,12 +61,68 @@ struct SnowView: View {
         }
     }
 
+    // MARK: - Hero Banner
+
+    @Environment(\.dismiss) private var dismiss
+
+    private var heroBanner: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Back button row
+            HStack {
+                Button { dismiss() } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 34, height: 34)
+                        .background(.white.opacity(0.18))
+                        .clipShape(Circle())
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 6)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(appState.localized(en: "SNOW FORECAST", de: "SCHNEEPROGNOSE"))
+                    .font(.znEyebrow)
+                    .tracking(1.3)
+                    .textCase(.uppercase)
+                    .foregroundStyle(.white.opacity(0.55))
+
+                (
+                    Text(appState.localized(en: "Where's the ", de: "Wo liegt "))
+                        .font(.bannerTitle)
+                        .foregroundStyle(.white)
+                    + Text(appState.localized(en: "snow?", de: "Schnee?"))
+                        .font(.custom("Playfair", size: 28).italic())
+                        .foregroundStyle(.white.opacity(0.65))
+                )
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 22)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            ZStack(alignment: .bottomTrailing) {
+                Color.znNavy.ignoresSafeArea(.container, edges: .top)
+                // Cool blue glow for snow identity
+                RadialGradient(colors: [Color.snowGradientStart.opacity(0.35), .clear],
+                               center: UnitPoint(x: 1.0, y: 0.0), startRadius: 0, endRadius: 280)
+                SkylineIllustration().frame(width: 200, height: 110).opacity(0.09)
+            }
+        }
+    }
+
     // MARK: - Snow Content
 
     private var snowContent: some View {
-        ScrollViewReader { proxy in
-        ScrollView {
-            LazyVStack(spacing: 0) {
+        VStack(spacing: 0) {
+            heroBanner
+
+            ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 0) {
                 // 1. Powder alert banner
                 if viewModel.hasPowderAlert, let topResort = topResort {
                     PowderAlertBanner(
@@ -119,19 +177,26 @@ struct SnowView: View {
                         resort: resort,
                         language: appState.language,
                         isExpanded: viewModel.expandedResortID == resort.id,
-                        userLocation: locationManager.location
-                    ) {
-                        withAnimation(AppAnimation.expandEase) {
-                            viewModel.toggleExpanded(resort.id)
-                        }
-                        if viewModel.expandedResortID == resort.id {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                                withAnimation {
-                                    proxy.scrollTo(resort.id, anchor: .top)
+                        userLocation: locationManager.location,
+                        onTap: {
+                            withAnimation(AppAnimation.expandEase) {
+                                viewModel.toggleExpanded(resort.id)
+                            }
+                            if viewModel.expandedResortID == resort.id {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                    withAnimation {
+                                        proxy.scrollTo(resort.id, anchor: .top)
+                                    }
                                 }
                             }
-                        }
-                    }
+                        },
+                        onPlanHere: PlanningCity.isCovered(resort.id) ? {
+                            appState.pendingPlanRequest = AppState.PlanRequest(
+                                cityId: resort.id, date: nil
+                            )
+                            appState.selectedTab = .today
+                        } : nil
+                    )
                     .id(resort.id)
                     .padding(.horizontal)
                     .padding(.top, 12)
@@ -146,9 +211,10 @@ struct SnowView: View {
                 )
                 .padding(.top, 12)
                 .padding(.bottom, 24)
+                }
             }
-        }
-        } // ScrollViewReader
+            } // ScrollViewReader
+        } // VStack
     }
 
     // MARK: - Week Dates Header

@@ -13,10 +13,10 @@ struct DiscoverView: View {
     @State private var nudge: Nudge?
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                discoverHero
+        VStack(spacing: 0) {
+            discoverHero
 
+            ScrollView {
                 VStack(spacing: 16) {
                     // Smart nudge card
                     if let nudge {
@@ -58,7 +58,7 @@ struct DiscoverView: View {
                     ExploreNearbySection(path: $path)
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 16)
+                .padding(.top, 20)
                 .padding(.bottom, 32)
             }
         }
@@ -78,27 +78,61 @@ struct DiscoverView: View {
 
     // MARK: - Hero Banner
 
+    private var heroEyebrow: String {
+        let cityName = appState.city.localizedName(language: appState.language)
+        let formatter = DateFormatter()
+        formatter.locale = appState.language == .de ? Locale(identifier: "de_CH") : Locale(identifier: "en_US")
+        formatter.dateFormat = "EEEE"
+        return "\(cityName) · \(formatter.string(from: Date()))"
+    }
+
     private var discoverHero: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("DISCOVER")
-                .font(.znEyebrow)
-                .tracking(1.3)
-                .textCase(.uppercase)
-                .foregroundStyle(.white.opacity(0.42))
+            // Title row + city selector
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 4) {
+                    // Eyebrow
+                    Text(heroEyebrow)
+                        .font(.znEyebrow)
+                        .tracking(1.3)
+                        .textCase(.uppercase)
+                        .foregroundStyle(.white.opacity(0.55))
 
-            (
-                Text(appState.localized(en: "Discover ", de: "Entdecke "))
-                    .font(.bannerTitle)
-                    .foregroundStyle(.white)
-                + Text(appState.city.displayName)
-                    .font(.custom("Playfair", size: 28).italic())
-                    .foregroundStyle(.white.opacity(0.65))
-            )
+                    // Title: "Discover _Zürich_"
+                    (
+                        Text(appState.localized(en: "Discover ", de: "Entdecke "))
+                            .font(.bannerTitle)
+                            .foregroundStyle(.white)
+                        + Text(appState.city.displayName)
+                            .font(.custom("Playfair", size: 28).italic())
+                            .foregroundStyle(.white.opacity(0.65))
+                    )
+
+                    // Weather row
+                    if let w = weather {
+                        HStack(spacing: 6) {
+                            Image(systemName: w.sfSymbol)
+                                .font(.system(size: 14))
+                                .symbolRenderingMode(.multicolor)
+                            Text("\(Int(w.temperature))°")
+                                .font(.system(size: 14, weight: .medium))
+                            Text(w.description)
+                                .font(.system(size: 12))
+                                .opacity(0.7)
+                        }
+                        .foregroundStyle(.white.opacity(0.65))
+                        .padding(.top, 4)
+                    }
+                }
+
+                Spacer()
+
+                CityMenuButton()
+            }
         }
         .padding(.horizontal, 20)
         .padding(.top, 14)
         .padding(.bottom, 22)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             ZStack(alignment: .bottomTrailing) {
                 Color.znNavy
