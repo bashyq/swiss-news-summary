@@ -413,7 +413,7 @@ struct TodayView: View {
                 .padding(.horizontal)
                 .padding(.bottom, 6)
 
-                // Save + Sync ghost buttons
+                // Ghost buttons: Save to Calendar + Sync (only when relevant)
                 if viewModel.agenda != nil && !viewModel.agendaMode.isExecuting {
                     HStack(spacing: 8) {
                         Button {
@@ -437,26 +437,29 @@ struct TodayView: View {
                         }
                         .buttonStyle(.plain)
 
-                        Button {
-                            Task {
-                                await viewModel.handleCalendarSync(toast: toastManager)
+                        // Only show Sync when there are pending calendar events to review
+                        if !viewModel.pendingCalendarEvents.isEmpty {
+                            Button {
+                                Task {
+                                    await viewModel.handleCalendarSync(toast: toastManager)
+                                }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "calendar.badge.plus")
+                                        .font(.system(size: 12))
+                                    Text(appState.localized(en: "Sync", de: "Sync"))
+                                        .font(.system(size: 12, weight: .medium))
+                                }
+                                .foregroundStyle(Color.znNavy)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 6)
+                                .overlay(
+                                    Capsule()
+                                        .stroke(Color.znNavy.opacity(0.4), lineWidth: 1)
+                                )
                             }
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "calendar.badge.plus")
-                                    .font(.system(size: 12))
-                                Text(appState.localized(en: "Sync", de: "Sync"))
-                                    .font(.system(size: 12, weight: .medium))
-                            }
-                            .foregroundStyle(Color.znNavy)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 6)
-                            .overlay(
-                                Capsule()
-                                    .stroke(Color.znNavy.opacity(0.4), lineWidth: 1)
-                            )
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
 
                         Spacer()
                     }

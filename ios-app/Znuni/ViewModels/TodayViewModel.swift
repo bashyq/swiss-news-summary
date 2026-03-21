@@ -555,10 +555,14 @@ final class TodayViewModel {
         }
 
         // 5. Template engine fallback
-        // Only apply gap-aware filtering when there are actual anchors.
-        // Without anchors, the template should return all slots regardless of current time.
+        // Apply gap-aware filtering when:
+        // - There are anchors (always filter around them), OR
+        // - Planning for today (filter out past time slots)
+        // Skip gap filtering only for future dates with no anchors (show full day).
+        let isToday = Calendar.current.isDateInToday(planDate)
         let hasAnchors = !currentAnchors.isEmpty
-        let gapsForTemplate = hasAnchors ? (fillableGaps.isEmpty ? nil : fillableGaps) : nil
+        let shouldFilterGaps = hasAnchors || isToday
+        let gapsForTemplate = shouldFilterGaps ? (fillableGaps.isEmpty ? nil : fillableGaps) : nil
         #if DEBUG
         print("📋 Falling back to template engine (fillableGaps: \(fillableGaps.count), hasAnchors: \(hasAnchors))")
         #endif
