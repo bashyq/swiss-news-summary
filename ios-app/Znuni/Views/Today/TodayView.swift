@@ -17,6 +17,7 @@ struct TodayView: View {
     @State private var showSessionConfig = false
     // SlotEditSheet is presented via .sheet(item: $editingSlot)
     @State private var showCustomSlotForm = false
+    @State private var customSlotSnapshot: AgendaSlot?  // persists after editingSlot is nilled
     @State private var showAnchorForm = false
     @State private var editingSlot: AgendaSlot?
     @State private var editingAnchor: DayAnchor?
@@ -83,6 +84,8 @@ struct TodayView: View {
                         viewModel.editSlotTime(slotId: slot.id, newTime: newTime)
                     },
                     onReplaceWithCustom: {
+                        // Snapshot the slot before editingSlot gets nilled by sheet(item:) dismissal
+                        customSlotSnapshot = slot
                         // Delay slightly to allow edit sheet to dismiss first
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                             showCustomSlotForm = true
@@ -99,7 +102,7 @@ struct TodayView: View {
                 .presentationDetents([.medium])
             }
             .sheet(isPresented: $showCustomSlotForm) {
-                if let slot = editingSlot {
+                if let slot = customSlotSnapshot {
                     CustomSlotFormSheet(
                         slotType: slot.type,
                         existingVenueName: slot.source == .userCustom ? slot.customVenueName : nil,
@@ -113,6 +116,7 @@ struct TodayView: View {
                             neighbourhood: neighbourhood,
                             locked: locked
                         )
+                        customSlotSnapshot = nil
                     }
                     .environment(appState)
                     .presentationDetents([.large])
