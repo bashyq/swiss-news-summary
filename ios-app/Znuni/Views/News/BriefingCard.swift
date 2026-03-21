@@ -115,11 +115,14 @@ struct BriefingCard: View {
 
     private var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
-        if hour < 12 {
+        switch hour {
+        case 5..<12:
             return appState.localized(en: "Good morning", de: "Guten Morgen")
-        } else if hour < 17 {
+        case 12..<17:
             return appState.localized(en: "Good afternoon", de: "Guten Nachmittag")
-        } else {
+        case 17..<22:
+            return appState.localized(en: "Good evening", de: "Guten Abend")
+        default:
             return appState.localized(en: "Good evening", de: "Guten Abend")
         }
     }

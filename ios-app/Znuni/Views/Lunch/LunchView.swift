@@ -62,8 +62,15 @@ struct LunchView: View {
 
     // MARK: - Navigation Title
 
-    private var navigationTitle: String {
-        appState.localized(en: "Lunch", de: "Mittagessen")
+    private var navigationTitle: some View {
+        (
+            Text(appState.localized(en: "Find ", de: "Finde "))
+                .font(.bannerTitle)
+                .foregroundStyle(.white)
+            + Text(appState.localized(en: "restaurants", de: "Restaurants"))
+                .font(.custom("Playfair", size: 28).italic())
+                .foregroundStyle(.white.opacity(0.65))
+        )
     }
 
     private var mapToggleButton: some View {
@@ -119,9 +126,7 @@ struct LunchView: View {
                     .textCase(.uppercase)
                     .foregroundStyle(.white.opacity(0.55))
 
-                Text(navigationTitle)
-                    .font(.bannerTitle)
-                    .foregroundStyle(.white)
+                navigationTitle
                     .lineLimit(1)
 
                 HStack(spacing: 12) {
