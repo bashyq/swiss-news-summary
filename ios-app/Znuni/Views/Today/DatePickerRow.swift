@@ -31,27 +31,40 @@ struct DatePickerRow: View {
                     .sensoryFeedback(.selection, trigger: isSelected)
                 }
 
-                // "Pick date" button
+                // "Pick date" button — matches pill style
                 Button(action: onPickDate) {
-                    HStack(spacing: 4) {
-                        if case .specific = selectedPlanDay {
-                            // Show the selected date
+                    if case .specific = selectedPlanDay {
+                        // Show the selected specific date as a filled pill
+                        HStack(spacing: 4) {
                             Text(selectedPlanDay.shortLabel(language: appState.language))
                                 .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(.white)
-                        } else {
-                            Image(systemName: "calendar")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(.znBody)
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 9, weight: .semibold))
+                                .opacity(0.6)
                         }
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(isSpecificSelected ? .white.opacity(0.6) : .znMuted)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(Color.znNavy)
+                        .clipShape(Capsule())
+                    } else {
+                        // Dashed outline pill: "Pick date →"
+                        HStack(spacing: 4) {
+                            Text(appState.localized(en: "Pick date", de: "Datum"))
+                                .font(.system(size: 13, weight: .medium))
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 9, weight: .semibold))
+                        }
+                        .foregroundStyle(Color.znMuted)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(Color.clear)
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(Color.znBorder, style: StrokeStyle(lineWidth: 1, dash: [5, 3]))
+                        )
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 7)
-                    .background(isSpecificSelected ? Color.znNavy : Color.znNeutralTagBg)
-                    .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
 

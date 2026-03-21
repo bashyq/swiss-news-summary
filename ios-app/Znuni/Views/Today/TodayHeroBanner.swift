@@ -18,8 +18,13 @@ struct TodayHeroBanner: View {
     let weather: Weather?
     let badWeatherMode: Bool
     let planningDate: Date
+    var planningCityName: String?
     @Binding var subView: TodaySubView
+    var onWeatherTap: (() -> Void)?
     var onHolidayTap: (() -> Void)?
+
+    // Plan mode properties
+    var contextText: String?
 
     // News mode properties
     var totalStoryCount: Int = 0
@@ -51,10 +56,15 @@ struct TodayHeroBanner: View {
             titleText
                 .padding(.bottom, 6)
 
-            // Compact weather row (both modes)
+            // Compact weather row (both modes) — tappable for hourly forecast
             if let weather {
-                weatherCompactRow(weather)
-                    .padding(.bottom, 12)
+                Button {
+                    onWeatherTap?()
+                } label: {
+                    weatherCompactRow(weather)
+                }
+                .buttonStyle(.plain)
+                .padding(.bottom, 12)
             } else {
                 Spacer().frame(height: 8)
             }
@@ -127,11 +137,33 @@ struct TodayHeroBanner: View {
         .clipShape(Capsule())
     }
 
-    // MARK: - Plan Header Content (moved to YourDayConfigSection)
+    // MARK: - Plan Header Content
 
     @ViewBuilder
     private var planHeaderContent: some View {
-        EmptyView()
+        if let contextText {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 11))
+                    .foregroundStyle(badWeatherMode
+                        ? Color(red: 0.96, green: 0.91, blue: 0.83).opacity(0.5)
+                        : .white.opacity(0.5))
+
+                Text(contextText)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(badWeatherMode
+                        ? Color(red: 0.96, green: 0.91, blue: 0.83).opacity(0.7)
+                        : .white.opacity(0.7))
+
+                Spacer()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(badWeatherMode
+                ? Color(red: 0.96, green: 0.91, blue: 0.83).opacity(0.07)
+                : .white.opacity(0.07))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
     }
 
     // MARK: - News Header Content
@@ -193,6 +225,13 @@ struct TodayHeroBanner: View {
                     }
                 }
             }
+            .mask(
+                HStack(spacing: 0) {
+                    Color.black
+                    LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                        .frame(width: 24)
+                }
+            )
         }
 
         // Next holiday row (in news mode)
@@ -231,7 +270,7 @@ struct TodayHeroBanner: View {
     // MARK: - Title
 
     private var titleText: some View {
-        let cityName = appState.city.localizedName(language: appState.language)
+        let cityName = planningCityName ?? appState.city.localizedName(language: appState.language)
         let titleColor: Color = badWeatherMode
             ? Color(red: 0.96, green: 0.91, blue: 0.83)
             : .white
