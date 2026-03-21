@@ -354,6 +354,10 @@ struct TodayView: View {
                 // Calendar sync: check for new events when Plan mode appears
                 viewModel.checkCalendarSync()
             }
+            .onChange(of: viewModel.selectedPlanDay) { _, _ in
+                // Re-check calendar when switching days
+                viewModel.checkCalendarSync()
+            }
     }
 
     // MARK: - Your Day Config Section
