@@ -104,6 +104,16 @@ final class TodayViewModel {
         if weekday != 7 && tomorrowWeekday != 7 { days.append(.saturday) }
         if weekday != 1 && tomorrowWeekday != 1 { days.append(.sunday) }
 
+        // Include the specific date if one is selected (and it's not already covered)
+        if case .specific(let date) = selectedPlanDay {
+            let isAlreadyCovered = days.contains { existingDay in
+                cal.isDate(existingDay.date(), inSameDayAs: date)
+            }
+            if !isAlreadyCovered {
+                days.append(.specific(date))
+            }
+        }
+
         return days
     }
 
