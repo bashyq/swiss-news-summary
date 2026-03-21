@@ -123,6 +123,25 @@ These are confirmed bugs from user testing. Fix in this priority order.
 
 **Test:** Save plan → open Calendar app → tap event → location shows venue name + address, tap for directions.
 
+### Bug 7: Venues suggested at times they're not open
+**Symptom:** Tram Museum suggested at 10am Sunday but it doesn't open until 1pm. Venues are being slotted at times they're closed.
+
+**Root cause:** The TemplateEngine was recently fixed (it was filtering ALL venues out due to a broken opening hours check). The fix removed the check entirely, making it too permissive — it no longer validates whether a venue is open at the proposed slot time.
+
+Opening hours exist as free-text strings on the `Activity` model (e.g. `"Tue-Sun 10:00-17:00"`, `"Daily 9:00-18:00"`, `"Mon-Fri 8:00-17:00, Sat 10:00-16:00"`). These come from the worker's `activities.js`.
+
+**Fix:**
+1. Create an `OpeningHoursParser` utility that parses these strings into structured data (day-of-week → open/close times)
+2. In `TemplateEngine.swift`: when selecting a venue for a slot, check if the venue is open at the slot's start time on the slot's day-of-week. Filter out closed venues. **Be very careful** — the previous bug was caused by an overly aggressive filter that emptied the pool. If parsing fails (unrecognized format), treat the venue as "always open" (fail-open, not fail-closed).
+3. In `AgendaComposer.swift`: include opening hours in the venue data sent to Claude in the system prompt, so Claude can respect them when selecting venues.
+
+**Files:**
+- Create: `Services/OpeningHoursParser.swift`
+- Modify: `Services/TemplateEngine.swift` — add `isOpen(activity:, at: Date)` check in venue selection
+- Modify: `Services/AgendaComposer.swift` — include opening hours in venue pool sent to Claude
+
+**Test:** Plan for Sunday → morning slot does NOT suggest Tram Museum (opens 1pm) → afternoon slot CAN suggest it. Venues with unparseable hours still appear (fail-open).
+
 ---
 
 ## Remaining Tasks (from original plan)
