@@ -673,7 +673,15 @@ final class TodayViewModel {
     /// If plan exists → show banner. If no plan yet → set pending for swipe sheet.
     @MainActor
     func checkCalendarSync() {
-        guard CalendarService.shared.hasAccess else { return }
+        #if DEBUG
+        print("📅 checkCalendarSync: hasAccess=\(CalendarService.shared.hasAccess), day=\(selectedPlanDay)")
+        #endif
+        guard CalendarService.shared.hasAccess else {
+            #if DEBUG
+            print("📅 checkCalendarSync: NO ACCESS — skipping")
+            #endif
+            return
+        }
         let planDate = selectedPlanDay.date()
         let anchors = AnchorStore.shared.anchors(for: planDate)
         let newEvents = CalendarSyncChecker.newEvents(

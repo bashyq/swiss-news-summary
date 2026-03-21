@@ -10,13 +10,23 @@ struct CalendarSyncChecker {
         for date: Date,
         existingAnchors: [AnchorEvent],
         discardStore: CalendarDiscardStore = .shared,
-        calendarService: CalendarService = .shared
+        calendarService: CalendarService = .shared,
+        exportStore: CalendarExportStore = .shared
     ) -> [EKEvent] {
         let events = calendarService.fetchEvents(for: date)
         let existingCalendarIds = Set(existingAnchors.compactMap { $0.calendarEventId })
+        let exportedEventIds = Set(exportStore.all().values)
+
+        #if DEBUG
+        print("📅 CalendarSync: \(events.count) events for \(date), \(existingCalendarIds.count) anchored, \(exportedEventIds.count) exported, \(discardStore.all().count) discarded")
+        for event in events {
+            print("   → \(event.title ?? "?") id=\(event.eventIdentifier.prefix(12))... anchored=\(existingCalendarIds.contains(event.eventIdentifier)) exported=\(exportedEventIds.contains(event.eventIdentifier)) discarded=\(discardStore.isDiscarded(event.eventIdentifier))")
+        }
+        #endif
 
         return events.filter { event in
             !existingCalendarIds.contains(event.eventIdentifier) &&
+            !exportedEventIds.contains(event.eventIdentifier) &&
             !discardStore.isDiscarded(event.eventIdentifier)
         }
     }
