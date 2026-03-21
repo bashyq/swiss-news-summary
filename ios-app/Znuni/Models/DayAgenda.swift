@@ -3,11 +3,12 @@ import Foundation
 // MARK: - Plan Day
 
 /// Which day the user is planning for.
-enum PlanDay: Equatable, CaseIterable {
+enum PlanDay: Equatable, Hashable {
     case today
     case tomorrow
     case saturday
     case sunday
+    case specific(Date)
 
     /// The actual calendar date for this plan day.
     func date() -> Date {
@@ -21,6 +22,8 @@ enum PlanDay: Equatable, CaseIterable {
             return PlanDay.nextWeekendDates().saturday
         case .sunday:
             return PlanDay.nextWeekendDates().sunday
+        case .specific(let d):
+            return d
         }
     }
 
@@ -49,8 +52,24 @@ enum PlanDay: Equatable, CaseIterable {
             return language == .en ? "Tomorrow's plan" : "Plan für morgen"
         case .saturday, .sunday:
             return language == .en ? "Weekend plan" : "Wochenendplan"
+        case .specific:
+            let f = DateFormatter()
+            f.locale = language == .de ? Locale(identifier: "de_CH") : Locale(identifier: "en_US")
+            f.dateFormat = language == .de ? "EEEE, d. MMM" : "EEEE, MMM d"
+            return f.string(from: date())
         }
     }
+
+    /// Whether this represents a future date (not today).
+    var isFuture: Bool {
+        switch self {
+        case .today: return false
+        default: return true
+        }
+    }
+
+    /// The quick-pick days shown in the date picker row (today, tomorrow, next Sat, next Sun).
+    static var quickPicks: [PlanDay] { [.today, .tomorrow, .saturday, .sunday] }
 
     /// Get next Saturday and Sunday dates.
     static func nextWeekendDates() -> (saturday: Date, sunday: Date) {
@@ -70,7 +89,31 @@ enum PlanDay: Equatable, CaseIterable {
         return (saturday, sunday)
     }
 
-    static var allCases: [PlanDay] { [.today, .tomorrow, .saturday, .sunday] }
+    // MARK: - Hashable
+
+    func hash(into hasher: inout Hasher) {
+        switch self {
+        case .today: hasher.combine("today")
+        case .tomorrow: hasher.combine("tomorrow")
+        case .saturday: hasher.combine("saturday")
+        case .sunday: hasher.combine("sunday")
+        case .specific(let d):
+            hasher.combine("specific")
+            hasher.combine(Calendar.current.startOfDay(for: d))
+        }
+    }
+
+    static func == (lhs: PlanDay, rhs: PlanDay) -> Bool {
+        switch (lhs, rhs) {
+        case (.today, .today), (.tomorrow, .tomorrow),
+             (.saturday, .saturday), (.sunday, .sunday):
+            return true
+        case (.specific(let a), .specific(let b)):
+            return Calendar.current.isDate(a, inSameDayAs: b)
+        default:
+            return false
+        }
+    }
 }
 
 // MARK: - Agenda Mode

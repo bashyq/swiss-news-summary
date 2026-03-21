@@ -1,4 +1,5 @@
 import Foundation
+import CoreLocation
 
 // MARK: - Venue Score
 
@@ -82,7 +83,12 @@ struct FreshnessScorer {
         gapMidpoint: Date? = nil
     ) -> VenueScore {
 
-        // 1. Slot type eligibility
+        // 1. Minimum review threshold — skip restaurants with too few reviews
+        if let count = restaurant.ratingCount, count < 10 {
+            return ineligible(restaurant.id)
+        }
+
+        // 2. Slot type eligibility
         switch slotType {
         case .lunch:
             if restaurant.openForLunch == false { return ineligible(restaurant.id) }
@@ -143,28 +149,116 @@ struct FreshnessScorer {
         let lunchMidpoint = lunchGap.map { midpoint(of: $0) }
         let dinnerMidpoint = dinnerGap.map { midpoint(of: $0) }
 
-        let scoredActivities = activities
+        // Find anchor locations adjacent to activity/lunch/dinner gaps for proximity bias
+        let activityAnchorLocation = anchorLocation(for: activityGap)
+        let lunchAnchorLocation = anchorLocation(for: lunchGap)
+        let dinnerAnchorLocation = anchorLocation(for: dinnerGap)
+
+        var scoredActivities = activities
             .map { ($0, scoreActivity($0, visitStore: visitStore, weather: weather, date: date, gapMidpoint: activityMidpoint)) }
             .filter { $0.1.isEligible }
+
+        // Apply proximity bias for activities near anchor locations
+        if let anchorLoc = activityAnchorLocation {
+            scoredActivities = applyProximityBias(
+                scored: scoredActivities,
+                anchorLocation: anchorLoc,
+                coordinateExtractor: { act in
+                    guard let lat = act.lat, let lon = act.lon else { return nil }
+                    return CLLocation(latitude: lat, longitude: lon)
+                }
+            )
+        }
+
+        let topActivities = scoredActivities
+            .shuffled()  // Break ties so rebuilds produce different selections
             .sorted { $0.1.compositeScore > $1.1.compositeScore }
             .prefix(15)
             .map { $0.0 }
 
-        let scoredLunches: [LunchSpot] = needsLunch ? restaurants
+        var scoredLunchPairs: [(LunchSpot, VenueScore)] = needsLunch ? restaurants
             .map { ($0, scoreRestaurant($0, slotType: .lunch, visitStore: visitStore, date: date, gapMidpoint: lunchMidpoint)) }
-            .filter { $0.1.isEligible }
+            .filter { $0.1.isEligible } : []
+
+        if let anchorLoc = lunchAnchorLocation, needsLunch {
+            scoredLunchPairs = applyProximityBias(
+                scored: scoredLunchPairs,
+                anchorLocation: anchorLoc,
+                coordinateExtractor: { spot in
+                    CLLocation(latitude: spot.lat, longitude: spot.lon)
+                }
+            )
+        }
+
+        let topLunches = scoredLunchPairs
+            .shuffled()  // Break ties — without this, same-score venues always appear in API order
             .sorted { $0.1.compositeScore > $1.1.compositeScore }
             .prefix(10)
-            .map { $0.0 } : []
+            .map { $0.0 }
 
-        let scoredDinners: [LunchSpot] = needsDinner ? restaurants
+        var scoredDinnerPairs: [(LunchSpot, VenueScore)] = needsDinner ? restaurants
             .map { ($0, scoreRestaurant($0, slotType: .dinner, visitStore: visitStore, date: date, gapMidpoint: dinnerMidpoint)) }
-            .filter { $0.1.isEligible }
+            .filter { $0.1.isEligible } : []
+
+        if let anchorLoc = dinnerAnchorLocation, needsDinner {
+            scoredDinnerPairs = applyProximityBias(
+                scored: scoredDinnerPairs,
+                anchorLocation: anchorLoc,
+                coordinateExtractor: { spot in
+                    CLLocation(latitude: spot.lat, longitude: spot.lon)
+                }
+            )
+        }
+
+        let topDinners = scoredDinnerPairs
+            .shuffled()
             .sorted { $0.1.compositeScore > $1.1.compositeScore }
             .prefix(10)
-            .map { $0.0 } : []
+            .map { $0.0 }
 
-        return (Array(scoredActivities), Array(scoredLunches), Array(scoredDinners))
+        return (Array(topActivities), Array(topLunches), Array(topDinners))
+    }
+
+    // MARK: - Proximity Bias
+
+    /// Extract the location of the nearest anchor adjacent to a gap.
+    private static func anchorLocation(for gap: FreeGap?) -> CLLocation? {
+        guard let gap else { return nil }
+        // Prefer the preceding anchor (venue after the anchor should be nearby)
+        if let anchor = gap.precedingAnchor, let lat = anchor.lat, let lon = anchor.lon {
+            return CLLocation(latitude: lat, longitude: lon)
+        }
+        if let anchor = gap.followingAnchor, let lat = anchor.lat, let lon = anchor.lon {
+            return CLLocation(latitude: lat, longitude: lon)
+        }
+        return nil
+    }
+
+    /// Boost scores of venues within ~3 km of a nearby anchor location.
+    /// Venues within 1 km get a +0.2 boost, 1-3 km get +0.1, beyond 3 km get no boost.
+    static func applyProximityBias<T>(
+        scored: [(T, VenueScore)],
+        anchorLocation: CLLocation,
+        coordinateExtractor: (T) -> CLLocation?
+    ) -> [(T, VenueScore)] {
+        scored.map { item, score in
+            guard let venueLoc = coordinateExtractor(item) else { return (item, score) }
+            let distanceKm = anchorLocation.distance(from: venueLoc) / 1000.0
+            let boost: Double
+            if distanceKm <= 1.0 {
+                boost = 0.2
+            } else if distanceKm <= 3.0 {
+                boost = 0.1
+            } else {
+                boost = 0.0
+            }
+            let adjusted = VenueScore(
+                venueId: score.venueId,
+                isEligible: score.isEligible,
+                compositeScore: min(1.0, score.compositeScore + boost)
+            )
+            return (item, adjusted)
+        }
     }
 
     // MARK: - Helpers

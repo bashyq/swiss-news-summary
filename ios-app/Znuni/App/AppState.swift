@@ -92,6 +92,16 @@ final class AppState {
     var pendingDiscoverRoute: String?
     /// Incremented when the user re-taps the already-selected tab (used to reset tab state)
     var tabRetapCount: Int = 0
+
+    /// Pending "plan a day here" request from sunshine/snow cards.
+    /// When set, Today tab reads this to configure planningCity + selectedPlanDay, then clears it.
+    var pendingPlanRequest: PlanRequest?
+
+    /// Request to plan a day in a specific city on a specific date.
+    struct PlanRequest: Equatable {
+        let cityId: String
+        let date: Date?
+    }
     
     var savedActivityIDs: Set<String> {
         didSet {

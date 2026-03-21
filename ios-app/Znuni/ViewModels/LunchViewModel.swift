@@ -36,8 +36,18 @@ final class LunchViewModel {
     /// Whether the user has tapped "Show all" to bypass the display limit
     var showingAll: Bool = false
 
-    /// Current sort order (smart default: nearest when Near Me active, topRated otherwise)
-    var sortOrder: LunchSort = .topRated
+    /// Current sort order — persisted across sessions. Default: nearest first.
+    var sortOrder: LunchSort = {
+        if let raw = UserDefaults.standard.string(forKey: "lunchSortOrder"),
+           let saved = LunchSort(rawValue: raw) {
+            return saved
+        }
+        return .nearest
+    }() {
+        didSet {
+            UserDefaults.standard.set(sortOrder.rawValue, forKey: "lunchSortOrder")
+        }
+    }
 
     // MARK: - Filtering
 

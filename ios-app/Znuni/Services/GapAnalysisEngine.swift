@@ -143,8 +143,9 @@ struct GapAnalysisEngine {
                 if h >= 10 && h <= 15 { s.insert(.lunch) }
                 if h >= 17 { s.insert(.dinner) }
             case .activity:
-                s.insert(.morningActivity)
-                s.insert(.afternoonActivity)
+                // Only suppress the activity slot in the same time period as the anchor
+                if h < 12 { s.insert(.morningActivity) }
+                else { s.insert(.afternoonActivity) }
             case .social:
                 s.insert(.afternoonActivity)
             default:

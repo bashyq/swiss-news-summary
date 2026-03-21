@@ -17,6 +17,7 @@ struct LunchCard: View {
     var onTap: (() -> Void)?
 
     @State private var showDeleteConfirmation = false
+    @State private var showAnchorForm = false
     @State private var markedAsVisited = false
 
     private var isExpanded: Bool { expandedID == spot.id }
@@ -64,6 +65,23 @@ struct LunchCard: View {
                 en: "Are you sure you want to delete this restaurant?",
                 de: "Möchtest du dieses Restaurant wirklich löschen?"
             ))
+        }
+        .sheet(isPresented: $showAnchorForm) {
+            AnchorFormSheet(
+                prefill: AnchorPrefill(
+                    title: spot.name,
+                    category: .food,
+                    lat: spot.lat,
+                    lon: spot.lon,
+                    address: nil,
+                    durationMinutes: 90
+                ),
+                onSave: { anchor in
+                    AnchorStore.shared.add(anchor, for: anchor.startTime)
+                    appState.selectedTab = .today
+                }
+            )
+            .presentationDetents([.large])
         }
     }
 
@@ -290,6 +308,24 @@ struct LunchCard: View {
 
             // Action buttons
             actionButtons
+
+            // Plan around this
+            Button {
+                showAnchorForm = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "calendar.badge.plus")
+                        .font(.system(size: 13))
+                    Text(appState.localized(en: "Plan around this →", de: "Hiermit planen →"))
+                        .font(.system(size: 13, weight: .medium))
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 42)
+                .background(Color.znNavy)
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
 
             // Mark as visited
             Button {

@@ -112,11 +112,12 @@ private struct DiscoverNavigationStack: View {
                 destinationView(for: route)
             }
             .task {
-                // Load sunshine/snow/events data for nudge engine
+                // Load all data for discover tab: sunshine, snow, events, and explore (activities for map/categories)
                 async let s: () = sunshineViewModel.loadSunshine(language: appState.language)
                 async let n: () = snowViewModel.loadSnow(language: appState.language)
                 async let e: () = eventsViewModel.loadData(city: appState.city, language: appState.language)
-                _ = await (s, n, e)
+                async let x: () = exploreViewModel.loadData(city: appState.city, language: appState.language)
+                _ = await (s, n, e, x)
             }
         }
         .onChange(of: appState.tabRetapCount) {

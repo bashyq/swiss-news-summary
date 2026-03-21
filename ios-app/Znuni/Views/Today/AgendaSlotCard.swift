@@ -81,15 +81,21 @@ struct AgendaSlotCard: View {
             HStack(alignment: .top, spacing: 12) {
                 // Timeline dot — vertically centered with first line of text
                 ZStack {
-                    Circle()
-                        .fill(effectiveAccentColor)
-                        .frame(width: 10, height: 10)
-
-                    // Pulsing glow for active
-                    if execState == .active {
+                    if slot.type == .homeActivity {
+                        Image(systemName: "house.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(effectiveAccentColor)
+                    } else {
                         Circle()
-                            .fill(Color.znTerracotta.opacity(0.3))
-                            .frame(width: 20, height: 20)
+                            .fill(effectiveAccentColor)
+                            .frame(width: 10, height: 10)
+
+                        // Pulsing glow for active
+                        if execState == .active {
+                            Circle()
+                                .fill(Color.znTerracotta.opacity(0.3))
+                                .frame(width: 20, height: 20)
+                        }
                     }
                 }
                 .padding(.top, (hasBadge && !isExpanded && (execState == .browsing || execState == .active)) ? 5 : 3)
@@ -194,6 +200,9 @@ struct AgendaSlotCard: View {
     private var cardStrokeStyle: StrokeStyle {
         if isCustomSlot {
             return StrokeStyle(lineWidth: 1.5, dash: [6, 4])
+        }
+        if slot.type == .homeActivity {
+            return StrokeStyle(lineWidth: 1, dash: [6, 3])
         }
         let width: CGFloat = (isLockedSlot || execState == .active) ? 1.5 : 1
         return StrokeStyle(lineWidth: width)

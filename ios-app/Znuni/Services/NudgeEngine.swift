@@ -145,8 +145,7 @@ struct NudgeEngine {
         // Find events starting in the next 3 days that are plannable
         let upcoming = events
             .filter { event in
-                guard let startStr = event.startDate,
-                      let startDate = DateHelpers.parseISO(startStr) else { return false }
+                guard let startDate = DateHelpers.parseISO(event.startDate) else { return false }
                 return startDate >= now && startDate <= threeDaysFromNow
             }
             .first

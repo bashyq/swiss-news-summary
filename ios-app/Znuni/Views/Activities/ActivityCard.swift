@@ -21,6 +21,7 @@ struct ActivityCard: View {
 
     @State private var showDeleteConfirmation = false
     @State private var showReminderSheet = false
+    @State private var showAnchorForm = false
     @State private var markedAsVisited = false
 
     private var isExpanded: Bool { expandedID == activity.id }
@@ -88,6 +89,22 @@ struct ActivityCard: View {
         .sheet(isPresented: $showReminderSheet) {
             ReminderSheet(activity: activity)
                 .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showAnchorForm) {
+            AnchorFormSheet(
+                prefill: AnchorPrefill(
+                    title: activity.localizedName(language: language),
+                    category: .activity,
+                    lat: activity.lat,
+                    lon: activity.lon,
+                    durationMinutes: 120
+                ),
+                onSave: { anchor in
+                    AnchorStore.shared.add(anchor, for: anchor.startTime)
+                    appState.selectedTab = .today
+                }
+            )
+            .presentationDetents([.large])
         }
     }
 
@@ -471,6 +488,25 @@ struct ActivityCard: View {
                         .buttonStyle(.plain)
                     }
                 }
+
+                // Plan around this
+                Button {
+                    showAnchorForm = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "calendar.badge.plus")
+                            .font(.system(size: 13))
+                        Text(appState.localized(en: "Plan around this →", de: "Hiermit planen →"))
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 42)
+                    .background(Color.znNavy)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
 
                 // Mark as visited
                 Button {

@@ -14,6 +14,7 @@ struct SnowCard: View {
     let isExpanded: Bool
     let userLocation: CLLocation?
     let onTap: () -> Void
+    var onPlanHere: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -135,6 +136,26 @@ struct SnowCard: View {
 
             // 7-day forecast section
             dailyForecastSection
+
+            // "Plan a day here" CTA — only for covered cities
+            if let onPlanHere, PlanningCity.isCovered(resort.id) {
+                Button(action: onPlanHere) {
+                    Label(
+                        language == .de
+                            ? "Tag in \(resort.localizedName(language: language)) planen →"
+                            : "Plan a day in \(resort.localizedName(language: language)) →",
+                        systemImage: "calendar.badge.plus"
+                    )
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Color.znNavy.opacity(0.12))
+                    .foregroundStyle(.znNavy)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
+            }
 
             // Get directions button
             directionsButton

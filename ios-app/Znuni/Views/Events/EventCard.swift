@@ -12,9 +12,11 @@ struct EventCard: View {
 
     @State private var showAnchorForm = false
 
-    /// Whether this event is plannable and overlaps with today.
+    /// Whether this event is plannable and hasn't ended yet.
     private var showAddToPlan: Bool {
-        event.isPlannable && event.overlaps(with: Date())
+        guard event.isPlannable else { return false }
+        guard let endDate = event.endDateParsed else { return true }
+        return Calendar.current.startOfDay(for: endDate) >= Calendar.current.startOfDay(for: Date())
     }
 
     var body: some View {

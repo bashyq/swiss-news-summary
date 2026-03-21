@@ -26,6 +26,7 @@ struct SunshineHighlightsSection: View {
                     if let city = City(rawValue: destination.id) {
                         appState.city = city
                     }
+                    appState.pendingDiscoverRoute = "activities"
                     appState.selectedTab = .discover
                 } label: {
                     Label(

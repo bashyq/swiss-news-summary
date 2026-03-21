@@ -1,4 +1,17 @@
 import SwiftUI
+import CoreLocation
+
+/// Pre-fill data for the "Plan around this" flow from activity/lunch/event cards.
+struct AnchorPrefill {
+    var title: String
+    var category: AnchorCategory
+    var lat: Double?
+    var lon: Double?
+    var address: String?
+    var date: Date?
+    var durationMinutes: Int = 120
+    var sourceEventId: String?
+}
 
 /// Form sheet for adding or editing a day anchor (pre-existing commitment).
 ///
@@ -27,6 +40,10 @@ struct AnchorFormSheet: View {
     @State private var customDurationMinutes: Int
     @State private var showCustomDuration: Bool = false
     @State private var selectedNeighbourhood: String?
+    @State private var addressText: String
+    @State private var resolvedLat: Double?
+    @State private var resolvedLon: Double?
+    @State private var isGeocoding: Bool = false
     @FocusState private var isLabelFocused: Bool
 
     // MARK: - Duration Options
@@ -77,6 +94,9 @@ struct AnchorFormSheet: View {
         _selectedCategory = State(initialValue: existingAnchor?.category)
         _selectedTime = State(initialValue: existingAnchor?.startTime ?? Self.nearestHalfHour())
         _selectedNeighbourhood = State(initialValue: existingAnchor?.neighbourhood)
+        _addressText = State(initialValue: existingAnchor?.address ?? "")
+        _resolvedLat = State(initialValue: existingAnchor?.lat)
+        _resolvedLon = State(initialValue: existingAnchor?.lon)
 
         // Match existing duration to closest preset
         if let existing = existingAnchor {
@@ -107,6 +127,32 @@ struct AnchorFormSheet: View {
         _selectedNeighbourhood = State(initialValue: nil)
         _selectedDuration = State(initialValue: .preset(120))
         _customDurationMinutes = State(initialValue: 120)
+        _addressText = State(initialValue: "")
+        _resolvedLat = State(initialValue: nil)
+        _resolvedLon = State(initialValue: nil)
+    }
+
+    /// Convenience init pre-filled from an AnchorPrefill (e.g. "Plan around this" flow).
+    init(
+        prefill: AnchorPrefill,
+        activitiesData: ActivitiesResponse? = nil,
+        onSave: @escaping (DayAnchor) -> Void
+    ) {
+        self.existingAnchor = nil
+        self.activitiesData = activitiesData
+        self.onSave = onSave
+        self.sourceEvent = nil
+        _label = State(initialValue: prefill.title)
+        _selectedCategory = State(initialValue: prefill.category)
+        _selectedTime = State(initialValue: Self.nearestHalfHour())
+        _selectedNeighbourhood = State(initialValue: nil)
+        let closestPreset = Self.closestPreset(to: prefill.durationMinutes)
+        _selectedDuration = State(initialValue: closestPreset)
+        _customDurationMinutes = State(initialValue: prefill.durationMinutes)
+        _showCustomDuration = State(initialValue: closestPreset == .custom)
+        _addressText = State(initialValue: prefill.address ?? "")
+        _resolvedLat = State(initialValue: prefill.lat)
+        _resolvedLon = State(initialValue: prefill.lon)
     }
 
     private static func closestPreset(to minutes: Int) -> DurationOption {
@@ -195,6 +241,9 @@ struct AnchorFormSheet: View {
 
                     // 5. Where (optional) — neighbourhood chips
                     whereSection
+
+                    // 6. Address (optional) — for proximity scoring
+                    addressSection
 
                     // Save button
                     saveButton
@@ -417,6 +466,7 @@ struct AnchorFormSheet: View {
     private var saveButton: some View {
         Button {
             guard canSave, let category = selectedCategory else { return }
+            let trimmedAddress = addressText.trimmingCharacters(in: .whitespaces)
             let anchor = DayAnchor(
                 id: existingAnchor?.id ?? UUID(),
                 title: label.trimmingCharacters(in: .whitespaces),
@@ -425,7 +475,10 @@ struct AnchorFormSheet: View {
                 durationMinutes: effectiveDuration,
                 neighbourhood: selectedNeighbourhood,
                 sourceEventId: existingAnchor?.sourceEventId ?? sourceEvent?.id,
-                createdDate: existingAnchor?.createdDate ?? Date()
+                createdDate: existingAnchor?.createdDate ?? Date(),
+                address: trimmedAddress.isEmpty ? nil : trimmedAddress,
+                lat: resolvedLat,
+                lon: resolvedLon
             )
             onSave(anchor)
             dismiss()
@@ -501,6 +554,81 @@ struct AnchorFormSheet: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.znBorder, lineWidth: 1)
         )
+    }
+
+    // MARK: - 6. Address (optional)
+
+    private var addressSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(appState.localized(en: "Address", de: "Adresse"))
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.znInk)
+
+            Text(appState.localized(
+                en: "Helps plan nearby activities — optional",
+                de: "Hilft, Aktivitäten in der Nähe zu planen — optional"
+            ))
+            .font(.system(size: 11))
+            .foregroundStyle(.znMuted)
+
+            HStack {
+                TextField(
+                    appState.localized(
+                        en: "e.g. Bahnhofstrasse 1, Zürich",
+                        de: "z.B. Bahnhofstrasse 1, Zürich"
+                    ),
+                    text: $addressText
+                )
+                .font(.system(size: 15))
+                .padding(12)
+                .background(Color.znCream)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.znBorder, lineWidth: 1)
+                )
+                .onSubmit {
+                    geocodeAddress()
+                }
+
+                if isGeocoding {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                        .frame(width: 32)
+                }
+            }
+
+            // Location resolved indicator
+            if resolvedLat != nil && resolvedLon != nil {
+                HStack(spacing: 4) {
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.znPositive)
+                    Text(appState.localized(en: "Location resolved", de: "Standort aufgelöst"))
+                        .font(.system(size: 11))
+                        .foregroundStyle(.znPositive)
+                }
+            }
+        }
+    }
+
+    /// Geocode the entered address to lat/lon using CLGeocoder.
+    private func geocodeAddress() {
+        let trimmed = addressText.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else {
+            resolvedLat = nil
+            resolvedLon = nil
+            return
+        }
+        isGeocoding = true
+        let geocoder = CLGeocoder()
+        geocoder.geocodeAddressString(trimmed) { placemarks, error in
+            isGeocoding = false
+            if let placemark = placemarks?.first, let location = placemark.location {
+                resolvedLat = location.coordinate.latitude
+                resolvedLon = location.coordinate.longitude
+            }
+        }
     }
 
     private let neighbourhoods = [

@@ -40,9 +40,16 @@ struct AgendaTimelineView: View {
         return idx >= agenda.slots.count
     }
 
-    /// Travel estimate from user's current location to the first slot's venue.
+    /// Whether the initial travel estimate uses the home address (true) or GPS (false).
+    private var initialTravelUsesHome: Bool {
+        appState.homeLocation != nil
+    }
+
+    /// Travel estimate from user's home (or current location) to the first slot's venue.
     private var travelToFirstSlot: TravelEstimate? {
-        guard let userLoc = location, let firstSlot = agenda.slots.first,
+        // Use home address if set, otherwise current GPS location
+        let sourceLocation = appState.homeLocation ?? location
+        guard let userLoc = sourceLocation, let firstSlot = agenda.slots.first,
               let venueId = firstSlot.venueId else { return nil }
 
         // Resolve venue coordinates
@@ -78,7 +85,7 @@ struct AgendaTimelineView: View {
         let icon = execSt == .upcoming ? modeIcon : modeIcon
         let label = execSt == .upcoming
             ? "Leave now · \(estimate.minutes) min \(modeLabel)"
-            : "~\(estimate.minutes) min \(modeLabel) from home"
+            : "~\(estimate.minutes) min \(modeLabel) \(initialTravelUsesHome ? "from home" : "from here")"
 
         return HStack(spacing: 10) {
             // Vertical dashed line

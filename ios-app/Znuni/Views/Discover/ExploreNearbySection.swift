@@ -15,7 +15,7 @@ struct ExploreNearbySection: View {
             ], spacing: 12) {
                 browseTile("Activities", icon: "star.fill", route: .activities)
                 browseTile("Museums", icon: "building.columns.fill", route: .museums)
-                browseTile("Parks", icon: "leaf.fill", route: .parks)
+                browseTile("Parks & Playgrounds", icon: "leaf.fill", route: .parks)
                 browseTile("Restaurants", icon: "fork.knife", route: .restaurants)
             }
 

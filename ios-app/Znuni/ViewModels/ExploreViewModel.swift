@@ -82,8 +82,9 @@ final class ExploreViewModel {
                 return false
             }
         case .parks:
+            let parkCategories: Set<String> = ["parks", "park", "playground", "playgrounds", "nature"]
             return activityItems().filter { item in
-                if case .activity(let a) = item { return a.category.lowercased() == "parks" || a.category.lowercased() == "playgrounds" || !a.indoor }
+                if case .activity(let a) = item { return parkCategories.contains(a.category.lowercased()) }
                 return false
             }
         case .restaurants:
@@ -107,8 +108,9 @@ final class ExploreViewModel {
                 return false
             }.count
         case .parks:
+            let parkCategories: Set<String> = ["parks", "park", "playground", "playgrounds", "nature"]
             return activityItems().filter { item in
-                if case .activity(let a) = item { return !a.indoor }
+                if case .activity(let a) = item { return parkCategories.contains(a.category.lowercased()) }
                 return false
             }.count
         case .restaurants:

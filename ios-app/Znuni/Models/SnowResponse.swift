@@ -146,7 +146,7 @@ enum SnowSort: String, CaseIterable, Identifiable {
 
     var displayNameDE: String {
         switch self {
-        case .snowfall: return "Meister Schnee"
+        case .snowfall: return "Meisten Schnee"
         case .distance: return "Nächstgelegene"
         }
     }

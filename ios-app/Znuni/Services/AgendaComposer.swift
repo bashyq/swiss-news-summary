@@ -74,20 +74,23 @@ struct AgendaComposer {
         """
         You are Znüni, a Swiss family day planner for toddlers (ages 2-5).
 
-        Rules:
+        CRITICAL RULES:
         1. Return ONLY a JSON array — no markdown, no explanation.
-        2. Each object: { "id": "slot-id", "time": "HH:MM", "type": "activity|lunch|dinner", "venueId": "exact-id-from-list", "venueName": "exact-name", "reason": "1-2 sentences why this fits", "durationMinutes": 90, "tags": ["Indoor","Free",...] }
-        The "durationMinutes" field is how long the family should spend there. Defaults: activity=100, lunch=90, dinner=120. Adjust based on venue type and gap size.
-        3. You MUST produce exactly one slot per gap line provided.
-        4. For lunch gaps → pick from the lunch restaurant pool. For dinner gaps → pick from the dinner restaurant pool.
-        5. Prefer outdoor activities when temp ≥ 15°C and no rain; prefer indoor when temp < 8°C or rain.
-        6. Never repeat a venueId within the same response.
-        7. The "time" field must fall within the gap's window.
-        8. Keep "reason" personal — mention the child's name and reference the weather or gap context.
-        9. "tags" should include relevant attributes: Indoor/Outdoor, Free if price mentions "free", age range.
-        10. If no suitable venue exists for a gap, use venueId "surprise" with venueName "Surprise me!" and a creative reason.
-        11. Response language: \(language == .de ? "German" : "English")
-        12. When an anchor has coordinates, prefer venues geographically close to it for adjacent slots. Mention proximity in the reason if applicable.
+        2. Each object: { "id": "gap-type-from-below", "time": "HH:MM", "type": "activity|lunch|dinner", "venueId": "exact-id-from-list", "venueName": "exact-name", "reason": "1-2 sentences why this fits", "durationMinutes": 90, "tags": ["Indoor","Free",...] }
+        The "durationMinutes" field is how long the family should spend there. Defaults: activity=100, lunch=90, dinner=120.
+        3. You MUST return EXACTLY one JSON object per gap listed below. If there are 4 gaps, return exactly 4 objects in the same order.
+        4. The "id" field MUST match the gap type: "morningActivity", "afternoonActivity", "quickActivity", "lunch", or "dinner".
+        5. For morningActivity/afternoonActivity/quickActivity gaps → "type" must be "activity" and venueId from the ACTIVITIES pool.
+           For lunch gaps → "type" must be "lunch" and venueId from the LUNCH restaurant pool.
+           For dinner gaps → "type" must be "dinner" and venueId from the DINNER restaurant pool.
+        6. Prefer outdoor activities when temp ≥ 15°C and no rain; prefer indoor when temp < 8°C or rain.
+        7. Never repeat a venueId within the same response.
+        8. The "time" field must fall within the gap's window.
+        9. Keep "reason" personal — mention the child's name and reference the weather or gap context.
+        10. "tags" should include relevant attributes: Indoor/Outdoor, Free if price mentions "free", age range.
+        11. If no suitable venue exists for a gap, use venueId "surprise" with venueName "Surprise me!" and a creative reason.
+        12. Response language: \(language == .de ? "German" : "English")
+        13. When an anchor has coordinates, prefer venues geographically close to it for adjacent slots.
         """
     }
 
@@ -110,7 +113,14 @@ struct AgendaComposer {
             let typeLabel = gap.suggestedType?.rawValue ?? "unknown"
             let start = timeString(gap.effectiveStart)
             let end = timeString(gap.gapEnd)
-            lines.append("- Gap \(i + 1): \(typeLabel) window \(start)–\(end) (\(gap.effectiveMinutes) min)")
+            let poolHint: String
+            switch gap.suggestedType {
+            case .lunch: poolHint = "→ pick from lunch restaurant pool"
+            case .dinner: poolHint = "→ pick from dinner restaurant pool"
+            case .morningActivity, .afternoonActivity, .quickActivity: poolHint = "→ pick from activities pool"
+            case nil: poolHint = ""
+            }
+            lines.append("- Gap \(i + 1): \(typeLabel) window \(start)–\(end) (\(gap.effectiveMinutes) min) \(poolHint)")
         }
 
         // Activities section
@@ -233,13 +243,39 @@ struct AgendaComposer {
             throw ComposerError.emptyResponse
         }
 
-        // Map raw slots to AgendaSlots, capping at gap count
-        let slotCount = min(rawSlots.count, gaps.count)
+        // Match raw slots to gaps by type (not by index) so out-of-order AI responses still work
         var result: [AgendaSlot] = []
+        var usedRawIndices = Set<Int>()
 
-        for i in 0..<slotCount {
-            let raw = rawSlots[i]
-            let gap = gaps[i]
+        for gap in gaps {
+            // Find the best matching raw slot for this gap
+            let matchIndex = rawSlots.indices.first { idx in
+                guard !usedRawIndices.contains(idx) else { return false }
+                let raw = rawSlots[idx]
+                // Match by id field (gap type) first
+                let rawId = raw.id.lowercased()
+                switch gap.suggestedType {
+                case .morningActivity:
+                    return rawId.contains("morning") || (raw.type.lowercased() == "activity" && !rawId.contains("afternoon"))
+                case .afternoonActivity:
+                    return rawId.contains("afternoon")
+                case .quickActivity:
+                    return rawId.contains("quick") || rawId.contains("activity")
+                case .lunch:
+                    return rawId.contains("lunch") || raw.type.lowercased() == "lunch"
+                case .dinner:
+                    return rawId.contains("dinner") || raw.type.lowercased() == "dinner"
+                case nil:
+                    return true
+                }
+            }
+
+            // Fallback: take the first unused raw slot if no type match found
+            let idx = matchIndex ?? rawSlots.indices.first { !usedRawIndices.contains($0) }
+            guard let rawIdx = idx else { continue }
+
+            usedRawIndices.insert(rawIdx)
+            let raw = rawSlots[rawIdx]
 
             let slotType: AgendaSlot.SlotType
             switch raw.type.lowercased() {
@@ -269,9 +305,21 @@ struct AgendaComposer {
                 }
             }()
 
+            // Enforce that AI-provided time falls within the gap window
+            let validatedTime: String = {
+                let gapStartTime = timeString(gap.effectiveStart)
+                let gapEndTime = timeString(gap.gapEnd)
+                if raw.time < gapStartTime || raw.time >= gapEndTime {
+                    // AI time is outside gap — snap to gap start + 15 min
+                    let snappedDate = gap.effectiveStart.addingTimeInterval(15 * 60)
+                    return timeString(snappedDate < gap.gapEnd ? snappedDate : gap.effectiveStart)
+                }
+                return raw.time
+            }()
+
             let slot = AgendaSlot(
                 id: slotId,
-                time: raw.time,
+                time: validatedTime,
                 type: slotType,
                 venueName: raw.venueName,
                 venueId: raw.venueId,
@@ -281,7 +329,7 @@ struct AgendaComposer {
                 durationMinutes: duration,
                 source: .aiGenerated,
                 isLocked: false,
-                slotDate: AgendaSlot.resolveSlotDate(time: raw.time, planDate: planDate)
+                slotDate: AgendaSlot.resolveSlotDate(time: validatedTime, planDate: planDate)
             )
             result.append(slot)
         }
@@ -289,6 +337,21 @@ struct AgendaComposer {
         #if DEBUG
         if rawSlots.count != gaps.count {
             print("⚠️ AgendaComposer: AI returned \(rawSlots.count) slots for \(gaps.count) gaps")
+        }
+        for gap in gaps {
+            let matched = result.contains { slot in
+                switch gap.suggestedType {
+                case .morningActivity: return slot.id == "morning"
+                case .afternoonActivity: return slot.id == "afternoon"
+                case .quickActivity: return slot.id == "quick"
+                case .lunch: return slot.id == "lunch"
+                case .dinner: return slot.id == "dinner"
+                case nil: return false
+                }
+            }
+            if !matched {
+                print("⚠️ AgendaComposer: No slot matched gap type \(gap.suggestedType?.rawValue ?? "nil")")
+            }
         }
         #endif
 

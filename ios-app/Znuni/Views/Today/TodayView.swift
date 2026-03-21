@@ -403,9 +403,10 @@ struct TodayView: View {
             // Rebuild is now via pull-to-refresh on the scroll view
             if !viewModel.agendaMode.isExecuting {
                 HStack(alignment: .center) {
-                    Text(viewModel.selectedPlanDay.headerTitle(language: appState.language))
-                        .font(.sectionHeadline)
-                        .foregroundStyle(.znInk)
+                    Text(viewModel.selectedPlanDay.headerTitle(language: appState.language).uppercased())
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.znMuted)
+                        .tracking(0.5)
 
                     Spacer()
                 }

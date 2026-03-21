@@ -27,17 +27,9 @@ struct LunchView: View {
                     language: appState.language
                 )
             }
-            .onChange(of: viewModel.activeToggles) { oldToggles, newToggles in
+            .onChange(of: viewModel.activeToggles) { _, newToggles in
                 if newToggles.contains(.nearMe) {
                     locationManager.requestLocation()
-                }
-                // Smart default: switch sort when Near Me toggled
-                let wasNearMe = oldToggles.contains(.nearMe)
-                let isNearMe = newToggles.contains(.nearMe)
-                if isNearMe && !wasNearMe {
-                    viewModel.sortOrder = .nearest
-                } else if !isNearMe && wasNearMe && viewModel.sortOrder == .nearest {
-                    viewModel.sortOrder = .topRated
                 }
             }
             .sheet(isPresented: $showAddSheet) {

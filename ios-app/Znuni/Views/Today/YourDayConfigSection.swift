@@ -9,45 +9,17 @@ struct YourDayConfigSection: View {
 
     let weather: Weather?
     let badWeatherMode: Bool
-    let contextText: String?
     let sessionDisplay: String?
     let anchors: [AnchorEvent]
     let anchorCount: Int
-    let canPlanWeekend: Bool
-    let isWeekendMode: Bool
-
     let onWeatherTap: () -> Void
     let onSessionTap: () -> Void
     let onAnchorAdd: () -> Void
     var onAnchorEdit: ((AnchorEvent) -> Void)?
     var onAnchorDelete: ((AnchorEvent) -> Void)?
-    var onPlanWeekend: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // Context banner (AI summary — e.g. "Cold day — indoor activities recommended")
-            if let contextText {
-                HStack(alignment: .top, spacing: 10) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 13))
-                        .foregroundStyle(Color.znNavy.opacity(0.5))
-
-                    Text(contextText)
-                        .font(.system(size: 13, weight: .light))
-                        .foregroundStyle(Color.znBody)
-                        .lineSpacing(2)
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 11)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.znNavy.opacity(0.03))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.znBorder, lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-            }
-
             // Session pill
             if let sessionDisplay {
                 Button(action: onSessionTap) {
@@ -77,29 +49,6 @@ struct YourDayConfigSection: View {
                 onDelete: { anchor in onAnchorDelete?(anchor) }
             )
 
-            // "Plan the weekend" CTA
-            if canPlanWeekend, !isWeekendMode, let onPlanWeekend {
-                Button(action: onPlanWeekend) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "calendar.badge.plus")
-                            .font(.system(size: 14, weight: .medium))
-                        Text(appState.localized(en: "Plan the weekend", de: "Wochenende planen"))
-                            .font(.system(size: 13, weight: .semibold))
-                    }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(
-                        LinearGradient(
-                            colors: [Color.znTerracotta, Color.znTerracotta.opacity(0.8)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .clipShape(Capsule())
-                }
-                .buttonStyle(.plain)
-            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal)

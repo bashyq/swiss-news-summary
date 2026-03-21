@@ -119,19 +119,22 @@ struct EventsView: View {
             .padding(.horizontal, 16)
             .padding(.top, 6)
 
-            Spacer(minLength: 0)
-
-            // Title content — bottom-left
+            // Title content
             VStack(alignment: .leading, spacing: 4) {
-                Text(appState.localized(en: "Family", de: "Familie") + " · " + cityName)
+                Text(appState.localized(en: "Events", de: "Events") + " · " + cityName)
                     .font(.znEyebrow)
                     .tracking(1.3)
                     .textCase(.uppercase)
                     .foregroundStyle(.white.opacity(0.55))
 
-                Text(appState.localized(en: "Family Events", de: "Familienevents"))
-                    .font(.bannerTitle)
-                    .foregroundStyle(.white)
+                (
+                    Text(appState.localized(en: "What's ", de: "Was ist "))
+                        .font(.bannerTitle)
+                        .foregroundStyle(.white)
+                    + Text(appState.localized(en: "happening?", de: "los?"))
+                        .font(.custom("Playfair", size: 28).italic())
+                        .foregroundStyle(.white.opacity(0.65))
+                )
 
                 HStack(spacing: 12) {
                     Label(
@@ -148,9 +151,10 @@ struct EventsView: View {
                 .padding(.top, 2)
             }
             .padding(.horizontal, 20)
-            .padding(.bottom, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 22)
         }
-        .frame(height: 150)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             ZStack {
                 LinearGradient(

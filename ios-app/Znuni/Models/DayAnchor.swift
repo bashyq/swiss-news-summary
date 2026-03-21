@@ -68,11 +68,18 @@ struct AnchorEvent: Codable, Identifiable, Equatable {
     var source: AnchorSource
     var calendarEventId: String?
     let createdDate: Date
+    var address: String?
+    var lat: Double?
+    var lon: Double?
+
+    /// Whether this anchor has a resolved geographic location.
+    var hasLocation: Bool { lat != nil && lon != nil }
 
     enum CodingKeys: String, CodingKey {
         case id, title, category, startTime, durationMinutes
         case neighbourhood, kreis, sourceEventId
         case source, calendarEventId, createdDate
+        case address, lat, lon
     }
 
     init(from decoder: Decoder) throws {
@@ -88,6 +95,9 @@ struct AnchorEvent: Codable, Identifiable, Equatable {
         source = try container.decodeIfPresent(AnchorSource.self, forKey: .source) ?? .manual
         calendarEventId = try container.decodeIfPresent(String.self, forKey: .calendarEventId)
         createdDate = try container.decode(Date.self, forKey: .createdDate)
+        address = try container.decodeIfPresent(String.self, forKey: .address)
+        lat = try container.decodeIfPresent(Double.self, forKey: .lat)
+        lon = try container.decodeIfPresent(Double.self, forKey: .lon)
     }
 
     init(
@@ -101,7 +111,10 @@ struct AnchorEvent: Codable, Identifiable, Equatable {
         sourceEventId: String? = nil,
         source: AnchorSource = .manual,
         calendarEventId: String? = nil,
-        createdDate: Date = Date()
+        createdDate: Date = Date(),
+        address: String? = nil,
+        lat: Double? = nil,
+        lon: Double? = nil
     ) {
         self.id = id
         self.title = title
@@ -114,6 +127,9 @@ struct AnchorEvent: Codable, Identifiable, Equatable {
         self.source = source
         self.calendarEventId = calendarEventId
         self.createdDate = createdDate
+        self.address = address
+        self.lat = lat
+        self.lon = lon
     }
 
     var endTime: Date {
@@ -137,6 +153,8 @@ struct AnchorEvent: Codable, Identifiable, Equatable {
             "ends: \(endTime.formatted(.dateTime.hour().minute()))"
         ]
         if let n = neighbourhood { parts.append("location: \(n)") }
+        if let addr = address { parts.append("address: \(addr)") }
+        if let lat, let lon { parts.append("coords: \(lat),\(lon)") }
         return parts.joined(separator: ", ")
     }
 }

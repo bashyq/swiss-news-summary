@@ -23,7 +23,7 @@ final class TodayViewModel {
     var activitiesData: ActivitiesResponse?
     var lunchData: LunchResponse?
 
-    /// Multi-day daily forecast from Open-Meteo (today + next 2 days).
+    /// Multi-day daily forecast from Open-Meteo (today + next 7 days).
     var dailyForecast: [DayWeather] = []
 
     var isLoading = false
@@ -324,6 +324,9 @@ final class TodayViewModel {
     /// Compose agenda for the currently selected plan day (used when switching day pills).
     @MainActor
     func composeAgendaForSelectedDay(city: City, language: AppLanguage, session: FamilySession) async {
+        // Clear stale conflict warning when switching days
+        conflictWarning = nil
+
         let planDate = selectedPlanDay.date()
         let dateISO = selectedPlanDay.isoDate
         // Skip if already loaded or currently loading
@@ -421,6 +424,14 @@ final class TodayViewModel {
         let allGaps = GapAnalysisEngine.analyse(anchors: currentAnchors, now: effectiveNow, date: planDate)
         let fillableGaps = allGaps.filter { $0.isFillable }
 
+        #if DEBUG
+        let tf = DateFormatter(); tf.dateFormat = "HH:mm"; tf.timeZone = TimeZone(identifier: "Europe/Zurich")
+        print("🕐 Gap analysis: effectiveNow=\(tf.string(from: effectiveNow)) | \(allGaps.count) total gaps, \(fillableGaps.count) fillable")
+        for gap in fillableGaps {
+            print("   → \(gap.suggestedType?.rawValue ?? "nil") \(tf.string(from: gap.effectiveStart))–\(tf.string(from: gap.gapEnd)) (\(gap.effectiveMinutes)min)")
+        }
+        #endif
+
         // Build weather note/theme using effective weather for this date
         let dateWeatherNote: String = {
             guard let w = effectiveWeather else { return "Weather unavailable" }
@@ -470,6 +481,11 @@ final class TodayViewModel {
                 visitStore: .shared
             )
 
+            #if DEBUG
+            let gapTypes = fillableGaps.map { $0.suggestedType?.rawValue ?? "nil" }.joined(separator: ", ")
+            print("📊 Compose: \(fillableGaps.count) gaps [\(gapTypes)] | pool: \(pool.activities.count) activities, \(pool.lunches.count) lunches, \(pool.dinners.count) dinners")
+            #endif
+
             do {
                 let aiSlots = try await AgendaComposer.compose(
                     gaps: fillableGaps,
@@ -487,6 +503,13 @@ final class TodayViewModel {
                 var allSlots = currentAnchors.map { anchorToSlot($0, language: language) }
                 allSlots.append(contentsOf: aiSlots)
                 allSlots.sort { $0.time < $1.time }
+
+                #if DEBUG
+                print("🔗 AI merge: \(currentAnchors.count) anchors + \(aiSlots.count) AI slots = \(allSlots.count) total")
+                for slot in allSlots {
+                    print("   → [\(slot.id)] \(slot.time) \(slot.type.rawValue) \(slot.venueName)")
+                }
+                #endif
 
                 // Enrich AI slots with swap alternatives from the pool
                 allSlots = enrichWithSwaps(
@@ -531,8 +554,15 @@ final class TodayViewModel {
             }
         }
 
-        // 5. Template engine fallback (now gap-aware)
-        buildTemplateFallback(session: session, language: language, dateISO: dateISO, fillableGaps: fillableGaps.isEmpty ? nil : fillableGaps, planDate: planDate)
+        // 5. Template engine fallback
+        // Only apply gap-aware filtering when there are actual anchors.
+        // Without anchors, the template should return all slots regardless of current time.
+        let hasAnchors = !currentAnchors.isEmpty
+        let gapsForTemplate = hasAnchors ? (fillableGaps.isEmpty ? nil : fillableGaps) : nil
+        #if DEBUG
+        print("📋 Falling back to template engine (fillableGaps: \(fillableGaps.count), hasAnchors: \(hasAnchors))")
+        #endif
+        buildTemplateFallback(session: session, language: language, dateISO: dateISO, fillableGaps: gapsForTemplate, planDate: planDate)
     }
 
     /// Invalidate cache and recompose the agenda for the currently selected day.
@@ -540,6 +570,7 @@ final class TodayViewModel {
     func rebuildAgenda(city: City, language: AppLanguage, session: FamilySession) async {
         ZnuniEvent.planRebuilt()
         clearExportedEvents()
+        conflictWarning = nil
         await agendaCache.invalidate()
         recentlyShownStore.clear()
         agenda = nil
@@ -997,21 +1028,51 @@ final class TodayViewModel {
             planDate: planDate
         )
 
-        // Gap-aware filtering: only keep slots whose ID matches a fillable gap's suggestion type
-        if let gaps = fillableGaps, !gaps.isEmpty {
-            // Map gap suggestion types to the slot IDs they correspond to
-            let allowedSlotIDs: Set<String> = Set(gaps.compactMap { gap -> String? in
-                switch gap.suggestedType {
-                case .morningActivity:  return "morning"
-                case .afternoonActivity: return "afternoon"
-                case .quickActivity:    return "morning"  // quick fills morning slot
-                case .lunch:            return "lunch"
-                case .dinner:           return "dinner"
-                case nil:               return nil
-                }
-            })
+        #if DEBUG
+        print("📋 Template engine produced \(result.slots.count) slots:")
+        for slot in result.slots {
+            print("   → [\(slot.id)] \(slot.time) \(slot.type.rawValue) \(slot.venueName)")
+        }
+        #endif
 
-            var filtered = result.slots.filter { allowedSlotIDs.contains($0.id) }
+        // Gap-aware filtering: only keep slots whose ID matches a fillable gap's suggestion type,
+        // and adjust slot times to fall within their corresponding gap window.
+        if let gaps = fillableGaps, !gaps.isEmpty {
+            // Build a mapping from slot ID → corresponding gap
+            var gapForSlotID: [String: FreeGap] = [:]
+            for gap in gaps {
+                switch gap.suggestedType {
+                case .morningActivity:  gapForSlotID["morning"] = gap
+                case .afternoonActivity: gapForSlotID["afternoon"] = gap
+                case .quickActivity:    gapForSlotID["morning"] = gap
+                case .lunch:            gapForSlotID["lunch"] = gap
+                case .dinner:           gapForSlotID["dinner"] = gap
+                case nil:               break
+                }
+            }
+
+            let timeFormatter = DateFormatter()
+            timeFormatter.dateFormat = "HH:mm"
+            timeFormatter.timeZone = TimeZone(identifier: "Europe/Zurich")
+
+            var filtered = result.slots
+                .filter { gapForSlotID[$0.id] != nil }
+                .map { slot -> AgendaSlot in
+                    guard let gap = gapForSlotID[slot.id] else { return slot }
+                    // Ensure the slot time falls within its gap window
+                    let gapStartTime = timeFormatter.string(from: gap.effectiveStart)
+                    let gapEndTime = timeFormatter.string(from: gap.gapEnd)
+                    if slot.time < gapStartTime || slot.time >= gapEndTime {
+                        // Snap to gap start + small offset
+                        var adjusted = slot
+                        let snappedDate = gap.effectiveStart.addingTimeInterval(15 * 60) // 15 min into the gap
+                        let snappedTime = timeFormatter.string(from: snappedDate < gap.gapEnd ? snappedDate : gap.effectiveStart)
+                        adjusted.time = snappedTime
+                        adjusted.slotDate = AgendaSlot.resolveSlotDate(time: snappedTime, planDate: planDate)
+                        return adjusted
+                    }
+                    return slot
+                }
 
             // Merge anchor display slots
             let dateForAnchors = dateISO.flatMap { iso -> Date? in
@@ -1023,8 +1084,15 @@ final class TodayViewModel {
             let anchors = AnchorStore.shared.anchors(for: dateForAnchors)
             if !anchors.isEmpty {
                 filtered.append(contentsOf: anchors.map { anchorToSlot($0, language: language) })
-                filtered.sort { $0.time < $1.time }
             }
+            filtered.sort { $0.time < $1.time }
+
+            #if DEBUG
+            print("📋 After gap filter + anchors: \(filtered.count) slots:")
+            for slot in filtered {
+                print("   → [\(slot.id)] \(slot.time) \(slot.type.rawValue) \(slot.venueName)")
+            }
+            #endif
 
             result = result.with(slots: filtered)
         }
@@ -1262,17 +1330,19 @@ final class TodayViewModel {
 
     /// Current fillable gaps based on anchors and time of day.
     /// Computed on demand for the context banner and header display.
+    /// Uses selectedPlanDay (not targetDate) so it matches what the user is viewing.
     var currentFillableGaps: [FreeGap] {
-        let anchors = AnchorStore.shared.anchors()
-        let now = Date()
-        return GapAnalysisEngine.analyse(anchors: anchors, now: now, date: targetDate)
+        let planDate = selectedPlanDay.date()
+        let anchors = AnchorStore.shared.anchors(for: planDate)
+        let now = Calendar.current.isDateInToday(planDate) ? Date() : Calendar.current.startOfDay(for: planDate)
+        return GapAnalysisEngine.analyse(anchors: anchors, now: now, date: planDate)
             .filter { $0.isFillable }
     }
 
     /// True when anchors exist but zero fillable gaps remain.
     /// Triggers AnchorOnlyView — no API call, no AI suggestions.
     var isAnchorOnlyState: Bool {
-        let anchors = AnchorStore.shared.anchors()
+        let anchors = AnchorStore.shared.anchors(for: selectedPlanDay.date())
         guard !anchors.isEmpty else { return false }
         return currentFillableGaps.isEmpty
     }
@@ -1280,7 +1350,7 @@ final class TodayViewModel {
     /// True when zero anchors AND zero fillable gaps (late evening, all elapsed).
     /// Triggers DayCompleteView.
     var isDayCompleteState: Bool {
-        let anchors = AnchorStore.shared.anchors()
+        let anchors = AnchorStore.shared.anchors(for: selectedPlanDay.date())
         guard anchors.isEmpty else { return false }
         return currentFillableGaps.isEmpty
     }
@@ -1289,7 +1359,7 @@ final class TodayViewModel {
     /// Priority: gap state → weather → nil.
     func contextBannerText(language: AppLanguage) -> String? {
         let gaps = currentFillableGaps
-        let anchors = AnchorStore.shared.anchors()
+        let anchors = AnchorStore.shared.anchors(for: selectedPlanDay.date())
 
         // All gaps elapsed — evening mode
         if gaps.isEmpty && !anchors.isEmpty {
@@ -1343,8 +1413,8 @@ final class TodayViewModel {
                 : "Der Tag ist fast geplant — noch ein Vorschlag für \(typeName)."
         }
 
-        // Weather-based fallback for good days
-        guard let weather else { return nil }
+        // Weather-based fallback — use weather for the selected day, not just today
+        guard let weather = weatherForSelectedDay else { return nil }
 
         if weather.temperature < 0 {
             return language == .en
@@ -1788,15 +1858,15 @@ final class TodayViewModel {
 
     // MARK: - Daily Forecast
 
-    /// Fetch a 3-day daily forecast from Open-Meteo for the selected city.
-    /// Populates `dailyForecast` with `DayWeather` entries for today, tomorrow, etc.
+    /// Fetch an 8-day daily forecast from Open-Meteo for the selected city.
+    /// Populates `dailyForecast` with `DayWeather` entries covering the date picker range.
     @MainActor
     private func fetchDailyForecast(city: City) async {
         let coord = city.coordinate
         let urlString = "https://api.open-meteo.com/v1/forecast"
             + "?latitude=\(coord.latitude)&longitude=\(coord.longitude)"
             + "&daily=weather_code,temperature_2m_max,temperature_2m_min"
-            + "&forecast_days=3&timezone=Europe/Zurich"
+            + "&forecast_days=8&timezone=Europe/Zurich"
         guard let url = URL(string: urlString) else { return }
         do {
             let (data, _) = try await URLSession.shared.data(from: url)

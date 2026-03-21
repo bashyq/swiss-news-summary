@@ -204,8 +204,8 @@ struct DayDetailView: View {
                     }
                 }
 
-                // "Plan around this" CTA (only for plannable events on today)
-                if isToday && festival.isPlannable {
+                // "Plan around this" CTA
+                if festival.isPlannable {
                     Button {
                         anchorFormEvent = festival
                     } label: {

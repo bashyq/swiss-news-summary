@@ -14,6 +14,7 @@ struct SunshineCard: View {
     let userLocation: CLLocation?
     var highlightID: String?
     let onTap: () -> Void
+    var onPlanHere: (() -> Void)?
 
     private var isBaseline: Bool {
         destination.isBaseline == true
@@ -151,6 +152,26 @@ struct SunshineCard: View {
 
             // Destination highlights + action buttons
             SunshineHighlightsSection(destination: destination, language: language)
+
+            // "Plan a day here" CTA — only for covered cities
+            if let onPlanHere, PlanningCity.isCovered(destination.id) {
+                Button(action: onPlanHere) {
+                    Label(
+                        language == .de
+                            ? "Tag in \(destination.localizedName(language: language)) planen →"
+                            : "Plan a day in \(destination.localizedName(language: language)) →",
+                        systemImage: "calendar.badge.plus"
+                    )
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Color.znNavy.opacity(0.12))
+                    .foregroundStyle(.znNavy)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding(AppSpacing.cardPadding)
         .transition(.opacity.combined(with: .move(edge: .top)))
