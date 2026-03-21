@@ -1001,11 +1001,19 @@ struct AgendaSlotCard: View {
 
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
-                if isOpenForLunch == true {
+                let venueStatus = OpeningHoursParser.status(from: hours)
+                let isOpen = venueStatus == .open || (venueStatus == .unknown && isOpenForLunch == true)
+                let isClosed = venueStatus == .closed || (venueStatus == .unknown && isOpenForLunch == false)
+                if isOpen {
                     Circle().fill(Color.znPositive).frame(width: 7, height: 7)
-                    Text(appState.localized(en: "Open for lunch", de: "Mittagstisch"))
+                    Text(appState.localized(en: "Open", de: "Geöffnet"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.znPositive)
+                } else if isClosed {
+                    Circle().fill(Color.znNegative).frame(width: 7, height: 7)
+                    Text(appState.localized(en: "Closed", de: "Geschlossen"))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.znNegative)
                 } else {
                     Circle().fill(Color.znMuted).frame(width: 7, height: 7)
                     Text(appState.localized(en: "Opening hours", de: "Öffnungszeiten"))

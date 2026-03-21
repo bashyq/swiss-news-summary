@@ -141,7 +141,7 @@ struct LunchCard: View {
                 Image(uiImage: photo)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: 94, height: 100)
+                    .frame(width: 76, height: 76)
                     .clipped()
             } else if !spot.id.hasPrefix("custom-"),
                let photoURL = APIClient.shared.photoURL(for: spot.id) {
@@ -151,7 +151,7 @@ struct LunchCard: View {
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                            .frame(width: 94, height: 100)
+                            .frame(width: 76, height: 76)
                             .clipped()
                     case .failure:
                         cuisineGradientFallback
@@ -176,7 +176,7 @@ struct LunchCard: View {
                 .clipShape(Capsule())
                 .padding(7)
         }
-        .frame(width: 94, height: 100)
+        .frame(width: 76, height: 76)
         .clipped()
     }
 
@@ -260,15 +260,15 @@ struct LunchCard: View {
             if spot.outdoorSeating == true {
                 vcardTag(
                     text: "☀️ \(appState.localized(en: "Terrace", de: "Terrasse"))",
-                    bgColor: Color.znTerracotta.opacity(0.1),
-                    textColor: .znTerracotta
+                    bgColor: .znNeutralTagBg,
+                    textColor: .znNeutralTagText
                 )
             }
             if spot.takeaway == true {
                 vcardTag(
                     text: appState.localized(en: "Takeaway", de: "Takeaway"),
-                    bgColor: Color.znNavy.opacity(0.08),
-                    textColor: .znNavy
+                    bgColor: .znNeutralTagBg,
+                    textColor: .znNeutralTagText
                 )
             }
 
@@ -361,13 +361,23 @@ struct LunchCard: View {
             // Status header — real-time open/closed via client-side parser
             HStack(spacing: 6) {
                 let venueStatus = OpeningHoursParser.status(from: hours)
-                Circle().fill(venueStatus == .open ? Color.znPositive : Color.znMuted)
-                    .frame(width: 7, height: 7)
-                Text(venueStatus == .open
-                     ? appState.localized(en: "Open now", de: "Jetzt geöffnet")
-                     : appState.localized(en: "Opening hours", de: "Öffnungszeiten"))
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(venueStatus == .open ? .znPositive : .znMuted)
+                switch venueStatus {
+                case .open:
+                    Circle().fill(Color.znPositive).frame(width: 7, height: 7)
+                    Text(appState.localized(en: "Open now", de: "Jetzt geöffnet"))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.znPositive)
+                case .closed:
+                    Circle().fill(Color.znNegative).frame(width: 7, height: 7)
+                    Text(appState.localized(en: "Closed", de: "Geschlossen"))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.znNegative)
+                case .unknown:
+                    Circle().fill(Color.znMuted).frame(width: 7, height: 7)
+                    Text(appState.localized(en: "Opening hours", de: "Öffnungszeiten"))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.znMuted)
+                }
             }
 
             // Hours listed per day

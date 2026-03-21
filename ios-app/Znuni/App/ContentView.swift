@@ -310,13 +310,54 @@ struct ZnuniTabBar: View {
         }
     }
 
-    /// Settings: Gear icon — stroked when inactive, filled when selected
+    /// Settings: Canvas-drawn gear icon — matches line weight of other Canvas icons
     private func settingsIcon(isSelected: Bool, active: Color, inactive: Color) -> some View {
-        let symbolName = isSelected ? "gearshape.fill" : "gearshape"
-        let color = isSelected ? active : inactive
+        Canvas { context, size in
+            let s = min(size.width, size.height)
+            let scale = s / 22.0
+            let lw: CGFloat = 1.5 * scale
+            let color = isSelected ? active : inactive
+            let center = CGPoint(x: 11 * scale, y: 11 * scale)
 
-        return Image(systemName: symbolName)
-            .font(.system(size: 19, weight: .regular))
-            .foregroundStyle(color)
+            // Inner circle
+            let innerR: CGFloat = 3.5 * scale
+            let innerPath = Path(ellipseIn: CGRect(
+                x: center.x - innerR, y: center.y - innerR,
+                width: innerR * 2, height: innerR * 2
+            ))
+
+            // Outer circle
+            let outerR: CGFloat = 6 * scale
+            let outerPath = Path(ellipseIn: CGRect(
+                x: center.x - outerR, y: center.y - outerR,
+                width: outerR * 2, height: outerR * 2
+            ))
+
+            // Gear teeth — 6 small rectangles radiating from center
+            var teethPath = Path()
+            let toothW: CGFloat = 2.5 * scale
+            let toothH: CGFloat = 3 * scale
+            let toothR: CGFloat = 7.5 * scale
+            for i in 0..<6 {
+                let angle = Double(i) * (.pi / 3) - .pi / 2
+                let tx = center.x + cos(angle) * toothR - toothW / 2
+                let ty = center.y + sin(angle) * toothR - toothH / 2
+                let rect = CGRect(x: tx, y: ty, width: toothW, height: toothH)
+                let transform = CGAffineTransform(translationX: center.x, y: center.y)
+                    .rotated(by: angle + .pi / 2)
+                    .translatedBy(x: -center.x, y: -center.y)
+                teethPath.addRect(rect, transform: transform)
+            }
+
+            if isSelected {
+                context.fill(outerPath, with: .color(color))
+                context.fill(teethPath, with: .color(color))
+                context.fill(innerPath, with: .color(Color.znCream))
+            } else {
+                context.stroke(outerPath, with: .color(color), lineWidth: lw)
+                context.stroke(innerPath, with: .color(color), lineWidth: lw)
+                context.stroke(teethPath, with: .color(color), lineWidth: lw)
+            }
+        }
     }
 }
