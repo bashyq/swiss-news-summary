@@ -1498,7 +1498,10 @@ final class TodayViewModel {
     /// News items for the currently selected category
     var currentNewsItems: [NewsItem] {
         guard let categories = newsData?.categories else { return [] }
-        return categories.items(for: selectedCategory)
+        let items = categories.items(for: selectedCategory)
+        // Exclude the briefing top story to avoid showing it twice
+        guard let topHeadline = newsData?.briefing?.topStory?.headline else { return items }
+        return items.filter { $0.headline != topHeadline }
     }
 
     /// Category keys that have at least one item, preserving display order

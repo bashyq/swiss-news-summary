@@ -6,14 +6,9 @@ struct EventsHeroCard: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                (
-                    Text("What's ")
-                        .font(.cardHeadline)
-                        .foregroundStyle(.white)
-                    + Text("happening?")
-                        .font(.system(size: 17, weight: .semibold).italic())
-                        .foregroundStyle(.white)
-                )
+                Text("What's happening?")
+                    .font(.cardHeadline)
+                    .foregroundStyle(.white)
                 Text("Events, markets & more")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.7))
