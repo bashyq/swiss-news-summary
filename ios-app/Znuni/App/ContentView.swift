@@ -45,8 +45,10 @@ struct ContentView: View {
     @ViewBuilder
     private func tabContent(_ tab: AppTab) -> some View {
         switch tab {
+        case .news:
+            NewsNavigationStack()
         case .today:
-            TodayNavigationStack()
+            PlanTabView()
         case .discover:
             DiscoverNavigationStack()
         case .settings:
@@ -57,10 +59,9 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Today Navigation Stack
+// MARK: - News Navigation Stack
 
-/// Manages its own NavigationPath so "See all news →" can push NewsView.
-private struct TodayNavigationStack: View {
+private struct NewsNavigationStack: View {
     @Environment(AppState.self) private var appState
     @State private var path = NavigationPath()
 
@@ -69,9 +70,21 @@ private struct TodayNavigationStack: View {
             TodayView()
         }
         .onChange(of: appState.tabRetapCount) {
-            if appState.selectedTab == .today && !path.isEmpty {
+            if appState.selectedTab == .news && !path.isEmpty {
                 path = NavigationPath()
             }
+        }
+    }
+}
+
+// MARK: - Plan Tab (placeholder — replaced in Task 6)
+
+struct PlanTabView: View {
+    var body: some View {
+        NavigationStack {
+            Text("Plan tab — coming in Task 6")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.znCream)
         }
     }
 }
@@ -252,8 +265,10 @@ struct ZnuniTabBar: View {
         let inactiveColor = Color.znMuted
 
         switch tab {
+        case .news:
+            newspaperIcon(isSelected: isSelected, active: activeColor, inactive: inactiveColor)
         case .today:
-            newsIcon(isSelected: isSelected, active: activeColor, inactive: inactiveColor)
+            gridIcon(isSelected: isSelected, active: activeColor, inactive: inactiveColor)
         case .discover:
             mountainIcon(isSelected: isSelected, active: activeColor, inactive: inactiveColor)
         case .settings:
@@ -261,8 +276,57 @@ struct ZnuniTabBar: View {
         }
     }
 
-    /// News: 2×2 grid of rounded squares — first filled when selected
-    private func newsIcon(isSelected: Bool, active: Color, inactive: Color) -> some View {
+    /// Newspaper: folded page with headline and text lines
+    private func newspaperIcon(isSelected: Bool, active: Color, inactive: Color) -> some View {
+        Canvas { context, size in
+            let s = min(size.width, size.height)
+            let scale = s / 22.0
+            let lw: CGFloat = 1.5 * scale
+            let color = isSelected ? active : inactive
+
+            // Outer page shape with folded left edge
+            var page = Path()
+            page.move(to: CGPoint(x: 5 * scale, y: 3 * scale))
+            page.addLine(to: CGPoint(x: 19 * scale, y: 3 * scale))
+            page.addLine(to: CGPoint(x: 19 * scale, y: 19 * scale))
+            page.addLine(to: CGPoint(x: 3 * scale, y: 19 * scale))
+            page.addLine(to: CGPoint(x: 3 * scale, y: 5 * scale))
+            page.closeSubpath()
+
+            // Fold triangle
+            var fold = Path()
+            fold.move(to: CGPoint(x: 3 * scale, y: 5 * scale))
+            fold.addLine(to: CGPoint(x: 5 * scale, y: 5 * scale))
+            fold.addLine(to: CGPoint(x: 5 * scale, y: 3 * scale))
+            fold.closeSubpath()
+
+            if isSelected {
+                context.fill(page, with: .color(color))
+                context.fill(fold, with: .color(color.opacity(0.5)))
+                // Headline and text lines in background color
+                let lineColor = Color.znCream
+                let headline = Path(CGRect(x: 7 * scale, y: 7 * scale, width: 9 * scale, height: 2 * scale))
+                context.fill(headline, with: .color(lineColor))
+                let line1 = Path(CGRect(x: 7 * scale, y: 11.5 * scale, width: 9 * scale, height: 1.2 * scale))
+                context.fill(line1, with: .color(lineColor))
+                let line2 = Path(CGRect(x: 7 * scale, y: 14.5 * scale, width: 6 * scale, height: 1.2 * scale))
+                context.fill(line2, with: .color(lineColor))
+            } else {
+                context.stroke(page, with: .color(color), lineWidth: lw)
+                context.stroke(fold, with: .color(color), lineWidth: lw)
+                // Headline and text lines
+                let headline = Path(CGRect(x: 7 * scale, y: 7 * scale, width: 9 * scale, height: 2 * scale))
+                context.fill(headline, with: .color(color))
+                let line1 = Path(CGRect(x: 7 * scale, y: 11.5 * scale, width: 9 * scale, height: 1.2 * scale))
+                context.fill(line1, with: .color(color))
+                let line2 = Path(CGRect(x: 7 * scale, y: 14.5 * scale, width: 6 * scale, height: 1.2 * scale))
+                context.fill(line2, with: .color(color))
+            }
+        }
+    }
+
+    /// Today: 2×2 grid of rounded squares — first filled when selected
+    private func gridIcon(isSelected: Bool, active: Color, inactive: Color) -> some View {
         Canvas { context, size in
             let s = min(size.width, size.height)
             let scale = s / 22.0

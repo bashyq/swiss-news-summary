@@ -209,7 +209,8 @@ final class AppState {
 
         let host = url.host ?? ""
         switch host {
-        case "news", "today": selectedTab = .today
+        case "news": selectedTab = .news
+        case "today": selectedTab = .today
         case "activities", "explore", "lunch", "events":
             selectedTab = .discover
             pendingDiscoverRoute = host
@@ -231,12 +232,14 @@ final class AppState {
 // MARK: - App Tab
 
 enum AppTab: String, CaseIterable {
+    case news
     case today
     case discover
     case settings
 
     var label: String {
         switch self {
+        case .news: return "News"
         case .today: return "Today"
         case .discover: return "Discover"
         case .settings: return "Settings"
@@ -245,6 +248,7 @@ enum AppTab: String, CaseIterable {
 
     var labelDE: String {
         switch self {
+        case .news: return "News"
         case .today: return "Heute"
         case .discover: return "Entdecken"
         case .settings: return "Einstellungen"
@@ -253,6 +257,7 @@ enum AppTab: String, CaseIterable {
 
     var sfSymbol: String {
         switch self {
+        case .news: return "newspaper"
         case .today: return "square.grid.2x2"
         case .discover: return "mountain.2"
         case .settings: return "gearshape"
