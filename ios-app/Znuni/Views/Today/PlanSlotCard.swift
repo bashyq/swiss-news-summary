@@ -12,6 +12,9 @@ struct PlanSlotCard: View {
     let slot: AgendaSlot
     @Binding var expandedID: String?
 
+    /// When true, the card shows a compact saved appearance (muted, no reason/footer).
+    var isSaved: Bool = false
+
     // MARK: - Closures
 
     var onLock: () -> Void = {}
@@ -51,10 +54,10 @@ struct PlanSlotCard: View {
                 .stroke(cardBorderStyle, lineWidth: isHomeActivity ? 1.5 : 1)
         )
         .shadow(
-            color: isHomeActivity ? .clear : (isExpanded ? AppShadow.cardExpanded.color : AppShadow.card.color),
-            radius: isExpanded ? AppShadow.cardExpanded.radius : AppShadow.card.radius,
+            color: isHomeActivity ? .clear : (isExpanded ? AppShadow.cardExpanded.color : (isSaved ? AppShadow.subtle.color : AppShadow.card.color)),
+            radius: isExpanded ? AppShadow.cardExpanded.radius : (isSaved ? AppShadow.subtle.radius : AppShadow.card.radius),
             x: 0,
-            y: isExpanded ? AppShadow.cardExpanded.y : AppShadow.card.y
+            y: isExpanded ? AppShadow.cardExpanded.y : (isSaved ? AppShadow.subtle.y : AppShadow.card.y)
         )
         .contentShape(Rectangle())
         .onTapGesture {
@@ -93,26 +96,28 @@ struct PlanSlotCard: View {
                     .foregroundStyle(.znInk)
                     .lineLimit(2)
 
-                // Reason (2-line clamp)
-                if !slot.reason.isEmpty {
+                // Reason (2-line clamp) — hidden in saved state
+                if !isSaved && !slot.reason.isEmpty {
                     Text(slot.reason)
                         .font(.system(size: 12, weight: .light))
                         .foregroundStyle(.znBody)
                         .lineLimit(2)
                 }
 
-                // Tags
-                if !slot.tags.isEmpty {
+                // Tags — hidden in saved state
+                if !isSaved && !slot.tags.isEmpty {
                     tagsRow(slot.tags)
                 }
             }
 
             Spacer(minLength: 0)
 
-            // Right side: context menu + chevron
+            // Right side: context menu + chevron — simplified in saved state
             VStack(spacing: 8) {
-                contextMenuButton
-                    .frame(width: 24, height: 24)
+                if !isSaved {
+                    contextMenuButton
+                        .frame(width: 24, height: 24)
+                }
 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 10, weight: .semibold))

@@ -48,6 +48,11 @@ final class PlanViewModel {
     /// Whether data pools are currently loading.
     var isLoadingData = false
 
+    /// Last successfully dealt agenda for the current date — used as fallback in error state.
+    var lastDealtAgenda: DayAgenda? {
+        inMemoryPlans[isoString(for: selectedDate)]
+    }
+
     // MARK: - Date Strip
 
     /// 14 days starting from today for the date strip.

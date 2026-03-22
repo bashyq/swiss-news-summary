@@ -11,6 +11,8 @@ struct PlanTabView: View {
     @State private var datePickerPlanDay: PlanDay = .today
     @State private var expandedSlotID: String?
     @State private var replacingSlot: AgendaSlot?
+    @State private var visibleSlotCount: Int = 0
+    @State private var previousStateWasCalendarPreview = false
 
     var body: some View {
         NavigationStack {
@@ -53,6 +55,10 @@ struct PlanTabView: View {
         .onChange(of: viewModel.selectedDate) { oldValue, newValue in
             Task {
                 await viewModel.selectDate(newValue, previousDate: oldValue)
+                // After date selection, if we loaded a cached plan, show all cards immediately
+                if let agenda = viewModel.currentAgenda {
+                    visibleSlotCount = agenda.slots.count
+                }
             }
         }
         .task {
@@ -62,6 +68,10 @@ struct PlanTabView: View {
                 viewModel.planningCity = PlanningCity(city: appState.city)
             }
             await viewModel.selectDate(viewModel.selectedDate)
+            // If a cached plan was loaded, show all cards immediately
+            if let agenda = viewModel.currentAgenda {
+                visibleSlotCount = agenda.slots.count
+            }
         }
         .sheet(isPresented: $showDatePicker) {
             DatePickerSheet(selectedPlanDay: $datePickerPlanDay)
@@ -72,6 +82,16 @@ struct PlanTabView: View {
         .sheet(item: $replacingSlot) { slot in
             CustomSlotSheet(replacingSlot: slot) { name, start, end, address in
                 viewModel.replaceWithCustom(slotId: slot.id, name: name, start: start, end: end, address: address)
+            }
+        }
+        .onChange(of: isDealState) { _, isDealt in
+            if isDealt {
+                animateDealIn()
+            }
+        }
+        .onChange(of: isCalendarPreviewState) { _, isPreviewing in
+            if isPreviewing {
+                previousStateWasCalendarPreview = true
             }
         }
     }
@@ -195,11 +215,12 @@ struct PlanTabView: View {
 
     private func dealtState(_ agenda: DayAgenda, isSaved: Bool) -> some View {
         VStack(spacing: 0) {
-            // Timeline of slots
-            ForEach(Array(agenda.slots.enumerated()), id: \.element.id) { index, slot in
+            // Timeline of slots — staggered appearance via visibleSlotCount
+            ForEach(Array(agenda.slots.prefix(visibleSlotCount).enumerated()), id: \.element.id) { index, slot in
                 PlanSlotCard(
                     slot: slot,
                     expandedID: $expandedSlotID,
+                    isSaved: isSaved,
                     onLock: {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         viewModel.lock(slotId: slot.id)
@@ -214,45 +235,89 @@ struct PlanTabView: View {
                     },
                     onReplace: { replacingSlot = slot }
                 )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
 
                 // Travel connector between slots
                 if index < agenda.slots.count - 1, let travel = slot.travelToNext {
                     SimpleTravelConnector(estimate: travel)
+                        .transition(.opacity)
                 }
             }
 
-            // Bottom action bar
-            actionBar(isSaved: isSaved)
-                .padding(.top, 24)
+            // Bottom action bar — show only when all cards are visible
+            if visibleSlotCount >= agenda.slots.count {
+                actionBar(isSaved: isSaved)
+                    .padding(.top, 24)
+                    .transition(.opacity)
+            }
+        }
+        .onAppear {
+            // If returning to a dealt state (e.g. date switch with cached plan),
+            // show all cards immediately
+            if visibleSlotCount == 0 {
+                visibleSlotCount = agenda.slots.count
+            }
         }
     }
 
     // MARK: - Error State
 
     private func errorState(_ message: String) -> some View {
-        VStack(spacing: 16) {
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 32))
-                .foregroundStyle(.znMuted)
-                .padding(.top, 32)
+        VStack(spacing: 12) {
+            // Check for stale cached plan to show as fallback
+            if let staleAgenda = viewModel.lastDealtAgenda {
+                // Warning banner
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(Color.znTerracotta)
+                    Text(appState.localized(
+                        en: "Couldn\u{2019}t refresh \u{2014} showing previous plan",
+                        de: "Aktualisierung fehlgeschlagen \u{2014} zeige letzten Plan"
+                    ))
+                    .font(.system(size: 13))
+                    .foregroundStyle(.znBody)
+                }
+                .padding(12)
+                .background(Color.znAlertBg)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
 
-            Text(message)
-                .font(.cardHeadline)
-                .foregroundStyle(.znInk)
-                .multilineTextAlignment(.center)
+                Button {
+                    Task { await viewModel.deal() }
+                } label: {
+                    Text(appState.localized(en: "Tap to retry", de: "Tippen zum Wiederholen"))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.znNavy)
+                }
+                .buttonStyle(.plain)
 
-            Button {
-                Task { await viewModel.deal() }
-            } label: {
-                Text(appState.localized(en: "Retry", de: "Erneut versuchen"))
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(Color.znNavy)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                // Show the stale plan
+                dealtState(staleAgenda, isSaved: false)
+                    .opacity(0.75)
+            } else {
+                // Pure error — no fallback available
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.system(size: 32))
+                    .foregroundStyle(.znMuted)
+                    .padding(.top, 32)
+
+                Text(message)
+                    .font(.cardHeadline)
+                    .foregroundStyle(.znInk)
+                    .multilineTextAlignment(.center)
+
+                Button {
+                    Task { await viewModel.deal() }
+                } label: {
+                    Text(appState.localized(en: "Retry", de: "Erneut versuchen"))
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                        .background(Color.znNavy)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
     }
 
@@ -484,6 +549,58 @@ struct PlanTabView: View {
                     )
             }
             .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - Deal Animation
+
+    private var isDealState: Bool {
+        if case .dealt = viewModel.planState { return true }
+        if case .saved = viewModel.planState { return true }
+        return false
+    }
+
+    private var isCalendarPreviewState: Bool {
+        if case .calendarPreview = viewModel.planState { return true }
+        return false
+    }
+
+    private func animateDealIn() {
+        guard let agenda = viewModel.currentAgenda else { return }
+        let slots = agenda.slots
+        let cameFromCalendar = previousStateWasCalendarPreview
+        previousStateWasCalendarPreview = false
+
+        if cameFromCalendar {
+            // Two-beat: calendar-sourced slots appear immediately, then others stagger in
+            // Find the last calendar slot index — show up to that point instantly
+            let lastCalendarIndex = slots.lastIndex(where: { $0.source == .calendar }) ?? -1
+            let immediateCount = lastCalendarIndex + 1
+
+            // Show all calendar slots at once
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                visibleSlotCount = max(immediateCount, 0)
+            }
+            // Then stagger non-calendar slots after a brief pause
+            let baseDelay: Double = 0.3
+            for i in immediateCount..<slots.count {
+                let staggerIndex = i - immediateCount
+                DispatchQueue.main.asyncAfter(deadline: .now() + baseDelay + Double(staggerIndex) * 0.12) {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        visibleSlotCount = i + 1
+                    }
+                }
+            }
+        } else {
+            // Standard stagger: all cards deal in one by one
+            visibleSlotCount = 0
+            for i in 0..<slots.count {
+                DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.12) {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        visibleSlotCount = i + 1
+                    }
+                }
+            }
         }
     }
 
