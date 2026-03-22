@@ -296,9 +296,12 @@ final class PlanViewModel {
         // Gap-aware filtering: only keep slots matching fillable gaps
         var filteredSlots = filterSlotsToGaps(result.slots, gaps: fillableGaps, planDate: planDate)
 
-        // Merge locked slots (skip anchor-derived duplicates — locked slots already cover them)
+        // Merge locked slots — they take priority over template-generated ones (have full data like venueId/photos)
         for slot in lockedSlots {
-            if !filteredSlots.contains(where: { $0.id == slot.id || $0.venueName == slot.venueName }) {
+            if let existingIdx = filteredSlots.firstIndex(where: { $0.id == slot.id || $0.venueName == slot.venueName }) {
+                // Replace template slot with locked slot (locked has venueId, photo data, etc.)
+                filteredSlots[existingIdx] = slot
+            } else {
                 filteredSlots.append(slot)
             }
         }
