@@ -59,7 +59,6 @@ struct PlanSlotCard: View {
             x: 0,
             y: isExpanded ? AppShadow.cardExpanded.y : (isSaved ? AppShadow.subtle.y : AppShadow.card.y)
         )
-        .contentShape(Rectangle())
         .onTapGesture {
             withAnimation(AppAnimation.spring) {
                 expandedID = isExpanded ? nil : slot.id
