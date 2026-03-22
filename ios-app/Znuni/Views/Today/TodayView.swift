@@ -15,10 +15,8 @@ struct TodayView: View {
     @State private var showWeatherDetail = false
     @State private var showHolidayDetail = false
     @State private var showSessionConfig = false
-    // SlotEditSheet is presented via .sheet(item: $editingSlot)
     @State private var customSlotSnapshot: AgendaSlot?  // persists after editingSlot is nilled
     @State private var showAnchorForm = false
-    @State private var editingSlot: AgendaSlot?
     @State private var editingAnchor: DayAnchor?
     @State private var anchors: [DayAnchor] = AnchorStore.shared.anchors()
     @State private var expandedNewsID: String?
@@ -75,30 +73,6 @@ struct TodayView: View {
                     }
                 }
                 .presentationDetents([.medium, .large])
-            }
-            .sheet(item: $editingSlot) { slot in
-                SlotEditSheet(
-                    slot: slot,
-                    onEditTime: { newTime in
-                        viewModel.editSlotTime(slotId: slot.id, newTime: newTime)
-                    },
-                    onReplaceWithCustom: {
-                        // Capture slot data before editingSlot gets nilled by sheet(item:) dismissal
-                        let snapshotSlot = slot
-                        // Delay to allow edit sheet to fully dismiss before presenting custom form
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            customSlotSnapshot = snapshotSlot
-                        }
-                    },
-                    onToggleLock: {
-                        viewModel.toggleSlotLock(slotId: slot.id)
-                    },
-                    onRemove: {
-                        viewModel.removeSlot(slotId: slot.id)
-                    }
-                )
-                .environment(appState)
-                .presentationDetents([.medium])
             }
             .sheet(item: $customSlotSnapshot) { slot in
                 CustomSlotFormSheet(
@@ -165,22 +139,6 @@ struct TodayView: View {
                     )
                 )
                 .environment(appState)
-            }
-            .fullScreenCover(isPresented: $viewModel.showCalendarSwipe) {
-                CalendarSwipeView(
-                    events: viewModel.pendingCalendarEvents,
-                    planDate: viewModel.selectedPlanDay.date()
-                ) { acceptedAnchors in
-                    Task {
-                        await viewModel.handleCalendarSwipeComplete(
-                            acceptedAnchors: acceptedAnchors,
-                            city: appState.city,
-                            language: appState.language,
-                            session: appState.familySession
-                        )
-                        anchors = AnchorStore.shared.anchors(for: viewModel.selectedPlanDay.date())
-                    }
-                }
             }
             .onAppear {
                 AnchorStore.shared.purgeIfNewDay()
@@ -259,31 +217,20 @@ struct TodayView: View {
 
     @ViewBuilder
     private var heroBanner: some View {
-        if subView == .plan, viewModel.agendaMode.isExecuting, let agenda = viewModel.agenda {
-            ExecHeaderView(
-                agenda: agenda,
-                currentSlotIndex: viewModel.agendaMode.currentSlotIndex ?? 0,
-                weather: viewModel.weather,
-                isComplete: viewModel.isAgendaComplete,
-                onSessionTap: { showSessionConfig = true },
-                subView: $subView
-            )
-        } else {
-            TodayHeroBanner(
-                weather: viewModel.weatherForSelectedDay,
-                badWeatherMode: viewModel.isBadWeatherForSelectedDay,
-                planningDate: viewModel.selectedPlanDay.date(),
-                planningCityName: viewModel.planningCity.localizedName(language: appState.language),
-                subView: $subView,
-                onWeatherTap: { showWeatherDetail = true },
-                onHolidayTap: { showHolidayDetail = true },
-                contextText: viewModel.contextBannerText(language: appState.language),
-                totalStoryCount: viewModel.totalNewsCount,
-                categoryKeys: viewModel.categoryKeys,
-                selectedCategory: $viewModel.selectedCategory,
-                itemCount: { viewModel.newsItemCount(for: $0) }
-            )
-        }
+        TodayHeroBanner(
+            weather: viewModel.weatherForSelectedDay,
+            badWeatherMode: viewModel.isBadWeatherForSelectedDay,
+            planningDate: viewModel.selectedPlanDay.date(),
+            planningCityName: viewModel.planningCity.localizedName(language: appState.language),
+            subView: $subView,
+            onWeatherTap: { showWeatherDetail = true },
+            onHolidayTap: { showHolidayDetail = true },
+            contextText: viewModel.contextBannerText(language: appState.language),
+            totalStoryCount: viewModel.totalNewsCount,
+            categoryKeys: viewModel.categoryKeys,
+            selectedCategory: $viewModel.selectedCategory,
+            itemCount: { viewModel.newsItemCount(for: $0) }
+        )
     }
 
     // MARK: - Main Content
@@ -351,11 +298,6 @@ struct TodayView: View {
 
     @ViewBuilder
     private var planSubView: some View {
-        // Day config (hidden in execution mode)
-        if !viewModel.agendaMode.isExecuting {
-            yourDayConfigSection
-        }
-
         // Agenda section
         agendaSection
             .onAppear {
@@ -366,34 +308,6 @@ struct TodayView: View {
                 // Re-check calendar when switching days
                 viewModel.checkCalendarSync()
             }
-    }
-
-    // MARK: - Your Day Config Section
-
-    private var yourDayConfigSection: some View {
-        YourDayConfigSection(
-            weather: viewModel.weatherForSelectedDay,
-            badWeatherMode: viewModel.isBadWeatherForSelectedDay,
-            sessionDisplay: appState.familySession.childrenDisplay,
-            anchors: anchors,
-            anchorCount: anchors.count,
-            onWeatherTap: { showWeatherDetail = true },
-            onSessionTap: { showSessionConfig = true },
-            onAnchorAdd: {
-                editingAnchor = nil
-                showAnchorForm = true
-            },
-            onAnchorEdit: { anchor in
-                editingAnchor = anchor
-                showAnchorForm = true
-            },
-            onAnchorDelete: { anchor in
-                let planDate = viewModel.selectedPlanDay.date()
-                AnchorStore.shared.remove(id: anchor.id, for: planDate)
-                anchors = AnchorStore.shared.anchors(for: planDate)
-                // Rebuild is triggered automatically by AnchorStore.didChangeNotification
-            }
-        )
     }
 
     // MARK: - News Sub-View
@@ -586,10 +500,7 @@ struct TodayView: View {
                                 viewModel.exitExecution()
                             }
                         },
-                        onEditSlot: { slot in
-                            editingSlot = slot
-                            // sheet(item:) triggers automatically
-                        },
+                        onEditSlot: { _ in },
                         onSuggestAnother: { slotId in
                             withAnimation(.easeInOut(duration: 0.2)) {
                                 viewModel.suggestAnotherNearby(slotId: slotId)
@@ -636,10 +547,7 @@ struct TodayView: View {
                                 viewModel.exitExecution()
                             }
                         },
-                        onEditSlot: { slot in
-                            editingSlot = slot
-                            // sheet(item:) triggers automatically
-                        },
+                        onEditSlot: { _ in },
                         onSuggestAnother: { slotId in
                             withAnimation(.easeInOut(duration: 0.2)) {
                                 viewModel.suggestAnotherNearby(slotId: slotId)

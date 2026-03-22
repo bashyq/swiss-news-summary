@@ -51,7 +51,7 @@ final class TodayViewModel {
     /// Calendar events pending user review (swipe screen).
     var pendingCalendarEvents: [EKEvent] = []
 
-    /// Whether to show the CalendarSwipeView modal.
+    /// Whether to show the calendar sync modal.
     var showCalendarSwipe = false
 
     /// Whether to show the sync banner (new events detected after plan is built).
@@ -1645,7 +1645,7 @@ final class TodayViewModel {
 
         let slot = currentAgenda.slots[idx]
         let actualDepartureTime = Date()
-        let delta = TimelineShifter.computeDelta(actualDepartureTime: actualDepartureTime, slot: slot)
+        let delta = actualDepartureTime.timeIntervalSince(slot.scheduledEndDate)
 
         // 1. Mark departure on the slot
         currentAgenda.slots[idx].checkOutTime = actualDepartureTime
@@ -1676,12 +1676,11 @@ final class TodayViewModel {
         // Only shift downstream when LATE by more than 10 min.
         // Early finish (delta < 0) never shifts — we don't pull slots earlier.
         if delta > 600 {
-            let shifted = TimelineShifter.shift(
-                slots: currentAgenda.slots,
-                fromIndex: idx,
-                delta: delta
-            )
-            currentAgenda.slots = shifted
+            // Inline timeline shift: add delta to all downstream slots
+            for i in (idx + 1)..<currentAgenda.slots.count {
+                let shifted = currentAgenda.slots[i].slotDate.addingTimeInterval(delta)
+                currentAgenda.slots[i].updateTime(from: shifted)
+            }
 
             // Trigger time shift animation
             timelineDidShift = true

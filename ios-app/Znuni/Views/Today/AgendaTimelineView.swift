@@ -29,8 +29,6 @@ struct AgendaTimelineView: View {
     var onAcceptWarning: (() -> Void)?
     var onDismissWarning: (() -> Void)?
 
-    @State private var openSwapTray: String?
-
     private var currentSlotIndex: Int? {
         agendaMode.currentSlotIndex
     }

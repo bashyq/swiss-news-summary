@@ -32,7 +32,7 @@ struct FeasibilityWarning: Identifiable {
 
 /// Checks shifted slot times for feasibility problems.
 ///
-/// Runs after every `TimelineShifter` call. Returns warnings sorted by priority
+/// Runs after timeline shifts. Returns warnings sorted by priority
 /// (most critical first). Only one banner is shown at a time.
 struct FeasibilityChecker {
 

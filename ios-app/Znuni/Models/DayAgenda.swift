@@ -314,7 +314,7 @@ struct AgendaSlot: Codable, Identifiable {
     var slotDate: Date
 
     /// Scheduled end date = slotDate + durationMinutes (or type default).
-    /// Used by TimelineShifter to compute the departure delta.
+    /// Used to compute the departure delta for timeline shifts.
     var scheduledEndDate: Date {
         let dur = durationMinutes ?? defaultDurationMinutes
         return slotDate.addingTimeInterval(TimeInterval(dur * 60))
