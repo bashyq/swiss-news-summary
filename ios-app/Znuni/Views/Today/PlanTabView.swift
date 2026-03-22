@@ -7,6 +7,8 @@ struct PlanTabView: View {
     @State private var viewModel = PlanViewModel()
     @State private var showDatePicker = false
     @State private var datePickerPlanDay: PlanDay = .today
+    @State private var expandedSlotID: String?
+    @State private var replacingSlot: AgendaSlot?
 
     var body: some View {
         NavigationStack {
@@ -128,7 +130,12 @@ struct PlanTabView: View {
 
             // Calendar event cards
             ForEach(events) { event in
-                calendarEventCard(event)
+                let slot = calendarSlotToAgendaSlot(event)
+                PlanSlotCard(
+                    slot: slot,
+                    expandedID: $expandedSlotID,
+                    onRemove: { viewModel.remove(slotId: slot.id) }
+                )
             }
 
             // Fill the gaps button
@@ -162,7 +169,10 @@ struct PlanTabView: View {
 
             // Show locked slots if any
             ForEach(locked) { slot in
-                simplifiedSlotCard(slot, accentColor: .znNavy)
+                PlanSlotCard(
+                    slot: slot,
+                    expandedID: .constant(nil)
+                )
             }
         }
     }
@@ -173,15 +183,18 @@ struct PlanTabView: View {
         VStack(spacing: 0) {
             // Timeline of slots
             ForEach(Array(agenda.slots.enumerated()), id: \.element.id) { index, slot in
-                simplifiedSlotCard(
-                    slot,
-                    accentColor: slotAccentColor(slot),
-                    showLockBadge: isSaved
+                PlanSlotCard(
+                    slot: slot,
+                    expandedID: $expandedSlotID,
+                    onLock: { viewModel.lock(slotId: slot.id) },
+                    onUnlock: { viewModel.unlock(slotId: slot.id) },
+                    onRemove: { viewModel.remove(slotId: slot.id) },
+                    onReplace: { replacingSlot = slot }
                 )
 
                 // Travel connector between slots
                 if index < agenda.slots.count - 1, let travel = slot.travelToNext {
-                    travelConnector(travel)
+                    SimpleTravelConnector(estimate: travel)
                 }
             }
 
