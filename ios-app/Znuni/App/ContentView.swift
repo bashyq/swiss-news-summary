@@ -67,7 +67,7 @@ private struct NewsNavigationStack: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            TodayView()
+            NewsView()
         }
         .onChange(of: appState.tabRetapCount) {
             if appState.selectedTab == .news && !path.isEmpty {

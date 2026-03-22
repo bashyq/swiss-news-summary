@@ -8,7 +8,7 @@ import Foundation
 final class AnchorStore {
     static let shared = AnchorStore()
 
-    /// Posted on every mutation so any tab can react (e.g. TodayViewModel rebuilds the agenda).
+    /// Posted on every mutation so any tab can react (e.g. PlanViewModel rebuilds the agenda).
     static let didChangeNotification = Notification.Name("znuni.anchorDidChange")
 
     private let legacyKey = "znuni.dayAnchors"

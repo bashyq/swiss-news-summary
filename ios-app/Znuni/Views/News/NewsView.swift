@@ -12,7 +12,7 @@ struct NewsView: View {
     @State private var expandedNewsID: String?
 
     /// When true, shows a navigation bar with "All News" title and back button
-    /// (pushed from TodayView). When false, hides the nav bar (standalone mode).
+    /// (pushed as a child view). When false, hides the nav bar (standalone root mode).
     var showAsChild: Bool = false
 
     var body: some View {

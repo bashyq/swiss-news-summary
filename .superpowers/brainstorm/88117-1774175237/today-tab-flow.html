@@ -1,0 +1,327 @@
+<h2>Today Tab — Plan Mode Flow</h2>
+<p class="subtitle">Three states of the Today tab: empty, calendar preview, and dealt hand</p>
+
+<div style="display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; margin-top: 24px;">
+
+  <!-- State 1: Empty / CTA -->
+  <div style="width: 300px; background: #1a1a2e; border-radius: 20px; overflow: hidden; font-family: -apple-system, sans-serif; color: white;">
+    <!-- Status bar -->
+    <div style="padding: 8px 20px; font-size: 11px; display: flex; justify-content: space-between; color: rgba(255,255,255,0.6);">
+      <span>9:41</span>
+      <span>⚡ 87%</span>
+    </div>
+
+    <!-- Date strip -->
+    <div style="padding: 8px 16px; display: flex; gap: 8px; overflow-x: auto;">
+      <div style="min-width: 44px; text-align: center; padding: 6px 4px; background: rgba(255,255,255,0.15); border-radius: 10px;">
+        <div style="font-size: 10px; color: rgba(255,255,255,0.5);">SAT</div>
+        <div style="font-size: 16px; font-weight: 600;">22</div>
+      </div>
+      <div style="min-width: 44px; text-align: center; padding: 6px 4px; border-radius: 10px;">
+        <div style="font-size: 10px; color: rgba(255,255,255,0.5);">SUN</div>
+        <div style="font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.6);">23</div>
+      </div>
+      <div style="min-width: 44px; text-align: center; padding: 6px 4px; border-radius: 10px;">
+        <div style="font-size: 10px; color: rgba(255,255,255,0.5);">MON</div>
+        <div style="font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.6);">24</div>
+      </div>
+      <div style="min-width: 44px; text-align: center; padding: 6px 4px; border-radius: 10px;">
+        <div style="font-size: 10px; color: rgba(255,255,255,0.5);">TUE</div>
+        <div style="font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.6);">25</div>
+      </div>
+      <div style="min-width: 44px; text-align: center; padding: 6px 4px; border-radius: 10px;">
+        <div style="font-size: 10px; color: rgba(255,255,255,0.5);">WED</div>
+        <div style="font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.6);">26</div>
+      </div>
+      <div style="min-width: 24px; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.4);">
+        📅
+      </div>
+    </div>
+
+    <!-- Weather summary -->
+    <div style="padding: 12px 20px; background: rgba(255,255,255,0.05); margin: 0 16px; border-radius: 12px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 24px;">☀️</span>
+        <div>
+          <div style="font-size: 14px; font-weight: 500;">Saturday · 18°C · Sunny</div>
+          <div style="font-size: 12px; color: rgba(255,255,255,0.5);">Great day to be outside</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- No calendar events state -->
+    <div style="padding: 40px 20px; text-align: center;">
+      <div style="font-size: 40px; margin-bottom: 12px; opacity: 0.3;">🃏</div>
+      <div style="font-size: 15px; color: rgba(255,255,255,0.5); margin-bottom: 24px;">No plans yet for Saturday</div>
+      <div style="background: linear-gradient(135deg, #1A3A5C, #2a5a8c); padding: 14px 32px; border-radius: 14px; font-size: 16px; font-weight: 600; display: inline-block; cursor: pointer;">
+        Deal my day
+      </div>
+    </div>
+
+    <!-- Tab bar -->
+    <div style="display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 20px;">
+      <div style="text-align: center; font-size: 10px; color: rgba(255,255,255,0.4);">
+        <div style="font-size: 18px; margin-bottom: 2px;">📰</div>News
+      </div>
+      <div style="text-align: center; font-size: 10px; color: #4A8AC4;">
+        <div style="font-size: 18px; margin-bottom: 2px;">📋</div>Today
+      </div>
+      <div style="text-align: center; font-size: 10px; color: rgba(255,255,255,0.4);">
+        <div style="font-size: 18px; margin-bottom: 2px;">🧭</div>Discover
+      </div>
+      <div style="text-align: center; font-size: 10px; color: rgba(255,255,255,0.4);">
+        <div style="font-size: 18px; margin-bottom: 2px;">⚙️</div>Settings
+      </div>
+    </div>
+  </div>
+
+  <!-- State 2: Calendar events previewed -->
+  <div style="width: 300px; background: #1a1a2e; border-radius: 20px; overflow: hidden; font-family: -apple-system, sans-serif; color: white;">
+    <div style="padding: 8px 20px; font-size: 11px; display: flex; justify-content: space-between; color: rgba(255,255,255,0.6);">
+      <span>9:41</span>
+      <span>⚡ 87%</span>
+    </div>
+
+    <!-- Date strip -->
+    <div style="padding: 8px 16px; display: flex; gap: 8px; overflow-x: auto;">
+      <div style="min-width: 44px; text-align: center; padding: 6px 4px; border-radius: 10px;">
+        <div style="font-size: 10px; color: rgba(255,255,255,0.5);">SAT</div>
+        <div style="font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.6);">22</div>
+      </div>
+      <div style="min-width: 44px; text-align: center; padding: 6px 4px; background: rgba(255,255,255,0.15); border-radius: 10px;">
+        <div style="font-size: 10px; color: rgba(255,255,255,0.5);">SUN</div>
+        <div style="font-size: 16px; font-weight: 600;">23</div>
+      </div>
+      <div style="min-width: 44px; text-align: center; padding: 6px 4px; border-radius: 10px;">
+        <div style="font-size: 10px; color: rgba(255,255,255,0.5);">MON</div>
+        <div style="font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.6);">24</div>
+      </div>
+      <div style="min-width: 44px; text-align: center; padding: 6px 4px; border-radius: 10px;">
+        <div style="font-size: 10px; color: rgba(255,255,255,0.5);">TUE</div>
+        <div style="font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.6);">25</div>
+      </div>
+      <div style="min-width: 44px; text-align: center; padding: 6px 4px; border-radius: 10px;">
+        <div style="font-size: 10px; color: rgba(255,255,255,0.5);">WED</div>
+        <div style="font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.6);">26</div>
+      </div>
+      <div style="min-width: 24px; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.4);">
+        📅
+      </div>
+    </div>
+
+    <!-- Weather summary -->
+    <div style="padding: 12px 20px; background: rgba(255,255,255,0.05); margin: 0 16px; border-radius: 12px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 24px;">⛅</span>
+        <div>
+          <div style="font-size: 14px; font-weight: 500;">Sunday · 14°C · Partly cloudy</div>
+          <div style="font-size: 12px; color: rgba(255,255,255,0.5);">2 events in your calendar</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar events as cards -->
+    <div style="padding: 12px 16px;">
+      <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.4); margin-bottom: 8px;">From your calendar</div>
+
+      <!-- Calendar card 1 -->
+      <div style="background: rgba(255,255,255,0.08); border-radius: 12px; padding: 12px; margin-bottom: 8px; border-left: 3px solid #6B7FF0; display: flex; align-items: center; gap: 10px;">
+        <div style="width: 40px; height: 40px; background: rgba(107,127,240,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center;">📅</div>
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: 500;">Dentist</div>
+          <div style="font-size: 12px; color: rgba(255,255,255,0.5);">10:00 – 11:00</div>
+        </div>
+        <div style="font-size: 11px; background: rgba(107,127,240,0.2); color: #8B9FF0; padding: 3px 8px; border-radius: 6px;">HELD</div>
+      </div>
+
+      <!-- Calendar card 2 -->
+      <div style="background: rgba(255,255,255,0.08); border-radius: 12px; padding: 12px; margin-bottom: 8px; border-left: 3px solid #6B7FF0; display: flex; align-items: center; gap: 10px;">
+        <div style="width: 40px; height: 40px; background: rgba(107,127,240,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center;">📅</div>
+        <div style="flex: 1;">
+          <div style="font-size: 14px; font-weight: 500;">Coffee with Anna</div>
+          <div style="font-size: 12px; color: rgba(255,255,255,0.5);">15:00 – 16:00</div>
+        </div>
+        <div style="font-size: 11px; background: rgba(107,127,240,0.2); color: #8B9FF0; padding: 3px 8px; border-radius: 6px;">HELD</div>
+      </div>
+    </div>
+
+    <!-- Deal CTA -->
+    <div style="padding: 8px 16px 16px; text-align: center;">
+      <div style="background: linear-gradient(135deg, #1A3A5C, #2a5a8c); padding: 14px 32px; border-radius: 14px; font-size: 16px; font-weight: 600; display: inline-block; cursor: pointer;">
+        Fill the gaps
+      </div>
+      <div style="font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 6px;">Morning · Lunch · Afternoon · Dinner</div>
+    </div>
+
+    <!-- Tab bar -->
+    <div style="display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.1);">
+      <div style="text-align: center; font-size: 10px; color: rgba(255,255,255,0.4);">
+        <div style="font-size: 18px; margin-bottom: 2px;">📰</div>News
+      </div>
+      <div style="text-align: center; font-size: 10px; color: #4A8AC4;">
+        <div style="font-size: 18px; margin-bottom: 2px;">📋</div>Today
+      </div>
+      <div style="text-align: center; font-size: 10px; color: rgba(255,255,255,0.4);">
+        <div style="font-size: 18px; margin-bottom: 2px;">🧭</div>Discover
+      </div>
+      <div style="text-align: center; font-size: 10px; color: rgba(255,255,255,0.4);">
+        <div style="font-size: 18px; margin-bottom: 2px;">⚙️</div>Settings
+      </div>
+    </div>
+  </div>
+
+  <!-- State 3: Dealt hand -->
+  <div style="width: 300px; background: #1a1a2e; border-radius: 20px; overflow: hidden; font-family: -apple-system, sans-serif; color: white;">
+    <div style="padding: 8px 20px; font-size: 11px; display: flex; justify-content: space-between; color: rgba(255,255,255,0.6);">
+      <span>9:41</span>
+      <span>⚡ 87%</span>
+    </div>
+
+    <!-- Date strip -->
+    <div style="padding: 8px 16px; display: flex; gap: 8px; overflow-x: auto;">
+      <div style="min-width: 44px; text-align: center; padding: 6px 4px; border-radius: 10px;">
+        <div style="font-size: 10px; color: rgba(255,255,255,0.5);">SAT</div>
+        <div style="font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.6);">22</div>
+      </div>
+      <div style="min-width: 44px; text-align: center; padding: 6px 4px; background: rgba(255,255,255,0.15); border-radius: 10px;">
+        <div style="font-size: 10px; color: rgba(255,255,255,0.5);">SUN</div>
+        <div style="font-size: 16px; font-weight: 600;">23</div>
+      </div>
+      <div style="min-width: 44px; text-align: center; padding: 6px 4px; border-radius: 10px;">
+        <div style="font-size: 10px; color: rgba(255,255,255,0.5);">MON</div>
+        <div style="font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.6);">24</div>
+      </div>
+      <div style="min-width: 44px; text-align: center; padding: 6px 4px; border-radius: 10px;">
+        <div style="font-size: 10px; color: rgba(255,255,255,0.5);">TUE</div>
+        <div style="font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.6);">25</div>
+      </div>
+      <div style="min-width: 44px; text-align: center; padding: 6px 4px; border-radius: 10px;">
+        <div style="font-size: 10px; color: rgba(255,255,255,0.5);">WED</div>
+        <div style="font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.6);">26</div>
+      </div>
+      <div style="min-width: 24px; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.4);">
+        📅
+      </div>
+    </div>
+
+    <!-- Dealt timeline -->
+    <div style="padding: 8px 16px; overflow-y: auto;">
+
+      <!-- Slot 1: Activity (dealt) -->
+      <div style="background: rgba(255,255,255,0.08); border-radius: 12px; padding: 10px; margin-bottom: 4px; border-left: 3px solid #C4623A; display: flex; align-items: center; gap: 10px;">
+        <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #C4623A33, #C4623A11); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">🦁</div>
+        <div style="flex: 1;">
+          <div style="font-size: 13px; font-weight: 600;">Zoo Zürich</div>
+          <div style="font-size: 11px; color: rgba(255,255,255,0.5);">9:00 – 11:00 · Outdoor</div>
+        </div>
+        <div style="font-size: 11px; background: rgba(196,98,58,0.2); color: #D4926A; padding: 3px 8px; border-radius: 6px;">NEW</div>
+      </div>
+
+      <!-- Travel connector -->
+      <div style="padding: 4px 0 4px 24px; display: flex; align-items: center; gap: 6px;">
+        <div style="width: 1px; height: 12px; background: rgba(255,255,255,0.15);"></div>
+        <span style="font-size: 10px; color: rgba(255,255,255,0.35);">🚋 18 min tram</span>
+      </div>
+
+      <!-- Slot 2: Calendar (held) -->
+      <div style="background: rgba(255,255,255,0.08); border-radius: 12px; padding: 10px; margin-bottom: 4px; border-left: 3px solid #6B7FF0; display: flex; align-items: center; gap: 10px;">
+        <div style="width: 50px; height: 50px; background: rgba(107,127,240,0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">📅</div>
+        <div style="flex: 1;">
+          <div style="font-size: 13px; font-weight: 600;">Dentist</div>
+          <div style="font-size: 11px; color: rgba(255,255,255,0.5);">10:00 – 11:00</div>
+        </div>
+        <div style="font-size: 11px; background: rgba(107,127,240,0.2); color: #8B9FF0; padding: 3px 8px; border-radius: 6px;">HELD</div>
+      </div>
+
+      <!-- Travel connector -->
+      <div style="padding: 4px 0 4px 24px; display: flex; align-items: center; gap: 6px;">
+        <div style="width: 1px; height: 12px; background: rgba(255,255,255,0.15);"></div>
+        <span style="font-size: 10px; color: rgba(255,255,255,0.35);">🚶 8 min walk</span>
+      </div>
+
+      <!-- Slot 3: Lunch (dealt) -->
+      <div style="background: rgba(255,255,255,0.08); border-radius: 12px; padding: 10px; margin-bottom: 4px; border-left: 3px solid #3A7D5C; display: flex; align-items: center; gap: 10px;">
+        <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #3A7D5C33, #3A7D5C11); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">🍽️</div>
+        <div style="flex: 1;">
+          <div style="font-size: 13px; font-weight: 600;">Hiltl Sihlpost</div>
+          <div style="font-size: 11px; color: rgba(255,255,255,0.5);">12:00 – 13:00 · $$</div>
+        </div>
+        <div style="font-size: 11px; background: rgba(196,98,58,0.2); color: #D4926A; padding: 3px 8px; border-radius: 6px;">NEW</div>
+      </div>
+
+      <!-- Travel connector -->
+      <div style="padding: 4px 0 4px 24px; display: flex; align-items: center; gap: 6px;">
+        <div style="width: 1px; height: 12px; background: rgba(255,255,255,0.15);"></div>
+        <span style="font-size: 10px; color: rgba(255,255,255,0.35);">🚋 12 min tram</span>
+      </div>
+
+      <!-- Slot 4: Calendar (held) -->
+      <div style="background: rgba(255,255,255,0.08); border-radius: 12px; padding: 10px; margin-bottom: 4px; border-left: 3px solid #6B7FF0; display: flex; align-items: center; gap: 10px;">
+        <div style="width: 50px; height: 50px; background: rgba(107,127,240,0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">📅</div>
+        <div style="flex: 1;">
+          <div style="font-size: 13px; font-weight: 600;">Coffee with Anna</div>
+          <div style="font-size: 11px; color: rgba(255,255,255,0.5);">15:00 – 16:00</div>
+        </div>
+        <div style="font-size: 11px; background: rgba(107,127,240,0.2); color: #8B9FF0; padding: 3px 8px; border-radius: 6px;">HELD</div>
+      </div>
+
+      <!-- Travel connector -->
+      <div style="padding: 4px 0 4px 24px; display: flex; align-items: center; gap: 6px;">
+        <div style="width: 1px; height: 12px; background: rgba(255,255,255,0.15);"></div>
+        <span style="font-size: 10px; color: rgba(255,255,255,0.35);">🚶 5 min walk</span>
+      </div>
+
+      <!-- Slot 5: Dinner (dealt) -->
+      <div style="background: rgba(255,255,255,0.08); border-radius: 12px; padding: 10px; margin-bottom: 4px; border-left: 3px solid #3A7D5C; display: flex; align-items: center; gap: 10px;">
+        <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #3A7D5C33, #3A7D5C11); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">🍕</div>
+        <div style="flex: 1;">
+          <div style="font-size: 13px; font-weight: 600;">Pizzeria Molino</div>
+          <div style="font-size: 11px; color: rgba(255,255,255,0.5);">18:00 – 19:30 · $$</div>
+        </div>
+        <div style="font-size: 11px; background: rgba(196,98,58,0.2); color: #D4926A; padding: 3px 8px; border-radius: 6px;">NEW</div>
+      </div>
+    </div>
+
+    <!-- Bottom actions -->
+    <div style="padding: 8px 16px 6px; display: flex; gap: 8px; justify-content: center;">
+      <div style="background: linear-gradient(135deg, #1A3A5C, #2a5a8c); padding: 10px 20px; border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer;">
+        💾 Save to calendar
+      </div>
+      <div style="background: rgba(255,255,255,0.1); padding: 10px 20px; border-radius: 12px; font-size: 13px; font-weight: 500; cursor: pointer;">
+        🔄 Redeal
+      </div>
+    </div>
+
+    <!-- Tab bar -->
+    <div style="display: flex; justify-content: space-around; padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 4px;">
+      <div style="text-align: center; font-size: 10px; color: rgba(255,255,255,0.4);">
+        <div style="font-size: 18px; margin-bottom: 2px;">📰</div>News
+      </div>
+      <div style="text-align: center; font-size: 10px; color: #4A8AC4;">
+        <div style="font-size: 18px; margin-bottom: 2px;">📋</div>Today
+      </div>
+      <div style="text-align: center; font-size: 10px; color: rgba(255,255,255,0.4);">
+        <div style="font-size: 18px; margin-bottom: 2px;">🧭</div>Discover
+      </div>
+      <div style="text-align: center; font-size: 10px; color: rgba(255,255,255,0.4);">
+        <div style="font-size: 18px; margin-bottom: 2px;">⚙️</div>Settings
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div style="display: flex; gap: 24px; justify-content: center; margin-top: 16px; flex-wrap: wrap;">
+  <div style="text-align: center; width: 300px;">
+    <div class="label">State 1: No calendar events</div>
+    <p style="font-size: 13px; color: #888;">Weather summary + "Deal my day" CTA</p>
+  </div>
+  <div style="text-align: center; width: 300px;">
+    <div class="label">State 2: Calendar events found</div>
+    <p style="font-size: 13px; color: #888;">Events shown as held cards + "Fill the gaps" CTA</p>
+  </div>
+  <div style="text-align: center; width: 300px;">
+    <div class="label">State 3: Hand dealt</div>
+    <p style="font-size: 13px; color: #888;">Full timeline with calendar (held) + suggestions (new). Tap to hold/discard, redeal unheld slots.</p>
+  </div>
+</div>

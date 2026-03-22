@@ -16,7 +16,7 @@ enum PlanState {
 
 // MARK: - PlanViewModel
 
-/// Core orchestrator for the Plan tab. Replaces TodayViewModel's agenda composition
+/// Core orchestrator for the Plan tab — handles agenda composition
 /// with a clean state machine built around the card-dealing interaction model.
 ///
 /// States: empty → calendarPreview → composing → dealt ⇄ saved
