@@ -33,6 +33,11 @@ final class PlanViewModel {
     /// Family session — loaded from UserDefaults.
     var session: FamilySession
 
+    // MARK: - In-Memory Plan Cache (survives date switches)
+
+    /// Stores dealt/saved agendas per date ISO string so switching dates doesn't lose work.
+    private var inMemoryPlans: [String: DayAgenda] = [:]
+
     // MARK: - Cached Data Pools
 
     /// Raw data fetched from API — cached across date switches.
@@ -84,16 +89,19 @@ final class PlanViewModel {
         selectedDate = date
         let dateISO = isoString(for: date)
 
-        // 0. Cache current agenda before switching (so we can come back to it)
+        // 0. Save current agenda in memory before switching
         if let current = currentAgenda {
-            let prevISO = isoString(for: selectedDate)
-            let prevAnchorsHash = AgendaCache.hash(anchors: anchorStore.anchors(for: selectedDate))
-            Task {
-                await cacheAgenda(current, dateISO: prevISO, anchors: anchorStore.anchors(for: selectedDate))
-            }
+            inMemoryPlans[isoString(for: selectedDate)] = current
         }
 
-        // 1. Check AgendaCache for existing plan
+        // 1. Check in-memory cache first (fastest, preserves lock state)
+        if let memoryCached = inMemoryPlans[dateISO] {
+            let allLocked = memoryCached.slots.allSatisfy { $0.isLocked }
+            planState = allLocked ? .saved(memoryCached) : .dealt(memoryCached)
+            return
+        }
+
+        // 2. Check AgendaCache for existing plan
         let anchorsHash = AgendaCache.hash(anchors: anchorStore.anchors(for: date))
         if let cachedData = await agendaCache.get(
             date: dateISO,
@@ -673,8 +681,9 @@ private extension PlanViewModel {
 
     // MARK: - State Mutation
 
-    /// Update the agenda in the current state.
+    /// Update the agenda in the current state and keep in-memory cache in sync.
     func updateAgenda(_ agenda: DayAgenda) {
+        inMemoryPlans[isoString(for: selectedDate)] = agenda
         switch planState {
         case .dealt:
             planState = .dealt(agenda)
