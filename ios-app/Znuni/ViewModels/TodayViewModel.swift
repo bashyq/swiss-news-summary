@@ -530,6 +530,9 @@ final class TodayViewModel {
                     language: language
                 )
 
+                // Compute travel estimates between consecutive slots
+                populateTravelEstimates(in: &allSlots)
+
                 let result = DayAgenda(
                     date: dateISO,
                     theme: buildTheme(session: session, language: language),
@@ -626,6 +629,7 @@ final class TodayViewModel {
                 }
             }
             rebuilt.slots.sort { $0.time < $1.time }
+            populateTravelEstimates(in: &rebuilt.slots)
             self.agenda = rebuilt
         }
     }
@@ -710,8 +714,14 @@ final class TodayViewModel {
     /// User tapped "Sync" button — request access if needed, then check.
     @MainActor
     func handleCalendarSync(toast: ToastManager) async {
+        #if DEBUG
+        print("📅 handleCalendarSync: hasAccess=\(CalendarService.shared.hasAccess), selectedPlanDay=\(selectedPlanDay)")
+        #endif
         if !CalendarService.shared.hasAccess {
             let granted = await CalendarService.shared.requestAccess()
+            #if DEBUG
+            print("📅 handleCalendarSync: requested access, granted=\(granted)")
+            #endif
             guard granted else {
                 toast.show("Calendar access needed", type: .error)
                 return
@@ -720,10 +730,17 @@ final class TodayViewModel {
 
         let planDate = selectedPlanDay.date()
         let anchors = AnchorStore.shared.anchors(for: planDate)
+        #if DEBUG
+        print("📅 handleCalendarSync: planDate=\(planDate), anchors=\(anchors.count)")
+        #endif
         let newEvents = CalendarSyncChecker.newEvents(
             for: planDate,
             existingAnchors: anchors
         )
+
+        #if DEBUG
+        print("📅 handleCalendarSync: newEvents=\(newEvents.count)")
+        #endif
 
         if newEvents.isEmpty {
             toast.show("Calendar is up to date", type: .info)
@@ -793,7 +810,7 @@ final class TodayViewModel {
             event.notes = slot.reason
             event.calendar = ekStore.defaultCalendarForNewEvents
 
-            // Set location from venue coordinates
+            // Set location from venue coordinates + readable address
             if let venueId = slot.venueId {
                 var lat: Double?
                 var lon: Double?
@@ -804,6 +821,9 @@ final class TodayViewModel {
                     lat = spot.lat
                     lon = spot.lon
                 }
+                // Human-readable location string (shown in Calendar app)
+                let cityName = planningCity.city.displayName
+                event.location = "\(slot.venueName), \(cityName)"
                 if let lat, let lon {
                     let location = EKStructuredLocation(title: slot.venueName)
                     location.geoLocation = CLLocation(latitude: lat, longitude: lon)
@@ -1170,6 +1190,12 @@ final class TodayViewModel {
             result = result.with(slots: filtered)
         }
 
+        // Compute travel estimates (overrides template engine's text-only travelNote
+        // with proper minutes + mode-aware text)
+        var slotsWithTravel = result.slots
+        populateTravelEstimates(in: &slotsWithTravel)
+        result = result.with(slots: slotsWithTravel)
+
         let key = dateISO ?? selectedPlanDay.isoDate
         _agendas[key] = result
         _agendaStates[key] = .fallback
@@ -1349,6 +1375,20 @@ final class TodayViewModel {
             let est = estimateTravelBetween(from: slots[index - 1].venueId, to: slots[index].venueId)
             slots[index - 1].travelMinutesToNext = est?.minutes
             slots[index - 1].travelNote = est.map { travelNoteText(for: $0) }
+        }
+    }
+
+    /// Populate travel estimates between all consecutive slots in an agenda.
+    private func populateTravelEstimates(in slots: inout [AgendaSlot]) {
+        for i in 0 ..< slots.count {
+            if i + 1 < slots.count {
+                let est = estimateTravelBetween(from: slots[i].venueId, to: slots[i + 1].venueId)
+                slots[i].travelMinutesToNext = est?.minutes
+                slots[i].travelNote = est.map { travelNoteText(for: $0) }
+            } else {
+                slots[i].travelMinutesToNext = nil
+                slots[i].travelNote = nil
+            }
         }
     }
 

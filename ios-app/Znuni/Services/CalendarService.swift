@@ -18,7 +18,13 @@ final class CalendarService {
     /// Returns true if granted, false otherwise.
     func requestAccess() async -> Bool {
         do {
-            return try await store.requestFullAccessToEvents()
+            let granted = try await store.requestFullAccessToEvents()
+            if granted {
+                // EKEventStore requires a reset after first access grant
+                // to actually receive event data (Apple docs requirement).
+                store.reset()
+            }
+            return granted
         } catch {
             #if DEBUG
             print("📅 Calendar access error: \(error.localizedDescription)")
@@ -29,8 +35,11 @@ final class CalendarService {
 
     // MARK: - Read
 
-    /// Fetch timed events for a specific date (filters out all-day events).
+    /// Fetch events for a specific date (includes both timed and all-day events).
     func fetchEvents(for date: Date) -> [EKEvent] {
+        // Pull latest data from remote sources (iCloud, Exchange, etc.)
+        store.refreshSourcesIfNecessary()
+
         let cal = Calendar.current
         let start = cal.startOfDay(for: date)
         guard let end = cal.date(byAdding: .day, value: 1, to: start) else { return [] }
@@ -38,8 +47,15 @@ final class CalendarService {
         let predicate = store.predicateForEvents(withStart: start, end: end, calendars: nil)
         let events = store.events(matching: predicate)
 
-        // Filter out all-day events — they can't map to time-bound anchors
-        return events.filter { !$0.isAllDay }
+        #if DEBUG
+        print("📅 CalendarService.fetchEvents: date=\(date), start=\(start), end=\(end)")
+        print("📅 CalendarService.fetchEvents: found \(events.count) total events (\(events.filter { $0.isAllDay }.count) all-day)")
+        for event in events {
+            print("   → \"\(event.title ?? "?")\" allDay=\(event.isAllDay) start=\(event.startDate ?? start) end=\(event.endDate ?? end)")
+        }
+        #endif
+
+        return events
     }
 
     // MARK: - Write

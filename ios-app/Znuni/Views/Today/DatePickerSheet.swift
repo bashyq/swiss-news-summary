@@ -26,6 +26,10 @@ struct DatePickerSheet: View {
                 .datePickerStyle(.graphical)
                 .tint(.znNavy)
                 .padding()
+                .onChange(of: pickerDate) {
+                    // Auto-apply when user taps a date on the calendar
+                    applySelection()
+                }
 
                 // Selected date summary
                 HStack {
@@ -105,17 +109,12 @@ struct DatePickerSheet: View {
             selectedPlanDay = .today
         } else if cal.isDateInTomorrow(pickerDate) {
             selectedPlanDay = .tomorrow
+        } else if cal.isDate(pickerDate, inSameDayAs: PlanDay.saturday.date()) {
+            selectedPlanDay = .saturday
+        } else if cal.isDate(pickerDate, inSameDayAs: PlanDay.sunday.date()) {
+            selectedPlanDay = .sunday
         } else {
-            // Check if it's the upcoming Saturday or Sunday
-            let satDate = PlanDay.saturday.date()
-            let sunDate = PlanDay.sunday.date()
-            if cal.isDate(pickerDate, inSameDayAs: satDate) {
-                selectedPlanDay = .saturday
-            } else if cal.isDate(pickerDate, inSameDayAs: sunDate) {
-                selectedPlanDay = .sunday
-            } else {
-                selectedPlanDay = .specific(pickerDate)
-            }
+            selectedPlanDay = .specific(cal.startOfDay(for: pickerDate))
         }
         dismiss()
     }

@@ -91,6 +91,7 @@ struct AgendaComposer {
         11. If no suitable venue exists for a gap, use venueId "surprise" with venueName "Surprise me!" and a creative reason.
         12. Response language: \(language == .de ? "German" : "English")
         13. When an anchor has coordinates, prefer venues geographically close to it for adjacent slots.
+        14. RESPECT OPENING HOURS: If a venue has "hours" listed, only select it for a time slot when the venue is open. For example, a venue with hours "Tu-Sun 13:00-17:00" should NOT be picked for a 10:00 morning slot on a Sunday, but CAN be picked for a 14:00 afternoon slot. If hours are "n/a", treat the venue as always open.
         """
     }
 
@@ -129,7 +130,8 @@ struct AgendaComposer {
             for act in activities {
                 let name = language == .de ? act.nameDE : act.name
                 let price = (language == .de ? act.priceDE : act.price) ?? "n/a"
-                lines.append("- id: \(act.id) | \(name) | indoor:\(act.indoor) | category:\(act.category) | duration:\(act.duration) | price:\(price)")
+                let hours = act.localizedOpeningHours(language: language) ?? "n/a"
+                lines.append("- id: \(act.id) | \(name) | indoor:\(act.indoor) | category:\(act.category) | duration:\(act.duration) | price:\(price) | hours:\(hours)")
             }
         }
 
@@ -138,7 +140,8 @@ struct AgendaComposer {
             lines.append("\n## Restaurants pool — lunch (top \(lunches.count))\n")
             for spot in lunches {
                 let rating = spot.rating.map { String(format: "%.1f", $0) } ?? "n/a"
-                lines.append("- id: \(spot.id) | \(spot.name) | cuisine:\(spot.cuisineDisplay) | rating:\(rating) | openForLunch:\(spot.openForLunch ?? false) | openForDinner:\(spot.openForDinner ?? false)")
+                let hours = spot.openingHours ?? "n/a"
+                lines.append("- id: \(spot.id) | \(spot.name) | cuisine:\(spot.cuisineDisplay) | rating:\(rating) | openForLunch:\(spot.openForLunch ?? false) | openForDinner:\(spot.openForDinner ?? false) | hours:\(hours)")
             }
         }
 
@@ -147,7 +150,8 @@ struct AgendaComposer {
             lines.append("\n## Restaurants pool — dinner (top \(dinners.count))\n")
             for spot in dinners {
                 let rating = spot.rating.map { String(format: "%.1f", $0) } ?? "n/a"
-                lines.append("- id: \(spot.id) | \(spot.name) | cuisine:\(spot.cuisineDisplay) | rating:\(rating) | openForLunch:\(spot.openForLunch ?? false) | openForDinner:\(spot.openForDinner ?? false)")
+                let hours = spot.openingHours ?? "n/a"
+                lines.append("- id: \(spot.id) | \(spot.name) | cuisine:\(spot.cuisineDisplay) | rating:\(rating) | openForLunch:\(spot.openForLunch ?? false) | openForDinner:\(spot.openForDinner ?? false) | hours:\(hours)")
             }
         }
 

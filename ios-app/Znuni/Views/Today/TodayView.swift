@@ -16,7 +16,6 @@ struct TodayView: View {
     @State private var showHolidayDetail = false
     @State private var showSessionConfig = false
     // SlotEditSheet is presented via .sheet(item: $editingSlot)
-    @State private var showCustomSlotForm = false
     @State private var customSlotSnapshot: AgendaSlot?  // persists after editingSlot is nilled
     @State private var showAnchorForm = false
     @State private var editingSlot: AgendaSlot?
@@ -84,11 +83,11 @@ struct TodayView: View {
                         viewModel.editSlotTime(slotId: slot.id, newTime: newTime)
                     },
                     onReplaceWithCustom: {
-                        // Snapshot the slot before editingSlot gets nilled by sheet(item:) dismissal
-                        customSlotSnapshot = slot
-                        // Delay slightly to allow edit sheet to dismiss first
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            showCustomSlotForm = true
+                        // Capture slot data before editingSlot gets nilled by sheet(item:) dismissal
+                        let snapshotSlot = slot
+                        // Delay to allow edit sheet to fully dismiss before presenting custom form
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            customSlotSnapshot = snapshotSlot
                         }
                     },
                     onToggleLock: {
@@ -101,26 +100,24 @@ struct TodayView: View {
                 .environment(appState)
                 .presentationDetents([.medium])
             }
-            .sheet(isPresented: $showCustomSlotForm) {
-                if let slot = customSlotSnapshot {
-                    CustomSlotFormSheet(
-                        slotType: slot.type,
-                        existingVenueName: slot.source == .userCustom ? slot.customVenueName : nil,
-                        existingTime: slot.time,
-                        existingNeighbourhood: slot.customNeighbourhood
-                    ) { venueName, time, neighbourhood, locked in
-                        viewModel.replaceSlotWithCustom(
-                            slotId: slot.id,
-                            venueName: venueName,
-                            time: time,
-                            neighbourhood: neighbourhood,
-                            locked: locked
-                        )
-                        customSlotSnapshot = nil
-                    }
-                    .environment(appState)
-                    .presentationDetents([.large])
+            .sheet(item: $customSlotSnapshot) { slot in
+                CustomSlotFormSheet(
+                    slotType: slot.type,
+                    existingVenueName: slot.source == .userCustom ? slot.customVenueName : nil,
+                    existingTime: slot.time,
+                    existingNeighbourhood: slot.customNeighbourhood
+                ) { venueName, time, neighbourhood, locked in
+                    viewModel.replaceSlotWithCustom(
+                        slotId: slot.id,
+                        venueName: venueName,
+                        time: time,
+                        neighbourhood: neighbourhood,
+                        locked: locked
+                    )
+                    customSlotSnapshot = nil
                 }
+                .environment(appState)
+                .presentationDetents([.large])
             }
             .sheet(isPresented: $showAnchorForm) {
                 AnchorFormSheet(existingAnchor: editingAnchor, activitiesData: viewModel.activitiesData) { anchor in
@@ -149,7 +146,18 @@ struct TodayView: View {
             .sheet(isPresented: Binding(
                 get: { viewModel.showDatePicker },
                 set: { viewModel.showDatePicker = $0 }
-            )) {
+            ), onDismiss: {
+                // Ensure composition triggers after date picker closes
+                // (sheet binding changes can race with SwiftUI's onChange)
+                anchors = AnchorStore.shared.anchors(for: viewModel.selectedPlanDay.date())
+                Task {
+                    await viewModel.composeAgendaForSelectedDay(
+                        city: appState.city,
+                        language: appState.language,
+                        session: appState.familySession
+                    )
+                }
+            }) {
                 DatePickerSheet(
                     selectedPlanDay: Binding(
                         get: { viewModel.selectedPlanDay },
@@ -454,29 +462,26 @@ struct TodayView: View {
                         }
                         .buttonStyle(.plain)
 
-                        // Only show Sync when there are pending calendar events to review
-                        if !viewModel.pendingCalendarEvents.isEmpty {
-                            Button {
-                                Task {
-                                    await viewModel.handleCalendarSync(toast: toastManager)
-                                }
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "calendar.badge.plus")
-                                        .font(.system(size: 12))
-                                    Text(appState.localized(en: "Sync", de: "Sync"))
-                                        .font(.system(size: 12, weight: .medium))
-                                }
-                                .foregroundStyle(Color.znNavy)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 6)
-                                .overlay(
-                                    Capsule()
-                                        .stroke(Color.znNavy.opacity(0.4), lineWidth: 1)
-                                )
+                        Button {
+                            Task {
+                                await viewModel.handleCalendarSync(toast: toastManager)
                             }
-                            .buttonStyle(.plain)
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "calendar.badge.plus")
+                                    .font(.system(size: 12))
+                                Text(appState.localized(en: "Sync", de: "Sync"))
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                            .foregroundStyle(Color.znNavy)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 6)
+                            .overlay(
+                                Capsule()
+                                    .stroke(Color.znNavy.opacity(0.4), lineWidth: 1)
+                            )
                         }
+                        .buttonStyle(.plain)
 
                         Spacer()
                     }

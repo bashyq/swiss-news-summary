@@ -267,14 +267,14 @@ private enum Archetype {
         theme: String, language: AppLanguage,
         planDate: Date
     ) -> DayAgenda {
-        let morning = pickActivity(from: morningPool, excluding: [], session: session, language: language)
+        let morning = pickActivity(from: morningPool, excluding: [], session: session, language: language, slotTime: "10:00", planDate: planDate)
         let afternoon = pickActivity(
             from: afternoonPool, excluding: [morning?.id].compactMap { $0 },
-            session: session, language: language
+            session: session, language: language, slotTime: "13:30", planDate: planDate
         )
 
-        let lunchSpot = pickRestaurant(near: morning, from: restaurants, language: language)
-        let dinnerSpot = pickRestaurant(near: afternoon, from: restaurants, excluding: lunchSpot?.id, language: language)
+        let lunchSpot = pickRestaurant(near: morning, from: restaurants, language: language, slotTime: "11:45", planDate: planDate)
+        let dinnerSpot = pickRestaurant(near: afternoon, from: restaurants, excluding: lunchSpot?.id, language: language, slotTime: "18:00", planDate: planDate)
 
         var slots: [AgendaSlot] = []
 
@@ -357,8 +357,8 @@ private enum Archetype {
         let homeActivities = buildHomeActivities(from: stayHome, session: session, language: language)
 
         // Single afternoon outing (indoor)
-        let afternoon = pickActivity(from: available, excluding: [], session: session, language: language)
-        let dinnerSpot = pickRestaurant(near: afternoon, from: restaurants, language: language)
+        let afternoon = pickActivity(from: available, excluding: [], session: session, language: language, slotTime: "14:30", planDate: planDate)
+        let dinnerSpot = pickRestaurant(near: afternoon, from: restaurants, language: language, slotTime: "17:30", planDate: planDate)
 
         var slots: [AgendaSlot] = []
 
@@ -399,13 +399,13 @@ private enum Archetype {
             : "Kleinkind-\(dayName) mit \(childNames)"
 
         let isCold = available.allSatisfy(\.indoor)
-        let morning = pickActivity(from: available, excluding: [], session: session, language: language)
+        let morning = pickActivity(from: available, excluding: [], session: session, language: language, slotTime: "09:30", planDate: planDate)
         let afternoon = pickActivity(
             from: available, excluding: [morning?.id].compactMap { $0 },
-            session: session, language: language
+            session: session, language: language, slotTime: "14:00", planDate: planDate
         )
-        let lunchSpot = pickRestaurant(near: morning, from: restaurants, language: language)
-        let dinnerSpot = pickRestaurant(near: afternoon, from: restaurants, excluding: lunchSpot?.id, language: language)
+        let lunchSpot = pickRestaurant(near: morning, from: restaurants, language: language, slotTime: "11:30", planDate: planDate)
+        let dinnerSpot = pickRestaurant(near: afternoon, from: restaurants, excluding: lunchSpot?.id, language: language, slotTime: "17:30", planDate: planDate)
 
         var slots: [AgendaSlot] = []
 
@@ -487,7 +487,7 @@ private enum Archetype {
                 swaps: [],
                 slotDate: AgendaSlot.resolveSlotDate(time: "10:00", planDate: planDate)
             ))
-        } else if let act = pickActivity(from: available, excluding: [], session: session, language: language) {
+        } else if let act = pickActivity(from: available, excluding: [], session: session, language: language, slotTime: "10:00", planDate: planDate) {
             let swaps = buildSwaps(from: available, excluding: [act.id], language: language)
             slots.append(makeActivitySlot(
                 id: "morning", time: "10:00", activity: act,
@@ -497,7 +497,7 @@ private enum Archetype {
         }
 
         // Lunch near morning
-        if let spot = pickRestaurant(near: nil, from: restaurants, language: language) {
+        if let spot = pickRestaurant(near: nil, from: restaurants, language: language, slotTime: "12:00", planDate: planDate) {
             let swaps = buildRestaurantSwaps(from: restaurants, excluding: [spot.id], near: nil, language: language)
             slots.append(makeLunchSlot(
                 spot: spot, time: "12:00", travelNote: nil, swaps: swaps, language: language, planDate: planDate
@@ -506,7 +506,7 @@ private enum Archetype {
 
         // Afternoon activity
         let usedIds = slots.compactMap(\.venueId)
-        let afternoon = pickActivity(from: available, excluding: usedIds, session: session, language: language)
+        let afternoon = pickActivity(from: available, excluding: usedIds, session: session, language: language, slotTime: "14:00", planDate: planDate)
         if let act = afternoon {
             let swaps = buildSwaps(from: available, excluding: usedIds + [act.id], language: language)
             slots.append(makeActivitySlot(
@@ -518,7 +518,7 @@ private enum Archetype {
 
         // Dinner
         let lunchId = slots.first(where: { $0.type == .lunch })?.venueId
-        let dinnerSpot = pickRestaurant(near: afternoon ?? pickActivity(from: available, excluding: [], session: session, language: language), from: restaurants, excluding: lunchId, language: language)
+        let dinnerSpot = pickRestaurant(near: afternoon ?? pickActivity(from: available, excluding: [], session: session, language: language, slotTime: "18:00", planDate: planDate), from: restaurants, excluding: lunchId, language: language, slotTime: "18:00", planDate: planDate)
         if let spot = dinnerSpot {
             let travel = travelBetween(afternoon, restaurantLat: spot.lat, restaurantLon: spot.lon)
             let swaps = buildRestaurantSwaps(from: restaurants, excluding: [lunchId, spot.id].compactMap { $0 }, near: afternoon, language: language)
@@ -682,11 +682,30 @@ private enum Archetype {
 
     // MARK: - Picking Helpers
 
+    /// Build a Date for a specific slot time on the plan date (e.g. "10:00" on planDate).
+    private func slotDate(time: String, on planDate: Date) -> Date? {
+        let parts = time.split(separator: ":")
+        guard parts.count == 2,
+              let hour = Int(parts[0]),
+              let minute = Int(parts[1]) else { return nil }
+        return Calendar.current.date(bySettingHour: hour, minute: minute, second: 0, of: planDate)
+    }
+
     private func pickActivity(
         from pool: [Activity], excluding: [String],
-        session: FamilySession, language: AppLanguage
+        session: FamilySession, language: AppLanguage,
+        slotTime: String? = nil, planDate: Date? = nil
     ) -> Activity? {
         var filtered = pool.filter { !excluding.contains($0.id) }
+
+        // Filter out venues that are definitely closed at the slot time (fail-open: keep .unknown)
+        if let time = slotTime, let date = planDate, let checkDate = slotDate(time: time, on: date) {
+            let openFiltered = filtered.filter {
+                OpeningHoursParser.status(from: $0.openingHours, at: checkDate) != .closed
+            }
+            // Only apply if it doesn't empty the pool
+            if !openFiltered.isEmpty { filtered = openFiltered }
+        }
 
         // Age-appropriate first
         let ageFiltered = filtered.filter { act in
@@ -705,10 +724,20 @@ private enum Archetype {
 
     private func pickRestaurant(
         near activity: Activity?, from restaurants: [LunchSpot],
-        excluding: String? = nil, language: AppLanguage
+        excluding: String? = nil, language: AppLanguage,
+        slotTime: String? = nil, planDate: Date? = nil
     ) -> LunchSpot? {
         var pool = restaurants
         if let excluding { pool.removeAll { $0.id == excluding } }
+
+        // Filter out restaurants that are definitely closed at the slot time (fail-open: keep .unknown)
+        if let time = slotTime, let date = planDate, let checkDate = slotDate(time: time, on: date) {
+            let openFiltered = pool.filter {
+                OpeningHoursParser.status(from: $0.openingHours, at: checkDate) != .closed
+            }
+            // Only apply if it doesn't empty the pool
+            if !openFiltered.isEmpty { pool = openFiltered }
+        }
 
         // Sort by distance from activity if available
         if let lat = activity?.lat, let lon = activity?.lon {

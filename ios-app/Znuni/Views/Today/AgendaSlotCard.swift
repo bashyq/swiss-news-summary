@@ -1080,15 +1080,8 @@ struct AgendaSlotCard: View {
     }
 
     private func openDirections(lat: Double, lon: Double, name: String?) {
-        // Use venue name for better Apple Maps search; fall back to coordinates
-        let destination: String
-        if let name, !name.isEmpty {
-            destination = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "\(lat),\(lon)"
-        } else {
-            destination = "\(lat),\(lon)"
-        }
-        // dirflg=r = transit directions (more useful than walking for Zürich distances)
-        let urlString = "https://maps.apple.com/?daddr=\(destination)&dirflg=r&t=r"
+        // Always use coordinates for precise routing (venue name geocoding is unreliable)
+        let urlString = "https://maps.apple.com/?daddr=\(lat),\(lon)&dirflg=r&t=r"
         if let url = URL(string: urlString) {
             UIApplication.shared.open(url)
         }

@@ -36,10 +36,15 @@ enum PlanDay: Equatable, Hashable {
     }
 
     /// Short label like "Sat 15" for day picker pills.
+    /// `.specific` dates include the month for clarity (e.g. "Mar 28").
     func shortLabel(language: AppLanguage) -> String {
         let f = DateFormatter()
         f.locale = language == .de ? Locale(identifier: "de_CH") : Locale(identifier: "en_US")
-        f.dateFormat = language == .de ? "EE d." : "EEE d"
+        if case .specific = self {
+            f.dateFormat = language == .de ? "d. MMM" : "MMM d"
+        } else {
+            f.dateFormat = language == .de ? "EE d." : "EEE d"
+        }
         return f.string(from: date())
     }
 

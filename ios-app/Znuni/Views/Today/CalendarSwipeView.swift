@@ -30,12 +30,25 @@ private func inferCategory(from title: String?) -> AnchorCategory {
 
 extension EKEvent {
     func toAnchorEvent() -> AnchorEvent {
-        AnchorEvent(
+        let anchorStart: Date
+        let anchorDuration: Int
+
+        if self.isAllDay {
+            // All-day events become a 9:00–17:00 anchor on that day
+            let cal = Calendar.current
+            anchorStart = cal.date(bySettingHour: 9, minute: 0, second: 0, of: self.startDate) ?? self.startDate
+            anchorDuration = 480 // 8 hours
+        } else {
+            anchorStart = self.startDate
+            anchorDuration = Int(self.endDate.timeIntervalSince(self.startDate) / 60)
+        }
+
+        return AnchorEvent(
             id: UUID(),
             title: self.title ?? "Calendar event",
             category: inferCategory(from: self.title),
-            startTime: self.startDate,
-            durationMinutes: Int(self.endDate.timeIntervalSince(self.startDate) / 60),
+            startTime: anchorStart,
+            durationMinutes: anchorDuration,
             source: .calendar,
             calendarEventId: self.eventIdentifier,
             createdDate: Date()
@@ -358,6 +371,7 @@ struct CalendarSwipeView: View {
     // MARK: - Formatting Helpers
 
     private func timeRangeString(_ event: EKEvent) -> String {
+        if event.isAllDay { return "All day" }
         let f = DateFormatter()
         f.dateFormat = "HH:mm"
         f.timeZone = TimeZone(identifier: "Europe/Zurich")
@@ -365,6 +379,7 @@ struct CalendarSwipeView: View {
     }
 
     private func durationString(_ event: EKEvent) -> String {
+        if event.isAllDay { return "All day" }
         let minutes = Int(event.endDate.timeIntervalSince(event.startDate) / 60)
         if minutes >= 60 {
             let hours = minutes / 60

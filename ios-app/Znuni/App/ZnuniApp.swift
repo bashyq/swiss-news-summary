@@ -28,6 +28,10 @@ struct ZnuniApp: App {
                     reminderManager.cleanupPastReminders()
                     AnchorStore.shared.purgeIfNewDay()
                     AnchorStore.shared.purgeStaleKeys()
+                    // Request calendar access upfront so Sync works immediately
+                    if !CalendarService.shared.hasAccess {
+                        _ = await CalendarService.shared.requestAccess()
+                    }
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
