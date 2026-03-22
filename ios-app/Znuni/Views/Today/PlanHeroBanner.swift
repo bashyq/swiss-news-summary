@@ -11,6 +11,7 @@ struct PlanHeroBanner: View {
     let planState: PlanState
     let weather: Weather?
     let planningCity: PlanningCity
+    var onCityChange: ((PlanningCity) -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -140,7 +141,7 @@ struct PlanHeroBanner: View {
         Menu {
             ForEach(PlanningCity.coveredCities, id: \.id) { pc in
                 Button {
-                    appState.city = pc.city
+                    onCityChange?(pc)
                 } label: {
                     HStack {
                         Text(pc.localizedName(language: appState.language))

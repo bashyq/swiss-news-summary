@@ -6,6 +6,7 @@ import UIKit
 struct PlanTabView: View {
     @Environment(AppState.self) private var appState
     @State private var viewModel = PlanViewModel()
+    @State private var hasInitializedCity = false
     @State private var showDatePicker = false
     @State private var datePickerPlanDay: PlanDay = .today
     @State private var expandedSlotID: String?
@@ -19,7 +20,12 @@ struct PlanTabView: View {
                         selectedDate: viewModel.selectedDate,
                         planState: viewModel.planState,
                         weather: viewModel.weather,
-                        planningCity: viewModel.planningCity
+                        planningCity: viewModel.planningCity,
+                        onCityChange: { newCity in
+                            guard newCity != viewModel.planningCity else { return }
+                            viewModel.changeCity(to: newCity)
+                            Task { await viewModel.deal() }
+                        }
                     )
 
                     DateStripView(
@@ -49,11 +55,12 @@ struct PlanTabView: View {
                 await viewModel.selectDate(newValue, previousDate: oldValue)
             }
         }
-        .onChange(of: appState.city) {
-            viewModel.planningCity = PlanningCity(city: appState.city)
-        }
         .task {
-            viewModel.planningCity = PlanningCity(city: appState.city)
+            // Initialize planning city from global city only on first appear
+            if !hasInitializedCity {
+                hasInitializedCity = true
+                viewModel.planningCity = PlanningCity(city: appState.city)
+            }
             await viewModel.selectDate(viewModel.selectedDate)
         }
         .sheet(isPresented: $showDatePicker) {

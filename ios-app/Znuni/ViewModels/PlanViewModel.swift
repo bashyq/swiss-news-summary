@@ -347,6 +347,25 @@ final class PlanViewModel {
         await deal(lockedSlots: locked)
     }
 
+    // MARK: - City Change
+
+    /// Switch planning city: invalidate data pools and reset plan state.
+    /// Planning city is independent from the global app city (News tab).
+    func changeCity(to newCity: PlanningCity) {
+        planningCity = newCity
+        invalidateDataPools()
+        // Clear in-memory plans since they're for the old city
+        inMemoryPlans.removeAll()
+        planState = .empty
+    }
+
+    /// Clear cached data pools so the next deal() re-fetches for the current city.
+    private func invalidateDataPools() {
+        activitiesData = nil
+        lunchData = nil
+        weather = nil
+    }
+
     // MARK: - Slot Actions
 
     /// Lock a slot so it survives redeals.
