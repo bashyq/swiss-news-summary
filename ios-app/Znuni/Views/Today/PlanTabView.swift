@@ -42,6 +42,7 @@ struct PlanTabView: View {
             .scrollIndicators(.hidden)
             .background(Color.znCream)
         }
+        .toolbar(.hidden, for: .navigationBar)
         .onChange(of: viewModel.selectedDate) { oldValue, newValue in
             Task {
                 await viewModel.selectDate(newValue, previousDate: oldValue)
@@ -429,13 +430,13 @@ struct PlanTabView: View {
                         ? appState.localized(en: "Saved to calendar", de: "Im Kalender gespeichert")
                         : appState.localized(en: "Save to calendar", de: "Im Kalender speichern")
                     )
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                 }
                 .foregroundStyle(.white)
-                .padding(.vertical, 14)
-                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
                 .background(LinearGradient.brand)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
                 .opacity(isSaved ? 0.5 : 1)
             }
             .buttonStyle(.plain)
@@ -445,15 +446,15 @@ struct PlanTabView: View {
             Button {
                 Task { await viewModel.redeal() }
             } label: {
-                Text(appState.localized(en: "Redeal", de: "Neu mischen"))
-                    .font(.system(size: 14, weight: .semibold))
+                Text(appState.localized(en: "Refresh plan", de: "Plan auffrischen"))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.znInk)
-                    .padding(.vertical, 14)
-                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 16)
                     .background(Color.znSurface)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: 12)
                             .stroke(Color.znBorder, lineWidth: 1)
                     )
             }
