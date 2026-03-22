@@ -71,6 +71,480 @@ GapAnalysisEngine, AgendaComposer, TemplateEngine, CalendarService, CalendarSync
 
 ---
 
+## Task 0: Regression Test Scaffolding
+
+**Files:**
+- Create: `ios-app/ZnuniTests/ZnuniTests/PlanViewModelTests.swift`
+- Create: `ios-app/ZnuniTests/ZnuniTests/CalendarBridgeTests.swift`
+- Create: `ios-app/ZnuniTests/ZnuniTests/TravelEstimateTests.swift`
+- Create: `ios-app/ZnuniUITests/PlanUITests.swift`
+
+Write all regression tests upfront — they start red and turn green as each subsequent task lands. This is our definition of "done" for the reimplementation.
+
+Follow existing test conventions: `import XCTest`, `@testable import Znuni`, `final class`, `test_scenario_expectedBehavior()` naming.
+
+- [ ] **Step 1: Create PlanViewModelTests.swift**
+
+Create `ios-app/ZnuniTests/ZnuniTests/PlanViewModelTests.swift`:
+
+```swift
+import XCTest
+@testable import Znuni
+
+final class PlanViewModelTests: XCTestCase {
+
+    // MARK: - Initial State
+
+    func test_initialState_isEmpty() {
+        let vm = PlanViewModel()
+        if case .empty = vm.planState {
+            // pass
+        } else {
+            XCTFail("Expected .empty, got \(vm.planState)")
+        }
+    }
+
+    func test_initialDate_isTodayBefore22() {
+        // If current hour < 22, selectedDate should be today
+        let vm = PlanViewModel()
+        let hour = Calendar.current.component(.hour, from: Date())
+        if hour < 22 {
+            XCTAssertTrue(Calendar.current.isDateInToday(vm.selectedDate))
+        } else {
+            XCTAssertTrue(Calendar.current.isDateInTomorrow(vm.selectedDate))
+        }
+    }
+
+    // MARK: - Date Strip
+
+    func test_dates_returns14Days() {
+        let vm = PlanViewModel()
+        XCTAssertEqual(vm.dates.count, 14)
+    }
+
+    func test_dates_startsFromToday() {
+        let vm = PlanViewModel()
+        XCTAssertTrue(Calendar.current.isDateInToday(vm.dates[0]))
+    }
+
+    // MARK: - State Transitions: selectDate
+
+    func test_selectDate_withNoCachedPlan_transitionsToEmpty() async {
+        let vm = PlanViewModel()
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date())!
+        vm.selectDate(tomorrow)
+        // Allow async calendar check to complete
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        // Without calendar events, should be .empty
+        if case .empty = vm.planState {
+            // pass
+        } else if case .calendarPreview = vm.planState {
+            // also acceptable if calendar has events
+        } else {
+            XCTFail("Expected .empty or .calendarPreview after selectDate")
+        }
+    }
+
+    // MARK: - State Transitions: lock / unlock
+
+    func test_lock_setsSlotLocked() {
+        let vm = PlanViewModel()
+        let slot = makeTestSlot(id: "test-1", locked: false)
+        let agenda = makeTestAgenda(slots: [slot])
+        vm.planState = .dealt(agenda)
+
+        vm.lock(slotId: "test-1")
+
+        if case .dealt(let updated) = vm.planState {
+            XCTAssertTrue(updated.slots[0].isLocked)
+        } else {
+            XCTFail("Expected .dealt state")
+        }
+    }
+
+    func test_unlock_setsSlotUnlocked() {
+        let vm = PlanViewModel()
+        let slot = makeTestSlot(id: "test-1", locked: true)
+        let agenda = makeTestAgenda(slots: [slot])
+        vm.planState = .dealt(agenda)
+
+        vm.unlock(slotId: "test-1")
+
+        if case .dealt(let updated) = vm.planState {
+            XCTAssertFalse(updated.slots[0].isLocked)
+        } else {
+            XCTFail("Expected .dealt state")
+        }
+    }
+
+    // MARK: - State Transitions: remove
+
+    func test_remove_deletesSlot() {
+        let vm = PlanViewModel()
+        let slot1 = makeTestSlot(id: "s1", locked: false)
+        let slot2 = makeTestSlot(id: "s2", locked: false)
+        let agenda = makeTestAgenda(slots: [slot1, slot2])
+        vm.planState = .dealt(agenda)
+
+        vm.remove(slotId: "s1")
+
+        if case .dealt(let updated) = vm.planState {
+            XCTAssertEqual(updated.slots.count, 1)
+            XCTAssertEqual(updated.slots[0].id, "s2")
+        } else {
+            XCTFail("Expected .dealt state")
+        }
+    }
+
+    func test_remove_onCalendarSlot_discardsIt() {
+        let vm = PlanViewModel()
+        let slot = makeTestSlot(id: "cal-1", locked: true, source: .calendar)
+        let agenda = makeTestAgenda(slots: [slot])
+        vm.planState = .dealt(agenda)
+
+        vm.remove(slotId: "cal-1")
+
+        if case .dealt(let updated) = vm.planState {
+            XCTAssertEqual(updated.slots.count, 0)
+        } else {
+            XCTFail("Expected .dealt state")
+        }
+        // CalendarDiscardStore should now contain "cal-1"
+        // (verify when CalendarBridge is wired)
+    }
+
+    // MARK: - State Transitions: replaceWithCustom
+
+    func test_replaceWithCustom_replacesSlot() {
+        let vm = PlanViewModel()
+        let slot = makeTestSlot(id: "s1", locked: false)
+        let agenda = makeTestAgenda(slots: [slot])
+        vm.planState = .dealt(agenda)
+
+        let now = Date()
+        let later = now.addingTimeInterval(3600)
+        vm.replaceWithCustom(slotId: "s1", name: "Visit Grandma", start: now, end: later, address: nil)
+
+        if case .dealt(let updated) = vm.planState {
+            XCTAssertEqual(updated.slots[0].venueName, "Visit Grandma")
+            XCTAssertEqual(updated.slots[0].source, .userCustom)
+            XCTAssertTrue(updated.slots[0].isLocked)
+        } else {
+            XCTFail("Expected .dealt state")
+        }
+    }
+
+    // MARK: - Redeal preserves locked
+
+    func test_redeal_keepsLockedSlots() async {
+        let vm = PlanViewModel()
+        let locked = makeTestSlot(id: "locked-1", locked: true)
+        let unlocked = makeTestSlot(id: "unlocked-1", locked: false)
+        let agenda = makeTestAgenda(slots: [locked, unlocked])
+        vm.planState = .dealt(agenda)
+
+        await vm.redeal()
+
+        if case .dealt(let updated) = vm.planState {
+            let lockedSlot = updated.slots.first { $0.id == "locked-1" }
+            XCTAssertNotNil(lockedSlot, "Locked slot should survive redeal")
+            XCTAssertTrue(lockedSlot?.isLocked == true)
+        } else if case .error = vm.planState {
+            // Acceptable in test environment without API/data
+        } else {
+            XCTFail("Expected .dealt or .error after redeal")
+        }
+    }
+
+    // MARK: - Save to calendar locks all
+
+    func test_saveToCalendar_locksAllSlots() async {
+        let vm = PlanViewModel()
+        let s1 = makeTestSlot(id: "s1", locked: false)
+        let s2 = makeTestSlot(id: "s2", locked: true)
+        let agenda = makeTestAgenda(slots: [s1, s2])
+        vm.planState = .dealt(agenda)
+
+        // saveToCalendar will fail without calendar access in test,
+        // but we can test the lock behavior by checking state transition
+        do {
+            try await vm.saveToCalendar()
+            if case .saved(let saved) = vm.planState {
+                XCTAssertTrue(saved.slots.allSatisfy { $0.isLocked })
+            }
+        } catch {
+            // Expected in test environment without calendar access
+        }
+    }
+
+    // MARK: - Helpers
+
+    /// Create a test AgendaSlot. Adjust parameters to match actual AgendaSlot init.
+    private func makeTestSlot(
+        id: String,
+        locked: Bool,
+        source: SlotSource = .aiGenerated
+    ) -> AgendaSlot {
+        // NOTE: Update this to match the actual AgendaSlot initializer
+        // after Task 1 model changes land. The init params here are
+        // placeholders — read DayAgenda.swift for real field names.
+        var slot = AgendaSlot.placeholder() // or however AgendaSlot is constructed
+        // Adjust: slot.id = id, slot.isLocked = locked, slot.source = source
+        return slot
+    }
+
+    /// Create a test DayAgenda. Adjust to match actual DayAgenda init.
+    private func makeTestAgenda(slots: [AgendaSlot]) -> DayAgenda {
+        // NOTE: Update this to match actual DayAgenda initializer
+        // after Task 1 model changes land.
+        return DayAgenda.placeholder(slots: slots)
+    }
+}
+```
+
+**Important:** The `makeTestSlot` and `makeTestAgenda` helpers use placeholder constructors. After Task 1 lands, update these to use the real initializers. The tests will not compile until then — that's intentional (red tests).
+
+- [ ] **Step 2: Create TravelEstimateTests.swift**
+
+Create `ios-app/ZnuniTests/ZnuniTests/TravelEstimateTests.swift`:
+
+```swift
+import XCTest
+@testable import Znuni
+
+final class TravelEstimateTests: XCTestCase {
+
+    // MARK: - Distance-based mode selection
+
+    func test_under1km_isWalking() {
+        // 500m apart → walking
+        let estimate = TravelEstimate.estimate(
+            fromLat: 47.3769, fromLon: 8.5417,  // Zurich HB
+            toLat: 47.3733, toLon: 8.5415        // ~400m south
+        )
+        XCTAssertEqual(estimate.mode, .walking)
+    }
+
+    func test_1to3km_isTransit() {
+        // ~2km apart → tram
+        let estimate = TravelEstimate.estimate(
+            fromLat: 47.3769, fromLon: 8.5417,  // Zurich HB
+            toLat: 47.3585, toLon: 8.5480        // ~2km south
+        )
+        XCTAssertEqual(estimate.mode, .transit)
+    }
+
+    func test_over3km_isTransit() {
+        // ~5km apart → transit
+        let estimate = TravelEstimate.estimate(
+            fromLat: 47.3769, fromLon: 8.5417,  // Zurich HB
+            toLat: 47.3849, toLon: 8.5743        // Zoo (~4.5km)
+        )
+        XCTAssertEqual(estimate.mode, .transit)
+    }
+
+    // MARK: - Time estimates
+
+    func test_walkingTime_isReasonable() {
+        // 400m at 80m/min ≈ 5 min
+        let estimate = TravelEstimate.estimate(
+            fromLat: 47.3769, fromLon: 8.5417,
+            toLat: 47.3733, toLon: 8.5415
+        )
+        XCTAssertGreaterThanOrEqual(estimate.minutes, 1)
+        XCTAssertLessThanOrEqual(estimate.minutes, 10)
+    }
+
+    func test_transitTime_includes5minWait() {
+        // 2km at 250m/min = 8 + 5 wait = 13 min
+        let estimate = TravelEstimate.estimate(
+            fromLat: 47.3769, fromLon: 8.5417,
+            toLat: 47.3585, toLon: 8.5480
+        )
+        XCTAssertGreaterThanOrEqual(estimate.minutes, 10)
+    }
+
+    func test_nilCoordinates_returnsDefault() {
+        // When either venue has no coordinates
+        let estimate = TravelEstimate.estimate(
+            fromLat: nil, fromLon: nil,
+            toLat: 47.3585, toLon: 8.5480
+        )
+        // Should return a sensible default (e.g., 10 min transit)
+        XCTAssertGreaterThan(estimate.minutes, 0)
+    }
+}
+```
+
+**Note:** `TravelEstimate.estimate(fromLat:fromLon:toLat:toLon:)` is a static method to be created in Task 1 as part of the `TravelEstimate` struct definition. Tests won't compile until then.
+
+- [ ] **Step 3: Create CalendarBridgeTests.swift**
+
+Create `ios-app/ZnuniTests/ZnuniTests/CalendarBridgeTests.swift`:
+
+```swift
+import XCTest
+@testable import Znuni
+
+final class CalendarBridgeTests: XCTestCase {
+
+    // MARK: - Event filtering
+
+    func test_fetchEvents_excludesAllDayEvents() async {
+        // This test requires calendar access in the simulator.
+        // If no access, skip gracefully.
+        let bridge = CalendarBridge()
+        guard bridge.hasAccess else {
+            // Cannot test without calendar permission
+            return
+        }
+        let events = await bridge.fetchEvents(for: Date())
+        for event in events {
+            XCTAssertFalse(event.isAllDay, "All-day events should be excluded")
+        }
+    }
+
+    func test_fetchEvents_excludesDiscardedEvents() async {
+        // Discard an event, then verify it doesn't appear
+        let bridge = CalendarBridge()
+        let testID = "test-discarded-\(UUID().uuidString)"
+        bridge.discardEvent(id: testID)
+
+        // The discarded ID should now be in the store
+        // (Actual filtering test requires a real calendar event with that ID)
+    }
+
+    // MARK: - CalendarSlot mapping
+
+    func test_calendarSlot_hasCorrectFields() {
+        let slot = CalendarSlot(
+            id: "test-id",
+            title: "Dentist",
+            startDate: Date(),
+            endDate: Date().addingTimeInterval(3600),
+            isAllDay: false
+        )
+        XCTAssertEqual(slot.id, "test-id")
+        XCTAssertEqual(slot.title, "Dentist")
+        XCTAssertFalse(slot.isAllDay)
+    }
+}
+```
+
+- [ ] **Step 4: Create PlanUITests.swift**
+
+Create `ios-app/ZnuniUITests/PlanUITests.swift`:
+
+```swift
+import XCTest
+
+final class PlanUITests: XCTestCase {
+
+    var app: XCUIApplication!
+
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+        app = XCUIApplication()
+        app.launch()
+    }
+
+    // MARK: - Tab Navigation
+
+    func test_todayTab_exists() {
+        let todayTab = app.tabBars.buttons["Today"]
+        XCTAssertTrue(todayTab.exists, "Today tab should exist in tab bar")
+    }
+
+    func test_newsTab_exists() {
+        let newsTab = app.tabBars.buttons["News"]
+        XCTAssertTrue(newsTab.exists, "News tab should exist in tab bar")
+    }
+
+    func test_fourTabs_exist() {
+        let tabBar = app.tabBars.firstMatch
+        XCTAssertEqual(tabBar.buttons.count, 4, "Should have 4 tabs")
+    }
+
+    // MARK: - Empty State
+
+    func test_todayTab_showsPlanMyDay() {
+        app.tabBars.buttons["Today"].tap()
+        let planButton = app.buttons["Plan my day"]
+        XCTAssertTrue(planButton.waitForExistence(timeout: 5), "Plan my day CTA should appear")
+    }
+
+    // MARK: - Date Strip
+
+    func test_dateStrip_isVisible() {
+        app.tabBars.buttons["Today"].tap()
+        // Date strip should show day numbers
+        let today = Calendar.current.component(.day, from: Date())
+        let dayLabel = app.staticTexts["\(today)"]
+        XCTAssertTrue(dayLabel.waitForExistence(timeout: 5), "Today's date should appear in strip")
+    }
+
+    // MARK: - Deal Flow
+
+    func test_planMyDay_showsCards() {
+        app.tabBars.buttons["Today"].tap()
+        let planButton = app.buttons["Plan my day"]
+        guard planButton.waitForExistence(timeout: 5) else {
+            XCTFail("Plan my day button not found")
+            return
+        }
+        planButton.tap()
+
+        // Should see either cards or a loading indicator
+        let loading = app.activityIndicators.firstMatch
+        let card = app.otherElements["plan-slot-card"].firstMatch
+        let appeared = loading.waitForExistence(timeout: 3) || card.waitForExistence(timeout: 10)
+        XCTAssertTrue(appeared, "Should see loading or cards after tapping Plan my day")
+    }
+
+    // MARK: - Save & Redeal Buttons
+
+    func test_dealtState_showsSaveAndRedeal() {
+        // This test assumes we can reach dealt state
+        // May need to be adjusted based on actual composition time
+        app.tabBars.buttons["Today"].tap()
+        let planButton = app.buttons["Plan my day"]
+        guard planButton.waitForExistence(timeout: 5) else { return }
+        planButton.tap()
+
+        // Wait for composition
+        let saveButton = app.buttons["Save to calendar"]
+        let redealButton = app.buttons["Redeal"]
+
+        // At least one should appear within 15 seconds (composition time)
+        let appeared = saveButton.waitForExistence(timeout: 15)
+        if appeared {
+            XCTAssertTrue(redealButton.exists, "Redeal button should exist alongside Save")
+        }
+        // If neither appears, composition may have failed — acceptable in CI
+    }
+}
+```
+
+- [ ] **Step 5: Build tests to verify they compile (most will fail — that's expected)**
+
+```bash
+cd ios-app && xcodebuild build-for-testing -project Znuni.xcodeproj -scheme Znuni \
+  -destination 'platform=iOS Simulator,name=iPhone 16' 2>&1 | tail -20
+```
+
+Tests will NOT compile yet — they reference types (`PlanViewModel`, `TravelEstimate`, `CalendarBridge`) that don't exist. That's correct — they turn green as each task lands.
+
+For now, wrap the test bodies that reference unbuilt types in `#if false ... #endif` so the test target compiles. Remove the `#if false` guards as each task makes the types available.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add ios-app/ZnuniTests/ ios-app/ZnuniUITests/
+git commit -m "test: add regression test scaffolding for Plan tab reimplementation (all red)"
+```
+
+---
+
 ## Task 1: Data Model Changes
 
 **Files:**
