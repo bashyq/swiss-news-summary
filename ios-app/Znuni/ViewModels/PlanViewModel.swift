@@ -397,6 +397,13 @@ final class PlanViewModel {
 
     /// Unlock a slot for replacement on redeal.
     func unlock(slotId: String) {
+        // Handle calendar preview state — remove the event from preview
+        if case .calendarPreview(var events) = planState {
+            events.removeAll { $0.id == slotId }
+            calendarBridge.discardEvent(id: slotId)
+            planState = events.isEmpty ? .empty : .calendarPreview(events)
+            return
+        }
         guard var agenda = currentAgenda,
               let idx = agenda.slots.firstIndex(where: { $0.id == slotId }) else { return }
         agenda.slots[idx].isLocked = false
@@ -405,11 +412,17 @@ final class PlanViewModel {
 
     /// Remove a slot from the current agenda. If calendar source, discard it.
     func remove(slotId: String) {
+        // Handle calendar preview state
+        if case .calendarPreview(var events) = planState {
+            calendarBridge.discardEvent(id: slotId)
+            events.removeAll { $0.id == slotId }
+            planState = events.isEmpty ? .empty : .calendarPreview(events)
+            return
+        }
         guard var agenda = currentAgenda else { return }
         if let slot = agenda.slots.first(where: { $0.id == slotId }),
-           slot.source == .calendar,
-           let venueId = slot.venueId {
-            calendarBridge.discardEvent(id: venueId)
+           slot.source == .calendar {
+            calendarBridge.discardEvent(id: slotId)
         }
         agenda.slots.removeAll { $0.id == slotId }
         populateTravelEstimates(in: &agenda.slots)
