@@ -192,7 +192,7 @@ The old separate interactions (compose, swap tray, rebuild, calendar swipe, lock
 - **Selected state**: navy background, white text
 - **Future/dim state**: muted text for dates beyond this week
 - **Calendar icon**: trailing position, opens date picker sheet for dates beyond 14 days
-- **Auto-default**: today if before 22:00, tomorrow if after 22:00
+- **Auto-default**: today if before 22:00, tomorrow if after 22:00. Today is always day 1 of the strip regardless — if after 22:00, today is still visible but tomorrow is highlighted. Tapping today after 22:00 shows a time-aware plan (dinner-only slots).
 
 ## 8. Architecture
 
@@ -231,15 +231,26 @@ Rewrite the orchestration layer (ViewModel + views). Keep working services.
 Instead of one 2,047-line ViewModel, split into:
 
 1. **PlanViewModel** (~300-400 lines) — owns the plan state machine:
-   - `planState: PlanState` enum (`.empty`, `.calendarPreview([EKEvent])`, `.dealt(DayAgenda)`, `.saved(DayAgenda)`)
+   - `planState: PlanState` enum:
+     - `.empty` — no plan for this date
+     - `.calendarPreview([CalendarSlot])` — calendar events found, shown as locked cards
+     - `.composing(locked: [AgendaSlot])` — async composition in progress, shows loading indicator + any locked slots
+     - `.dealt(DayAgenda)` — plan composed, timeline shown
+     - `.saved(DayAgenda)` — plan saved to calendar, all locked
+     - `.error(String)` — composition failed, show retry CTA + stale cache if available
    - `selectedDate: Date`
-   - `planningCity: PlanningCity`
+   - `planningCity: PlanningCity` — independent of global AppState city (News uses global, Today uses this)
    - `deal()`, `redeal()`, `lock(slotId:)`, `unlock(slotId:)`, `remove(slotId:)`, `replaceWithCustom(slotId:, ...)`, `saveToCalendar()`
    - Delegates to existing services for composition
+   - **FamilySession**: use persisted value from UserDefaults (set via Settings in prior sessions). If no saved value exists, use a sensible default: `FamilySession(kidCount: 1, youngestAge: 3, soloParent: false)`. The UI to edit this is cut but the stored preference is respected.
 
-2. **DateStripViewModel** (~50 lines) — date selection state, generates 14-day range
+2. **DateStripManager** (plain struct, not a ViewModel) — generates 14-day date range from today, provides `dates: [Date]` computed property and `isSelected(date:)` check. Owned by `PlanViewModel`.
 
-3. **CalendarBridge** (~100 lines) — wraps CalendarService + CalendarSyncChecker for the specific flows this tab needs (fetch events for date, export plan, detect new events)
+3. **CalendarBridge** (~100 lines) — wraps CalendarService + CalendarSyncChecker:
+   - `fetchEvents(for date: Date) -> [CalendarSlot]` — gets calendar events, excludes all-day events
+   - `exportPlan(_ agenda: DayAgenda) -> [String: String]` — writes EKEvents, returns slotId → eventId mapping
+   - `removeExportedEvents(ids: [String])` — cleanup on re-save
+   - **Discard behavior**: removing a calendar card from the timeline persists the removal in `CalendarDiscardStore` for that date. On next app open, discarded events don't reappear. Clearable from Settings (existing feature).
 
 ### State Machine
 
@@ -264,8 +275,16 @@ Instead of one 2,047-line ViewModel, split into:
                  └────────┬───────┘
                           ▼
                     ┌─────────────┐
+                    │  composing  │──── failure ───► .error
+                    │  (loading)  │                    │
+                    └──────┬──────┘              retry │
+                           │                          ▼
+                       success               back to composing
+                           │
+                           ▼
+                    ┌─────────────┐
                     │             │
-                    │    dealt    │ ◄─── redeal
+                    │    dealt    │ ◄─── redeal (via composing)
                     │             │
                     └──────┬──────┘
                            │
@@ -274,7 +293,7 @@ Instead of one 2,047-line ViewModel, split into:
                            ▼
                     ┌─────────────┐
                     │             │
-                    │    saved    │ ◄─── unlock + redeal
+                    │    saved    │ ◄─── unlock + redeal (via composing)
                     │             │
                     └─────────────┘
 ```
@@ -300,6 +319,68 @@ User taps "Plan my day" / "Fill the gaps"
   │
   └─ View reacts to planState change → renders timeline
 ```
+
+## 8b. Data Model Changes
+
+### CalendarSlot (new)
+
+Lightweight struct for calendar events before they enter the agenda:
+
+```swift
+struct CalendarSlot: Identifiable {
+    let id: String          // EKEvent.eventIdentifier
+    let title: String
+    let startDate: Date
+    let endDate: Date
+    let isAllDay: Bool
+}
+```
+
+### AgendaSlot Changes
+
+Calendar events and custom entries become `AgendaSlot` entries with new source/type values:
+
+- Add `SlotSource.calendar` — card came from iOS Calendar
+- Add `SlotSource.userCustom` — card was manually entered (already exists, keep as-is)
+- Calendar slots: `slotType` = `.activity` (generic), `source` = `.calendar`, `isLocked` = `true`
+- Custom slots: `slotType` inherits from replaced slot or defaults to `.activity`, `source` = `.userCustom`
+
+Remove `swaps: [SwapOption]` field from `AgendaSlot` — no longer used. Also remove `SwapOption` struct.
+
+Clean up dormant fields from `DayAgenda`: `theme`, `weatherNote`, `badWeatherMode`, `hasStaleSlots` can be removed since execution mode and stale indicators are deferred.
+
+### Redeal Data Flow
+
+```
+User taps "Redeal"
+  │
+  ├─ PlanViewModel.redeal()
+  │   ├─ Collect locked slots (including calendar slots the user kept)
+  │   ├─ Convert locked slots to AnchorEvent entries (time + location)
+  │   ├─ GapAnalysisEngine.analyse(lockedAsAnchors)
+  │   ├─ FreshnessScorer.buildScoredPool() — exclude venues already in locked slots
+  │   ├─ AgendaComposer.compose(gaps, pool) || TemplateEngine fallback
+  │   ├─ Merge: locked slots (unchanged) + new composed slots, sort by time
+  │   ├─ Recompute travel estimates
+  │   ├─ Cache result
+  │   └─ Set planState = .dealt(mergedAgenda)
+```
+
+### "Replace with my own" Form
+
+Sheet with:
+- **Venue name** (required, text field)
+- **Time range** (two date pickers: start + end, pre-filled from the slot being replaced)
+- **Address** (optional, text field — if provided, geocoded via `CLGeocoder` for Directions button coordinates)
+- **Validation**: name must be non-empty, end must be after start
+- Produces an `AgendaSlot` with `source: .userCustom`, `slotType` inherited from original slot
+
+### Haptic Feedback
+
+- Deal animation: medium impact on each card appearing
+- Lock/unlock toggle: light impact
+- Save to calendar: success notification
+- Redeal: medium impact on deal start
 
 ## 9. Card Design (Znuni Design System)
 
