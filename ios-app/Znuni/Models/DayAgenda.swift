@@ -178,7 +178,7 @@ struct TravelEstimate: Codable, Equatable {
         guard let fromLat, let fromLon, let toLat, let toLon else {
             return TravelEstimate(minutes: 10, mode: .transit) // sensible default
         }
-        return estimateFromDistance(haversineDistance(lat1: fromLat, lon1: fromLon, lat2: toLat, lon2: toLon))
+        return estimateFromDistance(haversine(lat1: fromLat, lon1: fromLon, lat2: toLat, lon2: toLon))
     }
 
     /// Estimate travel between two CLLocations.
@@ -197,7 +197,8 @@ struct TravelEstimate: Codable, Equatable {
         }
     }
 
-    private static func haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double) -> Double {
+    /// Haversine distance in meters between two coordinates.
+    static func haversine(lat1: Double, lon1: Double, lat2: Double, lon2: Double) -> Double {
         let R = 6371000.0
         let dLat = (lat2 - lat1) * .pi / 180
         let dLon = (lon2 - lon1) * .pi / 180

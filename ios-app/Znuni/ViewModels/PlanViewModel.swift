@@ -1,6 +1,7 @@
 import SwiftUI
 import EventKit
 import CoreLocation
+import MapKit
 
 // MARK: - Plan State
 
@@ -460,6 +461,12 @@ final class PlanViewModel {
         ZnuniEvent.planSlotEdited(action: "custom")
     }
 
+    /// Clear the entire plan for the current date and return to empty state.
+    func clearPlan() {
+        inMemoryPlans.removeValue(forKey: planKey())
+        planState = .empty
+    }
+
     // MARK: - Save to Calendar
 
     /// Lock all slots and export to iOS Calendar.
@@ -505,6 +512,42 @@ final class PlanViewModel {
     var isComposing: Bool {
         if case .composing = planState { return true }
         return false
+    }
+
+    /// Fetch real travel times from MapKit and update slots asynchronously.
+    @MainActor
+    func fetchMapKitTravelTimes() async {
+        guard var agenda = currentAgenda else { return }
+        var updated = false
+        for i in 0..<agenda.slots.count {
+            guard i + 1 < agenda.slots.count,
+                  let fromLat = agenda.slots[i].lat, let fromLon = agenda.slots[i].lon,
+                  let toLat = agenda.slots[i + 1].lat, let toLon = agenda.slots[i + 1].lon else { continue }
+
+            let source = MKMapItem(placemark: MKPlacemark(coordinate: CLLocationCoordinate2D(latitude: fromLat, longitude: fromLon)))
+            let dest = MKMapItem(placemark: MKPlacemark(coordinate: CLLocationCoordinate2D(latitude: toLat, longitude: toLon)))
+
+            let request = MKDirections.Request()
+            request.source = source
+            request.destination = dest
+
+            let distance = TravelEstimate.haversine(lat1: fromLat, lon1: fromLon, lat2: toLat, lon2: toLon)
+            request.transportType = distance < 1500 ? .walking : .transit
+
+            let directions = MKDirections(request: request)
+            if let response = try? await directions.calculate() {
+                let minutes = Int(response.routes.first?.expectedTravelTime ?? 0) / 60
+                if minutes > 0 {
+                    let mode: TravelMode = request.transportType == .walking ? .walking : .transit
+                    agenda.slots[i].travelToNext = TravelEstimate(minutes: minutes, mode: mode)
+                    agenda.slots[i].travelNote = travelNoteText(for: agenda.slots[i].travelToNext!)
+                    updated = true
+                }
+            }
+        }
+        if updated {
+            updateAgenda(agenda)
+        }
     }
 }
 
@@ -645,6 +688,12 @@ private extension PlanViewModel {
 
     /// Populate travel estimates between consecutive slots.
     func populateTravelEstimates(in slots: inout [AgendaSlot]) {
+        // Enrich all slots with coordinates first
+        for i in 0..<slots.count {
+            enrichSlotCoordinates(&slots[i])
+        }
+        // Use haversine heuristic for initial estimates (sync)
+        // MapKit directions will be fetched async and update later
         for i in 0..<slots.count {
             if i + 1 < slots.count {
                 let est = TravelEstimate.estimate(
@@ -669,16 +718,33 @@ private extension PlanViewModel {
 
     // MARK: - Venue Coordinate Enrichment
 
-    /// Enrich AI-returned slots with coordinates from the data pools.
+    /// Enrich slots with coordinates from the data pools (by venueId or venue name).
     func enrichSlotCoordinates(_ slot: inout AgendaSlot) {
-        guard let venueId = slot.venueId, slot.lat == nil else { return }
-        if let act = activitiesData?.activities.first(where: { $0.id == venueId }),
+        guard slot.lat == nil else { return }
+        // Try by venueId first
+        if let venueId = slot.venueId {
+            if let act = activitiesData?.activities.first(where: { $0.id == venueId }),
+               let lat = act.lat, let lon = act.lon {
+                slot.lat = lat
+                slot.lon = lon
+                return
+            } else if let spot = lunchData?.spots.first(where: { $0.id == venueId }) {
+                slot.lat = spot.lat
+                slot.lon = spot.lon
+                return
+            }
+        }
+        // Fallback: match by venue name
+        let name = slot.venueName
+        if let act = activitiesData?.activities.first(where: { $0.name == name || $0.nameDE == name }),
            let lat = act.lat, let lon = act.lon {
             slot.lat = lat
             slot.lon = lon
-        } else if let spot = lunchData?.spots.first(where: { $0.id == venueId }) {
+            if slot.venueId == nil { slot.venueId = act.id }
+        } else if let spot = lunchData?.spots.first(where: { $0.name == name }) {
             slot.lat = spot.lat
             slot.lon = spot.lon
+            if slot.venueId == nil { slot.venueId = spot.id }
         }
     }
 

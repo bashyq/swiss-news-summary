@@ -87,6 +87,8 @@ struct PlanTabView: View {
         .onChange(of: isDealState) { _, isDealt in
             if isDealt {
                 animateDealIn()
+                // Fetch real travel times from MapKit (async, updates in background)
+                Task { await viewModel.fetchMapKitTravelTimes() }
             }
         }
         .onChange(of: isCalendarPreviewState) { _, isPreviewing in
@@ -546,6 +548,23 @@ struct PlanTabView: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
                             .stroke(Color.znBorder, lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+
+            // Clear plan
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                viewModel.clearPlan()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.znMuted)
+                    .padding(12)
+                    .background(Color.znSurface)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle().stroke(Color.znBorder, lineWidth: 1)
                     )
             }
             .buttonStyle(.plain)
