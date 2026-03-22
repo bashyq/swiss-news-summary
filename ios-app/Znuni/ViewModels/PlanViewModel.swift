@@ -84,6 +84,15 @@ final class PlanViewModel {
         selectedDate = date
         let dateISO = isoString(for: date)
 
+        // 0. Cache current agenda before switching (so we can come back to it)
+        if let current = currentAgenda {
+            let prevISO = isoString(for: selectedDate)
+            let prevAnchorsHash = AgendaCache.hash(anchors: anchorStore.anchors(for: selectedDate))
+            Task {
+                await cacheAgenda(current, dateISO: prevISO, anchors: anchorStore.anchors(for: selectedDate))
+            }
+        }
+
         // 1. Check AgendaCache for existing plan
         let anchorsHash = AgendaCache.hash(anchors: anchorStore.anchors(for: date))
         if let cachedData = await agendaCache.get(
