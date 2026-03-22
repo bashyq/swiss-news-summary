@@ -77,17 +77,7 @@ private struct NewsNavigationStack: View {
     }
 }
 
-// MARK: - Plan Tab (placeholder — replaced in Task 6)
-
-struct PlanTabView: View {
-    var body: some View {
-        NavigationStack {
-            Text("Plan tab — coming in Task 6")
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color.znCream)
-        }
-    }
-}
+// MARK: - Plan Tab (implemented in Task 6 — see PlanTabView.swift)
 
 // MARK: - Discover Navigation Stack
 

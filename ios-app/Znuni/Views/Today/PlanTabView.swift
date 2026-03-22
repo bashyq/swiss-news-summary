@@ -1,0 +1,523 @@
+import SwiftUI
+
+/// Main container view for the Plan tab.
+/// Renders hero banner, date strip, and state-driven content from PlanViewModel.
+struct PlanTabView: View {
+    @Environment(AppState.self) private var appState
+    @State private var viewModel = PlanViewModel()
+    @State private var showDatePicker = false
+    @State private var datePickerPlanDay: PlanDay = .today
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 0) {
+                    PlanHeroBanner(
+                        selectedDate: viewModel.selectedDate,
+                        planState: viewModel.planState,
+                        weather: viewModel.weather,
+                        planningCity: viewModel.planningCity
+                    )
+
+                    DateStripView(
+                        dates: viewModel.dates,
+                        selectedDate: Binding(
+                            get: { viewModel.selectedDate },
+                            set: { viewModel.selectedDate = $0 }
+                        ),
+                        onCalendarTap: {
+                            datePickerPlanDay = currentPlanDay
+                            showDatePicker = true
+                        }
+                    )
+
+                    planContent
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
+                        .padding(.bottom, 32)
+                }
+            }
+            .scrollIndicators(.hidden)
+            .background(Color.znCream)
+        }
+        .onChange(of: viewModel.selectedDate) {
+            Task {
+                await viewModel.selectDate(viewModel.selectedDate)
+            }
+        }
+        .onChange(of: appState.city) {
+            viewModel.planningCity = PlanningCity(city: appState.city)
+        }
+        .task {
+            viewModel.planningCity = PlanningCity(city: appState.city)
+            await viewModel.selectDate(viewModel.selectedDate)
+        }
+        .sheet(isPresented: $showDatePicker) {
+            DatePickerSheet(selectedPlanDay: $datePickerPlanDay)
+                .onChange(of: datePickerPlanDay) {
+                    viewModel.selectedDate = datePickerPlanDay.date()
+                }
+        }
+    }
+
+    // MARK: - Plan Content (State-Driven)
+
+    @ViewBuilder
+    private var planContent: some View {
+        switch viewModel.planState {
+        case .empty:
+            emptyState
+
+        case .calendarPreview(let events):
+            calendarPreviewState(events)
+
+        case .composing(let locked):
+            composingState(locked)
+
+        case .dealt(let agenda):
+            dealtState(agenda, isSaved: false)
+
+        case .saved(let agenda):
+            dealtState(agenda, isSaved: true)
+
+        case .error(let message):
+            errorState(message)
+        }
+    }
+
+    // MARK: - Empty State
+
+    private var emptyState: some View {
+        VStack(spacing: 20) {
+            // Weather summary card
+            if let weather = viewModel.weather {
+                weatherSummaryCard(weather)
+            }
+
+            Text(appState.localized(
+                en: "No plans yet for \(dayName)",
+                de: "Noch keine Plaene fuer \(dayName)"
+            ))
+            .font(.system(size: 15))
+            .foregroundStyle(.znMuted)
+
+            planMyDayButton(
+                label: appState.localized(en: "Plan my day", de: "Tag planen")
+            )
+        }
+    }
+
+    // MARK: - Calendar Preview
+
+    private func calendarPreviewState(_ events: [CalendarSlot]) -> some View {
+        VStack(spacing: 16) {
+            // Weather card with event count
+            if let weather = viewModel.weather {
+                weatherSummaryCard(weather, subtitle: appState.localized(
+                    en: "\(events.count) events in your calendar",
+                    de: "\(events.count) Termine in deinem Kalender"
+                ))
+            }
+
+            // Section label
+            Text(appState.localized(en: "FROM YOUR CALENDAR", de: "AUS DEINEM KALENDER"))
+                .font(.znEyebrow)
+                .tracking(1)
+                .foregroundStyle(.znMuted)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Calendar event cards
+            ForEach(events) { event in
+                calendarEventCard(event)
+            }
+
+            // Fill the gaps button
+            planMyDayButton(
+                label: appState.localized(en: "Fill the gaps", de: "Luecken fuellen")
+            )
+
+            Text(appState.localized(
+                en: "Morning \u{00B7} Lunch \u{00B7} Afternoon \u{00B7} Dinner",
+                de: "Morgen \u{00B7} Mittag \u{00B7} Nachmittag \u{00B7} Abend"
+            ))
+            .font(.system(size: 11))
+            .foregroundStyle(.znMuted)
+        }
+    }
+
+    // MARK: - Composing State
+
+    private func composingState(_ locked: [AgendaSlot]) -> some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .tint(.znNavy)
+                .padding(.top, 32)
+
+            Text(appState.localized(
+                en: "Planning your day...",
+                de: "Plane deinen Tag..."
+            ))
+            .font(.system(size: 14))
+            .foregroundStyle(.znMuted)
+
+            // Show locked slots if any
+            ForEach(locked) { slot in
+                simplifiedSlotCard(slot, accentColor: .znNavy)
+            }
+        }
+    }
+
+    // MARK: - Dealt / Saved State
+
+    private func dealtState(_ agenda: DayAgenda, isSaved: Bool) -> some View {
+        VStack(spacing: 0) {
+            // Timeline of slots
+            ForEach(Array(agenda.slots.enumerated()), id: \.element.id) { index, slot in
+                simplifiedSlotCard(
+                    slot,
+                    accentColor: slotAccentColor(slot),
+                    showLockBadge: isSaved
+                )
+
+                // Travel connector between slots
+                if index < agenda.slots.count - 1, let travel = slot.travelToNext {
+                    travelConnector(travel)
+                }
+            }
+
+            // Bottom action bar
+            actionBar(isSaved: isSaved)
+                .padding(.top, 24)
+        }
+    }
+
+    // MARK: - Error State
+
+    private func errorState(_ message: String) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 32))
+                .foregroundStyle(.znMuted)
+                .padding(.top, 32)
+
+            Text(message)
+                .font(.cardHeadline)
+                .foregroundStyle(.znInk)
+                .multilineTextAlignment(.center)
+
+            Button {
+                Task { await viewModel.deal() }
+            } label: {
+                Text(appState.localized(en: "Retry", de: "Erneut versuchen"))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(Color.znNavy)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - Reusable Components
+
+    private func weatherSummaryCard(_ weather: Weather, subtitle: String? = nil) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: weather.sfSymbol)
+                .symbolRenderingMode(.multicolor)
+                .foregroundStyle(.yellow)
+                .font(.system(size: 28))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(Int(weather.temperature))\u{00B0} \(weather.description)")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.znInk)
+
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.znMuted)
+                }
+            }
+
+            Spacer()
+        }
+        .padding(AppSpacing.cardPadding)
+        .background(Color.znSurface)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
+        .shadow(
+            color: AppShadow.card.color,
+            radius: AppShadow.card.radius,
+            x: AppShadow.card.x,
+            y: AppShadow.card.y
+        )
+    }
+
+    private func planMyDayButton(label: String) -> some View {
+        Button {
+            Task {
+                if case .calendarPreview(let events) = viewModel.planState {
+                    // Convert calendar events to locked slots for gap filling
+                    let lockedSlots = events.map { event in
+                        calendarSlotToAgendaSlot(event)
+                    }
+                    await viewModel.deal(lockedSlots: lockedSlots)
+                } else {
+                    await viewModel.deal()
+                }
+            }
+        } label: {
+            Text(label)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.white)
+                .padding(.vertical, 14)
+                .padding(.horizontal, 32)
+                .background(LinearGradient.brand)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func calendarEventCard(_ event: CalendarSlot) -> some View {
+        HStack(spacing: 12) {
+            // Blue accent bar
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(Color.znNavy)
+                .frame(width: AppSpacing.borderStripWidth)
+
+            Image(systemName: "calendar")
+                .font(.system(size: 14))
+                .foregroundStyle(.znNavy)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(event.title)
+                    .font(.custom("Playfair", size: 15).weight(.semibold))
+                    .foregroundStyle(.znInk)
+
+                Text(eventTimeString(event))
+                    .font(.znMono)
+                    .foregroundStyle(.znMuted)
+            }
+
+            Spacer()
+
+            // Locked badge
+            Text(appState.localized(en: "Locked", de: "Fixiert"))
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.znNavy)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.znNavy.opacity(0.1))
+                .clipShape(Capsule())
+        }
+        .padding(AppSpacing.cardPadding)
+        .background(Color.znSurface)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
+        .shadow(
+            color: AppShadow.card.color,
+            radius: AppShadow.card.radius,
+            x: AppShadow.card.x,
+            y: AppShadow.card.y
+        )
+    }
+
+    private func simplifiedSlotCard(
+        _ slot: AgendaSlot,
+        accentColor: Color,
+        showLockBadge: Bool = false
+    ) -> some View {
+        HStack(spacing: 12) {
+            // Accent bar
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(accentColor)
+                .frame(width: AppSpacing.borderStripWidth)
+
+            VStack(alignment: .leading, spacing: 4) {
+                // Type label
+                Text(slotTypeLabel(slot.type))
+                    .font(.znEyebrow)
+                    .tracking(1)
+                    .foregroundStyle(.znMuted)
+                    .textCase(.uppercase)
+
+                // Venue name
+                Text(slot.venueName)
+                    .font(.custom("Playfair", size: 15).weight(.semibold))
+                    .foregroundStyle(.znInk)
+
+                // Time
+                HStack(spacing: 6) {
+                    Text(slot.time)
+                        .font(.znMono)
+                        .foregroundStyle(.znMuted)
+
+                    if let duration = slot.durationDisplay {
+                        Text("\u{00B7} \(duration)")
+                            .font(.znMono)
+                            .foregroundStyle(.znMuted)
+                    }
+                }
+            }
+
+            Spacer()
+
+            if showLockBadge || slot.isLocked {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.znNavy.opacity(0.5))
+            }
+        }
+        .padding(AppSpacing.cardPadding)
+        .background(Color.znSurface)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
+        .shadow(
+            color: AppShadow.card.color,
+            radius: AppShadow.card.radius,
+            x: AppShadow.card.x,
+            y: AppShadow.card.y
+        )
+        .padding(.vertical, 4)
+    }
+
+    private func travelConnector(_ travel: TravelEstimate) -> some View {
+        HStack(spacing: 6) {
+            Rectangle()
+                .fill(Color.znBorder)
+                .frame(width: 1, height: 20)
+                .padding(.leading, 24)
+
+            Image(systemName: travel.mode == .walking ? "figure.walk" : "tram.fill")
+                .font(.system(size: 10))
+                .foregroundStyle(.znMuted)
+
+            Text("\(travel.minutes) min")
+                .font(.system(size: 11))
+                .foregroundStyle(.znMuted)
+
+            Spacer()
+        }
+    }
+
+    private func actionBar(isSaved: Bool) -> some View {
+        HStack(spacing: 12) {
+            // Save to calendar
+            Button {
+                Task {
+                    try? await viewModel.saveToCalendar()
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    if isSaved {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    Text(isSaved
+                        ? appState.localized(en: "Saved to calendar", de: "Im Kalender gespeichert")
+                        : appState.localized(en: "Save to calendar", de: "Im Kalender speichern")
+                    )
+                    .font(.system(size: 14, weight: .semibold))
+                }
+                .foregroundStyle(.white)
+                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity)
+                .background(LinearGradient.brand)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .opacity(isSaved ? 0.5 : 1)
+            }
+            .buttonStyle(.plain)
+            .disabled(isSaved)
+
+            // Redeal
+            Button {
+                Task { await viewModel.redeal() }
+            } label: {
+                Text(appState.localized(en: "Redeal", de: "Neu mischen"))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.znInk)
+                    .padding(.vertical, 14)
+                    .padding(.horizontal, 20)
+                    .background(Color.znSurface)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.znBorder, lineWidth: 1)
+                    )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - Helpers
+
+    private var dayName: String {
+        let f = DateFormatter()
+        f.locale = appState.language == .de ? Locale(identifier: "de_CH") : Locale(identifier: "en_US")
+        f.dateFormat = "EEEE"
+        return f.string(from: viewModel.selectedDate)
+    }
+
+    private var currentPlanDay: PlanDay {
+        let cal = Calendar.current
+        let date = viewModel.selectedDate
+        if cal.isDateInToday(date) { return .today }
+        if cal.isDateInTomorrow(date) { return .tomorrow }
+        let weekendDates = PlanDay.nextWeekendDates()
+        if cal.isDate(date, inSameDayAs: weekendDates.saturday) { return .saturday }
+        if cal.isDate(date, inSameDayAs: weekendDates.sunday) { return .sunday }
+        return .specific(date)
+    }
+
+    private func eventTimeString(_ event: CalendarSlot) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        f.timeZone = TimeZone(identifier: "Europe/Zurich")
+        if event.isAllDay {
+            return appState.localized(en: "All day", de: "Ganztaegig")
+        }
+        return "\(f.string(from: event.startDate)) - \(f.string(from: event.endDate))"
+    }
+
+    private func slotAccentColor(_ slot: AgendaSlot) -> Color {
+        switch slot.type {
+        case .activity, .homeActivity: return .znTerracotta
+        case .lunch: return .znPositive
+        case .dinner: return .znNavy
+        }
+    }
+
+    private func slotTypeLabel(_ type: AgendaSlot.SlotType) -> String {
+        switch type {
+        case .activity:
+            return appState.localized(en: "ACTIVITY", de: "AKTIVITAET")
+        case .lunch:
+            return appState.localized(en: "LUNCH", de: "MITTAGESSEN")
+        case .dinner:
+            return appState.localized(en: "DINNER", de: "ABENDESSEN")
+        case .homeActivity:
+            return appState.localized(en: "AT HOME", de: "ZUHAUSE")
+        }
+    }
+
+    private func calendarSlotToAgendaSlot(_ event: CalendarSlot) -> AgendaSlot {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        f.timeZone = TimeZone(identifier: "Europe/Zurich")
+        let timeString = event.isAllDay ? "09:00" : f.string(from: event.startDate)
+        let duration = Int(event.endDate.timeIntervalSince(event.startDate) / 60)
+
+        return AgendaSlot(
+            id: "cal-\(event.id)",
+            time: timeString,
+            type: .activity,
+            venueName: event.title,
+            venueId: nil,
+            reason: "",
+            tags: [],
+            durationMinutes: max(duration, 60),
+            source: .calendar,
+            isLocked: true,
+            slotDate: event.startDate
+        )
+    }
+}
