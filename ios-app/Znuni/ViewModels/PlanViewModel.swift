@@ -85,11 +85,14 @@ final class PlanViewModel {
 
     /// Select a date and load cached plan or calendar events.
     @MainActor
-    func selectDate(_ date: Date) async {
+    func selectDate(_ date: Date, previousDate: Date? = nil) async {
         // 0. Save current agenda in memory under the OLD date before switching
-        let previousDateISO = isoString(for: selectedDate)
-        if let current = currentAgenda {
-            inMemoryPlans[previousDateISO] = current
+        let oldDate = previousDate ?? selectedDate
+        if !Calendar.current.isDate(oldDate, inSameDayAs: date) {
+            let previousDateISO = isoString(for: oldDate)
+            if let current = currentAgenda {
+                inMemoryPlans[previousDateISO] = current
+            }
         }
 
         selectedDate = date

@@ -42,9 +42,9 @@ struct PlanTabView: View {
             .scrollIndicators(.hidden)
             .background(Color.znCream)
         }
-        .onChange(of: viewModel.selectedDate) {
+        .onChange(of: viewModel.selectedDate) { oldValue, newValue in
             Task {
-                await viewModel.selectDate(viewModel.selectedDate)
+                await viewModel.selectDate(newValue, previousDate: oldValue)
             }
         }
         .onChange(of: appState.city) {
