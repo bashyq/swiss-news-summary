@@ -5,25 +5,13 @@ import CoreLocation
 // MARK: - Plan State
 
 /// State machine for the Plan tab's composition lifecycle.
-enum PlanState: Equatable {
+enum PlanState {
     case empty
     case calendarPreview([CalendarSlot])
     case composing(locked: [AgendaSlot])
     case dealt(DayAgenda)
     case saved(DayAgenda)
     case error(String)
-
-    static func == (lhs: PlanState, rhs: PlanState) -> Bool {
-        switch (lhs, rhs) {
-        case (.empty, .empty): return true
-        case (.calendarPreview(let a), .calendarPreview(let b)): return a == b
-        case (.composing, .composing): return true
-        case (.dealt(let a), .dealt(let b)): return a.date == b.date
-        case (.saved(let a), .saved(let b)): return a.date == b.date
-        case (.error(let a), .error(let b)): return a == b
-        default: return false
-        }
-    }
 }
 
 // MARK: - PlanViewModel
@@ -225,15 +213,15 @@ final class PlanViewModel {
                 var allSlots = lockedSlots
                 let anchorSlots = anchors.map { anchorToSlot($0) }
                 for aSlot in anchorSlots {
-                    if !allSlots.contains(where: { $0.id == aSlot.id }) {
+                    if !allSlots.contains(where: { $0.id == aSlot.id || $0.venueName == aSlot.venueName }) {
                         allSlots.append(aSlot)
                     }
                 }
                 allSlots.append(contentsOf: aiSlots)
-                // Deduplicate by venue+time
+                // Deduplicate by venue name
                 var seenAI = Set<String>()
                 allSlots = allSlots.filter { slot in
-                    let key = slot.venueName + slot.time
+                    let key = slot.venueName
                     if seenAI.contains(key) { return false }
                     seenAI.insert(key)
                     return true
@@ -266,12 +254,17 @@ final class PlanViewModel {
         }
 
         // 6. Template engine fallback
+        // Exclude locked venues from the pool so template doesn't re-suggest them
+        let lockedVenueNames = Set(lockedSlots.map { $0.venueName })
+        let filteredActivities = activities.filter { !lockedVenueNames.contains($0.name) }
+        let filteredSpots = spots.filter { !lockedVenueNames.contains($0.name) }
+
         let events = activitiesData?.cityEvents ?? []
         var result = templateEngine.buildAgenda(
             weather: effectiveWeather,
             session: session,
-            activities: activities,
-            restaurants: spots,
+            activities: filteredActivities,
+            restaurants: filteredSpots,
             cityEvents: events,
             recentlyShown: recentlyShownStore.recentlyShownIds(),
             language: language,
@@ -282,22 +275,23 @@ final class PlanViewModel {
         // Gap-aware filtering: only keep slots matching fillable gaps
         var filteredSlots = filterSlotsToGaps(result.slots, gaps: fillableGaps, planDate: planDate)
 
-        // Merge locked + anchor slots
-        let anchorSlots = anchors.map { anchorToSlot($0) }
+        // Merge locked slots (skip anchor-derived duplicates — locked slots already cover them)
         for slot in lockedSlots {
-            if !filteredSlots.contains(where: { $0.id == slot.id }) {
+            if !filteredSlots.contains(where: { $0.id == slot.id || $0.venueName == slot.venueName }) {
                 filteredSlots.append(slot)
             }
         }
+        // Only add anchor slots that aren't already represented by a locked slot or template slot
+        let anchorSlots = anchors.map { anchorToSlot($0) }
         for aSlot in anchorSlots {
-            if !filteredSlots.contains(where: { $0.id == aSlot.id }) {
+            if !filteredSlots.contains(where: { $0.id == aSlot.id || $0.venueName == aSlot.venueName }) {
                 filteredSlots.append(aSlot)
             }
         }
         // Deduplicate by venue name (template engine can produce duplicates)
         var seenVenues = Set<String>()
         filteredSlots = filteredSlots.filter { slot in
-            let key = slot.venueName + slot.time
+            let key = slot.venueName
             if seenVenues.contains(key) { return false }
             seenVenues.insert(key)
             return true
@@ -656,11 +650,11 @@ private extension PlanViewModel {
 
     // MARK: - Merge Helpers
 
-    /// Merge locked slots with anchor-generated slots, deduplicating by ID.
+    /// Merge locked slots with anchor-generated slots, deduplicating by ID or venue name.
     func mergeLockedAndAnchorSlots(locked: [AgendaSlot], anchorSlots: [AgendaSlot]) -> [AgendaSlot] {
         var result = locked
         for aSlot in anchorSlots {
-            if !result.contains(where: { $0.id == aSlot.id }) {
+            if !result.contains(where: { $0.id == aSlot.id || $0.venueName == aSlot.venueName }) {
                 result.append(aSlot)
             }
         }

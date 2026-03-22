@@ -353,9 +353,6 @@ struct PlanSlotCard: View {
             }
 
             Spacer()
-
-            contextMenuButton
-                .frame(width: 24, height: 24)
         }
     }
 
