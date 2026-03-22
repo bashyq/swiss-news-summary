@@ -79,6 +79,11 @@ struct PlanSlotCard: View {
 
             // Text content
             VStack(alignment: .leading, spacing: 4) {
+                // Badges (locked / custom)
+                if slot.isLocked || slot.source == .userCustom {
+                    badgesRow
+                }
+
                 // Eyebrow row: time + type + weather
                 eyebrowRow
 

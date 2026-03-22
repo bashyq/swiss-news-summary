@@ -230,6 +230,14 @@ final class PlanViewModel {
                     }
                 }
                 allSlots.append(contentsOf: aiSlots)
+                // Deduplicate by venue+time
+                var seenAI = Set<String>()
+                allSlots = allSlots.filter { slot in
+                    let key = slot.venueName + slot.time
+                    if seenAI.contains(key) { return false }
+                    seenAI.insert(key)
+                    return true
+                }
                 allSlots.sort { $0.time < $1.time }
                 populateTravelEstimates(in: &allSlots)
 
@@ -286,6 +294,15 @@ final class PlanViewModel {
                 filteredSlots.append(aSlot)
             }
         }
+        // Deduplicate by venue name (template engine can produce duplicates)
+        var seenVenues = Set<String>()
+        filteredSlots = filteredSlots.filter { slot in
+            let key = slot.venueName + slot.time
+            if seenVenues.contains(key) { return false }
+            seenVenues.insert(key)
+            return true
+        }
+
         filteredSlots.sort { $0.time < $1.time }
         populateTravelEstimates(in: &filteredSlots)
 
