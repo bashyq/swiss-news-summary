@@ -35,8 +35,14 @@ final class PlanViewModel {
 
     // MARK: - In-Memory Plan Cache (survives date switches)
 
-    /// Stores dealt/saved agendas per date ISO string so switching dates doesn't lose work.
+    /// Stores dealt/saved agendas per "cityId-dateISO" key so switching dates/cities doesn't lose work.
     private var inMemoryPlans: [String: DayAgenda] = [:]
+
+    private func planKey(city: String? = nil, date: Date? = nil) -> String {
+        let c = city ?? planningCity.id
+        let d = isoString(for: date ?? selectedDate)
+        return "\(c)-\(d)"
+    }
 
     // MARK: - Cached Data Pools
 
@@ -50,7 +56,7 @@ final class PlanViewModel {
 
     /// Last successfully dealt agenda for the current date — used as fallback in error state.
     var lastDealtAgenda: DayAgenda? {
-        inMemoryPlans[isoString(for: selectedDate)]
+        inMemoryPlans[planKey()]
     }
 
     // MARK: - Date Strip
@@ -94,9 +100,9 @@ final class PlanViewModel {
         // 0. Save current agenda in memory under the OLD date before switching
         let oldDate = previousDate ?? selectedDate
         if !Calendar.current.isDate(oldDate, inSameDayAs: date) {
-            let previousDateISO = isoString(for: oldDate)
+            let oldKey = planKey(date: oldDate)
             if let current = currentAgenda {
-                inMemoryPlans[previousDateISO] = current
+                inMemoryPlans[oldKey] = current
             }
         }
 
@@ -104,7 +110,7 @@ final class PlanViewModel {
         let dateISO = isoString(for: date)
 
         // 1. Check in-memory cache first (fastest, preserves lock state)
-        if let memoryCached = inMemoryPlans[dateISO] {
+        if let memoryCached = inMemoryPlans[planKey(date: date)] {
             let allLocked = memoryCached.slots.allSatisfy { $0.isLocked }
             planState = allLocked ? .saved(memoryCached) : .dealt(memoryCached)
             return
@@ -357,11 +363,19 @@ final class PlanViewModel {
     /// Switch planning city: invalidate data pools and reset plan state.
     /// Planning city is independent from the global app city (News tab).
     func changeCity(to newCity: PlanningCity) {
+        // Save current plan before switching
+        if let current = currentAgenda {
+            inMemoryPlans[planKey()] = current
+        }
         planningCity = newCity
         invalidateDataPools()
-        // Clear in-memory plans since they're for the old city
-        inMemoryPlans.removeAll()
-        planState = .empty
+        // Check if we have a cached plan for this city+date
+        if let cached = inMemoryPlans[planKey()] {
+            let allLocked = cached.slots.allSatisfy { $0.isLocked }
+            planState = allLocked ? .saved(cached) : .dealt(cached)
+        } else {
+            planState = .empty
+        }
     }
 
     /// Clear cached data pools so the next deal() re-fetches for the current city.
@@ -714,7 +728,7 @@ private extension PlanViewModel {
 
     /// Update the agenda in the current state and keep in-memory cache in sync.
     func updateAgenda(_ agenda: DayAgenda) {
-        inMemoryPlans[isoString(for: selectedDate)] = agenda
+        inMemoryPlans[planKey()] = agenda
         switch planState {
         case .dealt:
             planState = .dealt(agenda)
