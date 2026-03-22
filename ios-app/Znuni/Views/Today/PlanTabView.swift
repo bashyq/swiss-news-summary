@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Main container view for the Plan tab.
 /// Renders hero banner, date strip, and state-driven content from PlanViewModel.
@@ -60,6 +61,11 @@ struct PlanTabView: View {
                 .onChange(of: datePickerPlanDay) {
                     viewModel.selectedDate = datePickerPlanDay.date()
                 }
+        }
+        .sheet(item: $replacingSlot) { slot in
+            CustomSlotSheet(replacingSlot: slot) { name, start, end, address in
+                viewModel.replaceWithCustom(slotId: slot.id, name: name, start: start, end: end, address: address)
+            }
         }
     }
 
@@ -187,9 +193,18 @@ struct PlanTabView: View {
                 PlanSlotCard(
                     slot: slot,
                     expandedID: $expandedSlotID,
-                    onLock: { viewModel.lock(slotId: slot.id) },
-                    onUnlock: { viewModel.unlock(slotId: slot.id) },
-                    onRemove: { viewModel.remove(slotId: slot.id) },
+                    onLock: {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        viewModel.lock(slotId: slot.id)
+                    },
+                    onUnlock: {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        viewModel.unlock(slotId: slot.id)
+                    },
+                    onRemove: {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        viewModel.remove(slotId: slot.id)
+                    },
                     onReplace: { replacingSlot = slot }
                 )
 
@@ -270,6 +285,7 @@ struct PlanTabView: View {
 
     private func planMyDayButton(label: String) -> some View {
         Button {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             Task {
                 if case .calendarPreview(let events) = viewModel.planState {
                     // Convert calendar events to locked slots for gap filling
@@ -417,6 +433,7 @@ struct PlanTabView: View {
         HStack(spacing: 12) {
             // Save to calendar
             Button {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
                 Task {
                     try? await viewModel.saveToCalendar()
                 }
@@ -444,6 +461,7 @@ struct PlanTabView: View {
 
             // Redeal
             Button {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 Task { await viewModel.redeal() }
             } label: {
                 Text(appState.localized(en: "Refresh plan", de: "Plan auffrischen"))
