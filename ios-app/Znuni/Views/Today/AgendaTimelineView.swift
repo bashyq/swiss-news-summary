@@ -15,7 +15,7 @@ struct AgendaTimelineView: View {
     let location: CLLocation?
     let agendaMode: AgendaMode
     @Binding var expandedSlotID: String?
-    let onSwap: (String, AgendaSlot.SwapOption) -> Void
+    // onSwap removed — card-dealing model replaces swap trays
     var onStartExecuting: (() -> Void)?
     var onAdvanceSlot: (() -> Void)?
     var onExitExecution: (() -> Void)?
@@ -213,14 +213,7 @@ struct AgendaTimelineView: View {
                 AgendaSlotCard(
                     slot: slot,
                     accentColor: slot.accentColor,
-                    showSwapTray: Binding(
-                        get: { openSwapTray == slot.id },
-                        set: { openSwapTray = $0 ? slot.id : nil }
-                    ),
                     expandedSlotID: $expandedSlotID,
-                    onSwap: { swap in
-                        onSwap(slot.id, swap)
-                    },
                     execState: slotExecState(for: index),
                     onDone: slotExecState(for: index) == .active ? {
                         onAdvanceSlot?()
@@ -266,7 +259,7 @@ struct AgendaTimelineView: View {
                     )
                     TravelConnectorView(
                         travelNote: nextSlot.travelNote,
-                        travelMinutes: slot.travelMinutesToNext,
+                        travelMinutes: slot.travelToNext?.minutes,
                         execState: connectorExecState(afterSlotAt: index),
                         isTight: tight,
                         nextVenueName: tight ? nextSlot.venueName : nil,
@@ -290,7 +283,7 @@ struct AgendaTimelineView: View {
 
     /// Check if the gap between two consecutive slots is tight (< 20 min after travel).
     private func isTightConnection(currentSlot: AgendaSlot, nextSlot: AgendaSlot) -> Bool {
-        guard let travelMins = currentSlot.travelMinutesToNext else { return false }
+        guard let travelMins = currentSlot.travelToNext?.minutes else { return false }
         // Parse times
         let currentParts = currentSlot.time.split(separator: ":").compactMap { Int($0) }
         let nextParts = nextSlot.time.split(separator: ":").compactMap { Int($0) }
@@ -327,7 +320,7 @@ struct AgendaTimelineView: View {
         guard index + 1 < agenda.slots.count else { return nil }
         let slot = agenda.slots[index]
         let nextSlot = agenda.slots[index + 1]
-        guard let travelMin = slot.travelMinutesToNext else { return nil }
+        guard let travelMin = slot.travelToNext?.minutes else { return nil }
         let nextParts = nextSlot.time.split(separator: ":").compactMap { Int($0) }
         guard nextParts.count == 2 else { return nil }
         let totalMinutes = nextParts[0] * 60 + nextParts[1] - travelMin

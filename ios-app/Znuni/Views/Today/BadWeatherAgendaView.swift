@@ -11,7 +11,7 @@ struct BadWeatherAgendaView: View {
     let location: CLLocation?
     let agendaMode: AgendaMode
     @Binding var expandedSlotID: String?
-    let onSwap: (String, AgendaSlot.SwapOption) -> Void
+    // onSwap removed — card-dealing model replaces swap trays
     var onStartExecuting: (() -> Void)?
     var onAdvanceSlot: (() -> Void)?
     var onExitExecution: (() -> Void)?
@@ -61,7 +61,6 @@ struct BadWeatherAgendaView: View {
                 location: location,
                 agendaMode: agendaMode,
                 expandedSlotID: $expandedSlotID,
-                onSwap: onSwap,
                 onStartExecuting: onStartExecuting,
                 onAdvanceSlot: onAdvanceSlot,
                 onExitExecution: onExitExecution,

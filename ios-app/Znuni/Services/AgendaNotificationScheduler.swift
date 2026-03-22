@@ -24,7 +24,7 @@ final class AgendaNotificationScheduler {
             let slot = slots[i]
 
             // "Leave now" notification — fires travelMinutes + 5 min before next slot
-            if let travelMins = slot.travelMinutesToNext, i + 1 < slots.count {
+            if let travelMins = slot.travelToNext?.minutes, i + 1 < slots.count {
                 let nextSlot = slots[i + 1]
                 let leaveAt = nextSlot.slotDate.addingTimeInterval(
                     Double(-travelMins - 5) * 60

@@ -329,7 +329,6 @@ struct AgendaComposer {
                 venueId: raw.venueId,
                 reason: raw.reason,
                 tags: raw.tags,
-                swaps: [],
                 durationMinutes: duration,
                 source: .aiGenerated,
                 isLocked: false,

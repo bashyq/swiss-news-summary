@@ -521,15 +521,6 @@ final class TodayViewModel {
                 }
                 #endif
 
-                // Enrich AI slots with swap alternatives from the pool
-                allSlots = enrichWithSwaps(
-                    slots: allSlots,
-                    activityPool: pool.activities,
-                    lunchPool: pool.lunches,
-                    dinnerPool: pool.dinners,
-                    language: language
-                )
-
                 // Compute travel estimates between consecutive slots
                 populateTravelEstimates(in: &allSlots)
 
@@ -632,43 +623,6 @@ final class TodayViewModel {
             populateTravelEstimates(in: &rebuilt.slots)
             self.agenda = rebuilt
         }
-    }
-
-    /// Swap a slot's content with one of its swap options.
-    @MainActor
-    func swapSlot(slotId: String, with swap: AgendaSlot.SwapOption) {
-        guard var current = agenda,
-              let index = current.slots.firstIndex(where: { $0.id == slotId }) else { return }
-
-        current.slots[index].venueName = swap.venueName
-        current.slots[index].venueId = swap.venueId
-        current.slots[index].reason = swap.detail
-        current.slots[index].source = .userSwapped
-        ZnuniEvent.planSlotSwapped(slotType: current.slots[index].type.rawValue)
-
-        // Recalculate travel connectors for affected slots
-        recalcTravel(in: &current.slots, at: index)
-
-        // Record the new venue
-        if let venueId = swap.venueId {
-            recentlyShownStore.recordShown(venueId: venueId)
-        }
-
-        // Auto-update exported calendar event if plan was saved
-        if let eventId = CalendarExportStore.shared.eventId(for: slotId) {
-            let slot = current.slots[index]
-            let duration = slot.durationMinutes ?? 90
-            try? CalendarService.shared.updateEvent(
-                id: eventId,
-                title: swap.venueName,
-                startDate: slot.slotDate,
-                endDate: slot.slotDate.addingTimeInterval(Double(duration) * 60),
-                notes: swap.detail
-            )
-        }
-
-        self.agenda = current
-        syncAgendaToWidget()
     }
 
     // MARK: - Calendar Sync Methods
@@ -1007,11 +961,11 @@ final class TodayViewModel {
                 from: current.slots[index - 1].venueId,
                 to: current.slots[index].venueId
             )
-            current.slots[index - 1].travelMinutesToNext = est?.minutes
+            current.slots[index - 1].travelToNext = est
             current.slots[index - 1].travelNote = est.map { travelNoteText(for: $0) }
         } else if index > 0 {
             // Removed the last slot — predecessor has no next
-            current.slots[index - 1].travelMinutesToNext = nil
+            current.slots[index - 1].travelToNext = nil
             current.slots[index - 1].travelNote = nil
         }
 
@@ -1075,10 +1029,10 @@ final class TodayViewModel {
                 let est = estimateTravelBetween(
                     from: rebuilt.slots[i].venueId, to: rebuilt.slots[i + 1].venueId
                 )
-                rebuilt.slots[i].travelMinutesToNext = est?.minutes
+                rebuilt.slots[i].travelToNext = est
                 rebuilt.slots[i].travelNote = est.map { travelNoteText(for: $0) }
             } else {
-                rebuilt.slots[i].travelMinutesToNext = nil
+                rebuilt.slots[i].travelToNext = nil
             }
         }
 
@@ -1254,90 +1208,13 @@ final class TodayViewModel {
             reason: anchor.neighbourhood ?? categoryLabel,
             durationDisplay: "\(anchor.durationMinutes) min",
             tags: [categoryLabel],
-            swaps: [],
             source: .userAnchor,
             isLocked: true,
             anchorEndTime: endTimeString
         )
     }
 
-    /// Enrich AI-generated slots with swap alternatives from the scored pool.
-    private func enrichWithSwaps(
-        slots: [AgendaSlot],
-        activityPool: [Activity],
-        lunchPool: [LunchSpot],
-        dinnerPool: [LunchSpot],
-        language: AppLanguage
-    ) -> [AgendaSlot] {
-        let usedVenueIds = Set(slots.compactMap(\.venueId))
-        return slots.map { slot in
-            guard slot.source == .aiGenerated else { return slot }
-            var mutable = slot
-            switch slot.type {
-            case .activity:
-                let candidates = activityPool
-                    .filter { !usedVenueIds.contains($0.id) && $0.id != slot.venueId }
-                    .prefix(3)
-                mutable = AgendaSlot(
-                    id: mutable.id, time: mutable.time, type: mutable.type,
-                    venueName: mutable.venueName, venueId: mutable.venueId,
-                    reason: mutable.reason, durationDisplay: mutable.durationDisplay,
-                    travelNote: mutable.travelNote, tags: mutable.tags,
-                    swaps: candidates.map { act in
-                        AgendaSlot.SwapOption(
-                            id: act.id,
-                            venueName: act.localizedName(language: language),
-                            detail: (act.indoor ? "Indoor" : "Outdoor") +
-                                    (act.isFree ? " · Free" : ""),
-                            venueId: act.id
-                        )
-                    },
-                    source: mutable.source, isLocked: mutable.isLocked
-                )
-            case .lunch:
-                let candidates = lunchPool
-                    .filter { !usedVenueIds.contains($0.id) && $0.id != slot.venueId }
-                    .prefix(3)
-                mutable = AgendaSlot(
-                    id: mutable.id, time: mutable.time, type: mutable.type,
-                    venueName: mutable.venueName, venueId: mutable.venueId,
-                    reason: mutable.reason, durationDisplay: mutable.durationDisplay,
-                    travelNote: mutable.travelNote, tags: mutable.tags,
-                    swaps: candidates.map { spot in
-                        AgendaSlot.SwapOption(
-                            id: spot.id,
-                            venueName: spot.name,
-                            detail: "\(spot.cuisineDisplay) · \(String(repeating: "$", count: spot.priceTier))",
-                            venueId: spot.id
-                        )
-                    },
-                    source: mutable.source, isLocked: mutable.isLocked
-                )
-            case .dinner:
-                let candidates = dinnerPool
-                    .filter { !usedVenueIds.contains($0.id) && $0.id != slot.venueId }
-                    .prefix(3)
-                mutable = AgendaSlot(
-                    id: mutable.id, time: mutable.time, type: mutable.type,
-                    venueName: mutable.venueName, venueId: mutable.venueId,
-                    reason: mutable.reason, durationDisplay: mutable.durationDisplay,
-                    travelNote: mutable.travelNote, tags: mutable.tags,
-                    swaps: candidates.map { spot in
-                        AgendaSlot.SwapOption(
-                            id: spot.id,
-                            venueName: spot.name,
-                            detail: "\(spot.cuisineDisplay) · \(String(repeating: "$", count: spot.priceTier))",
-                            venueId: spot.id
-                        )
-                    },
-                    source: mutable.source, isLocked: mutable.isLocked
-                )
-            case .homeActivity:
-                break
-            }
-            return mutable
-        }
-    }
+    // enrichWithSwaps removed — card-dealing model replaces swap trays
 
     /// Look up coordinates for a venue by ID from activities or restaurant data.
     private func venueCoordinates(for venueId: String?) -> (lat: Double, lon: Double)? {
@@ -1362,18 +1239,18 @@ final class TodayViewModel {
         return TravelEstimate.estimate(from: locA, to: locB)
     }
 
-    /// Recalculate travelMinutesToNext for a slot and its predecessor after a swap.
+    /// Recalculate travelToNext for a slot and its predecessor after a swap.
     private func recalcTravel(in slots: inout [AgendaSlot], at index: Int) {
         // Update this slot's travel to next
         if index + 1 < slots.count {
             let est = estimateTravelBetween(from: slots[index].venueId, to: slots[index + 1].venueId)
-            slots[index].travelMinutesToNext = est?.minutes
+            slots[index].travelToNext = est
             slots[index].travelNote = est.map { travelNoteText(for: $0) }
         }
         // Update previous slot's travel to this slot
         if index > 0 {
             let est = estimateTravelBetween(from: slots[index - 1].venueId, to: slots[index].venueId)
-            slots[index - 1].travelMinutesToNext = est?.minutes
+            slots[index - 1].travelToNext = est
             slots[index - 1].travelNote = est.map { travelNoteText(for: $0) }
         }
     }
@@ -1383,10 +1260,10 @@ final class TodayViewModel {
         for i in 0 ..< slots.count {
             if i + 1 < slots.count {
                 let est = estimateTravelBetween(from: slots[i].venueId, to: slots[i + 1].venueId)
-                slots[i].travelMinutesToNext = est?.minutes
+                slots[i].travelToNext = est
                 slots[i].travelNote = est.map { travelNoteText(for: $0) }
             } else {
-                slots[i].travelMinutesToNext = nil
+                slots[i].travelToNext = nil
                 slots[i].travelNote = nil
             }
         }
@@ -1395,7 +1272,7 @@ final class TodayViewModel {
     /// Format a travel note string from a TravelEstimate.
     private func travelNoteText(for estimate: TravelEstimate) -> String {
         switch estimate.mode {
-        case .walk:
+        case .walking:
             return "\(estimate.minutes) min walk"
         case .transit:
             return "~\(estimate.minutes) min by transit"
@@ -1825,7 +1702,7 @@ final class TodayViewModel {
             if nextIdx < currentAgenda.slots.count {
                 let nextSlot = currentAgenda.slots[nextIdx]
                 let earlyArrival = actualDepartureTime.addingTimeInterval(
-                    TimeInterval((nextSlot.travelMinutesToNext ?? slot.travelMinutesToNext ?? 10) * 60)
+                    TimeInterval((nextSlot.travelToNext?.minutes ?? slot.travelToNext?.minutes ?? 10) * 60)
                 )
                 // Show advisory banner if next venue may not be open yet
                 let nextHour = Calendar.current.component(.hour, from: earlyArrival)
@@ -1935,12 +1812,12 @@ final class TodayViewModel {
         return idx >= agenda.slots.count
     }
 
-    /// "Leave at" time: current slot's time minus travelMinutesToNext of the previous slot.
+    /// "Leave at" time: current slot's time minus travelToNext of the previous slot.
     /// Returns nil for the first slot.
     func leaveAtTime(for slotIndex: Int) -> String? {
         guard slotIndex > 0, let agenda, slotIndex < agenda.slots.count else { return nil }
         let prevSlot = agenda.slots[slotIndex - 1]
-        guard let travelMin = prevSlot.travelMinutesToNext else { return nil }
+        guard let travelMin = prevSlot.travelToNext?.minutes else { return nil }
         // Parse current slot time (HH:mm)
         let currentTime = agenda.slots[slotIndex].time
         let parts = currentTime.split(separator: ":").compactMap { Int($0) }

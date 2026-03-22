@@ -65,7 +65,7 @@ struct FeasibilityChecker {
                 let gapMinutes = nextDate.timeIntervalSince(slot.scheduledEndDate) / 60
 
                 // Account for travel time
-                let travelMins = Double(slot.travelMinutesToNext ?? 0)
+                let travelMins = Double(slot.travelToNext?.minutes ?? 0)
                 let usableMinutes = gapMinutes - travelMins
 
                 if usableMinutes < 0 {

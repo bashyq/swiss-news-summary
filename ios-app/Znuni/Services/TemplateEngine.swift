@@ -291,38 +291,34 @@ private enum Archetype {
         }
 
         if let act = morning {
-            let swaps = buildSwaps(from: morningPool, excluding: [act.id, afternoon?.id].compactMap { $0 }, language: language)
             slots.append(makeActivitySlot(
                 id: "morning", time: "10:00", activity: act,
                 timeLabel: language == .en ? "🌅 Morning · Activity" : "🌅 Morgen · Aktivität",
                 travelNote: language == .en ? "From home" : "Von zu Hause",
-                swaps: swaps, session: session, language: language, planDate: planDate
+                session: session, language: language, planDate: planDate
             ))
         }
 
         if let spot = lunchSpot {
             let travel = travelBetween(morning, restaurantLat: spot.lat, restaurantLon: spot.lon)
-            let swaps = buildRestaurantSwaps(from: restaurants, excluding: [spot.id, dinnerSpot?.id].compactMap { $0 }, near: morning, language: language)
             slots.append(makeLunchSlot(
-                spot: spot, time: "11:45", travelNote: travel, swaps: swaps, language: language, planDate: planDate
+                spot: spot, time: "11:45", travelNote: travel, language: language, planDate: planDate
             ))
         }
 
         if let act = afternoon {
             let travel = travelBetweenRestaurant(lunchSpot, activity: act)
-            let swaps = buildSwaps(from: afternoonPool, excluding: [morning?.id, act.id].compactMap { $0 }, language: language)
             slots.append(makeActivitySlot(
                 id: "afternoon", time: "13:30", activity: act,
                 timeLabel: language == .en ? "☀️ Afternoon · Activity" : "☀️ Nachmittag · Aktivität",
-                travelNote: travel, swaps: swaps, session: session, language: language, planDate: planDate
+                travelNote: travel, session: session, language: language, planDate: planDate
             ))
         }
 
         if let spot = dinnerSpot {
             let travel = travelBetween(afternoon, restaurantLat: spot.lat, restaurantLon: spot.lon)
-            let swaps = buildRestaurantSwaps(from: restaurants, excluding: [lunchSpot?.id, spot.id].compactMap { $0 }, near: afternoon, language: language)
             slots.append(makeDinnerSlot(
-                spot: spot, time: "18:00", travelNote: travel, swaps: swaps, language: language, planDate: planDate
+                spot: spot, time: "18:00", travelNote: travel, language: language, planDate: planDate
             ))
         }
 
@@ -363,19 +359,17 @@ private enum Archetype {
         var slots: [AgendaSlot] = []
 
         if let act = afternoon {
-            let swaps = buildSwaps(from: available, excluding: [act.id], language: language)
             slots.append(makeActivitySlot(
                 id: "afternoon", time: "14:30", activity: act,
                 timeLabel: language == .en ? "🌨 Afternoon outing" : "🌨 Nachmittags-Ausflug",
-                travelNote: nil, swaps: swaps, session: session, language: language, planDate: planDate
+                travelNote: nil, session: session, language: language, planDate: planDate
             ))
         }
 
         if let spot = dinnerSpot {
             let travel = travelBetween(afternoon, restaurantLat: spot.lat, restaurantLon: spot.lon)
-            let swaps = buildRestaurantSwaps(from: restaurants, excluding: [spot.id], near: afternoon, language: language)
             slots.append(makeDinnerSlot(
-                spot: spot, time: "17:30", travelNote: travel, swaps: swaps, language: language, planDate: planDate
+                spot: spot, time: "17:30", travelNote: travel, language: language, planDate: planDate
             ))
         }
 
@@ -410,37 +404,33 @@ private enum Archetype {
         var slots: [AgendaSlot] = []
 
         if let act = morning {
-            let swaps = buildSwaps(from: available, excluding: [act.id, afternoon?.id].compactMap { $0 }, language: language)
             slots.append(makeActivitySlot(
                 id: "morning", time: "09:30", activity: act,
                 timeLabel: language == .en ? "🌅 Morning · Activity" : "🌅 Morgen · Aktivität",
-                travelNote: nil, swaps: swaps, session: session, language: language, planDate: planDate
+                travelNote: nil, session: session, language: language, planDate: planDate
             ))
         }
 
         if let spot = lunchSpot {
             let travel = travelBetween(morning, restaurantLat: spot.lat, restaurantLon: spot.lon)
-            let swaps = buildRestaurantSwaps(from: restaurants, excluding: [spot.id, dinnerSpot?.id].compactMap { $0 }, near: morning, language: language)
             slots.append(makeLunchSlot(
-                spot: spot, time: "11:30", travelNote: travel, swaps: swaps, language: language, planDate: planDate
+                spot: spot, time: "11:30", travelNote: travel, language: language, planDate: planDate
             ))
         }
 
         if let act = afternoon {
             let travel = travelBetweenRestaurant(lunchSpot, activity: act)
-            let swaps = buildSwaps(from: available, excluding: [morning?.id, act.id].compactMap { $0 }, language: language)
             slots.append(makeActivitySlot(
                 id: "afternoon", time: "14:00", activity: act,
                 timeLabel: language == .en ? "☀️ Afternoon · Activity" : "☀️ Nachmittag · Aktivität",
-                travelNote: travel, swaps: swaps, session: session, language: language, planDate: planDate
+                travelNote: travel, session: session, language: language, planDate: planDate
             ))
         }
 
         if let spot = dinnerSpot {
             let travel = travelBetween(afternoon ?? morning, restaurantLat: spot.lat, restaurantLon: spot.lon)
-            let swaps = buildRestaurantSwaps(from: restaurants, excluding: [lunchSpot?.id, spot.id].compactMap { $0 }, near: afternoon, language: language)
             slots.append(makeDinnerSlot(
-                spot: spot, time: "17:30", travelNote: travel, swaps: swaps, language: language, planDate: planDate
+                spot: spot, time: "17:30", travelNote: travel, language: language, planDate: planDate
             ))
         }
 
@@ -484,23 +474,20 @@ private enum Archetype {
                     event.toddlerFriendly ? (language == .en ? "Kid-friendly" : "Kinderfreundlich") : "",
                     event.free ? (language == .en ? "Free" : "Gratis") : ""
                 ].filter { !$0.isEmpty },
-                swaps: [],
                 slotDate: AgendaSlot.resolveSlotDate(time: "10:00", planDate: planDate)
             ))
         } else if let act = pickActivity(from: available, excluding: [], session: session, language: language, slotTime: "10:00", planDate: planDate) {
-            let swaps = buildSwaps(from: available, excluding: [act.id], language: language)
             slots.append(makeActivitySlot(
                 id: "morning", time: "10:00", activity: act,
                 timeLabel: language == .en ? "🌅 Morning · Activity" : "🌅 Morgen · Aktivität",
-                travelNote: nil, swaps: swaps, session: session, language: language, planDate: planDate
+                travelNote: nil, session: session, language: language, planDate: planDate
             ))
         }
 
         // Lunch near morning
         if let spot = pickRestaurant(near: nil, from: restaurants, language: language, slotTime: "12:00", planDate: planDate) {
-            let swaps = buildRestaurantSwaps(from: restaurants, excluding: [spot.id], near: nil, language: language)
             slots.append(makeLunchSlot(
-                spot: spot, time: "12:00", travelNote: nil, swaps: swaps, language: language, planDate: planDate
+                spot: spot, time: "12:00", travelNote: nil, language: language, planDate: planDate
             ))
         }
 
@@ -508,11 +495,10 @@ private enum Archetype {
         let usedIds = slots.compactMap(\.venueId)
         let afternoon = pickActivity(from: available, excluding: usedIds, session: session, language: language, slotTime: "14:00", planDate: planDate)
         if let act = afternoon {
-            let swaps = buildSwaps(from: available, excluding: usedIds + [act.id], language: language)
             slots.append(makeActivitySlot(
                 id: "afternoon", time: "14:00", activity: act,
                 timeLabel: language == .en ? "☀️ Afternoon · Activity" : "☀️ Nachmittag · Aktivität",
-                travelNote: nil, swaps: swaps, session: session, language: language, planDate: planDate
+                travelNote: nil, session: session, language: language, planDate: planDate
             ))
         }
 
@@ -521,9 +507,8 @@ private enum Archetype {
         let dinnerSpot = pickRestaurant(near: afternoon ?? pickActivity(from: available, excluding: [], session: session, language: language, slotTime: "18:00", planDate: planDate), from: restaurants, excluding: lunchId, language: language, slotTime: "18:00", planDate: planDate)
         if let spot = dinnerSpot {
             let travel = travelBetween(afternoon, restaurantLat: spot.lat, restaurantLon: spot.lon)
-            let swaps = buildRestaurantSwaps(from: restaurants, excluding: [lunchId, spot.id].compactMap { $0 }, near: afternoon, language: language)
             slots.append(makeDinnerSlot(
-                spot: spot, time: "18:00", travelNote: travel, swaps: swaps, language: language, planDate: planDate
+                spot: spot, time: "18:00", travelNote: travel, language: language, planDate: planDate
             ))
         }
 
@@ -538,7 +523,7 @@ private enum Archetype {
     private func makeActivitySlot(
         id: String, time: String, activity: Activity,
         timeLabel: String, travelNote: String?,
-        swaps: [AgendaSlot.SwapOption], session: FamilySession,
+        session: FamilySession,
         language: AppLanguage, planDate: Date = Date()
     ) -> AgendaSlot {
         let name = activity.localizedName(language: language)
@@ -549,7 +534,7 @@ private enum Archetype {
             id: id, time: time, type: .activity,
             venueName: name, venueId: activity.id,
             reason: reason, durationDisplay: activity.duration,
-            travelNote: travelNote, tags: tags, swaps: swaps,
+            travelNote: travelNote, tags: tags,
             durationMinutes: 100,
             slotDate: AgendaSlot.resolveSlotDate(time: time, planDate: planDate)
         )
@@ -574,7 +559,7 @@ private enum Archetype {
             id: id, time: time, type: .activity,
             venueName: name, venueId: activity.id,
             reason: reason, durationDisplay: language == .en ? "~1 hour" : "~1 Stunde",
-            travelNote: nil, tags: tags, swaps: [],
+            travelNote: nil, tags: tags,
             durationMinutes: 60,
             slotDate: AgendaSlot.resolveSlotDate(time: time, planDate: planDate)
         )
@@ -582,7 +567,7 @@ private enum Archetype {
 
     private func makeLunchSlot(
         spot: LunchSpot, time: String, travelNote: String?,
-        swaps: [AgendaSlot.SwapOption], language: AppLanguage,
+        language: AppLanguage,
         planDate: Date = Date()
     ) -> AgendaSlot {
         let cuisine = spot.cuisineDisplay
@@ -600,7 +585,7 @@ private enum Archetype {
                 ? "\(cuisine) restaurant, \(price). Good for families."
                 : "\(cuisine)-Restaurant, \(price). Gut für Familien.",
             durationDisplay: nil, travelNote: travelNote,
-            tags: tags, swaps: swaps,
+            tags: tags,
             durationMinutes: 90,
             slotDate: AgendaSlot.resolveSlotDate(time: time, planDate: planDate)
         )
@@ -608,7 +593,7 @@ private enum Archetype {
 
     private func makeDinnerSlot(
         spot: LunchSpot, time: String, travelNote: String?,
-        swaps: [AgendaSlot.SwapOption], language: AppLanguage,
+        language: AppLanguage,
         planDate: Date = Date()
     ) -> AgendaSlot {
         let cuisine = spot.cuisineDisplay
@@ -622,7 +607,6 @@ private enum Archetype {
                 : "\(cuisine), \(price). Früher Tisch passt gut mit Kindern.",
             durationDisplay: nil, travelNote: travelNote,
             tags: ["🏠 Indoor", "~CHF \(spot.priceTier * 20)–\(spot.priceTier * 35)"],
-            swaps: swaps,
             durationMinutes: 120,
             slotDate: AgendaSlot.resolveSlotDate(time: time, planDate: planDate)
         )
@@ -756,50 +740,6 @@ private enum Archetype {
         let topCount = min(pool.count, 5)
         guard topCount > 0 else { return nil }
         return pool[Int.random(in: 0..<topCount)]
-    }
-
-    // MARK: - Swap Builders
-
-    private func buildSwaps(
-        from pool: [Activity], excluding: [String], language: AppLanguage
-    ) -> [AgendaSlot.SwapOption] {
-        let candidates = pool.filter { !excluding.contains($0.id) }.shuffled()
-        return Array(candidates.prefix(3)).map { act in
-            let freeTag = act.isFree ? (language == .en ? "Free" : "Gratis") : ""
-            let indoorTag = act.indoor ? "Indoor" : "Outdoor"
-            let detail = [freeTag, indoorTag].filter { !$0.isEmpty }.joined(separator: " · ")
-            return AgendaSlot.SwapOption(
-                id: act.id,
-                venueName: act.localizedName(language: language),
-                detail: detail,
-                venueId: act.id
-            )
-        }
-    }
-
-    private func buildRestaurantSwaps(
-        from restaurants: [LunchSpot], excluding: [String],
-        near activity: Activity?, language: AppLanguage
-    ) -> [AgendaSlot.SwapOption] {
-        var pool = restaurants.filter { !excluding.contains($0.id) }
-
-        if let lat = activity?.lat, let lon = activity?.lon {
-            let loc = CLLocation(latitude: lat, longitude: lon)
-            pool.sort { a, b in
-                CLLocation(latitude: a.lat, longitude: a.lon).distance(from: loc) <
-                CLLocation(latitude: b.lat, longitude: b.lon).distance(from: loc)
-            }
-        }
-
-        return Array(pool.prefix(3)).map { spot in
-            let price = String(repeating: "$", count: spot.priceTier)
-            return AgendaSlot.SwapOption(
-                id: spot.id,
-                venueName: spot.name,
-                detail: "\(spot.cuisineDisplay) · \(price)",
-                venueId: spot.id
-            )
-        }
     }
 
     // MARK: - Tag Builders

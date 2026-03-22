@@ -1,4 +1,5 @@
 import Foundation
+import CoreLocation
 
 // MARK: - Plan Day
 
@@ -155,6 +156,54 @@ enum SlotSource: String, Codable {
     case userCustom     // user entered manually
     case userSwapped    // user picked from swap tray
     case userAnchor     // pre-existing commitment entered before compose
+    case calendar       // imported from iOS Calendar via CalendarBridge
+}
+
+// MARK: - Travel Estimate
+
+enum TravelMode: String, Codable {
+    case walking
+    case transit
+}
+
+struct TravelEstimate: Codable, Equatable {
+    let minutes: Int
+    let mode: TravelMode
+
+    /// Walk threshold in meters — walk under 2 km, transit above.
+    private static let walkThresholdMeters: Double = 2000
+
+    /// Estimate travel from optional lat/lon pairs.
+    static func estimate(fromLat: Double?, fromLon: Double?, toLat: Double?, toLon: Double?) -> TravelEstimate {
+        guard let fromLat, let fromLon, let toLat, let toLon else {
+            return TravelEstimate(minutes: 10, mode: .transit) // sensible default
+        }
+        return estimateFromDistance(haversineDistance(lat1: fromLat, lon1: fromLon, lat2: toLat, lon2: toLon))
+    }
+
+    /// Estimate travel between two CLLocations.
+    static func estimate(from origin: CLLocation, to destination: CLLocation) -> TravelEstimate {
+        return estimateFromDistance(origin.distance(from: destination))
+    }
+
+    private static func estimateFromDistance(_ meters: Double) -> TravelEstimate {
+        if meters <= walkThresholdMeters {
+            let walkMin = Int(ceil(meters * 1.3 / 83.0))
+            return TravelEstimate(minutes: max(walkMin, 2), mode: .walking)
+        } else {
+            // Transit: 15 km/h = 250 m/min + 5 min base (walk to stop + wait)
+            let transitMin = 5 + Int(ceil(meters / 250.0))
+            return TravelEstimate(minutes: max(transitMin, 8), mode: .transit)
+        }
+    }
+
+    private static func haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double) -> Double {
+        let R = 6371000.0
+        let dLat = (lat2 - lat1) * .pi / 180
+        let dLon = (lon2 - lon1) * .pi / 180
+        let a = sin(dLat/2) * sin(dLat/2) + cos(lat1 * .pi / 180) * cos(lat2 * .pi / 180) * sin(dLon/2) * sin(dLon/2)
+        return R * 2 * atan2(sqrt(a), sqrt(1-a))
+    }
 }
 
 // MARK: - Day Agenda
@@ -219,8 +268,9 @@ struct AgendaSlot: Codable, Identifiable {
     let durationDisplay: String?
     var travelNote: String?             // "8 min walk from home"
     let tags: [String]                  // ["Outdoor", "Free", "Ages 2-5"]
-    let swaps: [SwapOption]
-    var travelMinutesToNext: Int?       // Travel time to the next slot
+    var lat: Double?                    // Venue latitude for travel estimates
+    var lon: Double?                    // Venue longitude for travel estimates
+    var travelToNext: TravelEstimate?   // Travel estimate to the next slot
     var weatherAtSlot: SlotWeather?     // Forecasted weather at this slot's time
 
     /// Expected duration at this venue in minutes (activity: 100, lunch: 90, dinner: 120).
@@ -306,16 +356,9 @@ struct AgendaSlot: Codable, Identifiable {
         case homeActivity
     }
 
-    struct SwapOption: Codable, Identifiable {
-        let id: String
-        let venueName: String
-        let detail: String              // "Free · 12 min walk"
-        let venueId: String?
-    }
-
     enum CodingKeys: String, CodingKey {
         case id, time, type, venueName, venueId, reason, durationDisplay
-        case travelNote, tags, swaps, travelMinutesToNext, weatherAtSlot
+        case travelNote, tags, lat, lon, travelToNext, weatherAtSlot
         case durationMinutes, checkOutTime, wasAutoCheckedIn
         case source, isLocked, customVenueName, customNeighbourhood, isStale
         case anchorEndTime, slotDate
@@ -332,8 +375,9 @@ struct AgendaSlot: Codable, Identifiable {
         durationDisplay = try container.decodeIfPresent(String.self, forKey: .durationDisplay)
         travelNote = try container.decodeIfPresent(String.self, forKey: .travelNote)
         tags = try container.decode([String].self, forKey: .tags)
-        swaps = try container.decode([SwapOption].self, forKey: .swaps)
-        travelMinutesToNext = try container.decodeIfPresent(Int.self, forKey: .travelMinutesToNext)
+        lat = try container.decodeIfPresent(Double.self, forKey: .lat)
+        lon = try container.decodeIfPresent(Double.self, forKey: .lon)
+        travelToNext = try container.decodeIfPresent(TravelEstimate.self, forKey: .travelToNext)
         weatherAtSlot = try container.decodeIfPresent(SlotWeather.self, forKey: .weatherAtSlot)
         durationMinutes = try container.decodeIfPresent(Int.self, forKey: .durationMinutes)
         // Check-in fields with defaults for backward compatibility
@@ -357,7 +401,8 @@ struct AgendaSlot: Codable, Identifiable {
     init(
         id: String, time: String, type: SlotType, venueName: String, venueId: String?,
         reason: String, durationDisplay: String? = nil, travelNote: String? = nil,
-        tags: [String], swaps: [SwapOption], travelMinutesToNext: Int? = nil,
+        tags: [String], lat: Double? = nil, lon: Double? = nil,
+        travelToNext: TravelEstimate? = nil,
         weatherAtSlot: SlotWeather? = nil,
         durationMinutes: Int? = nil,
         checkOutTime: Date? = nil, wasAutoCheckedIn: Bool = false,
@@ -376,8 +421,9 @@ struct AgendaSlot: Codable, Identifiable {
         self.durationDisplay = durationDisplay
         self.travelNote = travelNote
         self.tags = tags
-        self.swaps = swaps
-        self.travelMinutesToNext = travelMinutesToNext
+        self.lat = lat
+        self.lon = lon
+        self.travelToNext = travelToNext
         self.weatherAtSlot = weatherAtSlot
         self.durationMinutes = durationMinutes
         self.checkOutTime = checkOutTime

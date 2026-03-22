@@ -28,9 +28,7 @@ struct AgendaSlotCard: View {
 
     let slot: AgendaSlot
     let accentColor: Color
-    @Binding var showSwapTray: Bool
     @Binding var expandedSlotID: String?
-    let onSwap: (AgendaSlot.SwapOption) -> Void
     var execState: SlotExecState = .browsing
     var onDone: (() -> Void)?
     var onEdit: (() -> Void)?
@@ -123,15 +121,7 @@ struct AgendaSlotCard: View {
                 activeDirectionsCTA
             }
 
-            // Swap tray (inline below) — only in browsing mode
-            if execState == .browsing, showSwapTray && !slot.swaps.isEmpty {
-                SwapTray(swaps: slot.swaps) { swap in
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        showSwapTray = false
-                    }
-                    onSwap(swap)
-                }
-            }
+            // Swap tray removed — card-dealing model replaces swap trays
         }
         .background(cardBackground)
         .overlay(alignment: .leading) {
@@ -564,23 +554,7 @@ struct AgendaSlotCard: View {
                     .foregroundStyle(Color.znNavy)
                 }
 
-                // Swap button
-                if !slot.swaps.isEmpty {
-                    Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                            showSwapTray.toggle()
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Text("⇄")
-                                .font(.system(size: 12))
-                            Text("\(slot.swaps.count) swaps")
-                                .font(.system(size: 11, weight: .medium))
-                        }
-                        .foregroundStyle(Color.znTerracotta)
-                    }
-                    .buttonStyle(.plain)
-                }
+                // Swap button removed — card-dealing model replaces swap trays
 
                 // "Suggest another nearby" — lunch/dinner only, browsing mode
                 if (slot.type == .lunch || slot.type == .dinner), let onSuggestAnother {

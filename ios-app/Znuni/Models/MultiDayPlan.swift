@@ -90,28 +90,11 @@ struct MultiDayPlan: Codable, Identifiable {
             usedIds = Set(firstDaySlots.compactMap(\.venueId))
         }
 
-        // For subsequent days, replace duplicates with first swap
+        // For subsequent days, track used venue IDs (dedup without swap trays)
         for dayIndex in 1..<result.days.count {
-            guard var agenda = result.days[dayIndex].agenda else { continue }
-            for slotIndex in 0..<agenda.slots.count {
-                guard let venueId = agenda.slots[slotIndex].venueId,
-                      usedIds.contains(venueId) else { continue }
-
-                // Try to replace with first swap that isn't also a duplicate
-                if let swap = agenda.slots[slotIndex].swaps.first(where: {
-                    guard let swapId = $0.venueId else { return false }
-                    return !usedIds.contains(swapId)
-                }) {
-                    agenda.slots[slotIndex].venueName = swap.venueName
-                    agenda.slots[slotIndex].venueId = swap.venueId
-                    agenda.slots[slotIndex].reason = swap.detail
-                }
-            }
-
-            // Add this day's final venue IDs to the used set
+            guard let agenda = result.days[dayIndex].agenda else { continue }
             let dayIds = Set(agenda.slots.compactMap(\.venueId))
             usedIds.formUnion(dayIds)
-            result.days[dayIndex].agenda = agenda
         }
 
         return result

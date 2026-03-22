@@ -575,9 +575,6 @@ struct TodayView: View {
                         location: locationManager.location,
                         agendaMode: viewModel.agendaMode,
                         expandedSlotID: $expandedSlotID,
-                        onSwap: { slotId, swap in
-                            viewModel.swapSlot(slotId: slotId, with: swap)
-                        },
                         onStartExecuting: {
                             handleLetsGo()
                         },
@@ -628,9 +625,6 @@ struct TodayView: View {
                         location: locationManager.location,
                         agendaMode: viewModel.agendaMode,
                         expandedSlotID: $expandedSlotID,
-                        onSwap: { slotId, swap in
-                            viewModel.swapSlot(slotId: slotId, with: swap)
-                        },
                         onStartExecuting: {
                             handleLetsGo()
                         },

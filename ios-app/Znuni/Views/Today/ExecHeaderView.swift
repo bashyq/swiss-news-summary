@@ -32,7 +32,7 @@ struct ExecHeaderView: View {
     private var leaveAtTime: String? {
         guard let current = currentSlot,
               let next = nextSlot,
-              let travelMin = current.travelMinutesToNext else { return nil }
+              let travelMin = current.travelToNext?.minutes else { return nil }
         let parts = next.time.split(separator: ":").compactMap { Int($0) }
         guard parts.count == 2 else { return nil }
         let totalMinutes = parts[0] * 60 + parts[1] - travelMin
