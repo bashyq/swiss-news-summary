@@ -97,6 +97,10 @@ final class AppState {
     /// When set, Today tab reads this to configure planningCity + selectedPlanDay, then clears it.
     var pendingPlanRequest: PlanRequest?
 
+    /// Pending trip from non-curated Sunshine/Snow destinations.
+    /// When set, PlanTabView picks it up and calls dealTrip(), then clears it.
+    var pendingTripRequest: DetectedTrip?
+
     /// Pending date to plan from events calendar empty state.
     /// When set + tab switches to Today, PlanTabView picks it up and enters Plan mode for that date.
     var pendingPlanDate: Date?

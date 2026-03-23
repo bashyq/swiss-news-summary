@@ -190,12 +190,19 @@ struct SnowView: View {
                                 }
                             }
                         },
-                        onPlanHere: PlanningCity.isCovered(resort.id) ? {
-                            appState.pendingPlanRequest = AppState.PlanRequest(
-                                cityId: resort.id, date: nil
-                            )
+                        onPlanHere: {
+                            if PlanningCity.isCovered(resort.id) {
+                                appState.pendingPlanRequest = AppState.PlanRequest(
+                                    cityId: resort.id, date: nil
+                                )
+                            } else {
+                                appState.pendingTripRequest = DetectedTrip.synthetic(
+                                    locality: resort.name,
+                                    coordinate: CLLocationCoordinate2D(latitude: resort.lat, longitude: resort.lon)
+                                )
+                            }
                             appState.selectedTab = .today
-                        } : nil
+                        }
                     )
                     .id(resort.id)
                     .padding(.horizontal)

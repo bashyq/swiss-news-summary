@@ -137,8 +137,8 @@ struct SnowCard: View {
             // 7-day forecast section
             dailyForecastSection
 
-            // "Plan a day here" CTA — only for covered cities
-            if let onPlanHere, PlanningCity.isCovered(resort.id) {
+            // "Plan a day here" CTA — all destinations (curated cities use pendingPlanRequest; others use pendingTripRequest)
+            if let onPlanHere {
                 Button(action: onPlanHere) {
                     Label(
                         language == .de

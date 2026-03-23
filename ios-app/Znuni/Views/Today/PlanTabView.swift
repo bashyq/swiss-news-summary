@@ -116,6 +116,13 @@ struct PlanTabView: View {
                 previousStateWasCalendarPreview = true
             }
         }
+        .onChange(of: appState.pendingTripRequest) { _, request in
+            guard let trip = request else { return }
+            appState.pendingTripRequest = nil
+            Task {
+                await viewModel.dealTrip(trip)
+            }
+        }
     }
 
     // MARK: - Plan Content (State-Driven)

@@ -153,8 +153,8 @@ struct SunshineCard: View {
             // Destination highlights + action buttons
             SunshineHighlightsSection(destination: destination, language: language)
 
-            // "Plan a day here" CTA — only for covered cities
-            if let onPlanHere, PlanningCity.isCovered(destination.id) {
+            // "Plan a day here" CTA — all destinations (curated cities use pendingPlanRequest; others use pendingTripRequest)
+            if let onPlanHere {
                 Button(action: onPlanHere) {
                     Label(
                         language == .de

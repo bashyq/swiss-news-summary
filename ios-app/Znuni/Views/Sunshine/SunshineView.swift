@@ -192,12 +192,19 @@ struct SunshineView: View {
                                     }
                                 }
                             },
-                            onPlanHere: PlanningCity.isCovered(destination.id) ? {
-                                appState.pendingPlanRequest = AppState.PlanRequest(
-                                    cityId: destination.id, date: nil
-                                )
+                            onPlanHere: {
+                                if PlanningCity.isCovered(destination.id) {
+                                    appState.pendingPlanRequest = AppState.PlanRequest(
+                                        cityId: destination.id, date: nil
+                                    )
+                                } else {
+                                    appState.pendingTripRequest = DetectedTrip.synthetic(
+                                        locality: destination.name,
+                                        coordinate: CLLocationCoordinate2D(latitude: destination.lat, longitude: destination.lon)
+                                    )
+                                }
                                 appState.selectedTab = .today
-                            } : nil
+                            }
                         )
                         .id(destination.id)
                         .padding(.horizontal)
