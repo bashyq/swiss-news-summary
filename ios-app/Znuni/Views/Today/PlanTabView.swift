@@ -176,7 +176,7 @@ struct PlanTabView: View {
                 PlanSlotCard(
                     slot: slot,
                     expandedID: $expandedSlotID,
-                    onRemove: { viewModel.remove(slotId: slot.id) }
+                    viewModel: viewModel
                 )
             }
 

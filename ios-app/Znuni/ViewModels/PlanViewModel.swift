@@ -407,19 +407,23 @@ final class PlanViewModel {
         } else {
             planLog.notice("  currentAgenda is nil")
         }
-        // Handle calendar preview state
+        // Handle calendar preview state — slotId has "cal-" prefix, CalendarSlot.id does not
         if case .calendarPreview(var events) = planState {
-            events.removeAll { $0.id == slotId }
-            calendarBridge.discardEvent(id: slotId)
+            let rawId = slotId.hasPrefix("cal-") ? String(slotId.dropFirst(4)) : slotId
+            calendarBridge.discardEvent(id: rawId)
+            events.removeAll { $0.id == rawId || "cal-\($0.id)" == slotId }
+            planLog.notice("  unlock in calendarPreview: rawId=\(rawId), \(events.count) events remain")
             planState = events.isEmpty ? .empty : .calendarPreview(events)
             return
         }
-        guard var agenda = currentAgenda else { return }
-        // Try exact ID match first, then match by venueId (calendar slots may have transformed IDs)
+        guard var agenda = currentAgenda else {
+            planLog.notice("  currentAgenda is nil — cannot unlock")
+            return
+        }
         if let idx = agenda.slots.firstIndex(where: { $0.id == slotId }) {
             agenda.slots[idx].isLocked = false
             updateAgenda(agenda)
-        } else if let idx = agenda.slots.firstIndex(where: { $0.venueId == slotId || "cal-\($0.venueId ?? "")" == slotId }) {
+        } else if let idx = agenda.slots.firstIndex(where: { "cal-\($0.venueId ?? "")" == slotId || $0.venueId == slotId }) {
             agenda.slots[idx].isLocked = false
             updateAgenda(agenda)
         }
@@ -428,15 +432,12 @@ final class PlanViewModel {
     /// Remove a slot from the current agenda. If calendar source, discard it.
     func remove(slotId: String) {
         planLog.notice("REMOVE called: slotId=\(slotId)")
-        if let agenda = currentAgenda {
-            planLog.notice("  agenda has \(agenda.slots.count) slots: \(agenda.slots.map { $0.id }.joined(separator: ", "))")
-        } else {
-            planLog.notice("  currentAgenda is nil")
-        }
-        // Handle calendar preview state
+        // Handle calendar preview state — slotId has "cal-" prefix, CalendarSlot.id does not
         if case .calendarPreview(var events) = planState {
-            calendarBridge.discardEvent(id: slotId)
-            events.removeAll { $0.id == slotId }
+            let rawId = slotId.hasPrefix("cal-") ? String(slotId.dropFirst(4)) : slotId
+            calendarBridge.discardEvent(id: rawId)
+            events.removeAll { $0.id == rawId || "cal-\($0.id)" == slotId }
+            planLog.notice("  remove in calendarPreview: rawId=\(rawId), \(events.count) events remain")
             planState = events.isEmpty ? .empty : .calendarPreview(events)
             return
         }
