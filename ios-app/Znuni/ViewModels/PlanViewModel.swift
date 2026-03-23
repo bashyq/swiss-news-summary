@@ -407,13 +407,9 @@ final class PlanViewModel {
         } else {
             planLog.notice("  currentAgenda is nil")
         }
-        // Handle calendar preview state — slotId has "cal-" prefix, CalendarSlot.id does not
-        if case .calendarPreview(var events) = planState {
-            let rawId = slotId.hasPrefix("cal-") ? String(slotId.dropFirst(4)) : slotId
-            calendarBridge.discardEvent(id: rawId)
-            events.removeAll { $0.id == rawId || "cal-\($0.id)" == slotId }
-            planLog.notice("  unlock in calendarPreview: rawId=\(rawId), \(events.count) events remain")
-            planState = events.isEmpty ? .empty : .calendarPreview(events)
+        // In calendar preview, unlock is a no-op (events are always locked until dealt)
+        if case .calendarPreview = planState {
+            planLog.notice("  unlock ignored in calendarPreview state")
             return
         }
         guard var agenda = currentAgenda else {
@@ -498,6 +494,20 @@ final class PlanViewModel {
     func clearPlan() {
         inMemoryPlans.removeValue(forKey: planKey())
         planState = .empty
+    }
+
+    // MARK: - Weather Pre-fetch
+
+    /// Load weather data so it shows in the hero before the user taps "Plan my day".
+    @MainActor
+    func loadWeatherIfNeeded() async {
+        guard weather == nil else { return }
+        let city = planningCity.city
+        let language = currentLanguage
+        do {
+            let news = try await APIClient.shared.fetchNews(city: city, language: language)
+            self.weather = news.weather
+        } catch {}
     }
 
     // MARK: - Save to Calendar

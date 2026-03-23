@@ -18,40 +18,41 @@ struct PlanTabView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 0) {
-                    PlanHeroBanner(
-                        selectedDate: viewModel.selectedDate,
-                        planState: viewModel.planState,
-                        weather: viewModel.weather,
-                        planningCity: viewModel.planningCity,
-                        onWeatherTap: { showWeatherDetail = true },
-                        onCityChange: { newCity in
-                            guard newCity != viewModel.planningCity else { return }
-                            viewModel.changeCity(to: newCity)
-                            Task { await viewModel.deal() }
-                        }
-                    )
+            VStack(spacing: 0) {
+                // Hero outside ScrollView so navy extends behind Dynamic Island
+                PlanHeroBanner(
+                    selectedDate: viewModel.selectedDate,
+                    planState: viewModel.planState,
+                    weather: viewModel.weather,
+                    planningCity: viewModel.planningCity,
+                    onWeatherTap: { showWeatherDetail = true },
+                    onCityChange: { newCity in
+                        guard newCity != viewModel.planningCity else { return }
+                        viewModel.changeCity(to: newCity)
+                        Task { await viewModel.deal() }
+                    }
+                )
 
-                    DateStripView(
-                        dates: viewModel.dates,
-                        selectedDate: Binding(
-                            get: { viewModel.selectedDate },
-                            set: { viewModel.selectedDate = $0 }
-                        ),
-                        onCalendarTap: {
-                            datePickerPlanDay = currentPlanDay
-                            showDatePicker = true
-                        }
-                    )
+                DateStripView(
+                    dates: viewModel.dates,
+                    selectedDate: Binding(
+                        get: { viewModel.selectedDate },
+                        set: { viewModel.selectedDate = $0 }
+                    ),
+                    onCalendarTap: {
+                        datePickerPlanDay = currentPlanDay
+                        showDatePicker = true
+                    }
+                )
 
+                ScrollView {
                     planContent
                         .padding(.horizontal, 16)
                         .padding(.top, 16)
                         .padding(.bottom, 32)
                 }
+                .scrollIndicators(.hidden)
             }
-            .scrollIndicators(.hidden)
             .background(Color.znCream)
         }
         .toolbar(.hidden, for: .navigationBar)
@@ -72,6 +73,8 @@ struct PlanTabView: View {
                 viewModel.planningCity = PlanningCity(city: appState.city)
             }
             await viewModel.selectDate(viewModel.selectedDate)
+            // Pre-fetch weather so it shows before user taps "Plan my day"
+            await viewModel.loadWeatherIfNeeded()
             // If a cached plan was loaded, show all cards immediately
             if let agenda = viewModel.currentAgenda {
                 visibleSlotCount = agenda.slots.count
