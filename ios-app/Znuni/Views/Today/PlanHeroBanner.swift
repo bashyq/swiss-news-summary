@@ -20,21 +20,22 @@ struct PlanHeroBanner: View {
         VStack(alignment: .leading, spacing: 0) {
             // Top row: date eyebrow + city picker
             HStack(alignment: .center) {
-                Text(eyebrowDate)
-                    .font(.znEyebrow)
-                    .tracking(1.3)
-                    .textCase(.uppercase)
-                    .foregroundStyle(.white.opacity(0.42))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(eyebrowDate)
+                        .font(.znEyebrow)
+                        .tracking(1.3)
+                        .textCase(.uppercase)
+                        .foregroundStyle(.white.opacity(0.42))
+
+                    // Title
+                    titleText
+                }
 
                 Spacer()
 
                 cityPickerButton
             }
-            .padding(.bottom, 12)
-
-            // Title
-            titleText
-                .padding(.bottom, 18)
+            .padding(.bottom, 18)
 
             // Weather row — for today show live weather; for future dates show forecast
             if isToday, let weather {
@@ -88,12 +89,12 @@ struct PlanHeroBanner: View {
     private var titleText: some View {
         let dayName = formattedDayName
 
-        return VStack(alignment: .leading, spacing: 0) {
+        return HStack(spacing: 6) {
             Text(titlePrefix)
                 .font(.heroTitle)
                 .foregroundStyle(.white)
             Text(dayName)
-                .font(.custom("Playfair", size: 28).italic())
+                .font(.custom("Playfair", size: 30).italic())
                 .foregroundStyle(.white.opacity(0.68))
         }
     }

@@ -92,7 +92,7 @@ struct NewsHeroBanner: View {
     private var titleText: some View {
         let cityName = appState.city.localizedName(language: appState.language)
 
-        return VStack(alignment: .leading, spacing: 0) {
+        return HStack(spacing: 6) {
             Text(appState.localized(en: "Today in", de: "Heute in"))
                 .font(.heroTitle)
                 .foregroundStyle(.white)
