@@ -38,7 +38,9 @@ struct PlanSlotCard: View {
         if let vm = viewModel { vm.unlock(slotId: slot.id) } else { onUnlock() }
     }
     private func doRemove() {
-        if let vm = viewModel { vm.remove(slotId: slot.id) } else { onRemove() }
+        withAnimation(.easeInOut(duration: 0.3)) {
+            if let vm = viewModel { vm.remove(slotId: slot.id) } else { onRemove() }
+        }
     }
 
     // MARK: - Body

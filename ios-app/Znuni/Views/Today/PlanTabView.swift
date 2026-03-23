@@ -182,7 +182,12 @@ struct PlanTabView: View {
                     onLock: { viewModel.lockCalendarEvent(slotId: event.id) }
                 )
                 .opacity(isExcluded ? 0.5 : 1.0)
+                .transition(.asymmetric(
+                    insertion: .opacity,
+                    removal: .opacity.combined(with: .scale(scale: 0.9))
+                ))
             }
+            .animation(.easeInOut(duration: 0.3), value: events.count)
 
             // Fill the gaps button
             planMyDayButton(
@@ -236,7 +241,10 @@ struct PlanTabView: View {
                     viewModel: viewModel,
                     onReplace: { replacingSlot = slot }
                 )
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .transition(.asymmetric(
+                    insertion: .move(edge: .bottom).combined(with: .opacity),
+                    removal: .opacity.combined(with: .scale(scale: 0.9))
+                ))
 
                 // Travel connector between slots
                 if index < agenda.slots.count - 1, let travel = slot.travelToNext {
@@ -244,6 +252,7 @@ struct PlanTabView: View {
                         .transition(.opacity)
                 }
             }
+            .animation(.easeInOut(duration: 0.3), value: agenda.slots.count)
 
             // Bottom action bar — show only when all cards are visible
             if visibleSlotCount >= agenda.slots.count {
