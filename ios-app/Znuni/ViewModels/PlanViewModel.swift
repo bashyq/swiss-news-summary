@@ -958,19 +958,25 @@ private extension PlanViewModel {
 
     // MARK: - Venue Coordinate Enrichment
 
-    /// Enrich slots with coordinates from the data pools (by venueId or venue name).
+    /// Enrich slots with coordinates and ratings from the data pools (by venueId or venue name).
     func enrichSlotCoordinates(_ slot: inout AgendaSlot) {
-        guard slot.lat == nil else { return }
+        guard slot.lat == nil else {
+            // Coordinates already set — still enrich ratings if missing
+            enrichSlotRatings(&slot)
+            return
+        }
         // Try by venueId first
         if let venueId = slot.venueId {
             if let act = activitiesData?.activities.first(where: { $0.id == venueId }),
                let lat = act.lat, let lon = act.lon {
                 slot.lat = lat
                 slot.lon = lon
+                enrichSlotRatings(&slot)
                 return
             } else if let spot = lunchData?.spots.first(where: { $0.id == venueId }) {
                 slot.lat = spot.lat
                 slot.lon = spot.lon
+                enrichSlotRatings(&slot)
                 return
             }
         }
@@ -985,6 +991,16 @@ private extension PlanViewModel {
             slot.lat = spot.lat
             slot.lon = spot.lon
             if slot.venueId == nil { slot.venueId = spot.id }
+        }
+        enrichSlotRatings(&slot)
+    }
+
+    /// Enrich lunch/dinner slots with rating data from the lunch data pool.
+    private func enrichSlotRatings(_ slot: inout AgendaSlot) {
+        guard slot.rating == nil, slot.type == .lunch || slot.type == .dinner else { return }
+        if let match = lunchData?.spots.first(where: { $0.id == slot.venueId || $0.name == slot.venueName }) {
+            slot.rating = match.rating
+            slot.ratingCount = match.ratingCount
         }
     }
 

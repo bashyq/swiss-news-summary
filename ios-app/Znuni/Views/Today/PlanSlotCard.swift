@@ -119,11 +119,29 @@ struct PlanSlotCard: View {
                     // Eyebrow row: time + type + weather
                     eyebrowRow
 
-                    // Venue name
-                    Text(slot.venueName)
-                        .font(.custom("Playfair", size: 15).weight(.semibold))
-                        .foregroundStyle(.znInk)
-                        .lineLimit(2)
+                    // Venue name + rating
+                    HStack(spacing: 6) {
+                        Text(slot.venueName)
+                            .font(.custom("Playfair", size: 15).weight(.semibold))
+                            .foregroundStyle(.znInk)
+                            .lineLimit(2)
+
+                        if let rating = slot.rating {
+                            HStack(spacing: 3) {
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.znTerracotta)
+                                Text(String(format: "%.1f", rating))
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(.znInk)
+                                if let count = slot.ratingCount {
+                                    Text("(\(count))")
+                                        .font(.system(size: 10.5))
+                                        .foregroundStyle(.znMuted)
+                                }
+                            }
+                        }
+                    }
 
                     // Reason (2-line clamp) — hidden in saved state
                     if !isSaved && !slot.reason.isEmpty {
@@ -491,6 +509,27 @@ struct PlanSlotCard: View {
                 }
                 .buttonStyle(.plain)
             }
+
+            // Heart / save button
+            if slot.type != .homeActivity && slot.source != .calendar {
+                Button {
+                    let saveId = slot.venueId ?? slot.venueName
+                    if slot.type == .activity {
+                        appState.toggleSavedActivity(saveId)
+                    } else {
+                        appState.toggleSavedLunch(saveId)
+                    }
+                } label: {
+                    Image(systemName: isSlotSaved ? "heart.fill" : "heart")
+                        .font(.system(size: 14))
+                        .foregroundStyle(isSlotSaved ? .znNegative : .znNavy)
+                        .frame(width: 40, height: 40)
+                        .background(Color.znNavy.opacity(0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+                .sensoryFeedback(.impact(flexibility: .soft), trigger: isSlotSaved)
+            }
         }
     }
 
@@ -519,6 +558,15 @@ struct PlanSlotCard: View {
     }
 
     // MARK: - Helpers
+
+    private var isSlotSaved: Bool {
+        let saveId = slot.venueId ?? slot.venueName
+        if slot.type == .activity {
+            return appState.savedActivityIDs.contains(saveId)
+        } else {
+            return appState.savedLunchIDs.contains(saveId)
+        }
+    }
 
     private var isHomeActivity: Bool {
         slot.type == .homeActivity
