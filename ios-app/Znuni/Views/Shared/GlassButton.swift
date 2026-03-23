@@ -39,12 +39,19 @@ struct CityMenuButton: View {
                 }
             }
         } label: {
-            Image(systemName: "building.2")
-                .font(.system(size: 14))
-                .foregroundStyle(.white)
-                .frame(width: 34, height: 34)
-                .background(.white.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+            HStack(spacing: 4) {
+                Text(appState.city.localizedName(language: appState.language))
+                    .font(.system(size: 12, weight: .medium))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8))
+            }
+            .foregroundStyle(.white.opacity(0.6))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(.white.opacity(0.12))
+            )
         }
     }
 }
