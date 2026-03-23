@@ -12,6 +12,7 @@ private let planLog = Logger(subsystem: "Bashar.Znuni", category: "PlanViewModel
 enum PlanState {
     case empty
     case calendarPreview([CalendarSlot])
+    case tripDetected(DetectedTrip)
     case composing(locked: [AgendaSlot])
     case dealt(DayAgenda)
     case saved(DayAgenda)
@@ -39,6 +40,23 @@ final class PlanViewModel {
 
     /// Family session — loaded from UserDefaults.
     var session: FamilySession
+
+    // MARK: - Trip Planner
+
+    /// The currently detected trip (non-home calendar event for the selected date).
+    private(set) var detectedTrip: DetectedTrip?
+
+    /// IDs of trips the user has dismissed — persisted across sessions.
+    private var tripDismissals: Set<String> {
+        get { Set(UserDefaults.standard.stringArray(forKey: "tripDismissals") ?? []) }
+        set { UserDefaults.standard.set(Array(newValue), forKey: "tripDismissals") }
+    }
+
+    /// Whether the current plan is in trip mode (away from home city).
+    var isTripMode: Bool { detectedTrip != nil }
+
+    /// The locality name for the detected trip destination.
+    var tripLocality: String? { detectedTrip?.locality }
 
     // MARK: - Plan Store
 
@@ -117,14 +135,30 @@ final class PlanViewModel {
             return
         }
 
-        // 2. Check calendar for events
+        // 2. Check for away-from-home calendar events (trip detection)
+        let allCalendarEvents = CalendarService.shared.fetchEvents(for: date)
+        let trips = await TripDetector.shared.detectTrips(
+            for: date,
+            homeCity: planningCity.city,
+            calendarEvents: allCalendarEvents
+        )
+
+        if let trip = trips.first, !tripDismissals.contains(trip.id) {
+            detectedTrip = trip
+            planState = .tripDetected(trip)
+            return
+        }
+
+        detectedTrip = nil
+
+        // 3. Check calendar for events (local preview)
         let calendarSlots = calendarBridge.fetchEvents(for: date)
         if !calendarSlots.isEmpty {
             planState = .calendarPreview(calendarSlots)
             return
         }
 
-        // 3. Nothing found
+        // 4. Nothing found
         planState = .empty
     }
 
@@ -339,6 +373,120 @@ final class PlanViewModel {
         store.deletePlan(city: planningCity.id, date: isoString(for: selectedDate))
         recentlyShownStore.clear()
         await deal(lockedSlots: locked)
+    }
+
+    // MARK: - Trip Planning
+
+    /// Compose a day plan around a detected trip destination.
+    @MainActor
+    func dealTrip(_ trip: DetectedTrip) async {
+        let lockedSlots: [AgendaSlot] = []
+        planState = .composing(locked: lockedSlots)
+        detectedTrip = trip
+
+        let planDate = selectedDate
+        let dateISO = isoString(for: planDate)
+
+        // 1. Fetch POIs near destination
+        let pois = await POISearchService.shared.search(near: trip.coordinate)
+        let pools = POIAdapter.buildPools(from: pois)
+
+        // 2. Fetch weather for destination
+        let tripWeather = await fetchWeatherForCoordinate(trip.coordinate)
+
+        // 3. Build anchors from calendar event
+        var anchors: [AnchorEvent] = []
+        if let event = trip.calendarEvent, let start = trip.startTime, let end = trip.endTime {
+            anchors.append(AnchorEvent(
+                id: UUID(),
+                title: trip.eventTitle,
+                category: .errand,
+                startTime: start,
+                durationMinutes: Int(end.timeIntervalSince(start) / 60),
+                source: .calendar,
+                calendarEventId: event.calendarItemExternalIdentifier,
+                createdDate: Date()
+            ))
+        }
+
+        // 4. Gap analysis
+        let now = effectiveNowForDate(planDate)
+        let gaps = GapAnalysisEngine.analyse(anchors: anchors, now: now, date: planDate)
+        let fillableGaps = gaps.filter { $0.isFillable }
+
+        let weatherNote = weatherNoteString(tripWeather)
+        let badWeather = isBadWeather(tripWeather)
+        let tripCityKey = "trip-\(trip.locality.lowercased())"
+
+        guard !fillableGaps.isEmpty else {
+            let anchorSlots = anchors.map { anchorToSlot($0) }
+            let agenda = DayAgenda(
+                date: dateISO,
+                theme: "Your day in \(trip.locality)",
+                weatherNote: weatherNote,
+                badWeatherMode: badWeather,
+                slots: anchorSlots,
+                homeActivities: nil
+            )
+            planState = .dealt(agenda)
+            store.savePlan(agenda, city: tripCityKey, date: dateISO)
+            return
+        }
+
+        // 5. Compose via AgendaComposer (or fallback)
+        var slots: [AgendaSlot] = []
+        let apiKey = Bundle.main.infoDictionary?["ANTHROPIC_API_KEY"] as? String ?? ""
+
+        if !apiKey.isEmpty && apiKey != "$(ANTHROPIC_API_KEY)" {
+            do {
+                slots = try await AgendaComposer.compose(
+                    gaps: fillableGaps,
+                    activities: pools.activities,
+                    lunches: pools.lunches,
+                    dinners: pools.dinners,
+                    weather: tripWeather,
+                    session: session,
+                    language: currentLanguage,
+                    apiKey: apiKey,
+                    planDate: planDate
+                )
+            } catch {
+                slots = buildFallbackSlots(gaps: fillableGaps, pois: pois, planDate: planDate)
+            }
+        } else {
+            slots = buildFallbackSlots(gaps: fillableGaps, pois: pois, planDate: planDate)
+        }
+
+        // 6. Merge anchors + composed slots
+        let anchorSlots = anchors.map { anchorToSlot($0) }
+        var allSlots = anchorSlots + slots
+        allSlots.sort { $0.time < $1.time }
+
+        // 7. Travel estimates
+        populateTravelEstimates(in: &allSlots)
+
+        let agenda = DayAgenda(
+            date: dateISO,
+            theme: "Your day in \(trip.locality)",
+            weatherNote: weatherNote,
+            badWeatherMode: badWeather,
+            slots: allSlots,
+            homeActivities: nil
+        )
+
+        planState = .dealt(agenda)
+        store.savePlan(agenda, city: tripCityKey, date: dateISO)
+
+        Task { await fetchMapKitTravelTimes() }
+    }
+
+    /// Dismiss a trip nudge and fall through to the next state (calendar preview or empty).
+    func dismissTrip(_ trip: DetectedTrip) {
+        tripDismissals.insert(trip.id)
+        detectedTrip = nil
+        Task { @MainActor in
+            await selectDate(selectedDate)
+        }
     }
 
     // MARK: - City Change
@@ -943,5 +1091,89 @@ private extension PlanViewModel {
         guard let w = weather else { return false }
         let heavyCodes: Set<Int> = [65, 67, 71, 73, 75, 77, 80, 81, 82, 85, 86, 95, 96, 99]
         return w.temperature < 10 && heavyCodes.contains(w.weatherCode)
+    }
+
+    // MARK: - Trip Fallback Slots
+
+    /// Build agenda slots from POI results when the AI composer is unavailable.
+    func buildFallbackSlots(gaps: [FreeGap], pois: [POIResult], planDate: Date) -> [AgendaSlot] {
+        var used: Set<String> = []
+        var slots: [AgendaSlot] = []
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        formatter.timeZone = TimeZone(identifier: "Europe/Zurich")
+
+        for gap in gaps {
+            let targetCategories: [POICategory]
+            let slotType: AgendaSlot.SlotType
+
+            switch gap.suggestedType {
+            case .lunch:
+                targetCategories = [.restaurant, .cafe]
+                slotType = .lunch
+            case .dinner:
+                targetCategories = [.restaurant]
+                slotType = .dinner
+            default:
+                targetCategories = [.playground, .park, .museum, .lake, .bakery]
+                slotType = .activity
+            }
+
+            if let poi = pois.first(where: { targetCategories.contains($0.category) && !used.contains($0.id) }) {
+                used.insert(poi.id)
+                let timeStr = formatter.string(from: gap.effectiveStart)
+
+                slots.append(AgendaSlot(
+                    id: gap.suggestedType?.rawValue ?? "quick",
+                    time: timeStr,
+                    type: slotType,
+                    venueName: poi.name,
+                    venueId: poi.id,
+                    reason: "Nearby \(poi.category.rawValue)",
+                    tags: [poi.category.rawValue.capitalized],
+                    lat: poi.latitude,
+                    lon: poi.longitude,
+                    venueUrl: poi.url,
+                    durationMinutes: slotType == .activity ? 100 : 90,
+                    source: .aiGenerated,
+                    isLocked: false,
+                    slotDate: AgendaSlot.resolveSlotDate(time: timeStr, planDate: planDate)
+                ))
+            }
+        }
+
+        return slots
+    }
+
+    // MARK: - Trip Weather
+
+    /// Fetch current weather for an arbitrary coordinate via Open-Meteo.
+    func fetchWeatherForCoordinate(_ coordinate: CLLocationCoordinate2D) async -> Weather? {
+        let urlString = "https://api.open-meteo.com/v1/forecast?latitude=\(coordinate.latitude)&longitude=\(coordinate.longitude)&current_weather=true&timezone=Europe/Zurich"
+        guard let url = URL(string: urlString) else { return nil }
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            struct OpenMeteoResponse: Decodable {
+                let current_weather: CurrentWeather
+                struct CurrentWeather: Decodable {
+                    let temperature: Double
+                    let weathercode: Int
+                    let windspeed: Double
+                }
+            }
+            let response = try JSONDecoder().decode(OpenMeteoResponse.self, from: data)
+            let cw = response.current_weather
+            return Weather(
+                temperature: cw.temperature,
+                description: APIClient.weatherDescription(for: cw.weathercode),
+                weatherCode: cw.weathercode,
+                windSpeed: cw.windspeed,
+                hourly: nil
+            )
+        } catch {
+            return nil
+        }
     }
 }

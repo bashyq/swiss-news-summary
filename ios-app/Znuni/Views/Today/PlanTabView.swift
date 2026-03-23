@@ -128,6 +128,9 @@ struct PlanTabView: View {
         case .calendarPreview(let events):
             calendarPreviewState(events)
 
+        case .tripDetected:
+            emptyState // placeholder — Task 6 will implement TripNudgeCard
+
         case .composing(let locked):
             composingState(locked)
 
