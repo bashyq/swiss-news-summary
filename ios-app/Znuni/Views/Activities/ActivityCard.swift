@@ -122,7 +122,7 @@ struct ActivityCard: View {
             // Body
             VStack(alignment: .leading, spacing: 4) {
                 Text(activity.localizedName(language: language))
-                    .font(.newsCardHeadline)
+                    .font(.custom("Playfair", size: 15))
                     .foregroundStyle(.znInk)
                     .lineLimit(1)
 
@@ -155,6 +155,10 @@ struct ActivityCard: View {
                         .clipShape(Capsule())
 
                     Spacer(minLength: 0)
+
+                    if activity.openingHours != nil {
+                        VenueStatusBadge(openingHours: activity.openingHours)
+                    }
 
                     if let dist = distanceBadgeText {
                         Text("↗ \(dist)")
@@ -466,12 +470,6 @@ struct ActivityCard: View {
     private var detailPanel: some View {
         if isExpanded {
             VStack(alignment: .leading, spacing: 0) {
-                // Real-time open/closed status
-                if activity.openingHours != nil {
-                    VenueStatusBadge(openingHours: activity.openingHours)
-                        .padding(.bottom, 10)
-                }
-
                 // Action buttons row: [Directions] [Plan →] [🌐] [♡]
                 HStack(spacing: 8) {
                     // Directions button (primary)
@@ -566,15 +564,17 @@ struct ActivityCard: View {
                     .padding(.top, 4)
                 }
 
-                // Mark as visited
+                // Mark as visited (toggleable)
                 Button {
-                    markedAsVisited = true
-                    VenueVisitStore.shared.recordVisit(
-                        venueId: activity.id,
-                        venueName: activity.name,
-                        venueType: .activity,
-                        source: .manualMark
-                    )
+                    markedAsVisited.toggle()
+                    if markedAsVisited {
+                        VenueVisitStore.shared.recordVisit(
+                            venueId: activity.id,
+                            venueName: activity.name,
+                            venueType: .activity,
+                            source: .manualMark
+                        )
+                    }
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: markedAsVisited ? "checkmark.circle.fill" : "checkmark.circle")
@@ -585,11 +585,11 @@ struct ActivityCard: View {
                             .font(.system(size: 12, weight: .medium))
                     }
                     .foregroundStyle(markedAsVisited ? Color.znPositive : Color.znMuted)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .disabled(markedAsVisited)
                 .padding(.top, 4)
             }
             .padding(.horizontal, 18)
@@ -605,11 +605,7 @@ struct ActivityCard: View {
     }
 
     private var categoryLabel: String {
-        let type = activity.indoor
-            ? appState.localized(en: "Indoor", de: "Indoor")
-            : appState.localized(en: "Outdoor", de: "Outdoor")
-        let cat = activity.category.capitalized
-        return "\(cat) · \(type)"
+        activity.category.capitalized
     }
 
     private var categoryIcon: String {
