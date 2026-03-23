@@ -145,11 +145,6 @@ struct PlanTabView: View {
 
     private var emptyState: some View {
         VStack(spacing: 20) {
-            // Weather summary card
-            if let weather = viewModel.weather {
-                weatherSummaryCard(weather)
-            }
-
             Text(appState.localized(
                 en: "No plans yet for \(dayName)",
                 de: "Noch keine Plaene fuer \(dayName)"
@@ -167,14 +162,6 @@ struct PlanTabView: View {
 
     private func calendarPreviewState(_ events: [CalendarSlot]) -> some View {
         VStack(spacing: 16) {
-            // Weather card with event count
-            if let weather = viewModel.weather {
-                weatherSummaryCard(weather, subtitle: appState.localized(
-                    en: "\(events.count) events in your calendar",
-                    de: "\(events.count) Termine in deinem Kalender"
-                ))
-            }
-
             // Section label
             Text(appState.localized(en: "FROM YOUR CALENDAR", de: "AUS DEINEM KALENDER"))
                 .font(.znEyebrow)
