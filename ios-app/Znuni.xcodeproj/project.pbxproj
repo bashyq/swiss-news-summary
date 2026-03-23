@@ -57,6 +57,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		0348D4F02F6A000000000001 /* Exceptions for "Znuni" folder in "Znuni" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 03CD272C2F4B123E0011395A /* Znuni */;
+		};
 		03CD276D2F4B12400011395A /* Exceptions for "ZnuniWidget" folder in "ZnuniWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -64,20 +71,13 @@
 			);
 			target = 03CD27622F4B12400011395A /* ZnuniWidgetExtension */;
 		};
-		03CD27802F4B12400011395A /* Exceptions for "Znuni" folder in "Znuni" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 03CD272C2F4B123E0011395A /* Znuni */;
-		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		03CD272F2F4B123E0011395A /* Znuni */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				03CD27802F4B12400011395A /* Exceptions for "Znuni" folder in "Znuni" target */,
+				0348D4F02F6A000000000001 /* Exceptions for "Znuni" folder in "Znuni" target */,
 			);
 			path = Znuni;
 			sourceTree = "<group>";
