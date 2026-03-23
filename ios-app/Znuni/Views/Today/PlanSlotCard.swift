@@ -1,5 +1,4 @@
 import SwiftUI
-import os.log
 import MapKit
 
 /// Accordion card for a single agenda slot in the Plan tab timeline.
@@ -33,15 +32,12 @@ struct PlanSlotCard: View {
     private var isExpanded: Bool { expandedID == slot.id }
 
     private func doLock() {
-        Logger(subsystem: "Bashar.Znuni", category: "SlotCard").notice("doLock: \(slot.id) vm=\(viewModel != nil)")
         if let vm = viewModel { vm.lock(slotId: slot.id) } else { onLock() }
     }
     private func doUnlock() {
-        Logger(subsystem: "Bashar.Znuni", category: "SlotCard").notice("doUnlock: \(slot.id) vm=\(viewModel != nil)")
         if let vm = viewModel { vm.unlock(slotId: slot.id) } else { onUnlock() }
     }
     private func doRemove() {
-        Logger(subsystem: "Bashar.Znuni", category: "SlotCard").notice("doRemove: \(slot.id) vm=\(viewModel != nil)")
         if let vm = viewModel { vm.remove(slotId: slot.id) } else { onRemove() }
     }
 

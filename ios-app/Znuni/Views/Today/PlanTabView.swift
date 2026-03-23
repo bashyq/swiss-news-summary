@@ -14,7 +14,6 @@ struct PlanTabView: View {
     @State private var visibleSlotCount: Int = 0
     @State private var isAnimatingDeal = false
     @State private var previousStateWasCalendarPreview = false
-    @State private var debugSlotAction: String?
     @State private var showWeatherDetail = false
 
     var body: some View {
@@ -103,11 +102,6 @@ struct PlanTabView: View {
                     await viewModel.replaceWithCustom(slotId: slot.id, name: name, start: start, end: end, address: address)
                 }
             }
-        }
-        .alert("Debug: Slot Action", isPresented: Binding(get: { debugSlotAction != nil }, set: { if !$0 { debugSlotAction = nil } })) {
-            Button("OK") { debugSlotAction = nil }
-        } message: {
-            Text(debugSlotAction ?? "")
         }
         .onChange(of: isDealState) { _, isDealt in
             if isDealt {

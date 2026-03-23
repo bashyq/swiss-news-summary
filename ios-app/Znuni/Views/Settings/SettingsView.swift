@@ -85,7 +85,7 @@ struct SettingsView: View {
         ) {
             Button(appState.localized(en: "Cancel", de: "Abbrechen"), role: .cancel) {}
             Button(appState.localized(en: "Clear", de: "Löschen"), role: .destructive) {
-                CalendarDiscardStore.shared.clearAll()
+                LocalPlanStore.shared.clearDiscards()
                 withAnimation { discardedCleared = true }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                     withAnimation { discardedCleared = false }
