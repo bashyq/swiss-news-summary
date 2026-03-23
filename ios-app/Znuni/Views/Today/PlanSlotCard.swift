@@ -64,6 +64,18 @@ struct PlanSlotCard: View {
                 expandedID = isExpanded ? nil : slot.id
             }
         }
+        .contextMenu {
+            if slot.isLocked {
+                Button { onUnlock() } label: { Label("Unlock", systemImage: "lock.open") }
+            } else {
+                Button { onLock() } label: { Label("Lock this slot", systemImage: "lock") }
+            }
+            if slot.source != .calendar {
+                Button { onReplace() } label: { Label("Replace with my own", systemImage: "pencil") }
+            }
+            Divider()
+            Button(role: .destructive) { onRemove() } label: { Label("Remove", systemImage: "trash") }
+        }
         .sensoryFeedback(.impact(weight: .light), trigger: isExpanded)
     }
 
