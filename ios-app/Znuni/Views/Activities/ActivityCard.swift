@@ -447,7 +447,12 @@ struct ActivityCard: View {
                 .overlay(Color.znInnerDivider)
                 .padding(.bottom, 10)
 
-            HStack {
+            HStack(spacing: 10) {
+                // Open/Closed status
+                if activity.openingHours != nil {
+                    VenueStatusBadge(openingHours: activity.openingHours)
+                }
+
                 // Distance
                 if let meters = distanceMeters {
                     HStack(spacing: 4) {
