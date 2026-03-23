@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Znuni — Today Tab Design</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'DM Sans', -apple-system, sans-serif;
+    background: #1a1a2e;
+    color: #F0EBE0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 400;
+    color: #F0EBE0;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  .page-subtitle {
+    color: #A09888;
+    font-size: 14px;
+    margin-bottom: 32px;
+    text-align: center;
+  }
+
+  .screens {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 1100px;
+  }
+
+  /* ── Znuni Design Tokens ── */
+  :root {
+    --zn-navy: #1A3A5C;
+    --zn-navy-light: #4A8AC4;
+    --zn-terracotta: #C4623A;
+    --zn-terracotta-light: #D4724A;
+    --zn-cream: #F5F0E8;
+    --zn-surface: #FAF8F4;
+    --zn-border: #E8E0D0;
+    --zn-ink: #1C1A16;
+    --zn-body: #4A5568;
+    --zn-muted: #8A8070;
+    --zn-positive: #3A7D5C;
+    --zn-negative: #B04040;
+    --zn-inner-divider: #F0EBE3;
+    --zn-neutral-tag-bg: #EDE8DF;
+    --zn-neutral-tag-text: #6B6355;
+    --zn-chevron: #C8C0B4;
+    --card-radius: 16px;
+    --card-padding: 16px;
+    --border-strip: 3px;
+    --card-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+
+  /* ── Phone Frame ── */
+  .phone {
+    width: 320px;
+    background: var(--zn-cream);
+    border-radius: 36px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Hero Banner (navy gradient) ── */
+  .hero {
+    background: linear-gradient(180deg, var(--zn-navy) 0%, #0F2540 100%);
+    padding: 40px 20px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -20px;
+    right: -20px;
+    width: 200px;
+    height: 120px;
+    background: radial-gradient(circle at center, rgba(196,98,58,0.15) 0%, transparent 70%);
+  }
+  .hero-eyebrow {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 4px;
+  }
+  .hero-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 400;
+    color: white;
+    margin-bottom: 6px;
+  }
+  .hero-title em {
+    font-style: italic;
+    color: rgba(255,255,255,0.85);
+  }
+  .hero-weather {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: rgba(255,255,255,0.7);
+    font-size: 13px;
+  }
+  .hero-weather .temp {
+    font-size: 22px;
+    font-weight: 300;
+    color: white;
+  }
+
+  /* ── Date Strip ── */
+  .date-strip {
+    display: flex;
+    gap: 4px;
+    padding: 12px 16px;
+    background: var(--zn-cream);
+    overflow-x: auto;
+  }
+  .date-cell {
+    min-width: 44px;
+    text-align: center;
+    padding: 6px 4px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .date-cell.selected {
+    background: var(--zn-navy);
+    color: white;
+  }
+  .date-cell .day-name {
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    color: var(--zn-muted);
+    margin-bottom: 2px;
+  }
+  .date-cell.selected .day-name { color: rgba(255,255,255,0.6); }
+  .date-cell .day-num {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--zn-ink);
+  }
+  .date-cell.selected .day-num { color: white; }
+  .date-cell.future .day-num { color: var(--zn-muted); }
+  .date-cal {
+    min-width: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--zn-chevron);
+    font-size: 16px;
+  }
+
+  /* ── Content Area ── */
+  .content {
+    flex: 1;
+    padding: 0 16px 12px;
+    background: var(--zn-cream);
+  }
+
+  /* ── Weather Summary Card ── */
+  .weather-summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--zn-surface);
+    border-radius: var(--card-radius);
+    box-shadow: var(--card-shadow);
+    margin-bottom: 16px;
+  }
+  .weather-icon { font-size: 28px; }
+  .weather-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--zn-ink);
+  }
+  .weather-sub {
+    font-size: 12px;
+    color: var(--zn-muted);
+    margin-top: 1px;
+  }
+
+  /* ── Empty State ── */
+  .empty-state {
+    text-align: center;
+    padding: 32px 16px;
+  }
+  .empty-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    opacity: 0.25;
+  }
+  .empty-text {
+    font-size: 15px;
+    color: var(--zn-muted);
+    margin-bottom: 20px;
+  }
+
+  /* ── CTA Button ── */
+  .cta-btn {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--zn-navy), #2A5A8C);
+    color: white;
+    padding: 14px 32px;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .cta-sub {
+    font-size: 11px;
+    color: var(--zn-muted);
+    margin-top: 6px;
+  }
+
+  /* ── Section Label ── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--zn-muted);
+    margin-bottom: 8px;
+  }
+
+  /* ── Slot Card ── */
+  .slot-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--zn-surface);
+    border-radius: var(--card-radius);
+    box-shadow: var(--card-shadow);
+    margin-bottom: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+  .slot-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: var(--border-strip);
+    border-radius: 1.5px;
+  }
+  .slot-card.activity::before { background: var(--zn-terracotta); }
+  .slot-card.restaurant::before { background: var(--zn-positive); }
+  .slot-card.calendar::before { background: var(--zn-navy-light); }
+
+  .slot-photo {
+    width: 52px;
+    height: 52px;
+    border-radius: 10px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  .slot-photo-placeholder {
+    width: 52px;
+    height: 52px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .slot-photo-placeholder.activity { background: linear-gradient(135deg, rgba(196,98,58,0.15), rgba(196,98,58,0.05)); }
+  .slot-photo-placeholder.restaurant { background: linear-gradient(135deg, rgba(58,125,92,0.15), rgba(58,125,92,0.05)); }
+  .slot-photo-placeholder.calendar { background: linear-gradient(135deg, rgba(74,138,196,0.12), rgba(74,138,196,0.04)); }
+
+  .slot-info { flex: 1; min-width: 0; }
+  .slot-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--zn-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .slot-meta {
+    font-size: 11px;
+    color: var(--zn-muted);
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .slot-meta .tag {
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+  }
+  .tag-outdoor { background: rgba(196,98,58,0.1); color: var(--zn-terracotta); }
+  .tag-indoor { background: rgba(26,58,92,0.08); color: var(--zn-navy); }
+  .tag-free { background: rgba(58,125,92,0.1); color: var(--zn-positive); }
+
+  /* ── Status Badge ── */
+  .status-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+  .badge-locked {
+    background: rgba(26,58,92,0.1);
+    color: var(--zn-navy);
+    border: 1px solid rgba(26,58,92,0.15);
+  }
+  .badge-new {
+    background: rgba(196,98,58,0.1);
+    color: var(--zn-terracotta);
+    border: 1px solid rgba(196,98,58,0.15);
+  }
+
+  /* ── Travel Connector ── */
+  .travel-connector {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 0 3px 28px;
+  }
+  .travel-line {
+    width: 1.5px;
+    height: 14px;
+    background: var(--zn-border);
+  }
+  .travel-label {
+    font-size: 10px;
+    color: var(--zn-chevron);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* ── Bottom Actions ── */
+  .bottom-actions {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    justify-content: center;
+    background: var(--zn-cream);
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--zn-navy), #2A5A8C);
+    color: white;
+    padding: 10px 18px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .btn-secondary {
+    background: var(--zn-surface);
+    color: var(--zn-ink);
+    padding: 10px 18px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--zn-border);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* ── Tab Bar ── */
+  .tab-bar {
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 0 20px;
+    background: var(--zn-surface);
+    border-top: 1px solid var(--zn-border);
+  }
+  .tab {
+    text-align: center;
+    font-size: 10px;
+    color: var(--zn-muted);
+    font-weight: 500;
+  }
+  .tab.active { color: var(--zn-navy); }
+  .tab-icon {
+    font-size: 18px;
+    margin-bottom: 2px;
+    display: block;
+  }
+
+  /* ── Labels below phones ── */
+  .phone-label {
+    text-align: center;
+    margin-top: 16px;
+    width: 320px;
+  }
+  .phone-label h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: #F0EBE0;
+    margin-bottom: 4px;
+  }
+  .phone-label p {
+    font-size: 12px;
+    color: #6A6058;
+    line-height: 1.4;
+  }
+</style>
+</head>
+<body>
+
+<h1>Today Tab — Reimagined</h1>
+<p class="page-subtitle">Three states: empty, calendar preview, and dealt hand</p>
+
+<div class="screens">
+
+  <!-- ═══════════ STATE 1: No calendar events ═══════════ -->
+  <div>
+    <div class="phone">
+      <div class="hero">
+        <div class="hero-eyebrow">Saturday, 22 March</div>
+        <div class="hero-title">Plan your <em>Saturday</em></div>
+        <div class="hero-weather">
+          <span class="temp">18°</span>
+          <span>☀️ Sunny · Zürich</span>
+        </div>
+      </div>
+
+      <div class="date-strip">
+        <div class="date-cell selected"><div class="day-name">Sat</div><div class="day-num">22</div></div>
+        <div class="date-cell"><div class="day-name">Sun</div><div class="day-num">23</div></div>
+        <div class="date-cell future"><div class="day-name">Mon</div><div class="day-num">24</div></div>
+        <div class="date-cell future"><div class="day-name">Tue</div><div class="day-num">25</div></div>
+        <div class="date-cell future"><div class="day-name">Wed</div><div class="day-num">26</div></div>
+        <div class="date-cal">📅</div>
+      </div>
+
+      <div class="content">
+        <div class="weather-summary">
+          <span class="weather-icon">☀️</span>
+          <div>
+            <div class="weather-label">18°C · Sunny all day</div>
+            <div class="weather-sub">Great day to be outside</div>
+          </div>
+        </div>
+
+        <div class="empty-state">
+          <div class="empty-text">No plans yet for Saturday</div>
+          <button class="cta-btn">Plan my day</button>
+        </div>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab"><span class="tab-icon">📰</span>News</div>
+        <div class="tab active"><span class="tab-icon">📋</span>Today</div>
+        <div class="tab"><span class="tab-icon">🧭</span>Discover</div>
+        <div class="tab"><span class="tab-icon">⚙️</span>Settings</div>
+      </div>
+    </div>
+    <div class="phone-label">
+      <h3>Empty State</h3>
+      <p>Weather summary + "Plan my day" CTA. No auto-composition — user opts in.</p>
+    </div>
+  </div>
+
+  <!-- ═══════════ STATE 2: Calendar events found ═══════════ -->
+  <div>
+    <div class="phone">
+      <div class="hero">
+        <div class="hero-eyebrow">Sunday, 23 March</div>
+        <div class="hero-title">Plan your <em>Sunday</em></div>
+        <div class="hero-weather">
+          <span class="temp">14°</span>
+          <span>⛅ Partly cloudy · Zürich</span>
+        </div>
+      </div>
+
+      <div class="date-strip">
+        <div class="date-cell"><div class="day-name">Sat</div><div class="day-num">22</div></div>
+        <div class="date-cell selected"><div class="day-name">Sun</div><div class="day-num">23</div></div>
+        <div class="date-cell future"><div class="day-name">Mon</div><div class="day-num">24</div></div>
+        <div class="date-cell future"><div class="day-name">Tue</div><div class="day-num">25</div></div>
+        <div class="date-cell future"><div class="day-name">Wed</div><div class="day-num">26</div></div>
+        <div class="date-cal">📅</div>
+      </div>
+
+      <div class="content">
+        <div class="weather-summary">
+          <span class="weather-icon">⛅</span>
+          <div>
+            <div class="weather-label">14°C · Partly cloudy</div>
+            <div class="weather-sub">2 events in your calendar</div>
+          </div>
+        </div>
+
+        <div class="section-label">From your calendar</div>
+
+        <div class="slot-card calendar">
+          <div class="slot-photo-placeholder calendar">📅</div>
+          <div class="slot-info">
+            <div class="slot-name">Dentist</div>
+            <div class="slot-meta">10:00 – 11:00</div>
+          </div>
+          <span class="status-badge badge-locked">🔒 Locked</span>
+        </div>
+
+        <div style="height: 8px;"></div>
+
+        <div class="slot-card calendar">
+          <div class="slot-photo-placeholder calendar">📅</div>
+          <div class="slot-info">
+            <div class="slot-name">Coffee with Anna</div>
+            <div class="slot-meta">15:00 – 16:00</div>
+          </div>
+          <span class="status-badge badge-locked">🔒 Locked</span>
+        </div>
+
+        <div style="text-align: center; padding: 16px 0 4px;">
+          <button class="cta-btn">Fill the gaps</button>
+          <div class="cta-sub">Morning · Lunch · Afternoon · Dinner</div>
+        </div>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab"><span class="tab-icon">📰</span>News</div>
+        <div class="tab active"><span class="tab-icon">📋</span>Today</div>
+        <div class="tab"><span class="tab-icon">🧭</span>Discover</div>
+        <div class="tab"><span class="tab-icon">⚙️</span>Settings</div>
+      </div>
+    </div>
+    <div class="phone-label">
+      <h3>Calendar Preview</h3>
+      <p>Calendar events appear as locked cards. "Fill the gaps" composes suggestions around them.</p>
+    </div>
+  </div>
+
+  <!-- ═══════════ STATE 3: Hand dealt ═══════════ -->
+  <div>
+    <div class="phone">
+      <div class="hero">
+        <div class="hero-eyebrow">Sunday, 23 March</div>
+        <div class="hero-title">Your <em>Sunday</em></div>
+        <div class="hero-weather">
+          <span class="temp">14°</span>
+          <span>⛅ Partly cloudy · Zürich</span>
+        </div>
+      </div>
+
+      <div class="date-strip">
+        <div class="date-cell"><div class="day-name">Sat</div><div class="day-num">22</div></div>
+        <div class="date-cell selected"><div class="day-name">Sun</div><div class="day-num">23</div></div>
+        <div class="date-cell future"><div class="day-name">Mon</div><div class="day-num">24</div></div>
+        <div class="date-cell future"><div class="day-name">Tue</div><div class="day-num">25</div></div>
+        <div class="date-cell future"><div class="day-name">Wed</div><div class="day-num">26</div></div>
+        <div class="date-cal">📅</div>
+      </div>
+
+      <div class="content" style="padding-top: 8px;">
+
+        <!-- Slot 1: Activity -->
+        <div class="slot-card activity">
+          <div class="slot-photo-placeholder activity">🦁</div>
+          <div class="slot-info">
+            <div class="slot-name">Zoo Zürich</div>
+            <div class="slot-meta">
+              9:00 – 11:00
+              <span class="tag tag-outdoor">Outdoor</span>
+            </div>
+          </div>
+          <span class="status-badge badge-new">New</span>
+        </div>
+
+        <div class="travel-connector">
+          <div class="travel-line"></div>
+          <span class="travel-label">🚋 18 min tram</span>
+        </div>
+
+        <!-- Slot 2: Calendar -->
+        <div class="slot-card calendar">
+          <div class="slot-photo-placeholder calendar">📅</div>
+          <div class="slot-info">
+            <div class="slot-name">Dentist</div>
+            <div class="slot-meta">10:00 – 11:00</div>
+          </div>
+          <span class="status-badge badge-locked">🔒 Locked</span>
+        </div>
+
+        <div class="travel-connector">
+          <div class="travel-line"></div>
+          <span class="travel-label">🚶 8 min walk</span>
+        </div>
+
+        <!-- Slot 3: Lunch -->
+        <div class="slot-card restaurant">
+          <div class="slot-photo-placeholder restaurant">🍽️</div>
+          <div class="slot-info">
+            <div class="slot-name">Hiltl Sihlpost</div>
+            <div class="slot-meta">
+              12:00 – 13:00 · $$
+            </div>
+          </div>
+          <span class="status-badge badge-new">New</span>
+        </div>
+
+        <div class="travel-connector">
+          <div class="travel-line"></div>
+          <span class="travel-label">🚋 12 min tram</span>
+        </div>
+
+        <!-- Slot 4: Calendar -->
+        <div class="slot-card calendar">
+          <div class="slot-photo-placeholder calendar">📅</div>
+          <div class="slot-info">
+            <div class="slot-name">Coffee with Anna</div>
+            <div class="slot-meta">15:00 – 16:00</div>
+          </div>
+          <span class="status-badge badge-locked">🔒 Locked</span>
+        </div>
+
+        <div class="travel-connector">
+          <div class="travel-line"></div>
+          <span class="travel-label">🚶 5 min walk</span>
+        </div>
+
+        <!-- Slot 5: Dinner -->
+        <div class="slot-card restaurant">
+          <div class="slot-photo-placeholder restaurant">🍕</div>
+          <div class="slot-info">
+            <div class="slot-name">Pizzeria Molino</div>
+            <div class="slot-meta">
+              18:00 – 19:30 · $$
+            </div>
+          </div>
+          <span class="status-badge badge-new">New</span>
+        </div>
+
+      </div>
+
+      <div class="bottom-actions">
+        <button class="btn-primary">Save to calendar</button>
+        <button class="btn-secondary">Redeal</button>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab"><span class="tab-icon">📰</span>News</div>
+        <div class="tab active"><span class="tab-icon">📋</span>Today</div>
+        <div class="tab"><span class="tab-icon">🧭</span>Discover</div>
+        <div class="tab"><span class="tab-icon">⚙️</span>Settings</div>
+      </div>
+    </div>
+    <div class="phone-label">
+      <h3>Hand Dealt</h3>
+      <p>Calendar slots locked, suggestions marked "New". Tap to lock what you like, then Redeal to replace unlocked slots. Save writes all to calendar.</p>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

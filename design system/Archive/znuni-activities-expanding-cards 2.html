@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Activities — Expanding Cards</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --cream: #F5F0E8;
+  --surface: #FAF8F4;
+  --sand: #E8E0D0;
+  --navy: #1A3A5C;
+  --terracotta: #C4623A;
+  --slate: #4A5568;
+  --muted: #8A8070;
+  --ink: #1C1A16;
+  --positive: #3A7D5C;
+  --border: #F0EBE3;
+}
+
+body {
+  background: #D8D0C0;
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px;
+  min-height: 100vh;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.phone {
+  width: 390px;
+  background: var(--cream);
+  border-radius: 48px;
+  overflow: hidden;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  max-height: 844px;
+}
+
+/* STATUS */
+.status {
+  background: var(--navy);
+  height: 44px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px; flex-shrink: 0;
+}
+.status-time { color: white; font-size: 15px; font-weight: 500; }
+.status-icons { display: flex; gap: 6px; align-items: center; }
+
+/* HERO */
+.hero {
+  background: var(--navy);
+  padding: 14px 20px 22px;
+  position: relative; overflow: hidden; flex-shrink: 0;
+}
+.hero::before {
+  content: '';
+  position: absolute; top: -50px; right: -30px;
+  width: 180px; height: 180px;
+  background: radial-gradient(circle, rgba(196,98,58,0.28) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-svg-bg {
+  position: absolute; bottom: 0; right: 0; opacity: 0.08; pointer-events: none;
+}
+.hero-top {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.hero-back {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.hero-actions { display: flex; gap: 8px; }
+.hero-btn {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; border: none;
+}
+.hero-eyebrow {
+  font-size: 10px; font-weight: 500; letter-spacing: 0.12em;
+  text-transform: uppercase; color: rgba(255,255,255,0.45); margin-bottom: 4px;
+}
+.hero-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px; color: white; font-weight: 400; line-height: 1.1;
+}
+.hero-title em { font-style: italic; color: rgba(255,255,255,0.65); }
+
+/* SCROLL BODY */
+.scroll-body {
+  flex: 1; overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 24px;
+}
+.scroll-body::-webkit-scrollbar { display: none; }
+
+/* FILTERS */
+.filter-wrap { padding: 14px 20px 4px; }
+.filter-row { display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none; }
+.filter-row::-webkit-scrollbar { display: none; }
+.pill {
+  flex-shrink: 0; height: 31px; border-radius: 100px;
+  padding: 0 13px; font-size: 12px; font-weight: 500;
+  display: flex; align-items: center; gap: 5px;
+  font-family: 'DM Sans', sans-serif; border: 1.5px solid transparent; cursor: pointer;
+}
+.pill.on { background: var(--navy); color: white; }
+.pill.off { background: transparent; color: var(--slate); border-color: var(--sand); }
+.cnt { width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; }
+.pill.on .cnt { background: rgba(255,255,255,0.2); }
+.pill.off .cnt { background: var(--sand); color: var(--muted); }
+.result-count { font-size: 12px; color: var(--muted); padding: 6px 20px 12px; }
+
+/* ─────────────────────────────────────
+   THE EXPANDING CARD
+───────────────────────────────────── */
+.cards { padding: 0 20px; display: flex; flex-direction: column; gap: 10px; }
+
+.xcard {
+  background: var(--surface);
+  border-radius: 18px;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  /* smooth height transition handled by inner elements */
+  transition: box-shadow 0.3s ease;
+}
+.xcard.expanded {
+  box-shadow: 0 12px 40px rgba(26,58,92,0.18);
+  cursor: default;
+}
+
+/* Left accent bar */
+.xcard::before {
+  content: '';
+  position: absolute; left: 0; top: 18px; bottom: 18px;
+  width: 3px; border-radius: 0 3px 3px 0; z-index: 2;
+  transition: opacity 0.3s ease;
+}
+.xcard.expanded::before { opacity: 0; } /* hides when photo visible */
+.xcard.outdoor::before { background: var(--terracotta); }
+.xcard.indoor::before  { background: var(--navy); }
+.xcard.free::before    { background: var(--positive); }
+
+/* ── PHOTO PANEL (slides in from top) ── */
+.xcard-photo {
+  width: 100%;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+.xcard.expanded .xcard-photo {
+  max-height: 200px;
+}
+.xcard-photo-inner {
+  width: 100%; height: 200px;
+  position: relative; overflow: hidden;
+}
+.xcard-photo-inner svg {
+  width: 100%; height: 100%;
+  display: block;
+}
+/* Gradient fades photo into the card body */
+.xcard-photo-fade {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 80px;
+  background: linear-gradient(to top, var(--surface), transparent);
+  pointer-events: none;
+}
+/* Category badge on photo */
+.xcard-photo-cat {
+  position: absolute; top: 12px; left: 14px;
+  background: rgba(26,58,92,0.82); color: white;
+  font-size: 10px; font-weight: 500; letter-spacing: 0.08em;
+  text-transform: uppercase; padding: 4px 10px; border-radius: 100px;
+  backdrop-filter: blur(8px);
+}
+/* Close button top-right */
+.xcard-close {
+  position: absolute; top: 10px; right: 10px; z-index: 10;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(255,255,255,0.22); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(8px);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s ease 0.2s;
+}
+.xcard.expanded .xcard-close {
+  opacity: 1; pointer-events: all;
+}
+
+/* ── CORE CONTENT (always visible) ── */
+.xcard-core {
+  padding: 15px 18px 13px 22px;
+  position: relative;
+}
+.xcard.expanded .xcard-core {
+  padding-left: 18px; /* remove left indent when accent bar hidden */
+}
+.xcard-top {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 5px;
+}
+.xcard-category {
+  font-size: 10px; font-weight: 500; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 3px;
+  transition: opacity 0.2s;
+}
+.xcard.expanded .xcard-category { opacity: 0; height: 0; overflow: hidden; margin: 0; }
+
+.xcard-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 16px; font-weight: 600; color: var(--ink); line-height: 1.25;
+}
+.xcard.expanded .xcard-title { font-size: 18px; }
+
+.xcard-heart { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+
+.xcard-desc {
+  font-size: 12.5px; color: var(--slate); font-weight: 300;
+  line-height: 1.6; margin-bottom: 10px;
+  /* clamp to 2 lines when collapsed */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: -webkit-line-clamp 0s;
+}
+.xcard.expanded .xcard-desc {
+  -webkit-line-clamp: unset;
+  overflow: visible;
+  margin-bottom: 12px;
+}
+
+.xcard-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  height: 24px; padding: 0 10px; border-radius: 100px;
+  font-size: 11px; font-weight: 500;
+}
+.tag-outdoor { background: rgba(196,98,58,0.1); color: var(--terracotta); }
+.tag-indoor  { background: rgba(26,58,92,0.1);  color: var(--navy); }
+.tag-free    { background: rgba(58,125,92,0.1); color: var(--positive); }
+.tag-neutral { background: #EDE8DF; color: #6B6355; }
+
+.xcard-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  padding-top: 10px; border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+.xcard-dist { color: var(--navy); font-weight: 500; display: flex; align-items: center; gap: 4px; }
+.xcard-cta  { color: var(--navy); font-weight: 500; display: flex; align-items: center; gap: 3px; font-size: 12px; }
+
+/* ── EXPANDED DETAIL PANEL (slides in from bottom) ── */
+.xcard-detail {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0.05s;
+}
+.xcard.expanded .xcard-detail {
+  max-height: 320px;
+}
+.xcard-detail-inner {
+  padding: 0 18px 18px;
+}
+
+/* Meta grid */
+.detail-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin-bottom: 14px;
+}
+.detail-cell {
+  background: var(--cream);
+  border-radius: 12px; padding: 10px 12px;
+}
+.detail-cell-label {
+  font-size: 9px; font-weight: 500; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 3px;
+}
+.detail-cell-value {
+  font-size: 13px; color: var(--ink); font-weight: 400; line-height: 1.3;
+}
+
+/* Opening hours strip */
+.hours-strip {
+  background: var(--cream); border-radius: 12px;
+  padding: 10px 14px; margin-bottom: 12px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.hours-open { font-size: 12px; font-weight: 500; color: var(--positive); display: flex; align-items: center; gap: 5px; }
+.hours-time { font-size: 12px; color: var(--muted); }
+
+/* Action buttons */
+.detail-actions { display: flex; gap: 8px; }
+.btn-directions {
+  flex: 1; background: var(--navy); color: white;
+  border: none; border-radius: 100px; padding: 11px;
+  font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  cursor: pointer;
+}
+.btn-website {
+  width: 42px; height: 42px; background: var(--sand);
+  border: none; border-radius: 100px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* TAB BAR */
+.tab-bar {
+  background: rgba(250,248,244,0.97);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--sand);
+  padding: 12px 0 28px;
+  display: flex; justify-content: space-around; flex-shrink: 0;
+}
+.tab { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 60px; }
+.tab-lbl { font-size: 10px; font-weight: 500; color: var(--muted); }
+.tab.on .tab-lbl { color: var(--navy); }
+.home-ind { height: 34px; background: var(--surface); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.home-bar { width: 120px; height: 5px; background: rgba(0,0,0,0.18); border-radius: 100px; }
+
+/* Surprise btn */
+.surprise-wrap { padding: 16px 20px 4px; }
+.surprise-btn {
+  width: 100%; background: var(--navy); color: white;
+  border: none; border-radius: 100px; padding: 14px;
+  font-family: 'Playfair Display', serif; font-size: 15px; font-style: italic;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  cursor: pointer; box-shadow: 0 8px 24px rgba(26,58,92,0.25);
+}
+
+/* BG PHOTO WASH on collapsed card */
+.xcard-bg-scene {
+  position: absolute; inset: 0; z-index: 0; overflow: hidden; border-radius: 18px;
+}
+.xcard-bg-scene svg { width: 100%; height: 100%; }
+.xcard-bg-wash {
+  position: absolute; inset: 0; z-index: 1; border-radius: 18px;
+  background: rgba(250,248,244,0.83);
+}
+.xcard-core, .xcard-photo, .xcard-detail { position: relative; z-index: 2; }
+.xcard::before { z-index: 3; }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- STATUS -->
+  <div class="status">
+    <span class="status-time">9:41</span>
+    <div class="status-icons">
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="none"><rect x="0" y="3" width="3" height="9" rx="1" fill="white" opacity="0.4"/><rect x="4.5" y="2" width="3" height="10" rx="1" fill="white" opacity="0.6"/><rect x="9" y="0" width="3" height="12" rx="1" fill="white" opacity="0.8"/><rect x="13.5" y="0" width="2.5" height="12" rx="1" fill="white"/></svg>
+      <svg width="16" height="11" viewBox="0 0 18 14" fill="none"><path d="M9 3C11.5 3 13.7 4.1 15.2 5.8L16.6 4.3C14.7 2.2 12 1 9 1C6 1 3.3 2.2 1.4 4.3L2.8 5.8C4.3 4.1 6.5 3 9 3Z" fill="white" opacity="0.5"/><path d="M9 6C10.7 6 12.2 6.7 13.3 7.8L14.7 6.3C13.2 4.9 11.2 4 9 4C6.8 4 4.8 4.9 3.3 6.3L4.7 7.8C5.8 6.7 7.3 6 9 6Z" fill="white" opacity="0.75"/><circle cx="9" cy="11" r="2" fill="white"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3.5" stroke="white" stroke-opacity="0.35"/><rect x="2" y="2" width="17" height="8" rx="2" fill="white"/></svg>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <svg class="hero-svg-bg" width="140" height="80" viewBox="0 0 140 80" fill="none">
+      <path d="M50 80L75 32L100 80Z" fill="white"/><path d="M75 80L96 44L118 80Z" fill="white"/>
+      <path d="M22 80L44 54L66 80Z" fill="white"/><circle cx="115" cy="14" r="10" fill="white"/>
+      <circle cx="18" cy="64" r="8" stroke="white" stroke-width="2"/><circle cx="40" cy="64" r="8" stroke="white" stroke-width="2"/>
+      <path d="M29 54L18 64M29 54L40 64M29 54L26 46M29 54H36" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+    </svg>
+    <div class="hero-top">
+      <div class="hero-back">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8L10 13" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="hero-actions">
+        <button class="hero-btn"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1V13M1 7H13" stroke="white" stroke-width="2" stroke-linecap="round"/></svg></button>
+        <button class="hero-btn"><svg width="16" height="14" viewBox="0 0 16 14" fill="none"><path d="M6 2H14M6 7H14M6 12H14" stroke="white" stroke-width="1.8" stroke-linecap="round"/><circle cx="2.5" cy="2" r="1.5" fill="white"/><circle cx="2.5" cy="7" r="1.5" fill="white"/><circle cx="2.5" cy="12" r="1.5" fill="white"/></svg></button>
+        <button class="hero-btn"><svg width="16" height="14" viewBox="0 0 16 14" fill="none"><rect x="1" y="5" width="5" height="9" rx="0.5" stroke="white" stroke-width="1.5"/><rect x="6" y="2" width="4" height="12" rx="0.5" stroke="white" stroke-width="1.5"/><rect x="10" y="6" width="5" height="8" rx="0.5" stroke="white" stroke-width="1.5"/></svg></button>
+      </div>
+    </div>
+    <div class="hero-eyebrow">Zürich · Wednesday</div>
+    <div class="hero-title">What to <em>do?</em></div>
+  </div>
+
+  <!-- SCROLL -->
+  <div class="scroll-body" id="scrollBody">
+
+    <div class="filter-wrap">
+      <div class="filter-row">
+        <span class="pill on">All <span class="cnt">23</span></span>
+        <span class="pill off">Near Me <span class="cnt">8</span></span>
+        <span class="pill off">Indoor <span class="cnt">9</span></span>
+        <span class="pill off">Outdoor <span class="cnt">14</span></span>
+        <span class="pill off">Stay home <span class="cnt">6</span></span>
+      </div>
+    </div>
+    <div class="result-count">23 activities found — tap a card to expand</div>
+
+    <div class="cards">
+
+      <!-- ══ CARD 1 — Zoo Zürich ══ -->
+      <div class="xcard outdoor" id="card-0" onclick="toggleCard(0, event)">
+        <!-- Atmospheric bg wash -->
+        <div class="xcard-bg-scene">
+          <svg viewBox="0 0 350 120" preserveAspectRatio="xMidYMid slice"><rect width="350" height="120" fill="#7BB89A"/><rect width="350" height="60" fill="#8ABCD4"/><ellipse cx="60" cy="20" rx="32" ry="13" fill="white" opacity="0.6"/><ellipse cx="260" cy="24" rx="26" ry="11" fill="white" opacity="0.5"/><rect x="0" y="60" width="350" height="60" fill="#8BAF72"/><rect x="20" y="42" width="7" height="25" fill="#4A7030"/><ellipse cx="23" cy="38" rx="16" ry="18" fill="#5C8A3A"/><rect x="290" y="38" width="8" height="28" fill="#4A7030"/><ellipse cx="294" cy="33" rx="18" ry="20" fill="#5C8A3A"/><ellipse cx="170" cy="84" rx="36" ry="26" fill="#8A8A8A"/><ellipse cx="140" cy="76" rx="20" ry="18" fill="#969696"/><path d="M128 88 Q114 104 120 116" stroke="#808080" stroke-width="8" fill="none" stroke-linecap="round"/><ellipse cx="128" cy="76" rx="12" ry="16" fill="#7A7A7A"/><ellipse cx="245" cy="96" rx="10" ry="14" fill="#1A1A1A"/><ellipse cx="245" cy="93" rx="6" ry="9" fill="white"/></svg>
+        </div>
+        <div class="xcard-bg-wash"></div>
+
+        <!-- Photo panel — slides in from top on expand -->
+        <div class="xcard-photo">
+          <div class="xcard-photo-inner">
+            <svg viewBox="0 0 390 200" preserveAspectRatio="xMidYMid slice"><rect width="390" height="200" fill="#7BB89A"/><rect width="390" height="110" fill="#6AAAC0"/><ellipse cx="70" cy="28" rx="40" ry="16" fill="white" opacity="0.65"/><ellipse cx="280" cy="20" rx="34" ry="14" fill="white" opacity="0.5"/><rect x="0" y="110" width="390" height="90" fill="#7AA860"/><rect x="18" y="72" width="9" height="46" fill="#4A7030"/><ellipse cx="22" cy="64" rx="22" ry="26" fill="#5C8A3A"/><rect x="55" y="78" width="8" height="38" fill="#4A7030"/><ellipse cx="59" cy="71" rx="17" ry="20" fill="#6A9A44"/><rect x="310" y="68" width="10" height="50" fill="#4A7030"/><ellipse cx="315" cy="60" rx="24" ry="28" fill="#5C8A3A"/><rect x="345" y="76" width="9" height="42" fill="#4A7030"/><ellipse cx="349" cy="69" rx="18" ry="22" fill="#6A9A44"/><ellipse cx="175" cy="144" rx="46" ry="33" fill="#8A8A8A"/><ellipse cx="138" cy="133" rx="27" ry="24" fill="#969696"/><path d="M124 148 Q108 168 115 182" stroke="#808080" stroke-width="10" fill="none" stroke-linecap="round"/><ellipse cx="120" cy="130" rx="14" ry="19" fill="#7A7A7A"/><circle cx="128" cy="122" r="4" fill="#222"/><rect x="152" y="168" width="14" height="26" rx="5" fill="#787878"/><rect x="172" y="168" width="14" height="26" rx="5" fill="#787878"/><rect x="192" y="168" width="13" height="24" rx="5" fill="#787878"/><ellipse cx="265" cy="152" rx="12" ry="16" fill="#181818"/><ellipse cx="265" cy="149" rx="7" ry="10" fill="white"/><ellipse cx="265" cy="141" rx="8" ry="8" fill="#111"/><rect x="263" y="133" width="5" height="3" rx="1" fill="#E8A020"/><ellipse cx="288" cy="158" rx="10" ry="13" fill="#181818"/><ellipse cx="288" cy="155" rx="6" ry="8" fill="white"/><path d="M0 190 Q195 172 390 190 L390 200 L0 200Z" fill="#C8B87A" opacity="0.5"/></svg>
+            <div class="xcard-photo-fade"></div>
+            <div class="xcard-photo-cat">Family · Outdoor</div>
+          </div>
+          <button class="xcard-close" onclick="closeCard(0, event)">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 1L9 9M9 1L1 9" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+
+        <!-- Always-visible core -->
+        <div class="xcard-core">
+          <div class="xcard-top">
+            <div>
+              <div class="xcard-category">Family · Outdoor</div>
+              <div class="xcard-title">Zoo Zürich</div>
+            </div>
+            <div class="xcard-heart" onclick="event.stopPropagation()">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 16C10 16 3 11.5 3 7C3 5 4.5 3.5 6.5 3.5C8 3.5 9.5 4.5 10 5.5C10.5 4.5 12 3.5 13.5 3.5C15.5 3.5 17 5 17 7C17 11.5 10 16 10 16Z" stroke="#D8D0C0" stroke-width="1.5"/></svg>
+            </div>
+          </div>
+          <div class="xcard-desc">Elephants, penguins, and the amazing Masoala Rainforest hall. One of the largest zoos in the German-speaking world — a full half-day at minimum. Kids under 6 enter free.</div>
+          <div class="xcard-tags">
+            <span class="tag tag-outdoor">☀ Outdoor</span>
+            <span class="tag tag-neutral">2–4 hours</span>
+            <span class="tag tag-neutral">CHF 29</span>
+            <span class="tag tag-neutral">kids under 6 free</span>
+          </div>
+          <div class="xcard-footer">
+            <span class="xcard-dist">↗ 3.1 km</span>
+            <span class="xcard-cta">Tap to expand <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 5L6 8L9 5" stroke="#1A3A5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </div>
+        </div>
+
+        <!-- Expanded detail panel — slides in from bottom -->
+        <div class="xcard-detail">
+          <div class="xcard-detail-inner">
+            <div class="detail-grid">
+              <div class="detail-cell">
+                <div class="detail-cell-label">Distance</div>
+                <div class="detail-cell-value">3.1 km away</div>
+              </div>
+              <div class="detail-cell">
+                <div class="detail-cell-label">Duration</div>
+                <div class="detail-cell-value">2–4 hours</div>
+              </div>
+              <div class="detail-cell">
+                <div class="detail-cell-label">Adults</div>
+                <div class="detail-cell-value">CHF 29</div>
+              </div>
+              <div class="detail-cell">
+                <div class="detail-cell-label">Children</div>
+                <div class="detail-cell-value">Free under 6</div>
+              </div>
+            </div>
+            <div class="hours-strip">
+              <span class="hours-open">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4" stroke="#3A7D5C" stroke-width="1.2"/><path d="M5 2.5V5L7 6.5" stroke="#3A7D5C" stroke-width="1.2" stroke-linecap="round"/></svg>
+                Open now
+              </span>
+              <span class="hours-time">9:00 – 18:00 · closes in 4h</span>
+            </div>
+            <div class="detail-actions">
+              <button class="btn-directions" onclick="event.stopPropagation()">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1C4.8 1 3 2.8 3 5C3 8 7 13 7 13C7 13 11 8 11 5C11 2.8 9.2 1 7 1ZM7 7C5.9 7 5 6.1 5 5C5 3.9 5.9 3 7 3C8.1 3 9 3.9 9 5C9 6.1 8.1 7 7 7Z" fill="white"/></svg>
+                Get directions
+              </button>
+              <button class="btn-website" onclick="event.stopPropagation()">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#4A5568" stroke-width="1.4"/><path d="M8 2C8 2 6 5 6 8C6 11 8 14 8 14M8 2C8 2 10 5 10 8C10 11 8 14 8 14M2 8H14" stroke="#4A5568" stroke-width="1.4" stroke-linecap="round"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ CARD 2 — Swiss National Museum ══ -->
+      <div class="xcard indoor" id="card-1" onclick="toggleCard(1, event)">
+        <div class="xcard-bg-scene">
+          <svg viewBox="0 0 350 120" preserveAspectRatio="xMidYMid slice"><rect width="350" height="120" fill="#A8B4C8"/><rect width="350" height="70" fill="#9AAEC0"/><rect x="55" y="35" width="240" height="85" fill="#D4CAB8"/><polygon points="55,35 175,6 295,35" fill="#C8BCA8"/><rect x="75" y="35" width="10" height="85" fill="#E0D8C8"/><rect x="105" y="35" width="10" height="85" fill="#E0D8C8"/><rect x="235" y="35" width="10" height="85" fill="#E0D8C8"/><rect x="265" y="35" width="10" height="85" fill="#E0D8C8"/><rect x="158" y="70" width="38" height="50" rx="19" fill="#8A7A60"/><rect x="28" y="18" width="28" height="102" fill="#BFB49A"/><rect x="295" y="18" width="28" height="102" fill="#BFB49A"/><rect x="88" y="48" width="24" height="16" rx="2" fill="#7090A8" opacity="0.6"/><rect x="240" y="48" width="24" height="16" rx="2" fill="#7090A8" opacity="0.6"/></svg>
+        </div>
+        <div class="xcard-bg-wash"></div>
+        <div class="xcard-photo">
+          <div class="xcard-photo-inner">
+            <svg viewBox="0 0 390 200" preserveAspectRatio="xMidYMid slice"><rect width="390" height="200" fill="#A8B4C8"/><rect width="390" height="110" fill="#9AAEC0"/><ellipse cx="80" cy="30" rx="44" ry="18" fill="white" opacity="0.5"/><rect x="50" y="50" width="290" height="150" fill="#D4CAB8"/><polygon points="50,50 195,8 340,50" fill="#C8BCA8"/><rect x="70" y="50" width="12" height="150" fill="#E0D8C8"/><rect x="105" y="50" width="12" height="150" fill="#E0D8C8"/><rect x="140" y="50" width="12" height="150" fill="#E0D8C8"/><rect x="236" y="50" width="12" height="150" fill="#E0D8C8"/><rect x="271" y="50" width="12" height="150" fill="#E0D8C8"/><rect x="306" y="50" width="12" height="150" fill="#E0D8C8"/><rect x="168" y="105" width="54" height="95" rx="27" fill="#8A7A60"/><rect x="24" y="28" width="34" height="172" fill="#BFB49A"/><rect x="332" y="28" width="34" height="172" fill="#BFB49A"/><rect x="90" y="68" width="30" height="22" rx="3" fill="#7090A8" opacity="0.6"/><rect x="270" y="68" width="30" height="22" rx="3" fill="#7090A8" opacity="0.6"/><rect x="0" y="195" width="390" height="5" fill="#8B9E70"/></svg>
+            <div class="xcard-photo-fade"></div>
+            <div class="xcard-photo-cat">Culture · Indoor</div>
+          </div>
+          <button class="xcard-close" onclick="closeCard(1, event)">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 1L9 9M9 1L1 9" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="xcard-core">
+          <div class="xcard-top">
+            <div>
+              <div class="xcard-category">Culture · Indoor</div>
+              <div class="xcard-title">Swiss National Museum</div>
+            </div>
+            <div class="xcard-heart" onclick="event.stopPropagation()">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 16C10 16 3 11.5 3 7C3 5 4.5 3.5 6.5 3.5C8 3.5 9.5 4.5 10 5.5C10.5 4.5 12 3.5 13.5 3.5C15.5 3.5 17 5 17 7C17 11.5 10 16 10 16Z" stroke="#D8D0C0" stroke-width="1.5"/></svg>
+            </div>
+          </div>
+          <div class="xcard-desc">Family-friendly exhibitions with interactive elements. The castle-like building is exciting for kids — and world-class Swiss history for adults. Free entry for under 16s.</div>
+          <div class="xcard-tags">
+            <span class="tag tag-indoor">⌂ Indoor</span>
+            <span class="tag tag-neutral">1–2 hours</span>
+            <span class="tag tag-neutral">CHF 10</span>
+            <span class="tag tag-neutral">under 16 free</span>
+          </div>
+          <div class="xcard-footer">
+            <span class="xcard-dist">↗ 2.1 km</span>
+            <span class="xcard-cta">Tap to expand <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 5L6 8L9 5" stroke="#1A3A5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </div>
+        </div>
+        <div class="xcard-detail">
+          <div class="xcard-detail-inner">
+            <div class="detail-grid">
+              <div class="detail-cell"><div class="detail-cell-label">Distance</div><div class="detail-cell-value">2.1 km away</div></div>
+              <div class="detail-cell"><div class="detail-cell-label">Duration</div><div class="detail-cell-value">1–2 hours</div></div>
+              <div class="detail-cell"><div class="detail-cell-label">Adults</div><div class="detail-cell-value">CHF 10</div></div>
+              <div class="detail-cell"><div class="detail-cell-label">Under 16</div><div class="detail-cell-value">Free entry</div></div>
+            </div>
+            <div class="hours-strip">
+              <span class="hours-open"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4" stroke="#3A7D5C" stroke-width="1.2"/><path d="M5 2.5V5L7 6.5" stroke="#3A7D5C" stroke-width="1.2" stroke-linecap="round"/></svg>Open now</span>
+              <span class="hours-time">10:00 – 17:00 · closes in 3h</span>
+            </div>
+            <div class="detail-actions">
+              <button class="btn-directions" onclick="event.stopPropagation()"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1C4.8 1 3 2.8 3 5C3 8 7 13 7 13C7 13 11 8 11 5C11 2.8 9.2 1 7 1ZM7 7C5.9 7 5 6.1 5 5C5 3.9 5.9 3 7 3C8.1 3 9 3.9 9 5C9 6.1 8.1 7 7 7Z" fill="white"/></svg>Get directions</button>
+              <button class="btn-website" onclick="event.stopPropagation()"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#4A5568" stroke-width="1.4"/><path d="M8 2C8 2 6 5 6 8C6 11 8 14 8 14M8 2C8 2 10 5 10 8C10 11 8 14 8 14M2 8H14" stroke="#4A5568" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ CARD 3 — Irchelpark ══ -->
+      <div class="xcard free" id="card-2" onclick="toggleCard(2, event)">
+        <div class="xcard-bg-scene">
+          <svg viewBox="0 0 350 120" preserveAspectRatio="xMidYMid slice"><rect width="350" height="120" fill="#C8DEC0"/><rect width="350" height="65" fill="#A8C4D8"/><ellipse cx="80" cy="24" rx="38" ry="15" fill="white" opacity="0.5"/><rect x="0" y="65" width="350" height="55" fill="#8BAF72"/><rect x="58" y="42" width="6" height="32" fill="#7B5A28"/><rect x="118" y="42" width="6" height="32" fill="#7B5A28"/><rect x="58" y="42" width="66" height="5" rx="2" fill="#C4623A" opacity="0.7"/><path d="M118 47 L148 78" stroke="#C4623A" stroke-width="4" stroke-linecap="round" opacity="0.7"/><rect x="190" y="38" width="96" height="4" rx="2" fill="#7B5A28"/><line x1="208" y1="42" x2="213" y2="72" stroke="#7B5A28" stroke-width="2"/><line x1="248" y1="42" x2="243" y2="72" stroke="#7B5A28" stroke-width="2"/><rect x="208" y="70" width="38" height="5" rx="2" fill="#C4623A" opacity="0.6"/><ellipse cx="175" cy="100" rx="75" ry="16" fill="#DEC880" opacity="0.55"/></svg>
+        </div>
+        <div class="xcard-bg-wash"></div>
+        <div class="xcard-photo">
+          <div class="xcard-photo-inner">
+            <svg viewBox="0 0 390 200" preserveAspectRatio="xMidYMid slice"><rect width="390" height="200" fill="#C8DEC0"/><rect width="390" height="108" fill="#A8C4D8"/><ellipse cx="90" cy="32" rx="44" ry="18" fill="white" opacity="0.55"/><ellipse cx="290" cy="24" rx="36" ry="15" fill="white" opacity="0.4"/><rect x="0" y="108" width="390" height="92" fill="#8BAF72"/><rect x="65" y="70" width="8" height="46" fill="#7B5A28"/><rect x="148" y="70" width="8" height="46" fill="#7B5A28"/><rect x="65" y="70" width="91" height="6" rx="3" fill="#C4623A" opacity="0.75"/><path d="M148 76 L188 128" stroke="#C4623A" stroke-width="6" stroke-linecap="round" opacity="0.75"/><rect x="218" y="60" width="120" height="5" rx="2.5" fill="#7B5A28"/><line x1="240" y1="65" x2="246" y2="108" stroke="#7B5A28" stroke-width="2.5"/><line x1="310" y1="65" x2="304" y2="108" stroke="#7B5A28" stroke-width="2.5"/><rect x="240" y="106" width="66" height="7" rx="3" fill="#C4623A" opacity="0.65"/><ellipse cx="80" cy="145" rx="34" ry="24" fill="#5C8A3A" opacity="0.6"/><ellipse cx="80" cy="140" rx="28" ry="20" fill="#6A9A44" opacity="0.7"/><ellipse cx="70" cy="136" rx="10" ry="10" fill="#5C8A3A"/><ellipse cx="195" cy="170" rx="90" ry="20" fill="#DEC880" opacity="0.5"/><ellipse cx="340" cy="148" rx="28" ry="20" fill="#5C8A3A" opacity="0.6"/><ellipse cx="340" cy="143" rx="22" ry="18" fill="#6A9A44" opacity="0.7"/></svg>
+            <div class="xcard-photo-fade"></div>
+            <div class="xcard-photo-cat">Outdoors · Free</div>
+          </div>
+          <button class="xcard-close" onclick="closeCard(2, event)">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 1L9 9M9 1L1 9" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="xcard-core">
+          <div class="xcard-top">
+            <div>
+              <div class="xcard-category">Outdoors · Free</div>
+              <div class="xcard-title">Irchelpark Playground</div>
+            </div>
+            <div class="xcard-heart" onclick="event.stopPropagation()">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 16C10 16 3 11.5 3 7C3 5 4.5 3.5 6.5 3.5C8 3.5 9.5 4.5 10 5.5C10.5 4.5 12 3.5 13.5 3.5C15.5 3.5 17 5 17 7C17 11.5 10 16 10 16Z" stroke="#D8D0C0" stroke-width="1.5"/></svg>
+            </div>
+          </div>
+          <div class="xcard-desc">Large natural playground with climbing structures, sand pit, and water play channels. One of the best free family spots in the city — dogs welcome too.</div>
+          <div class="xcard-tags">
+            <span class="tag tag-outdoor">☀ Outdoor</span>
+            <span class="tag tag-free">Free always</span>
+            <span class="tag tag-neutral">1–2 hours</span>
+            <span class="tag tag-neutral">All ages</span>
+          </div>
+          <div class="xcard-footer">
+            <span class="xcard-dist">↗ 4.8 km</span>
+            <span class="xcard-cta">Tap to expand <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 5L6 8L9 5" stroke="#1A3A5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </div>
+        </div>
+        <div class="xcard-detail">
+          <div class="xcard-detail-inner">
+            <div class="detail-grid">
+              <div class="detail-cell"><div class="detail-cell-label">Distance</div><div class="detail-cell-value">4.8 km away</div></div>
+              <div class="detail-cell"><div class="detail-cell-label">Duration</div><div class="detail-cell-value">1–2 hours</div></div>
+              <div class="detail-cell"><div class="detail-cell-label">Entry</div><div class="detail-cell-value">Always free</div></div>
+              <div class="detail-cell"><div class="detail-cell-label">Best for</div><div class="detail-cell-value">All ages</div></div>
+            </div>
+            <div class="hours-strip">
+              <span class="hours-open"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4" stroke="#3A7D5C" stroke-width="1.2"/><path d="M5 2.5V5L7 6.5" stroke="#3A7D5C" stroke-width="1.2" stroke-linecap="round"/></svg>Open always</span>
+              <span class="hours-time">No closing time</span>
+            </div>
+            <div class="detail-actions">
+              <button class="btn-directions" onclick="event.stopPropagation()"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1C4.8 1 3 2.8 3 5C3 8 7 13 7 13C7 13 11 8 11 5C11 2.8 9.2 1 7 1ZM7 7C5.9 7 5 6.1 5 5C5 3.9 5.9 3 7 3C8.1 3 9 3.9 9 5C9 6.1 8.1 7 7 7Z" fill="white"/></svg>Get directions</button>
+              <button class="btn-website" onclick="event.stopPropagation()"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#4A5568" stroke-width="1.4"/><path d="M8 2C8 2 6 5 6 8C6 11 8 14 8 14M8 2C8 2 10 5 10 8C10 11 8 14 8 14M2 8H14" stroke="#4A5568" stroke-width="1.4" stroke-linecap="round"/></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /cards -->
+
+    <div class="surprise-wrap">
+      <button class="surprise-btn">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1L9.5 5.5H14.5L10.5 8.5L12 13L8 10.5L4 13L5.5 8.5L1.5 5.5H6.5L8 1Z" fill="white" opacity="0.8"/></svg>
+        Surprise me
+      </button>
+    </div>
+
+  </div><!-- /scroll-body -->
+
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <div class="tab"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2" y="2" width="8" height="8" rx="2" stroke="#8A8070" stroke-width="1.5"/><rect x="12" y="2" width="8" height="8" rx="2" stroke="#8A8070" stroke-width="1.5"/><rect x="2" y="12" width="8" height="8" rx="2" stroke="#8A8070" stroke-width="1.5"/><rect x="12" y="12" width="8" height="8" rx="2" stroke="#8A8070" stroke-width="1.5"/></svg><span class="tab-lbl">News</span></div>
+    <div class="tab on"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 2L13.5 8H20L15 12L17 19L11 15L5 19L7 12L2 8H8.5L11 2Z" fill="#1A3A5C"/></svg><span class="tab-lbl" style="color:#1A3A5C">Activities</span></div>
+    <div class="tab"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M3 17L8 7L13 12L17 6L20 17H3Z" stroke="#8A8070" stroke-width="1.5" stroke-linejoin="round"/></svg><span class="tab-lbl">Explore</span></div>
+    <div class="tab"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="8" r="5" stroke="#8A8070" stroke-width="1.5"/><path d="M8 13C5 14 3 16 3 18H19C19 16 17 14 14 13" stroke="#8A8070" stroke-width="1.5" stroke-linecap="round"/></svg><span class="tab-lbl">Weather</span></div>
+    <div class="tab"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="8" stroke="#8A8070" stroke-width="1.5"/><circle cx="7.5" cy="11" r="1" fill="#8A8070"/><circle cx="11" cy="11" r="1" fill="#8A8070"/><circle cx="14.5" cy="11" r="1" fill="#8A8070"/></svg><span class="tab-lbl">More</span></div>
+  </div>
+  <div class="home-ind"><div class="home-bar"></div></div>
+
+</div>
+
+<script>
+let openCard = null;
+
+function toggleCard(index, event) {
+  const card = document.getElementById('card-' + index);
+  if (card.classList.contains('expanded')) return; // already open, ignore body tap
+  openCardById(index);
+}
+
+function openCardById(index) {
+  // Close currently open card first
+  if (openCard !== null && openCard !== index) {
+    const prev = document.getElementById('card-' + openCard);
+    collapseCard(prev, openCard);
+  }
+
+  const card = document.getElementById('card-' + index);
+  if (!card.classList.contains('expanded')) {
+    card.classList.add('expanded');
+    // Update footer hint
+    const cta = card.querySelector('.xcard-cta');
+    if (cta) { cta.innerHTML = 'Tap × to close <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 5L6 8L9 5" stroke="#1A3A5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
+    openCard = index;
+    // Scroll card into view smoothly
+    setTimeout(() => {
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 100);
+  }
+}
+
+function collapseCard(card, index) {
+  card.classList.remove('expanded');
+  const cta = card.querySelector('.xcard-cta');
+  if (cta) { cta.innerHTML = 'Tap to expand <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 5L6 8L9 5" stroke="#1A3A5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
+  if (openCard === index) openCard = null;
+}
+
+function closeCard(index, event) {
+  event.stopPropagation();
+  const card = document.getElementById('card-' + index);
+  collapseCard(card, index);
+}
+</script>
+</body>
+</html>

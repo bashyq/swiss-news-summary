@@ -1,0 +1,59 @@
+<h2>How does the trip planner fit into the app?</h2>
+<p class="subtitle">Three ways to trigger "plan a day somewhere else" — consider how each feels in the existing UI</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Smart Calendar Detection</h3>
+      <p>App scans your calendar, spots events outside your home city, and surfaces a nudge card on the Plan tab:</p>
+      <div style="background: #1A3A5C; color: white; border-radius: 12px; padding: 16px; margin: 12px 0; font-family: system-ui;">
+        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7;">📍 Away from home</div>
+        <div style="font-size: 17px; font-weight: 600; margin: 6px 0;">Eye doctor in Meggen · Thursday</div>
+        <div style="font-size: 13px; opacity: 0.8;">You're free before 10:00 and after 11:30. Want to plan the rest of the day?</div>
+        <div style="margin-top: 10px; display: flex; gap: 8px;">
+          <div style="background: rgba(255,255,255,0.15); padding: 6px 14px; border-radius: 8px; font-size: 13px;">Plan my day in Meggen</div>
+          <div style="opacity: 0.5; padding: 6px 14px; font-size: 13px;">Dismiss</div>
+        </div>
+      </div>
+      <p style="margin-top: 8px; font-size: 13px; color: #666;">Feels magical — zero-effort discovery. But relies on calendar having location data, and could feel invasive if overdone.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Manual "Somewhere Else" Button</h3>
+      <p>Add a button to the Plan tab hero banner (next to the city picker) that opens a destination search sheet:</p>
+      <div style="background: #1A3A5C; color: white; border-radius: 12px; padding: 16px; margin: 12px 0; font-family: system-ui;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7;">Monday, March 23</div>
+            <div style="font-size: 22px; font-family: Georgia, serif;">Plan your Monday</div>
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <div style="background: rgba(255,255,255,0.12); padding: 6px 12px; border-radius: 10px; font-size: 13px;">Zürich ▾</div>
+            <div style="background: rgba(255,255,255,0.12); padding: 6px 12px; border-radius: 10px; font-size: 13px;">🧳 Trip</div>
+          </div>
+        </div>
+      </div>
+      <p style="margin-top: 8px; font-size: 13px; color: #666;">Always available, user-initiated. Simple to implement — opens a search sheet where you type a destination and optionally add an anchor. No magic, no calendar scanning.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Both: Smart Detection + Manual Trigger</h3>
+      <p>Calendar detection surfaces the nudge when it spots an away-from-home event. The manual "Trip" button is always there as a fallback for scenarios without calendar events (Grindelwald invite, spontaneous day out).</p>
+      <div style="background: #f5f0e8; border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin: 12px 0; font-family: system-ui;">
+        <div style="font-size: 13px; color: #444;">
+          <strong>Calendar event detected:</strong> → nudge card appears automatically<br>
+          <strong>No calendar event:</strong> → user taps "Trip" button → search sheet<br>
+          <strong>Sunshine/Snow CTA:</strong> → goes straight to plan with destination pre-filled
+        </div>
+      </div>
+      <p style="margin-top: 8px; font-size: 13px; color: #666;">Covers all three scenarios naturally. Calendar detection handles the Meggen/flat-viewing cases. Manual handles the Grindelwald invite. Sunshine/Snow handles the weather-chasing case. More to build, but each entry point is simple.</p>
+    </div>
+  </div>
+</div>

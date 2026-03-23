@@ -1,0 +1,165 @@
+<h2>Trip Planner — Design Overview</h2>
+<p class="subtitle">Review each section. Let me know if anything feels off.</p>
+
+<div class="section">
+  <h3>1. Entry Points</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 16px 0;">
+    <div style="background: #f5f0e8; border: 1px solid #ddd; border-radius: 12px; padding: 16px;">
+      <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 6px;">Primary</div>
+      <div style="font-weight: 600; margin-bottom: 6px;">Calendar Detection</div>
+      <div style="font-size: 13px; color: #555;">App spots calendar events with locations outside your home city. Shows nudge card on Plan tab.</div>
+    </div>
+    <div style="background: #f5f0e8; border: 1px solid #ddd; border-radius: 12px; padding: 16px;">
+      <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 6px;">Secondary</div>
+      <div style="font-weight: 600; margin-bottom: 6px;">Sunshine / Snow CTA</div>
+      <div style="font-size: 13px; color: #555;">Existing "Plan a day here" buttons on destination cards. Pre-fills destination + date, goes straight to plan.</div>
+    </div>
+    <div style="background: #f5f0e8; border: 1px solid #ddd; border-radius: 12px; padding: 16px;">
+      <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #888; margin-bottom: 6px;">Workaround</div>
+      <div style="font-weight: 600; margin-bottom: 6px;">Add Calendar Event</div>
+      <div style="font-size: 13px; color: #555;">For spontaneous trips (Grindelwald invite), user adds a calendar event with location → detection picks it up.</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>2. Detection Logic</h3>
+  <div style="background: #fff; border: 1px solid #ddd; border-radius: 12px; padding: 20px; margin: 16px 0; font-family: monospace; font-size: 13px; line-height: 2;">
+    <span style="color: #888;">// On Plan tab load / date change</span><br>
+    Scan calendar events for selected date<br>
+    → Filter to events with a <strong>structuredLocation</strong><br>
+    → Reverse-geocode each location → get <strong>locality name</strong><br>
+    → Compare locality to <strong>home city</strong> (e.g. "Zürich")<br>
+    → If different → this is an <strong>away event</strong><br>
+    → Show nudge card with event title, location, free time windows
+  </div>
+</div>
+
+<div class="section">
+  <h3>3. The Flow (tap "Plan my day in Meggen")</h3>
+  <div style="display: flex; gap: 8px; align-items: flex-start; margin: 16px 0; flex-wrap: wrap;">
+    <div style="background: #1A3A5C; color: white; border-radius: 10px; padding: 12px 16px; font-size: 13px; min-width: 140px;">
+      <div style="font-size: 10px; opacity: 0.6; text-transform: uppercase;">Step 1</div>
+      <div style="font-weight: 600;">MKLocalSearch</div>
+      <div style="font-size: 12px; opacity: 0.8; margin-top: 4px;">Fetch POIs near destination: restaurants, cafés, playgrounds, parks, museums, bakeries, lakes</div>
+    </div>
+    <div style="color: #1A3A5C; font-size: 24px; padding-top: 20px;">→</div>
+    <div style="background: #1A3A5C; color: white; border-radius: 10px; padding: 12px 16px; font-size: 13px; min-width: 140px;">
+      <div style="font-size: 10px; opacity: 0.6; text-transform: uppercase;">Step 2</div>
+      <div style="font-weight: 600;">Weather</div>
+      <div style="font-size: 12px; opacity: 0.8; margin-top: 4px;">Open-Meteo for destination lat/lon. Already client-side capable.</div>
+    </div>
+    <div style="color: #1A3A5C; font-size: 24px; padding-top: 20px;">→</div>
+    <div style="background: #1A3A5C; color: white; border-radius: 10px; padding: 12px 16px; font-size: 13px; min-width: 140px;">
+      <div style="font-size: 10px; opacity: 0.6; text-transform: uppercase;">Step 3</div>
+      <div style="font-weight: 600;">Gap Analysis</div>
+      <div style="font-size: 12px; opacity: 0.8; margin-top: 4px;">Calendar event = anchor. GapAnalysisEngine finds free windows (already city-agnostic).</div>
+    </div>
+    <div style="color: #1A3A5C; font-size: 24px; padding-top: 20px;">→</div>
+    <div style="background: #1A3A5C; color: white; border-radius: 10px; padding: 12px 16px; font-size: 13px; min-width: 140px;">
+      <div style="font-size: 10px; opacity: 0.6; text-transform: uppercase;">Step 4</div>
+      <div style="font-weight: 600;">AgendaComposer</div>
+      <div style="font-size: 12px; opacity: 0.8; margin-top: 4px;">Claude picks best POIs for family day. Weather-aware, time-aware. Same API call as today.</div>
+    </div>
+    <div style="color: #1A3A5C; font-size: 24px; padding-top: 20px;">→</div>
+    <div style="background: #1A3A5C; color: white; border-radius: 10px; padding: 12px 16px; font-size: 13px; min-width: 140px;">
+      <div style="font-size: 10px; opacity: 0.6; text-transform: uppercase;">Step 5</div>
+      <div style="font-weight: 600;">Deal Cards</div>
+      <div style="font-size: 12px; opacity: 0.8; margin-top: 4px;">Same PlanSlotCard UI. Lock, unlock, remove, replace — all works as-is.</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>4. What Changes vs Current Plan Tab</h3>
+  <div style="margin: 16px 0;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+      <tr style="border-bottom: 2px solid #ddd;">
+        <td style="padding: 10px; font-weight: 600; width: 30%;">Component</td>
+        <td style="padding: 10px; font-weight: 600;">Current (7 cities)</td>
+        <td style="padding: 10px; font-weight: 600;">Trip (any destination)</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 10px; color: #555;">POI data source</td>
+        <td style="padding: 10px;">Worker API (curated)</td>
+        <td style="padding: 10px; color: #1A3A5C; font-weight: 500;">MKLocalSearch (dynamic)</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 10px; color: #555;">Restaurant data</td>
+        <td style="padding: 10px;">Worker /lunch endpoint</td>
+        <td style="padding: 10px; color: #1A3A5C; font-weight: 500;">MKLocalSearch (restaurants)</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 10px; color: #555;">Weather</td>
+        <td style="padding: 10px;">Open-Meteo (client-side)</td>
+        <td style="padding: 10px;">Same — any lat/lon</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 10px; color: #555;">Gap analysis</td>
+        <td style="padding: 10px;">GapAnalysisEngine</td>
+        <td style="padding: 10px;">Same — city-agnostic</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 10px; color: #555;">Composer</td>
+        <td style="padding: 10px;">AgendaComposer (Claude)</td>
+        <td style="padding: 10px;">Same — different pool format</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 10px; color: #555;">Photos</td>
+        <td style="padding: 10px;">R2 photos (curated)</td>
+        <td style="padding: 10px; color: #1A3A5C; font-weight: 500;">Gradient + icon fallback</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 10px; color: #555;">Persistence</td>
+        <td style="padding: 10px;">PlanStore (city-date key)</td>
+        <td style="padding: 10px;">Same — locality name as key</td>
+      </tr>
+      <tr style="border-bottom: 1px solid #eee;">
+        <td style="padding: 10px; color: #555;">UI cards</td>
+        <td style="padding: 10px;">PlanSlotCard</td>
+        <td style="padding: 10px;">Same</td>
+      </tr>
+      <tr>
+        <td style="padding: 10px; color: #555;">Hero banner</td>
+        <td style="padding: 10px;">"Plan your Monday"</td>
+        <td style="padding: 10px; color: #1A3A5C; font-weight: 500;">"Your day in Meggen"</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<div class="section">
+  <h3>5. New Components</h3>
+  <div style="margin: 16px 0;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+      <div style="background: #e8f4e8; border: 1px solid #b8d4b8; border-radius: 10px; padding: 14px;">
+        <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">TripDetector</div>
+        <div style="font-size: 12px; color: #555;">Service that scans calendar events, geocodes locations, compares to home city. Returns detected away-events for a date range.</div>
+      </div>
+      <div style="background: #e8f4e8; border: 1px solid #b8d4b8; border-radius: 10px; padding: 14px;">
+        <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">POISearchService</div>
+        <div style="font-size: 12px; color: #555;">Wraps MKLocalSearch. Parallel queries for multiple categories, deduplicates, returns unified POI pool for AgendaComposer.</div>
+      </div>
+      <div style="background: #e8f4e8; border: 1px solid #b8d4b8; border-radius: 10px; padding: 14px;">
+        <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">TripNudgeCard</div>
+        <div style="font-size: 12px; color: #555;">SwiftUI view on Plan tab when away-event detected. Navy card with event details, free time windows, "Plan my day in [place]" CTA.</div>
+      </div>
+      <div style="background: #e8f4e8; border: 1px solid #b8d4b8; border-radius: 10px; padding: 14px;">
+        <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">AgendaComposer changes</div>
+        <div style="font-size: 12px; color: #555;">Accept MKLocalSearch POI pool alongside curated activities. Format POI data for Claude prompt. Minor prompt update.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>6. What We're NOT Building</h3>
+  <div style="margin: 16px 0; font-size: 13px; color: #555; line-height: 2;">
+    ✗ Manual destination search UI (calendar is the entry point)<br>
+    ✗ Multi-day trip planning (one day at a time)<br>
+    ✗ Hotel/accommodation search<br>
+    ✗ Transit routing to the destination (just planning once there)<br>
+    ✗ Photo fetching for arbitrary POIs (gradient + icon fallback)<br>
+    ✗ New backend endpoints (all client-side: MKLocalSearch + Open-Meteo)
+  </div>
+</div>

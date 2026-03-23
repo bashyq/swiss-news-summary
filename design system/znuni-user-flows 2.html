@@ -1,0 +1,1694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Znüni — User Flow Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased;}
+:root{
+  --navy:#1A3A5C;--terra:#C4623A;--cream:#F5F0E8;--surface:#FAF8F4;
+  --border:#E8E0D0;--ink:#1C1A16;--body:#4A5568;--muted:#8A8070;
+  --pos:#3A7D5C;--neg:#B04040;--exec:#0F2238;
+}
+
+body{
+  background:#7A766E;
+  font-family:'DM Sans',sans-serif;
+  min-height:100vh;
+  padding:0;
+}
+
+/* ── Flow Selector ── */
+.flow-nav{
+  position:sticky;top:0;z-index:100;
+  background:rgba(28,26,22,0.95);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  padding:16px 24px 12px;
+}
+.flow-nav-title{
+  font-family:'Playfair Display',serif;
+  font-size:13px;font-weight:400;color:rgba(255,255,255,0.35);
+  letter-spacing:0.12em;text-transform:uppercase;
+  margin-bottom:10px;
+}
+.flow-tabs{
+  display:flex;gap:6px;flex-wrap:wrap;
+}
+.flow-tab{
+  padding:7px 14px;border-radius:100px;
+  font-size:12px;font-weight:500;color:rgba(255,255,255,0.45);
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.08);
+  cursor:pointer;transition:all 0.2s;
+  white-space:nowrap;
+}
+.flow-tab:hover{background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);}
+.flow-tab.active{background:var(--navy);color:white;border-color:var(--navy);}
+.flow-tab .num{
+  display:inline-block;width:16px;height:16px;border-radius:50%;
+  background:rgba(255,255,255,0.15);font-size:10px;font-weight:500;
+  text-align:center;line-height:16px;margin-right:5px;
+}
+.flow-tab.active .num{background:rgba(255,255,255,0.25);}
+
+/* ── Flow Content ── */
+.flow-content{
+  padding:32px 24px 80px;
+  display:none;
+}
+.flow-content.active{display:block;}
+
+.flow-header{
+  max-width:900px;margin:0 auto 32px;
+}
+.flow-scenario{
+  font-family:'Playfair Display',serif;
+  font-size:28px;font-weight:400;color:white;line-height:1.2;
+  margin-bottom:8px;
+}
+.flow-scenario em{font-style:italic;color:rgba(255,255,255,0.5);}
+.flow-pain{
+  font-size:14px;color:rgba(255,255,255,0.45);font-weight:300;
+  margin-bottom:4px;
+}
+.flow-trigger{
+  font-size:12px;color:var(--terra);font-weight:500;
+  letter-spacing:0.05em;
+}
+
+/* ── Screen Flow ── */
+.screen-flow{
+  display:flex;gap:20px;align-items:flex-start;
+  max-width:100%;overflow-x:auto;
+  padding-bottom:20px;
+  scroll-snap-type:x mandatory;
+}
+.screen-flow::-webkit-scrollbar{height:4px;}
+.screen-flow::-webkit-scrollbar-track{background:rgba(255,255,255,0.05);border-radius:2px;}
+.screen-flow::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:2px;}
+
+.flow-step{
+  display:flex;flex-direction:column;align-items:center;gap:0;
+  flex-shrink:0;
+  scroll-snap-align:center;
+}
+.step-label{
+  font-size:9px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;
+  color:rgba(255,255,255,0.3);margin-bottom:8px;text-align:center;
+}
+.step-num{
+  width:22px;height:22px;border-radius:50%;
+  background:var(--navy);color:white;font-size:10px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:6px;
+}
+
+/* Arrow between steps */
+.flow-arrow{
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;padding-top:180px;
+  color:rgba(255,255,255,0.2);font-size:24px;
+}
+.flow-arrow-label{
+  font-size:9px;color:rgba(255,255,255,0.25);
+  text-align:center;max-width:70px;
+  margin-top:4px;font-weight:400;
+}
+.flow-arrow-wrap{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  flex-shrink:0;padding-top:160px;
+}
+
+/* ── Phone ── */
+.phone{
+  width:280px;
+  background:var(--cream);
+  border-radius:36px;
+  overflow:hidden;
+  box-shadow:0 0 0 1px rgba(0,0,0,0.15),0 24px 48px rgba(0,0,0,0.3),0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Status bar */
+.status{padding:10px 20px 0;display:flex;justify-content:space-between;align-items:center;}
+.st{font-size:13px;font-weight:500;color:white;}
+
+/* Header */
+.hdr{padding:4px 14px 14px;position:relative;overflow:hidden;}
+.hdr-navy{background:var(--navy);}
+.hdr-exec{background:var(--exec);}
+.hdr-warm{background:#2C2018;}
+.hdr::after{
+  content:'';position:absolute;top:0;right:-16px;bottom:0;width:52%;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cpath d='M10 200 L10 120 L20 120 L20 95 L28 95 L28 80 L34 80 L34 65 L40 65 L40 80 L48 80 L48 60 L54 60 L54 48 L60 48 L60 60 L68 60 L68 80 L78 80 L78 95 L88 95 L88 75 L94 75 L94 58 L100 58 L100 45 L106 45 L106 35 L112 35 L112 45 L118 45 L118 60 L126 60 L126 78 L136 78 L136 58 L142 58 L142 46 L148 46 L148 60 L156 60 L156 82 L166 82 L166 95 L174 95 L174 78 L180 78 L180 95 L190 95 L190 110 L200 110 L200 200 Z' fill='rgba(255,255,255,0.035)'/%3E%3C/svg%3E") right center/cover no-repeat;
+  pointer-events:none;
+}
+.eyebrow{font-size:8px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:1px;position:relative;z-index:1;}
+.title-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;position:relative;z-index:1;}
+.title{font-family:'Playfair Display',serif;font-size:21px;font-weight:400;color:white;line-height:1.1;}
+.title em{font-style:italic;color:rgba(255,255,255,.5);}
+
+/* Segment control */
+.seg{background:rgba(255,255,255,.12);border-radius:8px;padding:2px;display:flex;position:relative;z-index:1;}
+.seg-b{font-size:10px;font-weight:500;padding:4px 10px;border-radius:6px;color:rgba(255,255,255,.4);}
+.seg-b.on{background:white;color:var(--navy);}
+
+/* Date picker pills */
+.date-pills{display:flex;gap:4px;margin-bottom:8px;position:relative;z-index:1;}
+.dp{font-size:9px;font-weight:500;padding:4px 8px;border-radius:6px;
+  color:rgba(255,255,255,.4);background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.08);}
+.dp.on{background:white;color:var(--navy);border-color:white;}
+.dp.more{color:rgba(255,255,255,.25);border-style:dashed;}
+
+/* Weather row */
+.wx{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;position:relative;z-index:1;}
+.wx-temp{font-size:24px;font-weight:300;color:white;line-height:1;}
+.wx-info{margin-left:6px;}
+.wx-cond{font-size:11px;color:rgba(255,255,255,.8);}
+.wx-hl{font-size:9px;color:rgba(255,255,255,.35);}
+.wx-icon{font-size:26px;}
+
+/* Session pill */
+.session{
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.12);
+  border-radius:8px;padding:6px 10px;margin-bottom:6px;
+  display:flex;align-items:center;gap:6px;
+  position:relative;z-index:1;
+}
+.session-text{font-size:11px;color:white;}
+.session-arr{font-size:10px;color:rgba(255,255,255,.3);margin-left:auto;}
+
+/* Anchor pills */
+.anchor-pills{display:flex;flex-direction:column;gap:4px;margin-bottom:6px;position:relative;z-index:1;}
+.ap{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:5px 10px;display:flex;align-items:center;gap:5px;}
+.ap-e{font-size:11px;}
+.ap-t{font-size:10px;font-weight:500;color:white;flex:1;}
+.ap-time{font-size:8px;color:rgba(255,255,255,.38);}
+.ap-x{font-size:11px;color:rgba(255,255,255,.25);padding:0 2px;}
+.ap-add{background:transparent;border:1px dashed rgba(255,255,255,.18);border-radius:8px;padding:5px 10px;display:flex;align-items:center;gap:5px;}
+.ap-add-text{font-size:10px;color:rgba(255,255,255,.35);}
+
+/* Context banner */
+.ctx{
+  background:rgba(255,255,255,.08);border-radius:8px;padding:6px 10px;
+  font-size:10px;color:rgba(255,255,255,.55);font-weight:300;font-style:italic;
+  position:relative;z-index:1;
+}
+
+/* ── Scroll body ── */
+.scroll{
+  flex:1;overflow-y:auto;padding:12px 14px 16px;
+  display:flex;flex-direction:column;gap:8px;
+}
+
+/* Cards */
+.card{
+  background:var(--surface);border-radius:14px;
+  padding:12px;position:relative;
+  border:1px solid var(--border);
+}
+.card-eyebrow{
+  font-size:8px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:3px;
+}
+.card-title{
+  font-family:'Playfair Display',serif;
+  font-size:14px;font-weight:600;color:var(--ink);line-height:1.2;
+  margin-bottom:3px;
+}
+.card-desc{font-size:10px;color:var(--body);font-weight:300;line-height:1.5;}
+.card-meta{display:flex;gap:6px;align-items:center;margin-top:5px;flex-wrap:wrap;}
+.card-tag{
+  font-size:8px;font-weight:500;
+  background:rgba(26,58,92,0.06);color:var(--navy);
+  border-radius:100px;padding:2px 7px;
+}
+.card-tag.terra{background:rgba(196,98,58,0.08);color:var(--terra);}
+.card-tag.pos{background:rgba(58,125,92,0.08);color:var(--pos);}
+
+/* Agenda slot */
+.slot{
+  background:var(--surface);border-radius:14px;
+  padding:10px 12px;position:relative;
+  border:1px solid var(--border);
+  display:flex;gap:10px;align-items:flex-start;
+}
+.slot-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--terra);margin-top:3px;flex-shrink:0;
+}
+.slot-dot.navy{background:var(--navy);}
+.slot-dot.pos{background:var(--pos);}
+.slot-body{flex:1;}
+.slot-time{font-size:8px;color:var(--muted);font-weight:500;margin-bottom:1px;}
+.slot-name{font-size:12px;font-weight:500;color:var(--ink);margin-bottom:2px;}
+.slot-reason{font-size:9px;color:var(--body);font-weight:300;}
+.slot-actions{display:flex;gap:4px;margin-top:4px;}
+.slot-btn{
+  font-size:8px;font-weight:500;color:var(--navy);
+  background:rgba(26,58,92,0.06);border-radius:100px;
+  padding:2px 8px;
+}
+
+/* Connector */
+.connector{
+  display:flex;align-items:center;gap:6px;padding:2px 0 2px 3px;
+}
+.connector-line{width:1px;height:20px;background:var(--border);}
+.connector-chip{
+  font-size:8px;color:var(--muted);font-weight:400;
+  background:rgba(232,224,208,0.5);border-radius:100px;padding:2px 8px;
+}
+
+/* CTA button */
+.cta{
+  background:var(--navy);color:white;border:none;border-radius:100px;
+  padding:10px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;
+  width:100%;text-align:center;margin-top:4px;
+}
+.cta.terra{background:var(--terra);}
+.cta.outline{
+  background:transparent;border:1px solid var(--border);color:var(--navy);
+}
+.cta.sm{padding:6px 14px;width:auto;font-size:10px;}
+
+/* ── Tab bar ── */
+.tab-bar{
+  display:flex;justify-content:space-around;align-items:center;
+  padding:6px 0 18px;background:var(--cream);
+  border-top:1px solid var(--border);flex-shrink:0;
+}
+.tab{display:flex;flex-direction:column;align-items:center;gap:2px;opacity:0.4;}
+.tab.on{opacity:1;}
+.tab-icon{font-size:18px;}
+.tab-lbl{font-size:9px;font-weight:500;color:var(--ink);}
+.tab.on .tab-lbl{color:var(--navy);}
+
+/* ── Discover specific ── */
+.discover-hero{
+  border-radius:14px;overflow:hidden;position:relative;
+  height:100px;margin-bottom:8px;
+}
+.discover-hero-bg{
+  position:absolute;inset:0;
+}
+.discover-hero-bg.sun{
+  background:linear-gradient(135deg,#F5C842 0%,#E8943A 60%,#C4623A 100%);
+}
+.discover-hero-bg.snow{
+  background:linear-gradient(135deg,#B8D4E8 0%,#7BA3C4 60%,#4A7A9C 100%);
+}
+.discover-hero-bg.events{
+  background:linear-gradient(135deg,#3A7D5C 0%,#2A5E44 60%,#1A3A5C 100%);
+}
+.discover-hero-content{
+  position:relative;z-index:1;padding:14px;
+  display:flex;flex-direction:column;justify-content:flex-end;height:100%;
+}
+.discover-hero-title{
+  font-family:'Playfair Display',serif;
+  font-size:18px;font-weight:400;color:white;line-height:1.1;
+}
+.discover-hero-sub{font-size:9px;color:rgba(255,255,255,0.65);margin-top:2px;font-weight:300;}
+.discover-hero-badge{
+  position:absolute;top:10px;right:10px;
+  font-size:8px;font-weight:500;color:white;
+  background:rgba(255,255,255,0.2);backdrop-filter:blur(8px);
+  border-radius:100px;padding:3px 8px;
+}
+
+/* Browse grid */
+.browse-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.browse-tile{
+  background:var(--surface);border-radius:12px;
+  padding:14px 12px;border:1px solid var(--border);
+  text-align:center;
+}
+.browse-tile-icon{font-size:24px;margin-bottom:4px;}
+.browse-tile-label{font-size:11px;font-weight:500;color:var(--ink);}
+.browse-tile-count{font-size:8px;color:var(--muted);margin-top:2px;}
+
+/* Smart nudge */
+.nudge{
+  background:linear-gradient(135deg,rgba(245,200,66,0.12) 0%,rgba(196,98,58,0.08) 100%);
+  border:1px solid rgba(196,98,58,0.15);
+  border-radius:14px;padding:12px;margin-bottom:8px;
+}
+.nudge-title{font-size:11px;font-weight:500;color:var(--ink);margin-bottom:2px;}
+.nudge-desc{font-size:9px;color:var(--body);font-weight:300;line-height:1.5;margin-bottom:6px;}
+.nudge-cta{
+  font-size:9px;font-weight:500;color:var(--terra);
+  display:flex;align-items:center;gap:4px;
+}
+
+/* Sunshine ranking */
+.sun-rank{display:flex;flex-direction:column;gap:6px;}
+.sun-row{
+  background:var(--surface);border-radius:12px;
+  padding:10px 12px;border:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.sun-pos{
+  font-size:14px;font-weight:600;color:var(--terra);
+  width:20px;text-align:center;
+}
+.sun-info{flex:1;}
+.sun-city{font-size:12px;font-weight:500;color:var(--ink);}
+.sun-detail{font-size:9px;color:var(--muted);font-weight:300;}
+.sun-hours{
+  font-size:16px;font-weight:300;color:var(--terra);
+}
+.sun-unit{font-size:8px;color:var(--muted);}
+
+/* Event list */
+.event-item{
+  background:var(--surface);border-radius:12px;
+  padding:10px 12px;border:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.event-date-badge{
+  background:var(--navy);color:white;border-radius:8px;
+  padding:4px 8px;text-align:center;flex-shrink:0;min-width:36px;
+}
+.event-date-badge .edb-month{font-size:7px;font-weight:500;text-transform:uppercase;opacity:0.6;}
+.event-date-badge .edb-day{font-size:14px;font-weight:600;line-height:1;}
+.event-info{flex:1;}
+.event-name{font-size:12px;font-weight:500;color:var(--ink);}
+.event-meta{font-size:9px;color:var(--muted);font-weight:300;}
+
+/* Plan around CTA */
+.plan-cta{
+  display:flex;align-items:center;gap:4px;
+  font-size:9px;font-weight:500;color:var(--terra);
+  margin-top:4px;
+}
+
+/* Annotation callout */
+.callout{
+  background:rgba(196,98,58,0.08);
+  border-left:3px solid var(--terra);
+  border-radius:0 8px 8px 0;
+  padding:6px 10px;margin:4px 0;
+}
+.callout-text{font-size:9px;color:var(--terra);font-weight:500;}
+
+/* ── Highlight overlay ── */
+.highlight{
+  position:relative;
+}
+.highlight::before{
+  content:'';position:absolute;inset:-3px;
+  border:2px solid var(--terra);border-radius:16px;
+  pointer-events:none;opacity:0.5;
+}
+
+/* Tab structure label */
+.tab-structure{
+  text-align:center;margin-bottom:24px;
+  max-width:900px;margin-left:auto;margin-right:auto;
+}
+.tab-structure h3{
+  font-family:'Playfair Display',serif;
+  font-size:14px;font-weight:400;color:rgba(255,255,255,0.6);
+  margin-bottom:4px;
+}
+.tab-structure p{
+  font-size:11px;color:rgba(255,255,255,0.3);font-weight:300;
+}
+
+/* Section divider */
+.section-note{
+  max-width:900px;margin:8px auto 0;
+  padding:12px 16px;
+  background:rgba(255,255,255,0.04);
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,0.06);
+}
+.section-note h4{
+  font-size:11px;font-weight:500;color:rgba(255,255,255,0.5);margin-bottom:4px;
+}
+.section-note p{
+  font-size:10px;color:rgba(255,255,255,0.3);font-weight:300;line-height:1.6;
+}
+.section-note ul{
+  font-size:10px;color:rgba(255,255,255,0.3);font-weight:300;line-height:1.8;
+  padding-left:16px;margin-top:4px;
+}
+
+/* Architecture tab */
+.arch-grid{
+  max-width:900px;margin:0 auto;
+  display:flex;flex-direction:column;gap:20px;
+}
+.arch-row{
+  display:flex;gap:16px;align-items:stretch;
+}
+.arch-card{
+  flex:1;background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:16px;padding:20px;
+}
+.arch-card h3{
+  font-family:'Playfair Display',serif;
+  font-size:18px;font-weight:400;color:white;margin-bottom:8px;
+}
+.arch-card p{
+  font-size:12px;color:rgba(255,255,255,0.45);font-weight:300;line-height:1.6;
+}
+.arch-card .arch-list{
+  margin-top:10px;display:flex;flex-direction:column;gap:4px;
+}
+.arch-item{
+  font-size:11px;color:rgba(255,255,255,0.55);
+  padding:6px 10px;background:rgba(255,255,255,0.04);
+  border-radius:8px;
+}
+.arch-item strong{color:rgba(255,255,255,0.8);font-weight:500;}
+
+/* Responsive */
+@media(max-width:800px){
+  .screen-flow{flex-direction:column;align-items:center;}
+  .flow-arrow-wrap{padding-top:0;transform:rotate(90deg);}
+  .arch-row{flex-direction:column;}
+}
+</style>
+</head>
+<body>
+
+<!-- ── FLOW NAVIGATION ── -->
+<div class="flow-nav">
+  <div class="flow-nav-title">Znüni — User Flows → App Architecture</div>
+  <div class="flow-tabs">
+    <div class="flow-tab active" onclick="showFlow('f1')"><span class="num">1</span>Blank slate day</div>
+    <div class="flow-tab" onclick="showFlow('f2')"><span class="num">2</span>Plan around commitment</div>
+    <div class="flow-tab" onclick="showFlow('f3')"><span class="num">3</span>Escape the grey</div>
+    <div class="flow-tab" onclick="showFlow('f4')"><span class="num">4</span>City event</div>
+    <div class="flow-tab" onclick="showFlow('f7')"><span class="num">7</span>What's happening</div>
+    <div class="flow-tab" onclick="showFlow('f8')"><span class="num">8</span>Nearby now</div>
+    <div class="flow-tab" onclick="showFlow('arch')">⬡ Tab Architecture</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- FLOW 1: BLANK SLATE DAY                     -->
+<!-- ════════════════════════════════════════════ -->
+<div class="flow-content active" id="f1">
+  <div class="flow-header">
+    <div class="flow-trigger">FLOW A · MUST NAIL</div>
+    <div class="flow-scenario">Blank slate <em>day</em></div>
+    <div class="flow-pain">Pain: Decision paralysis. Kids are home, no plans, what do we do?</div>
+  </div>
+
+  <div class="screen-flow">
+
+    <!-- Step 1: Open app → Today tab -->
+    <div class="flow-step">
+      <div class="step-num">1</div>
+      <div class="step-label">Open app</div>
+      <div class="phone">
+        <div class="status" style="background:var(--navy)"><span class="st">9:41</span><span class="st">⚡</span></div>
+        <div class="hdr hdr-navy">
+          <div class="eyebrow">Tuesday, 18 March</div>
+          <div class="title-row">
+            <div class="title">Today <em>in Zürich</em></div>
+            <div class="seg"><span class="seg-b on">Plan</span><span class="seg-b">News</span></div>
+          </div>
+          <div class="date-pills">
+            <div class="dp on">Today</div>
+            <div class="dp">Tomorrow</div>
+            <div class="dp">Sat</div>
+            <div class="dp">Sun</div>
+            <div class="dp more">Apr 20 →</div>
+          </div>
+          <div class="wx">
+            <div style="display:flex;align-items:center">
+              <div class="wx-temp">14°</div>
+              <div class="wx-info"><div class="wx-cond">Partly cloudy</div><div class="wx-hl">H:17° L:9°</div></div>
+            </div>
+            <div class="wx-icon">⛅</div>
+          </div>
+          <div class="session">
+            <span class="session-text">👨‍👧 With Sami (3)</span>
+            <span class="session-arr">›</span>
+          </div>
+          <div class="ctx">Good day for getting out. Building a full day for Sami…</div>
+        </div>
+        <div class="scroll">
+          <div style="text-align:center;padding:20px 0">
+            <div style="font-size:28px;margin-bottom:8px">✨</div>
+            <div style="font-size:12px;color:var(--muted);font-weight:300">Building your day…</div>
+            <div style="width:60%;height:3px;background:var(--border);border-radius:2px;margin:10px auto 0;overflow:hidden">
+              <div style="width:45%;height:100%;background:var(--navy);border-radius:2px;animation:load 1.5s infinite"></div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab on"><div class="tab-icon">📋</div><div class="tab-lbl">Today</div></div>
+          <div class="tab"><div class="tab-icon">🧭</div><div class="tab-lbl">Discover</div></div>
+          <div class="tab"><div class="tab-icon">⚙️</div><div class="tab-lbl">Settings</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-arrow-wrap"><div class="flow-arrow">→</div><div class="flow-arrow-label">Auto-compose</div></div>
+
+    <!-- Step 2: Agenda generated -->
+    <div class="flow-step">
+      <div class="step-num">2</div>
+      <div class="step-label">Agenda ready</div>
+      <div class="phone">
+        <div class="status" style="background:var(--navy)"><span class="st">9:41</span><span class="st">⚡</span></div>
+        <div class="hdr hdr-navy">
+          <div class="eyebrow">Tuesday, 18 March</div>
+          <div class="title-row">
+            <div class="title">Today <em>in Zürich</em></div>
+            <div class="seg"><span class="seg-b on">Plan</span><span class="seg-b">News</span></div>
+          </div>
+          <div class="date-pills">
+            <div class="dp on">Today</div>
+            <div class="dp">Tomorrow</div>
+            <div class="dp">Sat</div>
+            <div class="dp">Sun</div>
+            <div class="dp more">Apr 20 →</div>
+          </div>
+          <div class="wx">
+            <div style="display:flex;align-items:center">
+              <div class="wx-temp">14°</div>
+              <div class="wx-info"><div class="wx-cond">Partly cloudy</div><div class="wx-hl">H:17° L:9°</div></div>
+            </div>
+            <div class="wx-icon">⛅</div>
+          </div>
+          <div class="session">
+            <span class="session-text">👨‍👧 With Sami (3)</span>
+            <span class="session-arr">›</span>
+          </div>
+          <div class="ctx">Good day for getting out. Built a full day for Sami.</div>
+        </div>
+        <div class="scroll">
+          <div class="slot">
+            <div class="slot-dot" style="background:var(--terra)"></div>
+            <div class="slot-body">
+              <div class="slot-time">9:30 AM · 2 hrs</div>
+              <div class="slot-name">Wildnispark Zürich</div>
+              <div class="slot-reason">Great for toddlers, mild weather, haven't been in 3 weeks</div>
+              <div class="slot-actions"><span class="slot-btn">Swap</span><span class="slot-btn">···</span></div>
+            </div>
+          </div>
+          <div class="connector"><div class="connector-line"></div><div class="connector-chip">🚗 18 min</div></div>
+          <div class="slot">
+            <div class="slot-dot" style="background:var(--pos)"></div>
+            <div class="slot-body">
+              <div class="slot-time">12:00 PM · Lunch</div>
+              <div class="slot-name">Frau Gerolds Garten</div>
+              <div class="slot-reason">Kid-friendly, outdoor seating, close to afternoon</div>
+              <div class="slot-actions"><span class="slot-btn">Suggest another</span><span class="slot-btn">···</span></div>
+            </div>
+          </div>
+          <div class="connector"><div class="connector-line"></div><div class="connector-chip">🚶 8 min</div></div>
+          <div class="slot">
+            <div class="slot-dot" style="background:var(--terra)"></div>
+            <div class="slot-body">
+              <div class="slot-time">2:00 PM · 2 hrs</div>
+              <div class="slot-name">Chinagarten</div>
+              <div class="slot-reason">Nice for a walk, free entry, different from morning</div>
+              <div class="slot-actions"><span class="slot-btn">Swap</span><span class="slot-btn">···</span></div>
+            </div>
+          </div>
+          <div class="connector"><div class="connector-line"></div><div class="connector-chip">🚗 12 min</div></div>
+          <div class="slot">
+            <div class="slot-dot" style="background:var(--pos)"></div>
+            <div class="slot-body">
+              <div class="slot-time">5:30 PM · Dinner</div>
+              <div class="slot-name">Hiltl Sihlpost</div>
+              <div class="slot-reason">Early dinner, good for families, back home by 7</div>
+              <div class="slot-actions"><span class="slot-btn">Suggest another</span><span class="slot-btn">···</span></div>
+            </div>
+          </div>
+          <div style="height:8px"></div>
+          <div class="cta">Let's go →</div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab on"><div class="tab-icon">📋</div><div class="tab-lbl">Today</div></div>
+          <div class="tab"><div class="tab-icon">🧭</div><div class="tab-lbl">Discover</div></div>
+          <div class="tab"><div class="tab-icon">⚙️</div><div class="tab-lbl">Settings</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-arrow-wrap"><div class="flow-arrow">→</div><div class="flow-arrow-label">"Let's go"</div></div>
+
+    <!-- Step 3: Execution mode -->
+    <div class="flow-step">
+      <div class="step-num">3</div>
+      <div class="step-label">Execution mode</div>
+      <div class="phone">
+        <div class="status" style="background:var(--exec)"><span class="st">10:15</span><span class="st">⚡</span></div>
+        <div class="hdr hdr-exec">
+          <div class="eyebrow">Now</div>
+          <div class="title" style="font-size:18px;margin-bottom:6px">Wildnispark Zürich</div>
+          <div style="display:flex;gap:8px;position:relative;z-index:1">
+            <div style="font-size:9px;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.1);padding:3px 8px;border-radius:6px;">9:30 – 11:30</div>
+            <div style="font-size:9px;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.1);padding:3px 8px;border-radius:6px;">🧭 Get directions</div>
+          </div>
+          <div style="display:flex;gap:4px;margin-top:10px;position:relative;z-index:1">
+            <div style="width:24px;height:3px;border-radius:2px;background:white;"></div>
+            <div style="width:24px;height:3px;border-radius:2px;background:rgba(255,255,255,0.2);"></div>
+            <div style="width:24px;height:3px;border-radius:2px;background:rgba(255,255,255,0.2);"></div>
+            <div style="width:24px;height:3px;border-radius:2px;background:rgba(255,255,255,0.2);"></div>
+          </div>
+        </div>
+        <div class="scroll">
+          <div style="padding:6px 0">
+            <div style="font-size:9px;color:var(--muted);font-weight:500;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px">Up next</div>
+          </div>
+          <div class="slot" style="opacity:0.7">
+            <div class="slot-dot" style="background:var(--pos)"></div>
+            <div class="slot-body">
+              <div class="slot-time">12:00 PM · Lunch</div>
+              <div class="slot-name">Frau Gerolds Garten</div>
+              <div style="font-size:8px;color:var(--muted);margin-top:2px">Leave at 11:42</div>
+            </div>
+          </div>
+          <div class="slot" style="opacity:0.4">
+            <div class="slot-dot" style="background:var(--terra)"></div>
+            <div class="slot-body">
+              <div class="slot-time">2:00 PM · Activity</div>
+              <div class="slot-name">Chinagarten</div>
+            </div>
+          </div>
+          <div class="slot" style="opacity:0.4">
+            <div class="slot-dot" style="background:var(--pos)"></div>
+            <div class="slot-body">
+              <div class="slot-time">5:30 PM · Dinner</div>
+              <div class="slot-name">Hiltl Sihlpost</div>
+            </div>
+          </div>
+          <div style="height:12px"></div>
+          <div class="cta terra">Done ✓ — Mark Wildnispark visited</div>
+          <div style="height:4px"></div>
+          <div style="text-align:center"><span style="font-size:10px;color:var(--muted)">← Edit plan</span></div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab on"><div class="tab-icon">📋</div><div class="tab-lbl">Today</div></div>
+          <div class="tab"><div class="tab-icon">🧭</div><div class="tab-lbl">Discover</div></div>
+          <div class="tab"><div class="tab-icon">⚙️</div><div class="tab-lbl">Settings</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="section-note">
+    <h4>What changed from current app</h4>
+    <p>Date picker replaces the Today/Tomorrow-only toggle. Same planner, same engine — just accessible for any date within 14 days. Weekend tab planner is eliminated. The "Plan" sub-view in Today becomes the single home for all planning.</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- FLOW 2: PLAN AROUND COMMITMENT              -->
+<!-- ════════════════════════════════════════════ -->
+<div class="flow-content" id="f2">
+  <div class="flow-header">
+    <div class="flow-trigger">FLOW A · MUST NAIL</div>
+    <div class="flow-scenario">Plan around <em>a commitment</em></div>
+    <div class="flow-pain">Pain: Birthday party at 2pm. Morning and evening are wasted unless I plan around it.</div>
+  </div>
+
+  <div class="screen-flow">
+
+    <!-- Step 1: Calendar sync shows anchor -->
+    <div class="flow-step">
+      <div class="step-num">1</div>
+      <div class="step-label">Calendar synced</div>
+      <div class="phone">
+        <div class="status" style="background:var(--navy)"><span class="st">8:30</span><span class="st">⚡</span></div>
+        <div class="hdr hdr-navy">
+          <div class="eyebrow">Saturday, 22 March</div>
+          <div class="title-row">
+            <div class="title">Today <em>in Zürich</em></div>
+            <div class="seg"><span class="seg-b on">Plan</span><span class="seg-b">News</span></div>
+          </div>
+          <div class="date-pills">
+            <div class="dp">Today</div>
+            <div class="dp">Tomorrow</div>
+            <div class="dp on">Sat</div>
+            <div class="dp">Sun</div>
+            <div class="dp more">Pick date →</div>
+          </div>
+          <div class="wx">
+            <div style="display:flex;align-items:center">
+              <div class="wx-temp">12°</div>
+              <div class="wx-info"><div class="wx-cond">Sunny</div><div class="wx-hl">H:15° L:7°</div></div>
+            </div>
+            <div class="wx-icon">☀️</div>
+          </div>
+          <div class="session">
+            <span class="session-text">👨‍👧 With Sami (3)</span>
+            <span class="session-arr">›</span>
+          </div>
+          <div class="anchor-pills">
+            <div class="ap highlight">
+              <span class="ap-e">🎉</span>
+              <span class="ap-t">Noah's birthday party</span>
+              <span class="ap-time">14:00–16:30</span>
+              <span class="ap-x">✕</span>
+            </div>
+            <div class="callout"><div class="callout-text">↑ Pulled from Apple Calendar via EventKit</div></div>
+            <div class="ap-add">
+              <span class="ap-e" style="opacity:0.3">+</span>
+              <span class="ap-add-text">Add another</span>
+            </div>
+          </div>
+          <div class="ctx">Party at 2 — planning morning and evening around it.</div>
+        </div>
+        <div class="scroll">
+          <div style="text-align:center;padding:16px 0">
+            <div style="font-size:10px;color:var(--muted)">Analysing gaps around your anchors…</div>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab on"><div class="tab-icon">📋</div><div class="tab-lbl">Today</div></div>
+          <div class="tab"><div class="tab-icon">🧭</div><div class="tab-lbl">Discover</div></div>
+          <div class="tab"><div class="tab-icon">⚙️</div><div class="tab-lbl">Settings</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-arrow-wrap"><div class="flow-arrow">→</div><div class="flow-arrow-label">Gap analysis</div></div>
+
+    <!-- Step 2: Filled around anchor -->
+    <div class="flow-step">
+      <div class="step-num">2</div>
+      <div class="step-label">Gaps filled</div>
+      <div class="phone">
+        <div class="status" style="background:var(--navy)"><span class="st">8:30</span><span class="st">⚡</span></div>
+        <div class="hdr hdr-navy">
+          <div class="eyebrow">Saturday, 22 March</div>
+          <div class="title-row">
+            <div class="title">Today <em>in Zürich</em></div>
+          </div>
+          <div class="date-pills">
+            <div class="dp">Today</div>
+            <div class="dp">Tomorrow</div>
+            <div class="dp on">Sat</div>
+            <div class="dp">Sun</div>
+            <div class="dp more">Pick date →</div>
+          </div>
+          <div class="anchor-pills">
+            <div class="ap">
+              <span class="ap-e">🎉</span>
+              <span class="ap-t">Noah's birthday party</span>
+              <span class="ap-time">14:00–16:30</span>
+              <span class="ap-x">✕</span>
+            </div>
+          </div>
+          <div class="ctx">Morning + dinner planned around Noah's party.</div>
+        </div>
+        <div class="scroll">
+          <div class="slot">
+            <div class="slot-dot" style="background:var(--terra)"></div>
+            <div class="slot-body">
+              <div class="slot-time">9:30 AM · 2 hrs</div>
+              <div class="slot-name">Playground Irchelpark</div>
+              <div class="slot-reason">Close to home, burns energy before the party</div>
+              <div class="slot-actions"><span class="slot-btn">Swap</span></div>
+            </div>
+          </div>
+          <div class="connector"><div class="connector-line"></div><div class="connector-chip">🚗 15 min</div></div>
+          <div class="slot">
+            <div class="slot-dot" style="background:var(--pos)"></div>
+            <div class="slot-body">
+              <div class="slot-time">12:00 PM · Lunch</div>
+              <div class="slot-name">Tibits Seefeld</div>
+              <div class="slot-reason">Quick lunch, leaves time to get to the party</div>
+              <div class="slot-actions"><span class="slot-btn">Suggest another</span></div>
+            </div>
+          </div>
+          <div class="connector"><div class="connector-line"></div><div class="connector-chip">🚗 20 min</div></div>
+
+          <!-- Anchor slot -->
+          <div class="slot" style="background:rgba(26,58,92,0.04);border-color:rgba(26,58,92,0.18);border-left:3px solid var(--navy)">
+            <div class="slot-dot navy"></div>
+            <div class="slot-body">
+              <div class="slot-time">2:00 – 4:30 PM</div>
+              <div class="slot-name">🎉 Noah's birthday party</div>
+              <div style="font-size:8px;color:var(--navy);margin-top:2px"><span class="card-tag" style="background:rgba(26,58,92,0.08)">Your plans</span></div>
+            </div>
+          </div>
+
+          <div class="connector"><div class="connector-line"></div><div class="connector-chip">🚗 15 min</div></div>
+          <div class="slot">
+            <div class="slot-dot" style="background:var(--pos)"></div>
+            <div class="slot-body">
+              <div class="slot-time">5:30 PM · Dinner</div>
+              <div class="slot-name">Outlines Café</div>
+              <div class="slot-reason">Relaxed post-party dinner, kid-friendly</div>
+            </div>
+          </div>
+          <div style="height:8px"></div>
+          <div class="cta">Let's go →</div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab on"><div class="tab-icon">📋</div><div class="tab-lbl">Today</div></div>
+          <div class="tab"><div class="tab-icon">🧭</div><div class="tab-lbl">Discover</div></div>
+          <div class="tab"><div class="tab-icon">⚙️</div><div class="tab-lbl">Settings</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="section-note">
+    <h4>Entry points into this flow</h4>
+    <p>Calendar sync auto-imports events as anchors. User can also manually add anchors via "+ Add another". A CityEvent from Discover ("Add to plan") enters here too — same anchor mechanism, different source. The planner doesn't care where the anchor came from.</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- FLOW 3: ESCAPE THE GREY                     -->
+<!-- ════════════════════════════════════════════ -->
+<div class="flow-content" id="f3">
+  <div class="flow-header">
+    <div class="flow-trigger">FLOW B · DIFFERENTIATOR</div>
+    <div class="flow-scenario">Escape <em>the grey</em></div>
+    <div class="flow-pain">Pain: 3rd grey weekend in a row. Where's the sun? Where's the snow? Get me out of here.</div>
+  </div>
+
+  <div class="screen-flow">
+
+    <!-- Step 1: Discover tab with nudge -->
+    <div class="flow-step">
+      <div class="step-num">1</div>
+      <div class="step-label">Discover tab</div>
+      <div class="phone">
+        <div class="status" style="background:var(--navy)"><span class="st">9:00</span><span class="st">⚡</span></div>
+        <div class="hdr hdr-navy" style="padding-bottom:12px">
+          <div class="eyebrow">Explore</div>
+          <div class="title-row">
+            <div class="title">Discover</div>
+          </div>
+        </div>
+        <div class="scroll">
+          <!-- Smart nudge -->
+          <div class="nudge highlight">
+            <div class="nudge-title">☀️ 3 grey weekends — time to escape?</div>
+            <div class="nudge-desc">It's 19° and sunny in Lugano this Saturday. Just 2h by train.</div>
+            <div class="nudge-cta">Plan a sunshine day → </div>
+          </div>
+          <div class="callout"><div class="callout-text">↑ Proactive nudge — surfaces when local weather is poor + sunshine elsewhere</div></div>
+
+          <!-- Hero cards -->
+          <div class="discover-hero">
+            <div class="discover-hero-bg sun"></div>
+            <div class="discover-hero-content">
+              <div class="discover-hero-title">Where's the sun?</div>
+              <div class="discover-hero-sub">Find the sunniest spot nearby</div>
+            </div>
+            <div class="discover-hero-badge">☀️ 7 cities</div>
+          </div>
+          <div class="discover-hero">
+            <div class="discover-hero-bg snow"></div>
+            <div class="discover-hero-content">
+              <div class="discover-hero-title">Where's the snow?</div>
+              <div class="discover-hero-sub">Fresh powder & ski conditions</div>
+            </div>
+            <div class="discover-hero-badge">❄️ Season</div>
+          </div>
+          <div class="discover-hero">
+            <div class="discover-hero-bg events"></div>
+            <div class="discover-hero-content">
+              <div class="discover-hero-title">What's happening</div>
+              <div class="discover-hero-sub">Events, markets & festivals</div>
+            </div>
+            <div class="discover-hero-badge">📅 This week</div>
+          </div>
+
+          <!-- Browse nearby -->
+          <div style="margin-top:4px">
+            <div style="font-size:10px;font-weight:500;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Explore nearby</div>
+            <div class="browse-grid">
+              <div class="browse-tile"><div class="browse-tile-icon">🎨</div><div class="browse-tile-label">Museums</div><div class="browse-tile-count">12 venues</div></div>
+              <div class="browse-tile"><div class="browse-tile-icon">🌳</div><div class="browse-tile-label">Parks</div><div class="browse-tile-count">18 spots</div></div>
+              <div class="browse-tile"><div class="browse-tile-icon">🍽️</div><div class="browse-tile-label">Restaurants</div><div class="browse-tile-count">45 places</div></div>
+              <div class="browse-tile"><div class="browse-tile-icon">🎯</div><div class="browse-tile-label">Activities</div><div class="browse-tile-count">32 ideas</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab"><div class="tab-icon">📋</div><div class="tab-lbl">Today</div></div>
+          <div class="tab on"><div class="tab-icon">🧭</div><div class="tab-lbl">Discover</div></div>
+          <div class="tab"><div class="tab-icon">⚙️</div><div class="tab-lbl">Settings</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-arrow-wrap"><div class="flow-arrow">→</div><div class="flow-arrow-label">Tap sunshine<br>or nudge</div></div>
+
+    <!-- Step 2: Sunshine ranking -->
+    <div class="flow-step">
+      <div class="step-num">2</div>
+      <div class="step-label">Sunshine finder</div>
+      <div class="phone">
+        <div class="status" style="background:var(--navy)"><span class="st">9:00</span><span class="st">⚡</span></div>
+        <div class="hdr hdr-navy" style="padding-bottom:12px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;position:relative;z-index:1">
+            <div style="font-size:12px;color:rgba(255,255,255,0.4)">‹</div>
+            <div class="eyebrow" style="margin:0">Saturday sunshine</div>
+          </div>
+          <div class="title-row">
+            <div class="title">Where's the <em>sun?</em></div>
+          </div>
+        </div>
+        <div class="scroll">
+          <div class="sun-rank">
+            <div class="sun-row highlight">
+              <div class="sun-pos">1</div>
+              <div class="sun-info">
+                <div class="sun-city">Lugano</div>
+                <div class="sun-detail">19°C · Clear skies · 2h 10m by train</div>
+              </div>
+              <div><div class="sun-hours">9.2</div><div class="sun-unit">hrs sun</div></div>
+            </div>
+            <div class="sun-row">
+              <div class="sun-pos">2</div>
+              <div class="sun-info">
+                <div class="sun-city">Locarno</div>
+                <div class="sun-detail">18°C · Mostly sunny · 2h 30m</div>
+              </div>
+              <div><div class="sun-hours">8.8</div><div class="sun-unit">hrs sun</div></div>
+            </div>
+            <div class="sun-row">
+              <div class="sun-pos">3</div>
+              <div class="sun-info">
+                <div class="sun-city">Lucerne</div>
+                <div class="sun-detail">15°C · Partly cloudy · 45m</div>
+              </div>
+              <div><div class="sun-hours">6.4</div><div class="sun-unit">hrs sun</div></div>
+            </div>
+            <div class="sun-row">
+              <div class="sun-pos">4</div>
+              <div class="sun-info">
+                <div class="sun-city">Basel</div>
+                <div class="sun-detail">13°C · Overcast · 55m</div>
+              </div>
+              <div><div class="sun-hours">4.1</div><div class="sun-unit">hrs sun</div></div>
+            </div>
+            <div class="sun-row" style="opacity:0.5">
+              <div class="sun-pos">5</div>
+              <div class="sun-info">
+                <div class="sun-city">Zürich</div>
+                <div class="sun-detail">9°C · Overcast · You are here</div>
+              </div>
+              <div><div class="sun-hours">1.2</div><div class="sun-unit">hrs sun</div></div>
+            </div>
+          </div>
+          <div style="height:16px"></div>
+          <div style="text-align:center;font-size:9px;color:var(--muted)">Tap a city to see what's there →</div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab"><div class="tab-icon">📋</div><div class="tab-lbl">Today</div></div>
+          <div class="tab on"><div class="tab-icon">🧭</div><div class="tab-lbl">Discover</div></div>
+          <div class="tab"><div class="tab-icon">⚙️</div><div class="tab-lbl">Settings</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-arrow-wrap"><div class="flow-arrow">→</div><div class="flow-arrow-label">Tap Lugano</div></div>
+
+    <!-- Step 3: City detail + Plan CTA -->
+    <div class="flow-step">
+      <div class="step-num">3</div>
+      <div class="step-label">City detail</div>
+      <div class="phone">
+        <div class="status" style="background:var(--navy)"><span class="st">9:01</span><span class="st">⚡</span></div>
+        <div class="hdr hdr-navy" style="padding-bottom:12px;background:linear-gradient(135deg,#C4623A 0%,#1A3A5C 100%)">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;position:relative;z-index:1">
+            <div style="font-size:12px;color:rgba(255,255,255,0.4)">‹</div>
+            <div class="eyebrow" style="margin:0">Sunshine · Saturday</div>
+          </div>
+          <div class="title-row">
+            <div class="title">Lugano</div>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;position:relative;z-index:1">
+            <div style="font-size:9px;color:rgba(255,255,255,0.65);background:rgba(255,255,255,0.12);padding:3px 8px;border-radius:6px;">☀️ 19°C · 9.2 hrs</div>
+            <div style="font-size:9px;color:rgba(255,255,255,0.65);background:rgba(255,255,255,0.12);padding:3px 8px;border-radius:6px;">🚂 2h 10m</div>
+          </div>
+        </div>
+        <div class="scroll">
+          <div class="cta terra highlight" style="margin-bottom:8px">☀️ Plan a day in Lugano →</div>
+          <div class="callout"><div class="callout-text">↑ This is the handoff — Flow B → Flow A. Navigates to Today tab with Lugano as city context.</div></div>
+
+          <div style="font-size:10px;font-weight:500;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin:8px 0 6px;">Things to do</div>
+          <div class="card">
+            <div class="card-title">Parco Ciani</div>
+            <div class="card-desc">Lakeside park with playground, botanical garden. Free.</div>
+            <div class="card-meta"><span class="card-tag">🌳 Park</span><span class="card-tag pos">Free</span></div>
+            <div class="plan-cta">Plan around this →</div>
+          </div>
+          <div class="card">
+            <div class="card-title">LAC Lugano Arte e Cultura</div>
+            <div class="card-desc">Modern art museum on the lake. Family workshops on weekends.</div>
+            <div class="card-meta"><span class="card-tag">🎨 Museum</span><span class="card-tag">CHF 15</span></div>
+            <div class="plan-cta">Plan around this →</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Lido di Lugano</div>
+            <div class="card-desc">Public swimming, pools and lake access. Playground area.</div>
+            <div class="card-meta"><span class="card-tag">🏊 Swimming</span></div>
+            <div class="plan-cta">Plan around this →</div>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab"><div class="tab-icon">📋</div><div class="tab-lbl">Today</div></div>
+          <div class="tab on"><div class="tab-icon">🧭</div><div class="tab-lbl">Discover</div></div>
+          <div class="tab"><div class="tab-icon">⚙️</div><div class="tab-lbl">Settings</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-arrow-wrap"><div class="flow-arrow">→</div><div class="flow-arrow-label">"Plan a day<br>in Lugano"</div></div>
+
+    <!-- Step 4: Planner with city context -->
+    <div class="flow-step">
+      <div class="step-num">4</div>
+      <div class="step-label">Planner (Lugano)</div>
+      <div class="phone">
+        <div class="status" style="background:var(--navy)"><span class="st">9:02</span><span class="st">⚡</span></div>
+        <div class="hdr hdr-navy" style="background:linear-gradient(180deg,#C4623A 0%,#1A3A5C 100%)">
+          <div class="eyebrow">Saturday, 22 March</div>
+          <div class="title-row">
+            <div class="title">Today <em>in Lugano</em></div>
+          </div>
+          <div class="date-pills">
+            <div class="dp">Today</div>
+            <div class="dp">Tomorrow</div>
+            <div class="dp on">Sat</div>
+            <div class="dp">Sun</div>
+            <div class="dp more">Pick date →</div>
+          </div>
+          <div style="display:flex;gap:6px;position:relative;z-index:1;margin-bottom:6px">
+            <div style="font-size:9px;color:rgba(255,255,255,0.65);background:rgba(255,255,255,0.12);padding:3px 8px;border-radius:6px;">☀️ 19°C · Sunny</div>
+            <div style="font-size:9px;color:rgba(255,255,255,0.65);background:rgba(255,255,255,0.12);padding:3px 8px;border-radius:6px;">🚂 Train 07:52 → arr 10:02</div>
+          </div>
+          <div class="ctx">Sunny day in Lugano. Planned around your train times.</div>
+        </div>
+        <div class="scroll">
+          <div class="slot">
+            <div class="slot-dot" style="background:var(--terra)"></div>
+            <div class="slot-body">
+              <div class="slot-time">10:15 AM · 2 hrs</div>
+              <div class="slot-name">Parco Ciani</div>
+              <div class="slot-reason">Start lakeside, playground for Sami, 10 min walk from station</div>
+            </div>
+          </div>
+          <div class="connector"><div class="connector-line"></div><div class="connector-chip">🚶 12 min</div></div>
+          <div class="slot">
+            <div class="slot-dot" style="background:var(--pos)"></div>
+            <div class="slot-body">
+              <div class="slot-time">12:30 PM · Lunch</div>
+              <div class="slot-name">Grotto della Salute</div>
+              <div class="slot-reason">Traditional Ticinese grotto, shaded terrace</div>
+            </div>
+          </div>
+          <div class="connector"><div class="connector-line"></div><div class="connector-chip">🚶 8 min</div></div>
+          <div class="slot">
+            <div class="slot-dot" style="background:var(--terra)"></div>
+            <div class="slot-body">
+              <div class="slot-time">2:30 PM · 2 hrs</div>
+              <div class="slot-name">Lido di Lugano</div>
+              <div class="slot-reason">Afternoon by the lake, pools + playground</div>
+            </div>
+          </div>
+          <div class="connector"><div class="connector-line"></div><div class="connector-chip">🚶 15 min to station</div></div>
+          <div style="background:rgba(26,58,92,0.04);border:1px solid rgba(26,58,92,0.12);border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:6px">
+            <div style="font-size:14px">🚂</div>
+            <div>
+              <div style="font-size:10px;font-weight:500;color:var(--ink)">Train home 17:02 → Zürich 19:12</div>
+              <div style="font-size:8px;color:var(--muted)">Leave Lido by 16:45</div>
+            </div>
+          </div>
+          <div style="height:8px"></div>
+          <div class="cta">Let's go →</div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab on"><div class="tab-icon">📋</div><div class="tab-lbl">Today</div></div>
+          <div class="tab"><div class="tab-icon">🧭</div><div class="tab-lbl">Discover</div></div>
+          <div class="tab"><div class="tab-icon">⚙️</div><div class="tab-lbl">Settings</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="section-note">
+    <h4>The key moment</h4>
+    <p>Step 3 → 4 is the handoff from Flow B (destination finding) to Flow A (day planning). The planner receives a city context parameter which changes the venue pool from Zürich to Lugano. The header shifts from "Today in Zürich" to "Today in Lugano" — same planner, different data. For cities without curated data, the planner uses AI-only suggestions with a quality disclaimer.</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- FLOW 4: CITY EVENT                          -->
+<!-- ════════════════════════════════════════════ -->
+<div class="flow-content" id="f4">
+  <div class="flow-header">
+    <div class="flow-trigger">FLOW A VARIANT · SECONDARY</div>
+    <div class="flow-scenario">Plan around <em>an event</em></div>
+    <div class="flow-pain">Pain: Sechseläuten is April 20. I know it exists. I don't know how to build a day around it.</div>
+  </div>
+
+  <div class="screen-flow">
+
+    <!-- Step 1: Events in Discover -->
+    <div class="flow-step">
+      <div class="step-num">1</div>
+      <div class="step-label">Discover → Events</div>
+      <div class="phone">
+        <div class="status" style="background:var(--navy)"><span class="st">9:00</span><span class="st">⚡</span></div>
+        <div class="hdr hdr-navy" style="padding-bottom:12px;background:linear-gradient(135deg,#3A7D5C 0%,#1A3A5C 100%)">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;position:relative;z-index:1">
+            <div style="font-size:12px;color:rgba(255,255,255,0.4)">‹</div>
+            <div class="eyebrow" style="margin:0">Discover</div>
+          </div>
+          <div class="title-row">
+            <div class="title">What's <em>happening</em></div>
+          </div>
+        </div>
+        <div class="scroll">
+          <div style="font-size:10px;font-weight:500;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Coming up</div>
+
+          <div class="event-item" style="margin-bottom:6px">
+            <div class="event-date-badge"><div class="edb-month">Mar</div><div class="edb-day">29</div></div>
+            <div class="event-info">
+              <div class="event-name">Farmers Market Bürkliplatz</div>
+              <div class="event-meta">Every Saturday · 6:00–11:00 · Free</div>
+            </div>
+          </div>
+
+          <div class="event-item highlight" style="margin-bottom:6px">
+            <div class="event-date-badge" style="background:var(--terra)"><div class="edb-month">Apr</div><div class="edb-day">20</div></div>
+            <div class="event-info">
+              <div class="event-name">Sechseläuten</div>
+              <div class="event-meta">Zürich · Spring festival · Böögg burning</div>
+              <div class="plan-cta">Plan around this →</div>
+            </div>
+          </div>
+          <div class="callout"><div class="callout-text">↑ "Plan around this" → opens anchor form pre-filled with event name + category, then navigates to Today tab with April 20 selected</div></div>
+
+          <div class="event-item" style="margin-bottom:6px">
+            <div class="event-date-badge"><div class="edb-month">Apr</div><div class="edb-day">6</div></div>
+            <div class="event-info">
+              <div class="event-name">Frühlings­ferien begin</div>
+              <div class="event-meta">School holidays · Apr 6–17</div>
+              <div style="font-size:8px;color:var(--muted);margin-top:2px;font-style:italic">10 days off — plan day by day in the planner</div>
+            </div>
+          </div>
+
+          <div class="event-item" style="margin-bottom:6px">
+            <div class="event-date-badge"><div class="edb-month">Apr</div><div class="edb-day">21</div></div>
+            <div class="event-info">
+              <div class="event-name">Zürich Marathon</div>
+              <div class="event-meta">Zürich · City-wide · Road closures</div>
+              <div class="plan-cta">Plan around this →</div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab"><div class="tab-icon">📋</div><div class="tab-lbl">Today</div></div>
+          <div class="tab on"><div class="tab-icon">🧭</div><div class="tab-lbl">Discover</div></div>
+          <div class="tab"><div class="tab-icon">⚙️</div><div class="tab-lbl">Settings</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-arrow-wrap"><div class="flow-arrow">→</div><div class="flow-arrow-label">"Plan around<br>Sechseläuten"</div></div>
+
+    <!-- Step 2: Anchor form -->
+    <div class="flow-step">
+      <div class="step-num">2</div>
+      <div class="step-label">Add timing</div>
+      <div class="phone">
+        <div class="status" style="background:var(--navy)"><span class="st">9:01</span><span class="st">⚡</span></div>
+        <div class="hdr hdr-navy" style="padding-bottom:12px">
+          <div class="title-row">
+            <div class="title" style="font-size:18px">Add to plan</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.4);position:relative;z-index:1">✕</div>
+          </div>
+        </div>
+        <div class="scroll" style="gap:12px">
+          <div>
+            <div style="font-size:9px;font-weight:500;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">What</div>
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--ink);">Sechseläuten</div>
+            <div style="font-size:8px;color:var(--pos);margin-top:2px">Pre-filled from event</div>
+          </div>
+          <div>
+            <div style="font-size:9px;font-weight:500;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">What kind</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+              <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;font-size:11px;color:var(--ink)">🍴 Food</div>
+              <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;font-size:11px;color:var(--ink)">🎉 Social</div>
+              <div style="background:rgba(26,58,92,0.08);border:2px solid var(--navy);border-radius:10px;padding:10px;text-align:center;font-size:11px;color:var(--navy);font-weight:500">🏃 Activity ✓</div>
+              <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;font-size:11px;color:var(--ink)">📌 Other</div>
+            </div>
+            <div style="font-size:8px;color:var(--pos);margin-top:2px">Pre-selected</div>
+          </div>
+          <div>
+            <div style="font-size:9px;font-weight:500;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">When — you pick</div>
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--ink);display:flex;justify-content:space-between">
+              <span>15:00</span><span style="color:var(--muted)">→</span>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:9px;font-weight:500;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">How long — you pick</div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <div style="padding:6px 12px;border-radius:8px;font-size:11px;background:var(--surface);border:1px solid var(--border);color:var(--ink)">1 hr</div>
+              <div style="padding:6px 12px;border-radius:8px;font-size:11px;background:var(--surface);border:1px solid var(--border);color:var(--ink)">1.5 hr</div>
+              <div style="padding:6px 12px;border-radius:8px;font-size:11px;background:rgba(26,58,92,0.08);border:2px solid var(--navy);color:var(--navy);font-weight:500">2 hr ✓</div>
+              <div style="padding:6px 12px;border-radius:8px;font-size:11px;background:var(--surface);border:1px solid var(--border);color:var(--ink)">3 hr</div>
+            </div>
+          </div>
+          <div style="height:8px"></div>
+          <div class="cta">Add to April 20 plan →</div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab"><div class="tab-icon">📋</div><div class="tab-lbl">Today</div></div>
+          <div class="tab on"><div class="tab-icon">🧭</div><div class="tab-lbl">Discover</div></div>
+          <div class="tab"><div class="tab-icon">⚙️</div><div class="tab-lbl">Settings</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-arrow-wrap"><div class="flow-arrow">→</div><div class="flow-arrow-label">Navigate<br>to Today tab</div></div>
+
+    <!-- Step 3: Today with April 20 selected -->
+    <div class="flow-step">
+      <div class="step-num">3</div>
+      <div class="step-label">Plan built</div>
+      <div class="phone">
+        <div class="status" style="background:var(--navy)"><span class="st">9:02</span><span class="st">⚡</span></div>
+        <div class="hdr hdr-navy">
+          <div class="eyebrow">Monday, 20 April</div>
+          <div class="title-row">
+            <div class="title">Today <em>in Zürich</em></div>
+          </div>
+          <div class="date-pills">
+            <div class="dp">Today</div>
+            <div class="dp">Tomorrow</div>
+            <div class="dp">Sat</div>
+            <div class="dp">Sun</div>
+            <div class="dp on" style="background:var(--terra);color:white;border-color:var(--terra)">Apr 20</div>
+          </div>
+          <div class="anchor-pills">
+            <div class="ap">
+              <span class="ap-e">🏃</span>
+              <span class="ap-t">Sechseläuten</span>
+              <span class="ap-time">15:00–17:00</span>
+              <span class="ap-x">✕</span>
+            </div>
+          </div>
+          <div class="ctx">Sechseläuten at 3 — morning and lunch planned around it.</div>
+        </div>
+        <div class="scroll">
+          <div class="slot">
+            <div class="slot-dot" style="background:var(--terra)"></div>
+            <div class="slot-body">
+              <div class="slot-time">10:00 AM · 1.5 hrs</div>
+              <div class="slot-name">Botanischer Garten</div>
+              <div class="slot-reason">Relaxed morning, close to city centre for Sechseläuten</div>
+            </div>
+          </div>
+          <div class="connector"><div class="connector-line"></div><div class="connector-chip">🚶 10 min</div></div>
+          <div class="slot">
+            <div class="slot-dot" style="background:var(--pos)"></div>
+            <div class="slot-body">
+              <div class="slot-time">12:00 PM · Lunch</div>
+              <div class="slot-name">Sternen Grill</div>
+              <div class="slot-reason">Quick, casual, near Bellevue for the parade</div>
+            </div>
+          </div>
+          <div class="connector"><div class="connector-line"></div><div class="connector-chip">🚶 5 min</div></div>
+          <div class="slot" style="background:rgba(26,58,92,0.04);border-color:rgba(26,58,92,0.18);border-left:3px solid var(--navy)">
+            <div class="slot-dot navy"></div>
+            <div class="slot-body">
+              <div class="slot-time">3:00 – 5:00 PM</div>
+              <div class="slot-name">🏃 Sechseläuten</div>
+              <div style="margin-top:2px"><span class="card-tag" style="font-size:7px;background:rgba(26,58,92,0.08)">Your plans</span></div>
+            </div>
+          </div>
+          <div class="connector"><div class="connector-line"></div><div class="connector-chip">🚶 8 min</div></div>
+          <div class="slot">
+            <div class="slot-dot" style="background:var(--pos)"></div>
+            <div class="slot-body">
+              <div class="slot-time">5:30 PM · Dinner</div>
+              <div class="slot-name">Zeughauskeller</div>
+              <div class="slot-reason">Traditional, close to event, festive atmosphere</div>
+            </div>
+          </div>
+          <div style="height:8px"></div>
+          <div class="cta">Let's go →</div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab on"><div class="tab-icon">📋</div><div class="tab-lbl">Today</div></div>
+          <div class="tab"><div class="tab-icon">🧭</div><div class="tab-lbl">Discover</div></div>
+          <div class="tab"><div class="tab-icon">⚙️</div><div class="tab-lbl">Settings</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="section-note">
+    <h4>This is Flow 2 with a different entry point</h4>
+    <p>The event becomes an anchor via the same AnchorFormSheet. The only difference is the entry point (Discover → Events instead of Apple Calendar) and the date pre-selection (April 20 instead of today). Same planner, same gap analysis, same engine.</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- FLOW 7: WHAT'S HAPPENING                    -->
+<!-- ════════════════════════════════════════════ -->
+<div class="flow-content" id="f7">
+  <div class="flow-header">
+    <div class="flow-trigger">DISCOVERY · ENGAGEMENT HOOK</div>
+    <div class="flow-scenario">What's <em>happening?</em></div>
+    <div class="flow-pain">Pain: FOMO. Don't want to miss out on things happening in the city this weekend.</div>
+  </div>
+
+  <div class="screen-flow">
+
+    <!-- Step 1: Discover tab -->
+    <div class="flow-step">
+      <div class="step-num">1</div>
+      <div class="step-label">Discover tab</div>
+      <div class="phone">
+        <div class="status" style="background:var(--navy)"><span class="st">20:30</span><span class="st">⚡</span></div>
+        <div class="hdr hdr-navy" style="padding-bottom:12px">
+          <div class="eyebrow">Explore</div>
+          <div class="title-row">
+            <div class="title">Discover</div>
+          </div>
+        </div>
+        <div class="scroll">
+          <!-- Smart nudge -->
+          <div class="nudge">
+            <div class="nudge-title">📅 Sechseläuten is in 3 weeks</div>
+            <div class="nudge-desc">Spring festival with the Böögg burning. Plan your April 20?</div>
+            <div class="nudge-cta">Plan around this →</div>
+          </div>
+
+          <div class="discover-hero">
+            <div class="discover-hero-bg sun"></div>
+            <div class="discover-hero-content">
+              <div class="discover-hero-title">Where's the sun?</div>
+              <div class="discover-hero-sub">Find the sunniest spot nearby</div>
+            </div>
+          </div>
+          <div class="discover-hero highlight">
+            <div class="discover-hero-bg events"></div>
+            <div class="discover-hero-content">
+              <div class="discover-hero-title">What's happening</div>
+              <div class="discover-hero-sub">Events, markets & festivals</div>
+            </div>
+            <div class="discover-hero-badge">3 this week</div>
+          </div>
+
+          <div style="font-size:10px;font-weight:500;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin:4px 0 8px;">Explore nearby</div>
+          <div class="browse-grid">
+            <div class="browse-tile"><div class="browse-tile-icon">🎨</div><div class="browse-tile-label">Museums</div></div>
+            <div class="browse-tile"><div class="browse-tile-icon">🌳</div><div class="browse-tile-label">Parks</div></div>
+            <div class="browse-tile"><div class="browse-tile-icon">🍽️</div><div class="browse-tile-label">Restaurants</div></div>
+            <div class="browse-tile"><div class="browse-tile-icon">🎯</div><div class="browse-tile-label">Activities</div></div>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab"><div class="tab-icon">📋</div><div class="tab-lbl">Today</div></div>
+          <div class="tab on"><div class="tab-icon">🧭</div><div class="tab-lbl">Discover</div></div>
+          <div class="tab"><div class="tab-icon">⚙️</div><div class="tab-lbl">Settings</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flow-arrow-wrap"><div class="flow-arrow">→</div><div class="flow-arrow-label">Browse &<br>decide</div></div>
+
+    <!-- Step 2: Browse events or categories -->
+    <div class="flow-step">
+      <div class="step-num">2</div>
+      <div class="step-label">Browse or plan</div>
+      <div class="phone">
+        <div class="status" style="background:var(--navy)"><span class="st">20:31</span><span class="st">⚡</span></div>
+        <div class="hdr hdr-navy" style="padding-bottom:12px;background:linear-gradient(135deg,#3A7D5C 0%,#1A3A5C 100%)">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;position:relative;z-index:1">
+            <div style="font-size:12px;color:rgba(255,255,255,0.4)">‹</div>
+            <div class="eyebrow" style="margin:0">This weekend</div>
+          </div>
+          <div class="title-row">
+            <div class="title">What's <em>happening</em></div>
+          </div>
+        </div>
+        <div class="scroll">
+          <div class="event-item" style="margin-bottom:6px">
+            <div class="event-date-badge"><div class="edb-month">Mar</div><div class="edb-day">22</div></div>
+            <div class="event-info">
+              <div class="event-name">Farmers Market Bürkliplatz</div>
+              <div class="event-meta">Saturday · 6:00–11:00 · Free</div>
+              <div class="plan-cta">Plan around this →</div>
+            </div>
+          </div>
+          <div class="event-item" style="margin-bottom:6px">
+            <div class="event-date-badge"><div class="edb-month">Mar</div><div class="edb-day">22</div></div>
+            <div class="event-info">
+              <div class="event-name">Kids Flohmarkt Wipkingen</div>
+              <div class="event-meta">Saturday · 10:00–16:00 · Free entry</div>
+              <div class="plan-cta">Plan around this →</div>
+            </div>
+          </div>
+          <div class="event-item" style="margin-bottom:6px">
+            <div class="event-date-badge"><div class="edb-month">Mar</div><div class="edb-day">23</div></div>
+            <div class="event-info">
+              <div class="event-name">Kinderzirkus Stey</div>
+              <div class="event-meta">Sunday · 14:00 · CHF 25 family</div>
+              <div class="plan-cta">Plan around this →</div>
+            </div>
+          </div>
+          <div style="height:8px"></div>
+          <div style="font-size:10px;font-weight:500;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Coming up</div>
+          <div class="event-item" style="margin-bottom:6px;opacity:0.6">
+            <div class="event-date-badge"><div class="edb-month">Apr</div><div class="edb-day">6</div></div>
+            <div class="event-info">
+              <div class="event-name">Frühlingsferien begin</div>
+              <div class="event-meta">School holidays · Apr 6–17</div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab"><div class="tab-icon">📋</div><div class="tab-lbl">Today</div></div>
+          <div class="tab on"><div class="tab-icon">🧭</div><div class="tab-lbl">Discover</div></div>
+          <div class="tab"><div class="tab-icon">⚙️</div><div class="tab-lbl">Settings</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="section-note">
+    <h4>Pure discovery — may or may not lead to planning</h4>
+    <p>This flow might end with "cool, good to know" (no planning) or "Plan around this →" (enters Flow 2/4). Either outcome is fine. The value is awareness. The conversion to planning is a bonus.</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- FLOW 8: NEARBY NOW                          -->
+<!-- ════════════════════════════════════════════ -->
+<div class="flow-content" id="f8">
+  <div class="flow-header">
+    <div class="flow-trigger">DEFERRED · DIFFERENT UX MODE</div>
+    <div class="flow-scenario">What's nearby <em>right now?</em></div>
+    <div class="flow-pain">Pain: Already out. Hungry. Need a restaurant nearby in 2 minutes, not a full plan.</div>
+  </div>
+
+  <div class="screen-flow">
+
+    <div class="flow-step">
+      <div class="step-num">1</div>
+      <div class="step-label">Discover → Nearby</div>
+      <div class="phone">
+        <div class="status" style="background:var(--navy)"><span class="st">12:30</span><span class="st">⚡</span></div>
+        <div class="hdr hdr-navy" style="padding-bottom:12px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;position:relative;z-index:1">
+            <div style="font-size:12px;color:rgba(255,255,255,0.4)">‹</div>
+            <div class="eyebrow" style="margin:0">Explore nearby</div>
+          </div>
+          <div class="title-row">
+            <div class="title">Restaurants</div>
+          </div>
+          <div style="display:flex;gap:4px;position:relative;z-index:1">
+            <div style="font-size:9px;color:rgba(255,255,255,0.65);background:rgba(255,255,255,0.12);padding:3px 8px;border-radius:6px;">📍 Near you</div>
+            <div style="font-size:9px;color:rgba(255,255,255,0.65);background:rgba(255,255,255,0.12);padding:3px 8px;border-radius:6px;">🍽️ Open now</div>
+            <div style="font-size:9px;color:rgba(255,255,255,0.65);background:rgba(255,255,255,0.12);padding:3px 8px;border-radius:6px;">👶 Kid-friendly</div>
+          </div>
+        </div>
+        <div class="scroll">
+          <div class="card" style="margin-bottom:6px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div>
+                <div class="card-title">Hiltl Dachterrasse</div>
+                <div class="card-desc">Vegetarian · Rooftop terrace · Open until 22:00</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:12px;font-weight:500;color:var(--terra)">350m</div>
+                <div style="font-size:8px;color:var(--muted)">5 min walk</div>
+              </div>
+            </div>
+            <div class="card-meta"><span class="card-tag pos">★ 4.6</span><span class="card-tag">$$</span><span class="card-tag">👶 Yes</span></div>
+          </div>
+          <div class="card" style="margin-bottom:6px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div>
+                <div class="card-title">Café Miyuko</div>
+                <div class="card-desc">Japanese · Cosy · Open until 17:00</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:12px;font-weight:500;color:var(--terra)">500m</div>
+                <div style="font-size:8px;color:var(--muted)">7 min walk</div>
+              </div>
+            </div>
+            <div class="card-meta"><span class="card-tag pos">★ 4.4</span><span class="card-tag">$$</span></div>
+          </div>
+          <div class="card" style="margin-bottom:6px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div>
+                <div class="card-title">Sternen Grill</div>
+                <div class="card-desc">Swiss sausages · Street food · Always busy</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:12px;font-weight:500;color:var(--terra)">800m</div>
+                <div style="font-size:8px;color:var(--muted)">11 min walk</div>
+              </div>
+            </div>
+            <div class="card-meta"><span class="card-tag pos">★ 4.5</span><span class="card-tag">$</span><span class="card-tag">👶 Yes</span></div>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab"><div class="tab-icon">📋</div><div class="tab-lbl">Today</div></div>
+          <div class="tab on"><div class="tab-icon">🧭</div><div class="tab-lbl">Discover</div></div>
+          <div class="tab"><div class="tab-icon">⚙️</div><div class="tab-lbl">Settings</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="section-note">
+    <h4>Deferred but naturally fits</h4>
+    <p>This is the existing Explore functionality (browse by category, filter by location) living inside the Discover tab. No new engineering — just relocated. The "near you" filter uses device location. This competes with Google Maps, so it's a convenience feature, not a differentiator.</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- ARCHITECTURE VIEW                           -->
+<!-- ════════════════════════════════════════════ -->
+<div class="flow-content" id="arch">
+  <div class="flow-header">
+    <div class="flow-trigger">TAB ARCHITECTURE</div>
+    <div class="flow-scenario">Three tabs, <em>two flows</em></div>
+    <div class="flow-pain">Everything that exists today, restructured around user intent instead of feature type.</div>
+  </div>
+
+  <div class="arch-grid">
+    <div class="arch-row">
+
+      <div class="arch-card">
+        <h3>📋 Today</h3>
+        <p>The planner. One home for all planning, any date, any city.</p>
+        <div class="arch-list">
+          <div class="arch-item"><strong>Date picker</strong> — Today / Tomorrow / Sat / Sun / Pick date (14-day range)</div>
+          <div class="arch-item"><strong>City context</strong> — "in Zürich" default, changes to destination city from sunshine/snow flow</div>
+          <div class="arch-item"><strong>Plan/News toggle</strong> — Plan sub-view (agenda) + News sub-view (local feed)</div>
+          <div class="arch-item"><strong>Calendar sync</strong> — EventKit anchors auto-imported</div>
+          <div class="arch-item"><strong>Agenda composer</strong> — GapAnalysis → FreshnessScorer → Claude API → timeline</div>
+          <div class="arch-item"><strong>Execution mode</strong> — "Let's go" → progress dots, check-in, timeline shift</div>
+          <div class="arch-item"><strong>Weather</strong> — per-day forecast in header, drives indoor/outdoor pool</div>
+        </div>
+      </div>
+
+      <div class="arch-card">
+        <h3>🧭 Discover</h3>
+        <p>Inspiration hub. All reasons to plan, all things to explore.</p>
+        <div class="arch-list">
+          <div class="arch-item"><strong>Smart nudge</strong> — contextual: sunshine escape, upcoming event, holiday reminder</div>
+          <div class="arch-item"><strong>☀️ Where's the sun</strong> — sunshine ranking → city detail → "Plan a day here →"</div>
+          <div class="arch-item"><strong>❄️ Where's the snow</strong> — snow/ski conditions → resort detail → "Plan a ski day →"</div>
+          <div class="arch-item"><strong>📅 What's happening</strong> — events calendar → "Plan around this →"</div>
+          <div class="arch-item"><strong>Explore nearby</strong> — Activities, Museums, Parks, Restaurants by category</div>
+          <div class="arch-item"><strong>Every card has "Plan this →"</strong> — universal entry point into Today tab</div>
+        </div>
+      </div>
+
+      <div class="arch-card" style="max-width:200px">
+        <h3>⚙️ Settings</h3>
+        <p>Family & preferences.</p>
+        <div class="arch-list">
+          <div class="arch-item"><strong>Family session</strong></div>
+          <div class="arch-item"><strong>Calendar sync config</strong></div>
+          <div class="arch-item"><strong>Notifications</strong></div>
+          <div class="arch-item"><strong>Home city</strong></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="arch-row">
+      <div class="arch-card" style="border-color:var(--terra);border-width:2px">
+        <h3 style="color:var(--terra)">What's eliminated</h3>
+        <div class="arch-list">
+          <div class="arch-item"><strong>Weekend tab</strong> — planner moves to Today (date picker), sunshine/snow moves to Discover</div>
+          <div class="arch-item"><strong>Activities tab</strong> — merges into Discover → Explore nearby</div>
+          <div class="arch-item"><strong>Explore tab</strong> — merges into Discover (events + map + categories)</div>
+          <div class="arch-item"><strong>Duplicate planning UIs</strong> — one planner, not two</div>
+        </div>
+      </div>
+
+      <div class="arch-card" style="border-color:var(--pos);border-width:2px">
+        <h3 style="color:var(--pos)">What's new</h3>
+        <div class="arch-list">
+          <div class="arch-item"><strong>Date picker</strong> — extends planner beyond today/tomorrow to any date in 14 days</div>
+          <div class="arch-item"><strong>City context parameter</strong> — planner works for any city with venue data</div>
+          <div class="arch-item"><strong>Smart nudge</strong> — proactive suggestions based on weather patterns + upcoming events</div>
+          <div class="arch-item"><strong>"Plan this →" universal CTA</strong> — every discovery card links to planner</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arch-row">
+      <div class="arch-card">
+        <h3>Flow routing</h3>
+        <p>How every entry point connects to the planner:</p>
+        <div class="arch-list">
+          <div class="arch-item"><strong>Blank slate</strong> → Today tab (no anchors, no city override) → full auto-compose</div>
+          <div class="arch-item"><strong>Calendar event</strong> → Today tab (anchor pre-loaded) → gap fill</div>
+          <div class="arch-item"><strong>City event</strong> → Discover → anchor form → Today tab (date + anchor) → gap fill</div>
+          <div class="arch-item"><strong>Sunshine city</strong> → Discover → city detail → Today tab (city override + date) → compose</div>
+          <div class="arch-item"><strong>Snow resort</strong> → Discover → resort detail → Today tab (city override + date) → compose</div>
+          <div class="arch-item"><strong>Activity card</strong> → Discover → "Plan around this" → Today tab (venue as anchor) → gap fill</div>
+          <div class="arch-item"><strong>Push notification</strong> → deep link → Today tab (date + context pre-loaded)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes load{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
+</style>
+
+<script>
+function showFlow(id){
+  document.querySelectorAll('.flow-content').forEach(f=>f.classList.remove('active'));
+  document.querySelectorAll('.flow-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.closest('.flow-tab').classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+
+</body>
+</html>
