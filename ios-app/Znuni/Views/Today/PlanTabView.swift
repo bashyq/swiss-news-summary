@@ -27,6 +27,7 @@ struct PlanTabView: View {
                     forecast: viewModel.isSelectedDateToday ? nil : viewModel.forecastForSelectedDate,
                     isToday: viewModel.isSelectedDateToday,
                     planningCity: viewModel.planningCity,
+                    tripLocality: viewModel.tripLocality,
                     onWeatherTap: { showWeatherDetail = true },
                     onCityChange: { newCity in
                         guard newCity != viewModel.planningCity else { return }
@@ -128,8 +129,19 @@ struct PlanTabView: View {
         case .calendarPreview(let events):
             calendarPreviewState(events)
 
-        case .tripDetected:
-            emptyState // placeholder — Task 6 will implement TripNudgeCard
+        case .tripDetected(let trip):
+            TripNudgeCard(
+                trip: trip,
+                onPlan: {
+                    Task {
+                        await viewModel.dealTrip(trip)
+                    }
+                },
+                onDismiss: {
+                    viewModel.dismissTrip(trip)
+                }
+            )
+            .transition(.opacity.combined(with: .move(edge: .top)))
 
         case .composing(let locked):
             composingState(locked)

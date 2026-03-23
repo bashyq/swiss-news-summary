@@ -13,6 +13,7 @@ struct PlanHeroBanner: View {
     let forecast: DailyForecast?
     let isToday: Bool
     let planningCity: PlanningCity
+    var tripLocality: String?
     var onWeatherTap: (() -> Void)?
     var onCityChange: ((PlanningCity) -> Void)?
 
@@ -87,16 +88,27 @@ struct PlanHeroBanner: View {
     // MARK: - Title
 
     private var titleText: some View {
+        if let locality = tripLocality {
+            return AnyView(HStack(spacing: 6) {
+                Text("Your day in")
+                    .font(.heroTitle)
+                    .foregroundStyle(.white)
+                Text(locality)
+                    .font(.custom("Playfair", size: 30).italic())
+                    .foregroundStyle(.white.opacity(0.68))
+            })
+        }
+
         let dayName = formattedDayName
 
-        return HStack(spacing: 6) {
+        return AnyView(HStack(spacing: 6) {
             Text(titlePrefix)
                 .font(.heroTitle)
                 .foregroundStyle(.white)
             Text(dayName)
                 .font(.custom("Playfair", size: 30).italic())
                 .foregroundStyle(.white.opacity(0.68))
-        }
+        })
     }
 
     private var titlePrefix: String {
@@ -180,33 +192,47 @@ struct PlanHeroBanner: View {
     // MARK: - City Picker Glass Button
 
     private var cityPickerButton: some View {
-        Menu {
-            ForEach(PlanningCity.coveredCities, id: \.id) { pc in
-                Button {
-                    onCityChange?(pc)
-                } label: {
-                    HStack {
-                        Text(pc.localizedName(language: appState.language))
-                        if pc == planningCity {
-                            Image(systemName: "checkmark")
+        if let locality = tripLocality {
+            return AnyView(
+                Text(locality)
+                    .font(.znLabel)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(.white.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            )
+        }
+
+        return AnyView(
+            Menu {
+                ForEach(PlanningCity.coveredCities, id: \.id) { pc in
+                    Button {
+                        onCityChange?(pc)
+                    } label: {
+                        HStack {
+                            Text(pc.localizedName(language: appState.language))
+                            if pc == planningCity {
+                                Image(systemName: "checkmark")
+                            }
                         }
                     }
                 }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(planningCity.localizedName(language: appState.language))
+                        .font(.system(size: 12, weight: .medium))
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 8))
+                }
+                .foregroundStyle(.white.opacity(0.6))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(.white.opacity(0.12))
+                )
             }
-        } label: {
-            HStack(spacing: 4) {
-                Text(planningCity.localizedName(language: appState.language))
-                    .font(.system(size: 12, weight: .medium))
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 8))
-            }
-            .foregroundStyle(.white.opacity(0.6))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(.white.opacity(0.12))
-            )
-        }
+        )
     }
 }
