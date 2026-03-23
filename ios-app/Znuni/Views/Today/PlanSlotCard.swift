@@ -29,7 +29,6 @@ struct PlanSlotCard: View {
     // MARK: - State
 
     @Environment(AppState.self) private var appState
-    @State private var showActions = false
 
     private var isExpanded: Bool { expandedID == slot.id }
 
@@ -77,18 +76,6 @@ struct PlanSlotCard: View {
             x: 0,
             y: isExpanded ? AppShadow.cardExpanded.y : (isSaved ? AppShadow.subtle.y : AppShadow.card.y)
         )
-        .confirmationDialog("Slot actions", isPresented: $showActions, titleVisibility: .hidden) {
-            if slot.isLocked {
-                Button("Unlock") { doUnlock() }
-            } else {
-                Button("Lock this slot") { doLock() }
-            }
-            if slot.source != .calendar {
-                Button("Replace with my own") { onReplace() }
-            }
-            Button("Remove", role: .destructive) { doRemove() }
-            Button("Cancel", role: .cancel) {}
-        }
         .sensoryFeedback(.impact(weight: .light), trigger: isExpanded)
     }
 
@@ -501,8 +488,17 @@ struct PlanSlotCard: View {
     // MARK: - Context Menu Button
 
     private var contextMenuButton: some View {
-        Button {
-            showActions = true
+        Menu {
+            if slot.isLocked {
+                Button { doUnlock() } label: { Label("Unlock", systemImage: "lock.open") }
+            } else {
+                Button { doLock() } label: { Label("Lock this slot", systemImage: "lock") }
+            }
+            if slot.source != .calendar {
+                Button { onReplace() } label: { Label("Replace with my own", systemImage: "pencil") }
+            }
+            Divider()
+            Button(role: .destructive) { doRemove() } label: { Label("Remove", systemImage: "trash") }
         } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 14))
@@ -510,7 +506,6 @@ struct PlanSlotCard: View {
                 .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Helpers
