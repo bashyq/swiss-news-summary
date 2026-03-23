@@ -1,0 +1,133 @@
+import SwiftUI
+
+/// Reusable badge for labels (free, distance, drive time, etc.)
+struct BadgeView: View {
+    let text: String
+    var icon: String?
+    var color: Color = .gray
+    var style: BadgeStyle = .filled
+
+    enum BadgeStyle {
+        case filled
+        case outlined
+    }
+
+    var body: some View {
+        HStack(spacing: 3) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.caption2)
+            }
+            Text(text)
+                .font(.caption2)
+                .fontWeight(.medium)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(background)
+        .foregroundStyle(foreground)
+        .clipShape(Capsule())
+        .overlay {
+            if style == .filled {
+                Capsule().stroke(color.opacity(0.3), lineWidth: 0.5)
+            }
+        }
+    }
+
+    private var background: some ShapeStyle {
+        switch style {
+        case .filled: return AnyShapeStyle(color.opacity(0.15))
+        case .outlined: return AnyShapeStyle(.clear)
+        }
+    }
+
+    private var foreground: Color {
+        switch style {
+        case .filled: return color
+        case .outlined: return color
+        }
+    }
+}
+
+/// Sentiment badge for news items
+struct SentimentBadge: View {
+    let sentiment: String?
+
+    var body: some View {
+        if let sentiment, sentiment != "neutral" {
+            BadgeView(
+                text: sentiment.capitalized,
+                icon: sentiment == "positive" ? "arrow.up.right" : "arrow.down.right",
+                color: Color.sentimentColor(sentiment)
+            )
+        }
+    }
+}
+
+/// Drive time badge
+struct DriveTimeBadge: View {
+    let minutes: Int
+
+    var body: some View {
+        BadgeView(
+            text: CLLocation.formattedDriveTime(minutes),
+            icon: "car.fill",
+            color: .znNavy
+        )
+    }
+}
+
+import CoreLocation
+
+/// Distance badge (from user location)
+struct DistanceBadge: View {
+    let meters: Double
+
+    var body: some View {
+        BadgeView(
+            text: CLLocation.formattedDistance(meters),
+            icon: "location.fill",
+            color: .znTerracotta
+        )
+    }
+}
+
+/// Altitude badge
+struct AltitudeBadge: View {
+    let meters: Int
+
+    var body: some View {
+        BadgeView(
+            text: "\(meters)m",
+            icon: "mountain.2.fill",
+            color: .znNavy.opacity(0.7)
+        )
+    }
+}
+
+/// Free badge
+struct FreeBadge: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        BadgeView(text: appState.localized(en: "Free", de: "Gratis"), icon: "gift", color: .znPositive)
+    }
+}
+
+/// Toddler-friendly badge
+struct ToddlerFriendlyBadge: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        BadgeView(text: appState.localized(en: "Toddler-friendly", de: "Kleinkindfreundlich"), icon: "figure.and.child.holdinghands", color: .znNavy)
+    }
+}
+
+/// NEW activity badge
+struct NewBadge: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        BadgeView(text: appState.localized(en: "NEW", de: "NEU"), icon: "sparkle", color: .znPositive)
+    }
+}

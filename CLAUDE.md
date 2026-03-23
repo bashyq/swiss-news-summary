@@ -1,556 +1,114 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 ## Project Overview
 
-"Today in Switzerland" is a PWA that aggregates Swiss news, weather, transport disruptions, holidays, historical facts, family activities for toddlers (ages 2-5), weekend sunshine/snow forecasts, and deals. It uses Claude AI for news categorization and consists of a modular Cloudflare Worker backend (12 modules) and a 3-file frontend (HTML shell + CSS + JS).
+"Znuni" (formerly "Today in Switzerland") — PWA + native iOS app aggregating Swiss news, weather, transport, holidays, history, family activities (ages 2-5), sunshine/snow forecasts, and deals. Cloudflare Worker backend (12 modules), 3-file frontend (HTML + CSS + JS), SwiftUI iOS app (iOS 17+).
 
 **GitHub:** https://github.com/bashyq/swiss-news-summary
 
-## Deployment
+## Build & Deploy
 
 ```bash
-# Deploy worker (backend API)
-cd C:\Users\bashy\Documents\swiss-news-summary\worker && npx wrangler deploy
+# Worker (backend API)
+cd worker && npx wrangler deploy
 
-# Deploy frontend (Cloudflare Pages)
-cd C:\Users\bashy\Documents\swiss-news-summary && npx wrangler pages deploy frontend --project-name=swiss-news --branch=main
+# Frontend (Cloudflare Pages)
+npx wrangler pages deploy frontend --project-name=swiss-news --branch=main
+
+# iOS app
+cd ios-app && open SwissPortal.xcodeproj  # Cmd+B to build, Cmd+R to run
+# CLI: xcodebuild -project SwissPortal.xcodeproj -scheme SwissPortal \
+#   -destination 'platform=iOS Simulator,name=iPhone 16' build
 ```
 
-**URLs:**
-- Frontend: `https://swiss-news.pages.dev`
-- Worker API: `https://swiss-news-worker.swissnews.workers.dev`
-
-## Architecture
-
-```
-Cloudflare Pages (frontend/)
-    ↓ HTTP GET /?lang={en|de}&city={zurich|basel|bern|geneva|lausanne}
-Cloudflare Worker (worker/src/)
-    ↓
-1. [PARALLEL] Fetch RSS feeds, weather, and transport disruptions
-2. Get Swiss holidays and "This Day in History" facts (sync, instant)
-3. Call Claude API (Haiku) for news categorization
-4. Return JSON response
-
-    ↓ HTTP GET /activities?lang={en|de}&city={cityId}
-1. Fetch weather for activity recommendations
-2. Return curated family activities (sorted by weather)
-3. Include city events/festivals (getCityEvents)
-
-    ↓ HTTP GET /weekend?lang={en|de}&city={cityId}
-1. Fetch weather for weekend activity filtering
-2. Return weekend-appropriate activities
-
-    ↓ HTTP GET /sunshine?lang={en|de}
-1. Fetch weekend (Fri/Sat/Sun) sunshine forecasts for 28 destinations
-2. Single multi-location Open-Meteo API call (all destinations in one request)
-3. Return destinations ranked by total sunshine hours
-
-    ↓ HTTP GET /snow?lang={en|de}
-1. Fetch weekly (Mon–Sun) snowfall forecasts for 22 ski resorts
-2. Single multi-location Open-Meteo API call (snowfall_sum, snow_depth)
-3. Return resorts ranked by weekly snowfall total
-
-    ↓ HTTP GET /deals
-1. Return curated deals, free entry spots, and money-saving tips
-2. Static data, cached 24h on CDN
-```
+**URLs:** Frontend `https://swiss-news.pages.dev` · Worker `https://swiss-news-worker.swissnews.workers.dev`
 
 ## File Structure
 
 ```
-swiss-news-summary/
-├── frontend/
-│   ├── index.html      # Slim HTML shell (~36 lines)
-│   ├── styles.css      # Design system + all component styles
-│   ├── app.js          # Full JS app: state, views, components, utils (~2800 lines)
-│   ├── widget.html     # Compact widget page
-│   ├── sw.js           # Service worker (cache v42)
-│   ├── manifest.json   # PWA manifest with shortcuts
-│   └── icon.svg        # App icon
-├── worker/
-│   ├── src/
-│   │   ├── index.js      # Router, CORS, entry point
-│   │   ├── data.js       # Cities config, holidays, school holidays, history facts
-│   │   ├── weather.js    # Open Meteo integration
-│   │   ├── transport.js  # Swiss Transport API
-│   │   ├── news.js       # RSS parsing, Claude API, news assembly
-│   │   ├── activities.js # All activities data + handler
-│   │   ├── events.js     # City events/festivals data
-│   │   ├── weekend.js    # Weekend planner logic
-│   │   ├── lunch.js      # Overpass API + lunch handler
-│   │   ├── sunshine.js   # Weekend sunshine forecast (29 destinations, Zürich baseline)
-│   │   ├── snow.js       # Weekly snowfall forecast (22 ski resorts)
-│   │   └── deals.js      # Deals & free entry data
-│   └── wrangler.toml   # Worker config (main = "src/index.js")
-├── CLAUDE.md
-└── README.md
+├── frontend/           # PWA: index.html, styles.css, app.js (~2800 lines)
+├── worker/src/         # CF Worker: index.js (router), data.js, weather.js, transport.js,
+│                       #   news.js, activities.js, events.js, weekend.js, lunch.js,
+│                       #   sunshine.js, snow.js
+├── ios-app/Znuni/
+│   ├── App/            # ZnuniApp, AppState, ContentView
+│   ├── Models/         # Codable models
+│   ├── ViewModels/     # @Observable view models
+│   ├── Views/          # SwiftUI views by feature (Today/, News/, Explore/, Lunch/,
+│   │                   #   Activities/, Weekend/, Snow/, Sunshine/, Settings/, Shared/)
+│   ├── Services/       # CalendarService, AgendaComposer, TemplateEngine, CacheManager,
+│   │                   #   APIClient, LocationManager, AnchorStore, GapAnalysisEngine
+│   └── Resources/      # Fonts (Playfair), bundled data files
+└── docs/
+    └── api-reference.md  # Full API response schemas
 ```
 
-## Features
+## Znuni Design System
 
-### News View (Landing Page) — Design System v3.1
-- **Hero header**: Navy (#1A3A5C) background with terracotta radial glow, Playfair Display italic city name, inline weather row (40px temp, description, hi/lo range, large icon)
-- **5 Categories**: Politics, Disruptions, Events, Culture, Local (city-specific)
-- **Filter pills**: Navy active / bordered inactive (replaces tab buttons), with count badges
-- **Section heading**: Playfair Display 22px + muted article count
-- **News cards (ncard)**: Expand-in-place with 3px left accent bar (green=positive, red=negative, navy=neutral), source/time meta, Playfair headline, clamped summary, sentiment pills, expand CTA, detail meta grid, "Read full article" + share buttons
-- **Alert banner**: Transport disruptions as terracotta-tinted banner (replaces transport widget)
-- **History strip**: Card with clock SVG icon + terracotta "This Day in History" label
-- **Daily Pick**: Weather- and time-aware activity recommendation with reasoning text
-- **Weekend Brief**: Sat+Sun weather forecast + upcoming weekend events card (visible Mon-Sat)
-- **Holidays**: In hamburger menu (less prominent)
-- **Pull-to-refresh**: Mobile gesture support
-- **Share**: Native share API per article + clipboard fallback
-- **Theme**: Light-first (cream #F5F0E8 background), dark mode as secondary variant. Alpine brand theme removed.
+The iOS app uses a warm editorial design system. Colors, typography, spacing, and shadows are centralized in `Color+Theme.swift` and the Asset Catalog.
 
-### Activities View ("What to do?") — Design System v3.2
-- Curated family-friendly activities for toddlers (ages 2-5)
-- **7 cities**: Zürich, Basel, Bern, Geneva, Lausanne, Luzern, Winterthur
-- **Hero header**: Navy hero with terracotta glow, Playfair italic city name, filter pills in hero (`pill-row-hero`)
-- **Filter pills in hero**: White-on-navy pills (`.pill.on`/`.pill.off`), scrollable row
-- **Filters**: All, Near me, Indoor, Outdoor, Free, Saved, Seasonal
-- **"Near me"**: Uses geolocation, shows distance badges
-- **Weather-based**: Indoor prioritized when rainy/cold
-- **Act-card pattern**: Photo-left card (94px `.act-photo-wrap`), expand-in-place accordion
-  - Face: photo + name (Playfair) + description + tags (indoor/outdoor/free/age/featured)
-  - Detail panel: Hero photo with fade overlay, 4-cell meta grid (distance/duration/price/ages), status strip (open/closed), action buttons (website/save)
-- **Surprise Me bottom sheet**: `.surprise-sheet` with scrim, drag handle, photo, tags, website/save links, "Try another" CTA
-- **Custom activities**: Users can add their own
-- **Recurring events**: Farmers markets, play groups, story times
-- **Seasonal activities**: Christmas markets, ice skating, swimming pools, pumpkin farms
-- **Age filter**: Toggle between All ages, 2-3 years, or 4-5 years
-- **Featured activities**: Curated top picks sorted to front with "Featured" badge
-- **Reminders**: Set date reminders on saved activities (browser Notification API + toast fallback)
+### Color Tokens (Asset Catalog — auto Light/Dark)
+| Token | Usage |
+|---|---|
+| `znNavy` | Primary brand, accent (`Color.brand` alias) |
+| `znTerracotta` | Warm accent, outdoor borders |
+| `znCream` / `znSurface` | Page / card backgrounds |
+| `znBorder` / `znInnerDivider` | Card borders, internal dividers |
+| `znInk` / `znBody` / `znMuted` | Primary / body / caption text |
+| `znPositive` / `znNegative` | Success / error states |
+| `znAlertBg` | Alert backgrounds |
+| `znNeutralTagBg` / `znNeutralTagText` | Neutral pill backgrounds/text |
+| `znChevron` | Chevron icons |
 
-### Events View ("What's On") — Design System v4.0
-- **Hero header**: Navy hero with event filter pills (All/Holidays/🎒/Events/🔄/🌸/🎪)
-- Combined calendar + daily digest — merged from separate Events Calendar and What's On views
-- **Calendar grid**: Auto-selects today, purple dots for festivals, red for holidays, amber for school holidays, blue for recurring
-- **Day detail panel**: Click any day to see detail below calendar:
-  - Holidays on that date (purple banner)
-  - School holidays on that date (amber banner with date range)
-  - Festivals with date range overlap (purple left-border cards)
-  - Recurring activities matching that day-of-week
-  - Weather-based activity picks (today only — indoor when rainy/<5°C)
-  - Trending news (today only)
-- **School holidays**: Zürich 2026 dates (Sport, Easter, Spring, Ascension, Summer, Autumn, Christmas) from `getSchoolHolidays()` in worker
-- **All Events list**: Below detail panel with filter bar (All, Holidays, School Holidays, Events, Recurring, Seasonal, Festivals)
-- **City events**: ~70 hardcoded 2026 festivals/events served via `getCityEvents()` in worker
-- **Date-range awareness**: Multi-day festivals show dots on all days, filter by date overlap
-- **Festival cards**: Show date ranges, toddler-friendly and free badges
-- Fetches news data (weather, trending, holidays) if not already loaded
+**Important**: Color tokens are auto-generated from Asset Catalog colorsets. Do NOT redeclare them in `Color+Theme.swift` — only add legacy aliases there.
 
-### Weekend Planner — Design System v4.0
-- **Hero header**: Navy hero with Playfair italic "Weekend" title
-- Smart activity filtering based on weather and day-of-week
-- Uses `isAvailableOnDate()` for recurring/seasonal filtering
+### Typography (Playfair serif + SF Pro sans)
+- `Font.heroTitle` — Playfair 30pt regular (NOT semibold)
+- `Font.sectionHeadline` — Playfair 22pt regular
+- `Font.cardHeadline` — Playfair 17pt semibold
+- `Font.znEyebrow` — system 11pt medium, uppercase with tracking
+- `Font.znLabel` — system 12pt medium
+- `Font.znMono` — monospaced caption
+- Body/caption: system font (SF Pro)
 
-### Lunch Page — Design System v3.3
-- **Hero header**: Navy hero with filter pills + cuisine pills in hero (`pill-row-hero`)
-- **vcard pattern**: Photo-left cards (94px), expand-in-place accordion with detail panel
-  - Face: photo + Playfair name + star rating + price level + distance + cuisine/terrace tags
-  - Detail: hero photo, status pill (open/closed), 4-cell grid (distance/cuisine/price/rating), action row (directions/website/save)
-- **Filters in hero**: Near Me, Open, Terrace, Saved + cuisine emoji pills (All/🍕/🥢/🥙/☕/🍔/🌍)
-- "Surprise me!" random restaurant picker
-- Compact map strip above results
+### Spacing & Shadows
+- `AppSpacing.cardPadding` = 16, `cardRadius` = 16, `borderStripWidth` = 3
+- `AppShadow.card` = black 8%, radius 8, y=2
+- `CardStyle` / `SubtleCardStyle` ViewModifiers for centralized card styling
 
-### Stay-Home Activities
-- 40 at-home toddler activities (sensory/art/active/pretend/kitchen)
-- Separate "Stay home" filter tab, excluded from other filters
+### Design Patterns
 
-### Settings (Hamburger Menu)
-- **City selector**: Zürich, Basel, Bern, Geneva, Lausanne, Luzern, Winterthur
-- **Language toggle**: English / German
-- **Theme toggle**: Light / Dark mode
-- **Holidays display**: Upcoming Swiss holidays
-
-
-### Sunshine Page ("Where is Sun?") — Design System v4.0
-- **Hero header**: Navy hero with filter pills (All/☀️/⛅/☁️) + sort pills (☀️ Sun / 📍 Distance) separated by pill-sep
-- Weekend sunshine forecast for 29 destinations (28 + Zürich baseline) within driving distance of Zürich
-- **Zürich baseline**: Pinned first card with purple styling, always visible regardless of filter/sort
-- **"Nearest sunny escape"**: When Zürich has <6h sunshine, shows closest destination with more sun (drive-time sorted)
-- **Regions**: Ticino, Graubünden, Valais, Central Switzerland, Lake Geneva, Basel/Jura, Lake Constance, Lake Como
-- **Interactive Leaflet map**: Circle markers colored/sized by sunshine level (gold/blue/gray), purple for Zürich
-- **Ranked card list**: Sorted by total sunshine hours, collapsible (top 10 default)
-- **Sort**: By sunshine hours or by distance from current location (geolocation)
-- **Filter**: All / Sunny (>6h) / Partly (3-6h) / Cloudy (<3h)
-- **Hourly timeline**: Shows which hours (6-20) have predicted sunshine per day
-- **Drive time badges**: Minutes from Zürich
-- **Client-side fallback**: If worker is rate-limited, fetches directly from Open-Meteo
-- Always Zürich-based (not affected by city selector)
-- **Expandable cards**: Tap to expand with "Things to do" section (accordion, one at a time)
-- **Destination highlights**: `DEST_HIGHLIGHTS` in worker/src/sunshine.js — 2-3 toddler-friendly attractions per destination, included in API response
-- **Overlap cities** (Basel, Lausanne, Luzern): Show "See all activities →" link to Activities view
-- **Google Maps links**: "Find playgrounds" / "Find restaurants" near destination coordinates
-
-### Snow Page ("Where is Snow?") — Design System v4.0
-- **Hero header**: Navy hero with filter pills (All/🏔️/❄️/🌨️) + sort pills (❄️ Snow / 📍 Distance) separated by pill-sep
-- Weekly snowfall forecast for 22 Swiss ski resorts within driving distance of Zürich
-- **Regions**: Valais, Graubunden, Bernese Oberland, Central Switzerland, Eastern Switzerland
-- **Interactive Leaflet map**: Circle markers with radius proportional to snowfall (deep blue/blue/gray)
-- **Ranked card list**: Sorted by weekly snowfall, collapsible (top 10 default)
-- **Sort**: By snowfall or by distance from current location (geolocation)
-- **Filter**: All / Heavy (>30cm) / Moderate (10-30cm) / Light (<10cm)
-- **7-day forecast**: Daily snowfall bars with weather icons and temperature
-- **Badges**: Drive time, altitude, snow depth, distance
-- **Fresh powder alert**: Banner when top resort has >40cm weekly snowfall
-- **Client-side fallback**: If worker is rate-limited, fetches directly from Open-Meteo
-- Always Zürich-based (not affected by city selector)
-- **Cache keys**: Worker `snow-v1-{lang}`, Frontend `snowCache-v1` (30min TTL)
-
-### Deals & Free View ("Best deals?") — Design System v4.0
-- **Hero header**: Navy hero with filter pills (All/🆓 Free/🏷️ Deal/💡 Tip)
-- Curated list of free entry spots, family passes, and money-saving tips
-- **DEALS**: ~30 curated entries served from `GET /deals` worker endpoint
-- **Categories**: Museums, Outdoor, Transport, Family Passes, Seasonal
-- **Types**: Free (green badge), Deal (blue badge), Tip (amber badge)
-- **Filters**: All / Free / Deals / Tips
-- **City-aware**: Shows only deals relevant to selected city + "all" deals
-- **Month-aware**: Seasonal deals filtered by `validMonths` array
-- **Free filter in Activities**: Activities with `free: true` (auto-tagged from `price` field) shown via "Free" filter tab
-- `filterDeals(f)` function, `dealsFilter` state variable
-- `renderDealsView()`, `renderDealCard(d)` renderers
-
-### Explore View ("Explore") — Design System v3.4
-- **Hero header**: Navy hero with filter pills (All/Activities/Events/Deals) in hero
-- **Mini map**: Compact Leaflet map (178px) with expand hint, expandable to 400px
-- **"Near You" horizontal scroll**: Top 10 nearest items as chips (130px, icon + name + distance)
-- **"Browse by Type" grid**: 2-column category cards (Museums, Playgrounds, Outdoors, Animals, Indoor, Cafés) linking to Activities view
-- **Item list**: `explore-item` cards with icon, Playfair name, description, type/free tags, distance
-- **Filters**: All / Activities / Events / Deals (in hero pills)
-- **Geolocation**: Auto-requests location, sorts by distance, user marker on map
-- **Data sources**: Activities from worker API, city events from cached data, deals from worker API
-- `renderExploreView()`, `initExploreMap()`, `getExploreItems()`, `loadExplore()`, `expandExploreMap()`
-- `exploreFilter` state variable, `exploreMap` Leaflet instance
-
-### Widget Page (`/widget.html`)
-- Compact view: weather, top headline, transport status
-- Auto-refreshes every 5 minutes
-- Can be bookmarked as quick access
-
-## API Endpoints
-
-### Main News Endpoint
-`GET /?lang={en|de}&city={cityId}&refresh={true}`
-
-```json
-{
-  "weather": { "temperature": 1, "description": "Foggy", "weatherCode": 45, "windSpeed": 3, "hourly": [...] },
-  "transport": {
-    "delays": [{ "line": "IC 8", "destination": "Bern", "delay": 5, "scheduledTime": "23:02" }],
-    "summary": { "totalDelayed": 3, "maxDelay": 10, "status": "minor" }
-  },
-  "holidays": [{ "name": "Easter", "nameDE": "Ostern", "daysUntil": 45 }],
-  "schoolHolidays": [{ "name": "Summer", "nameDE": "Sommerferien", "startDate": "2026-07-13", "endDate": "2026-08-14", "type": "schoolHoliday" }],
-  "history": { "year": 1958, "event": "...", "eventDE": "..." },
-  "categories": {
-    "disruptions": [{ "headline": "...", "summary": "...", "source": "NZZ", "url": "..." }],
-    "events": [...],
-    "politics": [...],
-    "culture": [...],
-    "local": [...]
-  },
-  "city": { "id": "zurich", "name": "Zürich" },
-  "timestamp": "2026-..."
-}
+**Hero banners** — VStack with `.background {}` (NOT ZStack with Color fill). Content drives height:
+```swift
+VStack(alignment: .leading, spacing: 0) { /* content */ }
+.padding(.horizontal, 24).padding(.top, 18).padding(.bottom, 24)
+.background { ZStack(alignment: .bottomTrailing) { Color.znNavy; RadialGradient(/*...*/); skyline.opacity(0.09) } }
 ```
 
-### Activities Endpoint
-`GET /activities?lang={en|de}&city={cityId}`
+**Canvas skyline** — White building silhouettes at 9% opacity, bottom-right of hero banners.
 
-```json
-{
-  "activities": [
-    {
-      "id": "zoo-zurich",
-      "name": "Zoo Zürich",
-      "nameDE": "Zoo Zürich",
-      "description": "...",
-      "indoor": false,
-      "ageRange": "2-5 years",
-      "duration": "2-4 hours",
-      "price": "CHF 29 adults, kids under 6 free",
-      "url": "https://www.zoo.ch",
-      "lat": 47.3849,
-      "lon": 8.5743,
-      "category": "animals",
-      "minAge": 2,
-      "maxAge": 5,
-      "season": "winter"
-    }
-  ],
-  "cityEvents": [
-    {
-      "id": "zh-sechselaeuten",
-      "name": "Sechseläuten",
-      "nameDE": "Sechseläuten",
-      "city": "zurich",
-      "startDate": "2026-04-20",
-      "endDate": "2026-04-20",
-      "description": "...",
-      "descriptionDE": "...",
-      "toddlerFriendly": true,
-      "free": true,
-      "url": "https://www.sechselaeuten.ch/"
-    }
-  ],
-  "weather": { ... },
-  "city": { "id": "zurich", "name": "Zürich" }
-}
-```
+**Glass buttons** — `white.opacity(0.12)` bg, `RoundedRectangle(cornerRadius: 10)`. Helper: `glassButton()`.
 
-### Sunshine Endpoint
-`GET /sunshine?lang={en|de}&refresh={true}`
+**Accordion cards** — `@Binding var expandedID: String?`, one card expanded at a time, spring animation + haptic.
 
-```json
-{
-  "destinations": [
-    {
-      "id": "lugano", "name": "Lugano", "nameDE": "Lugano",
-      "lat": 46.0037, "lon": 8.9511,
-      "region": "Ticino", "regionDE": "Tessin", "driveMinutes": 150,
-      "forecast": [
-        {
-          "date": "2026-02-20", "weatherCode": 1, "tempMax": 12, "tempMin": 3,
-          "sunshineHours": 7.2, "precipMm": 0,
-          "sunnyHours": [8,9,10,11,12,13,14,15,16],
-          "description": { "en": "Mainly sunny", "de": "Überwiegend sonnig" }
-        }
-      ],
-      "sunshineHoursTotal": 18.5
-    }
-  ],
-  "weekendDates": { "friday": "2026-02-20", "saturday": "2026-02-21", "sunday": "2026-02-22" },
-  "timestamp": "2026-..."
-}
-```
+**R2 photos** — `APIClient.shared.photoURL(for: activityId)`. Only activities (not events/deals), exclude `custom-` prefix and `stayhome`. Always provide gradient+icon fallback.
 
-### Snow Endpoint
-`GET /snow?lang={en|de}&refresh={true}`
+### Design Mockups (source of truth)
+HTML files in `/Users/bq/Documents/SwissPortal/design system/`:
+- `znuni-news-and-explore-2.html` — Primary: News hero, Explore hero, cards
+- `znuni-activities-expanding-cards.html` — Accordion pattern
+- Other `znuni-*.html` files per view
 
-```json
-{
-  "destinations": [
-    {
-      "id": "zermatt", "name": "Zermatt", "nameDE": "Zermatt",
-      "lat": 46.0207, "lon": 7.7491,
-      "region": "Valais", "regionDE": "Wallis", "driveMinutes": 195, "altitude": 1620,
-      "forecast": [
-        { "date": "2026-02-16", "snowfallCm": 5.2, "weatherCode": 73, "tempMax": -2, "tempMin": -8 }
-      ],
-      "snowfallWeekTotal": 28.5,
-      "snowDepthCm": 145
-    }
-  ],
-  "weekDates": { "monday": "2026-02-16", "sunday": "2026-02-22" },
-  "timestamp": "2026-..."
-}
-```
+## Key Conventions
 
-## Data Sources
-
-**News (8 national + city-specific sources, 15 items/feed, 60 headlines to Claude):**
-- NZZ (Schweiz, Zürich feeds)
-- SRF News
-- 20 Minuten
-- Blick Schweiz
-- Watson
-- Inside Paradeplatz
-- Google News Switzerland (aggregated)
-- Google Trends CH (trending search terms, used for trending topic detection)
-- City-specific Google News feeds
-- Kantonspolizei Zürich (police/fire reports, Zürich only)
-
-**Weather:**
-- Open Meteo API (primary, Celsius)
-- ~~wttr.in~~ (removed - was returning incorrect data)
-
-**Transport:**
-- Swiss Transport API (`transport.opendata.ch`)
-- Fetches stationboard for main station in each city
-- Shows delays > 3 minutes
-
-**Activities:**
-- Curated list in worker (with coordinates for geolocation)
-- Cloudflare KV storage (for custom lists)
-
-## City Configuration
-
-Each city has:
-- `name`: Display name
-- `lat`, `lon`: Coordinates for weather
-- `station`: Main train station for transport API
-- `sources`: RSS feeds for local news
-
-**Supported cities:** zurich, basel, bern, geneva, lausanne, luzern, winterthur
-
-## Environment Variables
-
-| Variable | Location | Description |
-|----------|----------|-------------|
-| `CLAUDE_API_KEY` | Wrangler secret | Claude API key (required) |
-| `STRIPE_SECRET_KEY` | Wrangler secret | Stripe secret key (for donate feature, not yet deployed) |
-| `ALLOWED_ORIGIN` | wrangler.toml | CORS origin (`*`) |
-| `ACTIVITIES_KV` | wrangler.toml | KV namespace for activities |
-
-**KV Namespace ID:** `5ed6acfc2de944a38ee9a767080b4290`
-
-## Key Frontend Elements
-
-| Element ID | Purpose |
-|------------|---------|
-| `weather-compact` | Compact weather in header |
-| `weather-dropdown` | Expanded weather details |
-| `transport-widget` | Transport disruptions |
-| `history-inline` | History fact under title |
-| `menu-holidays-list` | Holidays in menu |
-| `activities-list` | Activities container |
-| `add-activity-form` | Custom activity form |
-| `events-list` | Events calendar list |
-| `calendar-grid` | Calendar day grid |
-| `calendar-month-label` | Calendar month/year display |
-| `loading-bar` | Animated progress bar during data fetches |
-| `pull-indicator` | Pull-to-refresh visual indicator |
-| `toast-container` | Toast notification container |
-
-## Key JavaScript Functions
-
-| Function | Purpose |
-|----------|---------|
-| `fetchSummary(forceRefresh)` | Load news data |
-| `loadActivities(forceRefresh)` | Load activities |
-| `switchView(view)` | Toggle news/activities |
-| `filterActivities(filter)` | Filter activities |
-| `requestLocation()` | Get user geolocation |
-| `calculateDistance(...)` | Haversine distance |
-| `updateTransport(data)` | Render transport widget |
-| `saveCustomActivity()` | Save user's custom activity |
-| `openMenu()` / `closeMenu()` | Hamburger menu |
-| `toggleTheme()` | Light/dark mode |
-| `toggleNews(card, event)` | Expand/collapse news card (accordion) |
-| `shareArticle(headline, url)` | Share article via native share or clipboard |
-| `toggleActCard(card, event)` | Expand/collapse activity card (accordion) |
-| `closeActCard(card, event)` | Close expanded activity card |
-| `closeSurpriseSheet()` | Close surprise bottom sheet |
-| `surpriseMe()` | Random activity picker |
-| `setAgeFilter(age)` | Filter by age group |
-| `showSurpriseModal(activity)` | Display surprise activity / bottom sheet |
-| `loadEventsCalendar()` | Load events calendar data |
-| `renderCalendar()` | Render calendar grid with dots |
-| `renderEventsList()` | Render filtered events list |
-| `filterEvents(filter)` | Filter events by type |
-| `loadWeekendPlanner()` | Load weekend planner |
-| `loadSunshine(forceRefresh)` | Load sunshine data (worker + client fallback) |
-| `renderSunshineView()` | Render sunshine map + card list |
-| `initSunshineMap()` | Init Leaflet map with sunshine markers |
-| `setSunshineSort(sort)` | Sort by 'sunshine' or 'distance' |
-| `setSunshineFilter(filter)` | Filter by 'all'/'sunny'/'partly'/'cloudy' |
-| `getBaselineDest()` | Get Zürich baseline entry from sunshine data |
-| `fetchSunshineClientSide()` | Client-side Open-Meteo fallback |
-| `renderDayDetail(dateStr)` | Render day detail panel for selected calendar day |
-| `selectCalendarDay(dateStr)` | Toggle calendar day selection |
-| `renderSunshineHighlights(dest)` | Render expandable highlights section for sunshine card |
-| `renderHighlightItem(highlight)` | Render single destination highlight with directions link |
-| `loadSnow(forceRefresh)` | Load snow data (worker + client fallback) |
-| `renderSnowView()` | Render snow map + card list |
-| `initSnowMap()` | Init Leaflet map with snow markers |
-| `setSnowSort(sort)` | Sort by 'snowfall' or 'distance' |
-| `setSnowFilter(filter)` | Filter by 'all'/'heavy'/'moderate'/'light' |
-| `fetchSnowClientSide()` | Client-side Open-Meteo fallback for snow |
-| `loadDeals()` | Fetch deals from worker API, cache in localStorage |
-| `renderDealsView()` | Render deals & free view with filter bar |
-| `renderDealCard(d)` | Render single deal card |
-| `filterDeals(f)` | Filter deals by type (all/free/deal/tip) |
-| `getSchoolHolidays()` | Worker: return Zürich 2026 school holiday dates |
-| `renderWeekendBriefCard(wb)` | Render weekend brief card on news view |
-| `showReminderModal(activityId)` | Show reminder date picker modal |
-| `confirmReminder(activityId)` | Save reminder + request notification permission |
-| `removeReminder(activityId)` | Remove activity reminder |
-| `checkReminders()` | Check/fire due reminders on page load |
-| `renderExploreView()` | Render explore map view with filter bar |
-| `initExploreMap()` | Init Leaflet map with all explore markers |
-| `getExploreItems()` | Aggregate activities + events + deals for map |
-| `loadExplore(forceRefresh)` | Load activities data for explore view |
-| `setExploreFilter(filter)` | Filter explore by all/activities/events/deals |
-| `buildDailyPick(activities, weather, lang)` | Worker: weather-aware activity recommendation |
-| `buildWeekendBrief(weekendWeather, cityEvents, cityId)` | Worker: weekend weather + events summary |
-| `showLoading()` | Show animated loading bar at top of page |
-| `hideLoading()` | Hide loading bar with completion animation |
-
-## Storage
-
-**localStorage keys:**
-- `lang` - Language preference (en/de)
-- `city` - Selected city
-- `theme` - Theme preference (light/dark)
-- `view` - Active view (news/activities/lunch/events/weekend/sunshine/snow/deals/explore), persisted across refresh
-- `savedActivities` - Array of saved activity IDs
-- `customActivities` - Array of user-created activities
-- `installDismissed` - PWA install prompt dismissed
-- `notificationsEnabled` - Push notifications enabled
-- `newsCache-{city}-{lang}` - Cached news data per city/language (2hr TTL)
-- `activitiesCache-{city}` - Cached activities data per city
-- `sunshineCache-v2` - Cached sunshine data with Zürich baseline (30min TTL)
-- `snowCache-v1` - Cached snow/ski resort data (30min TTL)
-- `dealsCache` - Cached deals data from worker API
-- `activityReminders` - Array of `{ activityId, name, date, createdAt }` for activity reminders
-
-**Cloudflare KV:**
-- Key format: `activities-{cityId}`
-- Value: JSON array of activity objects
-
-## Notes
-
-### Performance Optimizations
-- **API prefetching**: Inline `<script>` in `<head>` starts API fetch before app.js loads (`window.__prefetch`)
-- **Non-render-blocking fonts**: Google Fonts loaded via `<link rel="preload" as="style">` + `onload` swap
-- **Deferred JS**: `<script src="app.js" defer>` — doesn't block rendering
-- **DNS prefetch**: `<link rel="dns-prefetch">` for unpkg.com, api.open-meteo.com, tile.openstreetmap.org
-- **Preconnect**: Worker API preconnected in `<head>`
-- **Service worker strategies**: cache-first for static/CDN, stale-while-revalidate for API, networkOnly for `?refresh`
-- **Parallel RSS fetching**: All 7 feeds fetched via `Promise.allSettled` (removed sequential batching)
-- **Fetch timeouts**: 8-second `AbortController` timeout on RSS, weather, transport fetches
-- **CF edge cache**: 30-minute `max-age` on worker responses
-- **Loading bar**: CSS animation progress indicator shown during all data fetches
-
-### General
-- Open-Meteo rate limits: Worker IP can hit daily quota. Client-side fallback in app.js handles this.
-- Sunshine uses multi-location API (single request for all 29 destinations incl. Zürich baseline) to avoid rate limits.
-- Sunshine and Snow are always Zürich-based — `setCity()` doesn't affect them.
-
-## Troubleshooting
-
-**Weather showing wrong temperature:**
-- Open Meteo is the only weather source now
-- Add `?refresh=true` to force fresh data
-- Check Cloudflare cache if stale
-
-**News not loading:**
-- Check Claude API key is set: `wrangler secret put CLAUDE_API_KEY`
-- Check worker logs: `wrangler tail`
-
-**Activities not loading:**
-- Check `/activities` endpoint is deployed
-- Verify city parameter is valid
-
-**Sunshine showing "no data":**
-- Worker may be rate-limited by Open-Meteo (daily quota on CF Worker IP)
-- Client-side fallback should kick in automatically
-- Add `?refresh=true` to bypass CF edge cache
-- Check browser console for client-side fetch errors
-
-## First-time Setup
-
-```bash
-npm install -g wrangler
-wrangler login
-cd worker
-wrangler secret put CLAUDE_API_KEY  # Enter your Claude API key
-wrangler deploy
-cd ..
-npx wrangler pages deploy frontend --project-name=swiss-news --branch=main
-```
+- **iOS 17 @Observable** — all view models use Observation framework
+- **CacheManager** — disk cache with per-endpoint TTLs; `getStale()` for expired fallback on network failure
+- **Task cancellation** — `.task(id:)` auto-cancels on city/language change
+- **Xcode auto-discovery** — `PBXFileSystemSynchronizedRootGroup`, no manual file references
+- **7 cities**: zurich, basel, bern, geneva, lausanne, luzern, winterthur
+- **Bilingual** — all content has `name`/`nameDE`, `description`/`descriptionDE` pairs
+- **Sunshine/Snow always Zürich-based** — not affected by city selector
+- **Open-Meteo rate limits** — worker IP can hit daily quota; client-side fallback in app.js
+- **Tab bar**: Today, Activities, Explore, Weekend, Settings — custom `ZnuniTabBar`, tint `.znNavy`
+- **URL scheme**: `swissportal://lunch`, `swissportal://events`, etc.
+- **Environment**: `CLAUDE_API_KEY` (wrangler secret), `ACTIVITIES_KV` (KV namespace)

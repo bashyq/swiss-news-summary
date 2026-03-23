@@ -1,0 +1,344 @@
+import Foundation
+import WidgetKit
+
+/// Shared data provider for widget timeline updates.
+/// Fetches data from the same Cloudflare Worker API.
+struct WidgetDataProvider {
+    private static let baseURL = "https://swiss-news-worker.swissnews.workers.dev"
+
+    /// Fetch news summary for widget
+    static func fetchNews(city: String, language: String) async -> WidgetNewsEntry? {
+        guard let url = URL(string: "\(baseURL)/?lang=\(language)&city=\(city)") else { return nil }
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let response = try JSONDecoder().decode(WidgetNewsResponse.self, from: data)
+
+            let topHeadline = response.categories.topStories?.first?.headline
+                ?? response.categories.politics?.first?.headline
+                ?? "No headlines"
+
+            return WidgetNewsEntry(
+                date: Date(),
+                temperature: response.weather.temperature,
+                weatherCode: response.weather.weatherCode,
+                weatherDescription: response.weather.description,
+                topHeadline: topHeadline,
+                transportStatus: response.transport.summary?.status ?? "none",
+                transportDelays: response.transport.summary?.totalDelayed ?? 0,
+                cityName: response.city.name
+            )
+        } catch {
+            return nil
+        }
+    }
+
+    /// Fetch headlines for the news widget
+    static func fetchHeadlines(city: String, language: String) async -> WidgetHeadlinesEntry? {
+        guard let url = URL(string: "\(baseURL)/?lang=\(language)&city=\(city)") else { return nil }
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let response = try JSONDecoder().decode(WidgetNewsResponse.self, from: data)
+
+            let allItems = response.categories.allHeadlines
+            let headlines = Array(allItems.prefix(5))
+
+            return WidgetHeadlinesEntry(
+                date: Date(),
+                headlines: headlines,
+                cityName: response.city.name,
+                temperature: response.weather.temperature,
+                weatherCode: response.weather.weatherCode,
+                weatherDescription: response.weather.description,
+                language: language
+            )
+        } catch {
+            return nil
+        }
+    }
+
+    /// Load day plan agenda from shared UserDefaults (written by the main app)
+    static func loadDayPlan() -> WidgetDayPlanEntry? {
+        guard let data = UserDefaults(suiteName: "group.com.todayinswitzerland")?.data(forKey: "todayAgenda") else {
+            return nil
+        }
+        guard let agenda = try? JSONDecoder().decode(WidgetDayAgenda.self, from: data) else {
+            return nil
+        }
+        // Only show today's agenda
+        let todayISO = ISO8601DateFormatter.string(from: Date(), timeZone: .current, formatOptions: [.withFullDate])
+        let todaySimple = String(todayISO.prefix(10))
+        guard agenda.date == todaySimple else { return nil }
+
+        return WidgetDayPlanEntry(
+            date: Date(),
+            theme: agenda.theme,
+            weatherNote: agenda.weatherNote,
+            badWeatherMode: agenda.badWeatherMode,
+            slots: agenda.slots.map { slot in
+                WidgetAgendaSlot(
+                    id: slot.id,
+                    time: slot.time,
+                    type: slot.type,
+                    venueName: slot.venueName
+                )
+            }
+        )
+    }
+
+    /// Fetch sunshine summary for widget
+    static func fetchSunshine(language: String) async -> WidgetSunshineEntry? {
+        guard let url = URL(string: "\(baseURL)/sunshine?lang=\(language)") else { return nil }
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let response = try JSONDecoder().decode(WidgetSunshineResponse.self, from: data)
+
+            let topDestinations = response.destinations
+                .filter { $0.isBaseline != true }
+                .prefix(3)
+                .map { WidgetSunshineDestination(name: $0.name, sunshineHours: $0.sunshineHoursTotal, driveMinutes: $0.driveMinutes) }
+
+            let baseline = response.destinations.first { $0.isBaseline == true }
+
+            return WidgetSunshineEntry(
+                date: Date(),
+                baselineSunshineHours: baseline?.sunshineHoursTotal ?? 0,
+                topDestinations: Array(topDestinations)
+            )
+        } catch {
+            return nil
+        }
+    }
+}
+
+// MARK: - Widget Entry Models
+
+struct WidgetNewsEntry: TimelineEntry {
+    let date: Date
+    let temperature: Double
+    let weatherCode: Int
+    let weatherDescription: String
+    let topHeadline: String
+    let transportStatus: String
+    let transportDelays: Int
+    let cityName: String
+
+    var weatherSFSymbol: String {
+        switch weatherCode {
+        case 0: return "sun.max.fill"
+        case 1, 2: return "cloud.sun.fill"
+        case 3: return "cloud.fill"
+        case 45, 48: return "cloud.fog.fill"
+        case 51, 53, 55, 61, 63, 65, 80, 81, 82: return "cloud.rain.fill"
+        case 71, 73, 75, 85, 86: return "cloud.snow.fill"
+        case 95, 96, 99: return "cloud.bolt.fill"
+        default: return "cloud.fill"
+        }
+    }
+
+    static let placeholder = WidgetNewsEntry(
+        date: Date(),
+        temperature: 8,
+        weatherCode: 2,
+        weatherDescription: "Partly cloudy",
+        topHeadline: "Loading headlines...",
+        transportStatus: "none",
+        transportDelays: 0,
+        cityName: "Zürich"
+    )
+}
+
+struct WidgetHeadlinesEntry: TimelineEntry {
+    let date: Date
+    let headlines: [WidgetNewsItem]
+    let cityName: String
+    let temperature: Double
+    let weatherCode: Int
+    let weatherDescription: String
+    let language: String
+
+    var weatherSFSymbol: String {
+        switch weatherCode {
+        case 0: return "sun.max.fill"
+        case 1, 2: return "cloud.sun.fill"
+        case 3: return "cloud.fill"
+        case 45, 48: return "cloud.fog.fill"
+        case 51, 53, 55, 61, 63, 65, 80, 81, 82: return "cloud.rain.fill"
+        case 71, 73, 75, 85, 86: return "cloud.snow.fill"
+        case 95, 96, 99: return "cloud.bolt.fill"
+        default: return "cloud.fill"
+        }
+    }
+
+    static let placeholder = WidgetHeadlinesEntry(
+        date: Date(),
+        headlines: [
+            WidgetNewsItem(headline: "Swiss parliament debates new energy policy", headlineDE: "Schweizer Parlament debattiert neue Energiepolitik", source: "NZZ", summary: nil, summaryDE: nil),
+            WidgetNewsItem(headline: "Zurich plans major transit expansion", headlineDE: "Zürich plant grosse Nahverkehrserweiterung", source: "SRF", summary: nil, summaryDE: nil),
+            WidgetNewsItem(headline: "Weekend weather: Snow expected in Alps", headlineDE: "Wochenendwetter: Schnee in den Alpen erwartet", source: "20 Minuten", summary: nil, summaryDE: nil),
+        ],
+        cityName: "Zürich",
+        temperature: 8,
+        weatherCode: 2,
+        weatherDescription: "Partly cloudy",
+        language: "en"
+    )
+}
+
+struct WidgetSunshineEntry: TimelineEntry {
+    let date: Date
+    let baselineSunshineHours: Double
+    let topDestinations: [WidgetSunshineDestination]
+
+    static let placeholder = WidgetSunshineEntry(
+        date: Date(),
+        baselineSunshineHours: 4.5,
+        topDestinations: [
+            WidgetSunshineDestination(name: "Lugano", sunshineHours: 18.5, driveMinutes: 150),
+            WidgetSunshineDestination(name: "Locarno", sunshineHours: 17.2, driveMinutes: 160),
+            WidgetSunshineDestination(name: "Chur", sunshineHours: 15.0, driveMinutes: 80),
+        ]
+    )
+}
+
+struct WidgetSunshineDestination {
+    let name: String
+    let sunshineHours: Double
+    let driveMinutes: Int
+}
+
+// MARK: - Lightweight Codable models for widget (subset of full models)
+
+struct WidgetNewsResponse: Codable {
+    let weather: WidgetWeather
+    let transport: WidgetTransport
+    let categories: WidgetCategories
+    let city: WidgetCityInfo
+}
+
+struct WidgetWeather: Codable {
+    let temperature: Double
+    let description: String
+    let weatherCode: Int
+}
+
+struct WidgetTransport: Codable {
+    let summary: WidgetTransportSummary?
+}
+
+struct WidgetTransportSummary: Codable {
+    let totalDelayed: Int
+    let status: String
+}
+
+struct WidgetCategories: Codable {
+    let topStories: [WidgetNewsItem]?
+    let politics: [WidgetNewsItem]?
+    let disruptions: [WidgetNewsItem]?
+    let events: [WidgetNewsItem]?
+    let culture: [WidgetNewsItem]?
+    let local: [WidgetNewsItem]?
+
+    /// Collect all headlines across categories (deduped, preserving order)
+    var allHeadlines: [WidgetNewsItem] {
+        var seen = Set<String>()
+        var result: [WidgetNewsItem] = []
+        let all: [[WidgetNewsItem]?] = [topStories, politics, disruptions, events, culture, local]
+        for category in all {
+            for item in category ?? [] {
+                if seen.insert(item.headline).inserted {
+                    result.append(item)
+                }
+            }
+        }
+        return result
+    }
+}
+
+struct WidgetNewsItem: Codable {
+    let headline: String
+    let headlineDE: String?
+    let source: String?
+    let summary: String?
+    let summaryDE: String?
+
+    func localizedHeadline(_ language: String) -> String {
+        language == "de" ? (headlineDE ?? headline) : headline
+    }
+
+    func localizedSummary(_ language: String) -> String? {
+        language == "de" ? (summaryDE ?? summary) : summary
+    }
+}
+
+struct WidgetCityInfo: Codable {
+    let name: String
+}
+
+struct WidgetSunshineResponse: Codable {
+    let destinations: [WidgetSunshineDest]
+}
+
+struct WidgetSunshineDest: Codable {
+    let name: String
+    let driveMinutes: Int
+    let sunshineHoursTotal: Double
+    let isBaseline: Bool?
+}
+
+// MARK: - Day Plan Widget Models
+
+struct WidgetDayPlanEntry: TimelineEntry {
+    let date: Date
+    let theme: String
+    let weatherNote: String
+    let badWeatherMode: Bool
+    let slots: [WidgetAgendaSlot]
+
+    static let placeholder = WidgetDayPlanEntry(
+        date: Date(),
+        theme: "Family day out",
+        weatherNote: "12° and sunny",
+        badWeatherMode: false,
+        slots: [
+            WidgetAgendaSlot(id: "morning", time: "09:30", type: "activity", venueName: "Zoo Zürich"),
+            WidgetAgendaSlot(id: "lunch", time: "12:00", type: "lunch", venueName: "Restaurant Sonne"),
+            WidgetAgendaSlot(id: "afternoon", time: "14:00", type: "activity", venueName: "Stadtgärtnerei"),
+            WidgetAgendaSlot(id: "dinner", time: "17:30", type: "dinner", venueName: "Tibits"),
+        ]
+    )
+}
+
+struct WidgetAgendaSlot: Identifiable {
+    let id: String
+    let time: String
+    let type: String       // "activity", "lunch", "dinner", "homeActivity"
+    let venueName: String
+
+    var slotIcon: String {
+        switch type {
+        case "lunch": return "fork.knife"
+        case "dinner": return "fork.knife"
+        case "homeActivity": return "house.fill"
+        default: return "star.fill"
+        }
+    }
+}
+
+/// Lightweight Codable mirror of DayAgenda for widget deserialization
+struct WidgetDayAgenda: Codable {
+    let date: String
+    let theme: String
+    let weatherNote: String
+    let badWeatherMode: Bool
+    let slots: [WidgetDayAgendaSlot]
+}
+
+struct WidgetDayAgendaSlot: Codable {
+    let id: String
+    let time: String
+    let type: String
+    let venueName: String
+}

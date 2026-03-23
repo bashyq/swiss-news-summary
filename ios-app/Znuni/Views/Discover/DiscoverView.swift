@@ -1,0 +1,157 @@
+import SwiftUI
+
+struct DiscoverView: View {
+    @Environment(AppState.self) private var appState
+    @Binding var path: NavigationPath
+
+    var weather: Weather?
+    var sunshineDestinations: [SunshineDestination]?
+    var snowDestinations: [SnowDestination]?
+    var cityEvents: [CityEvent]?
+    var upcomingEventCount: Int = 0
+
+    @State private var nudge: Nudge?
+
+    var body: some View {
+        VStack(spacing: 0) {
+            discoverHero
+
+            ScrollView {
+                VStack(spacing: 16) {
+                    // Smart nudge card
+                    if let nudge {
+                        SmartNudgeCard(nudge: nudge) {
+                            switch nudge.type {
+                            case .sunshineEscape:
+                                path.append(DiscoverRoute.sunshine)
+                            case .freshSnow:
+                                path.append(DiscoverRoute.snow)
+                            case .upcomingEvent:
+                                path.append(DiscoverRoute.events)
+                            }
+                        }
+                    }
+
+                    // Hero cards
+                    Button {
+                        ZnuniEvent.discoverSunshineOpened()
+                        path.append(DiscoverRoute.sunshine)
+                    } label: {
+                        SunshineHeroCard()
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
+                        ZnuniEvent.discoverSnowOpened()
+                        path.append(DiscoverRoute.snow)
+                    } label: {
+                        SnowHeroCard()
+                    }
+                    .buttonStyle(.plain)
+
+                    Button { path.append(DiscoverRoute.events) } label: {
+                        EventsHeroCard(upcomingCount: upcomingEventCount)
+                    }
+                    .buttonStyle(.plain)
+
+                    // Explore nearby
+                    ExploreNearbySection(path: $path)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 20)
+                .padding(.bottom, 32)
+            }
+        }
+        .background(Color.znCream)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
+        .onAppear { evaluateNudge() }
+        .onChange(of: weather?.temperature) { _, _ in evaluateNudge() }
+        .onChange(of: sunshineDestinations?.count) { _, _ in evaluateNudge() }
+        .onChange(of: snowDestinations?.count) { _, _ in evaluateNudge() }
+    }
+
+    private func evaluateNudge() {
+        nudge = NudgeEngine.evaluate(
+            weather: weather,
+            sunshineDestinations: sunshineDestinations,
+            snowDestinations: snowDestinations,
+            events: cityEvents,
+            language: appState.language
+        )
+    }
+
+    // MARK: - Hero Banner
+
+    private var heroEyebrow: String {
+        let cityName = appState.city.localizedName(language: appState.language)
+        let formatter = DateFormatter()
+        formatter.locale = appState.language == .de ? Locale(identifier: "de_CH") : Locale(identifier: "en_US")
+        formatter.dateFormat = "EEEE"
+        return "\(cityName) · \(formatter.string(from: Date()))"
+    }
+
+    private var discoverHero: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Title row + city selector
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 4) {
+                    // Eyebrow
+                    Text(heroEyebrow)
+                        .font(.znEyebrow)
+                        .tracking(1.3)
+                        .textCase(.uppercase)
+                        .foregroundStyle(.white.opacity(0.55))
+
+                    // Title: "Discover _Zürich_"
+                    (
+                        Text(appState.localized(en: "Discover ", de: "Entdecke "))
+                            .font(.bannerTitle)
+                            .foregroundStyle(.white)
+                        + Text(appState.city.displayName)
+                            .font(.custom("Playfair", size: 28).italic())
+                            .foregroundStyle(.white.opacity(0.65))
+                    )
+
+                    // Weather row
+                    if let w = weather {
+                        HStack(spacing: 6) {
+                            Image(systemName: w.sfSymbol)
+                                .font(.system(size: 14))
+                                .symbolRenderingMode(.multicolor)
+                            Text("\(Int(w.temperature))°")
+                                .font(.system(size: 14, weight: .medium))
+                            Text(w.description)
+                                .font(.system(size: 12))
+                                .opacity(0.7)
+                        }
+                        .foregroundStyle(.white.opacity(0.65))
+                        .padding(.top, 4)
+                    }
+                }
+
+                Spacer()
+
+                CityMenuButton()
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 14)
+        .padding(.bottom, 22)
+        .background {
+            ZStack(alignment: .bottomTrailing) {
+                Color.znNavy
+                    .ignoresSafeArea(.container, edges: .top)
+                RadialGradient(
+                    colors: [Color.znTerracotta.opacity(0.22), .clear],
+                    center: UnitPoint(x: 1.2, y: -0.3),
+                    startRadius: 0,
+                    endRadius: 220
+                )
+                SkylineIllustration()
+                    .frame(width: 200, height: 110)
+                    .opacity(0.09)
+            }
+        }
+    }
+}

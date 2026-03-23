@@ -1,0 +1,353 @@
+import Foundation
+import SwiftUI
+
+// MARK: - Day Events
+
+/// Events occurring on a specific calendar day.
+struct DayEvents {
+    let holidays: [Holiday]
+    let schoolHolidays: [SchoolHoliday]
+    let festivals: [CityEvent]
+    let recurringActivities: [Activity]
+
+    var isEmpty: Bool {
+        holidays.isEmpty && schoolHolidays.isEmpty && festivals.isEmpty && recurringActivities.isEmpty
+    }
+}
+
+// MARK: - Events ViewModel
+
+/// ViewModel for the Events/Calendar view — manages calendar navigation, date selection,
+/// and aggregation of holidays, school holidays, festivals, and recurring activities.
+@Observable
+final class EventsViewModel {
+
+    // MARK: - Published State
+
+    /// Currently selected date on the calendar (defaults to today)
+    var selectedDate: Date? = Date()
+
+    /// Current calendar month being displayed (1-12)
+    var currentMonth: Int
+
+    /// Current calendar year being displayed
+    var currentYear: Int
+
+    /// Active filter for the events list
+    var eventFilter: EventFilter = .all
+
+    /// News response (provides holidays, school holidays, weather, trending)
+    var newsData: NewsResponse?
+
+    /// Activities response (provides city events/festivals, recurring activities)
+    var activitiesData: ActivitiesResponse?
+
+    /// Whether a network fetch is in progress
+    var isLoading: Bool = false
+
+    /// Human-readable error message if the last fetch failed
+    var error: String?
+
+    // MARK: - Init
+
+    init() {
+        let calendar = Calendar.current
+        let today = Date()
+        self.currentMonth = calendar.component(.month, from: today)
+        self.currentYear = calendar.component(.year, from: today)
+    }
+
+    // MARK: - Computed Properties
+
+    /// All dates in the currently displayed month
+    var datesInMonth: [Date] {
+        DateHelpers.datesInMonth(year: currentYear, month: currentMonth)
+    }
+
+    /// Number of blank cells before the first day of the month (Monday-based: Mon=0).
+    ///
+    /// `DateHelpers.firstWeekday` returns 1=Sunday, 2=Monday, ..., 7=Saturday.
+    /// We convert to Monday-based offset: Mon=0, Tue=1, ..., Sun=6.
+    var firstWeekdayOffset: Int {
+        let weekday = DateHelpers.firstWeekday(year: currentYear, month: currentMonth)
+        // Convert: Sunday(1)->6, Monday(2)->0, Tuesday(3)->1, ..., Saturday(7)->5
+        return (weekday + 5) % 7
+    }
+
+    /// Formatted label for the current month and year (e.g., "February 2026")
+    var monthYearLabel: String {
+        var components = DateComponents()
+        components.year = currentYear
+        components.month = currentMonth
+        components.day = 1
+        guard let date = Calendar.current.date(from: components) else {
+            return "\(currentMonth)/\(currentYear)"
+        }
+        return DateHelpers.monthYear(date)
+    }
+
+    /// All holidays from the news response
+    var holidays: [Holiday] {
+        newsData?.holidays ?? []
+    }
+
+    /// All school holidays from the news response
+    var schoolHolidays: [SchoolHoliday] {
+        newsData?.schoolHolidays ?? []
+    }
+
+    /// All city events/festivals from the activities response
+    var cityEvents: [CityEvent] {
+        activitiesData?.cityEvents ?? []
+    }
+
+    /// Whether the currently displayed month is the same as the real-world current month
+    var isShowingCurrentMonth: Bool {
+        let cal = Calendar.current
+        let today = Date()
+        return currentMonth == cal.component(.month, from: today)
+            && currentYear == cal.component(.year, from: today)
+    }
+
+    /// Jump the calendar back to today's month and select today
+    func goToToday() {
+        let cal = Calendar.current
+        let today = Date()
+        currentMonth = cal.component(.month, from: today)
+        currentYear = cal.component(.year, from: today)
+        selectedDate = today
+    }
+
+    // MARK: - Calendar Navigation
+
+    /// Navigate to the previous month
+    func previousMonth() {
+        if currentMonth == 1 {
+            currentMonth = 12
+            currentYear -= 1
+        } else {
+            currentMonth -= 1
+        }
+    }
+
+    /// Navigate to the next month
+    func nextMonth() {
+        if currentMonth == 12 {
+            currentMonth = 1
+            currentYear += 1
+        } else {
+            currentMonth += 1
+        }
+    }
+
+    // MARK: - Date Selection
+
+    /// Select a date on the calendar. If the same date is tapped again, deselect it.
+    func selectDate(_ date: Date) {
+        if let current = selectedDate, DateHelpers.isSameDay(current, date) {
+            selectedDate = nil
+        } else {
+            selectedDate = date
+        }
+    }
+
+    // MARK: - Events for a Date
+
+    /// Returns all events (holidays, school holidays, festivals, recurring activities) for a given date.
+    func eventsForDate(_ date: Date) -> DayEvents {
+        let dateISO = DateHelpers.toISO(date)
+
+        // Holidays that fall on this date
+        let matchingHolidays = holidays.filter { holiday in
+            return holiday.date == dateISO
+        }
+
+        // School holidays whose range overlaps this date
+        let matchingSchoolHolidays = schoolHolidays.filter { sh in
+            guard let start = sh.startDateParsed, let end = sh.endDateParsed else { return false }
+            let calendar = Calendar.current
+            let dayStart = calendar.startOfDay(for: date)
+            let shStart = calendar.startOfDay(for: start)
+            let shEnd = calendar.startOfDay(for: end)
+            return dayStart >= shStart && dayStart <= shEnd
+        }
+
+        // Festivals/city events that overlap this date
+        let matchingFestivals = cityEvents.filter { $0.overlaps(with: date) }
+
+        // Recurring activities available on this day of the week
+        let allActivities = activitiesData?.activities ?? []
+        let matchingRecurring = allActivities.filter { activity in
+            guard activity.recurring != nil else { return false }
+            return activity.isAvailable(on: date)
+        }
+
+        return DayEvents(
+            holidays: matchingHolidays,
+            schoolHolidays: matchingSchoolHolidays,
+            festivals: matchingFestivals,
+            recurringActivities: matchingRecurring
+        )
+    }
+
+    // MARK: - Calendar Dot Colors
+
+    /// Returns an array of dot colors to display under a calendar day.
+    ///
+    /// Color mapping:
+    /// - `.brand` — festival
+    /// - `.znNegative` — holiday (public)
+    /// - `.znTerracotta` — school holiday
+    /// - `.znNavy` (opacity 0.7) — recurring activity
+    func dotColors(for date: Date) -> [Color] {
+        let events = eventsForDate(date)
+        var colors: [Color] = []
+
+        if !events.holidays.isEmpty {
+            colors.append(.znNegative)
+        }
+        if !events.festivals.isEmpty {
+            colors.append(.brand)
+        }
+        if !events.schoolHolidays.isEmpty {
+            colors.append(.znTerracotta)
+        }
+        if !events.recurringActivities.isEmpty {
+            colors.append(.znNavy.opacity(0.7))
+        }
+
+        return colors
+    }
+
+    // MARK: - Filtered Events List
+
+    /// Returns all events filtered by the current `eventFilter`, as a typed array.
+    func filteredEvents(language: AppLanguage) -> [EventItem] {
+        var results: [EventItem] = []
+
+        let includeAll = eventFilter == .all
+
+        let today = Calendar.current.startOfDay(for: Date())
+        let todayISO = DateHelpers.toISO(today)
+
+        // Holidays (exclude past)
+        if includeAll || eventFilter == .holidays {
+            let upcoming = holidays.filter { $0.date >= todayISO }
+            results.append(contentsOf: upcoming.map { .holiday($0) })
+        }
+
+        // School holidays (exclude those that have already ended)
+        if includeAll || eventFilter == .schoolHolidays {
+            let current = schoolHolidays.filter { sh in
+                guard let endDate = sh.endDateParsed else { return true }
+                return Calendar.current.startOfDay(for: endDate) >= today
+            }
+            results.append(contentsOf: current.map { .schoolHoliday($0) })
+        }
+
+        // City events / festivals (exclude past)
+        if includeAll || eventFilter == .events || eventFilter == .festivals {
+            let upcoming = cityEvents.filter { event in
+                guard let endDate = event.endDateParsed else { return true }
+                return Calendar.current.startOfDay(for: endDate) >= today
+            }
+            results.append(contentsOf: upcoming.map { .cityEvent($0) })
+        }
+
+        // Recurring activities
+        if includeAll || eventFilter == .recurring {
+            let allActivities = activitiesData?.activities ?? []
+            let recurring = allActivities.filter { $0.recurring != nil }
+            results.append(contentsOf: recurring.map { .activity($0) })
+        }
+
+        // Seasonal activities (exclude any already added as recurring to avoid duplicates)
+        if includeAll || eventFilter == .seasonal {
+            let allActivities = activitiesData?.activities ?? []
+            let addedRecurringIDs = Set(
+                results.compactMap { item -> String? in
+                    if case .activity(let a) = item { return a.id }
+                    return nil
+                }
+            )
+            let seasonal = allActivities.filter {
+                $0.season != nil && $0.isCurrentSeason && $0.stayHome != true && !addedRecurringIDs.contains($0.id)
+            }
+            results.append(contentsOf: seasonal.map { .activity($0) })
+        }
+
+        return results
+    }
+
+    // MARK: - Loading
+
+    /// Load both news and activities data for the events calendar.
+    ///
+    /// The events view needs data from both endpoints:
+    /// - News: holidays, school holidays, weather, trending
+    /// - Activities: city events/festivals, recurring activities
+    ///
+    /// Strategy: show cached data immediately, then fetch fresh data in the background.
+    @MainActor
+    func loadData(city: City, language: AppLanguage) async {
+        let newsCacheKey = CacheKey.news(city: city, language: language)
+        let activitiesCacheKey = CacheKey.activities(city: city)
+
+        // 1. Show cached data immediately
+        let cachedNews: NewsResponse? = await CacheManager.shared.get(
+            NewsResponse.self,
+            key: newsCacheKey,
+            ttl: .news
+        )
+        if let cachedNews {
+            self.newsData = cachedNews
+        }
+
+        let cachedActivities: ActivitiesResponse? = await CacheManager.shared.get(
+            ActivitiesResponse.self,
+            key: activitiesCacheKey,
+            ttl: .activities
+        )
+        if let cachedActivities {
+            self.activitiesData = cachedActivities
+        }
+
+        // 2. Fetch fresh data from both endpoints in parallel
+        isLoading = true
+        error = nil
+
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { @MainActor [weak self] in
+                do {
+                    let response = try await APIClient.shared.fetchNews(
+                        city: city,
+                        language: language
+                    )
+                    self?.newsData = response
+                    await CacheManager.shared.set(response, key: newsCacheKey)
+                } catch {
+                    if self?.newsData == nil {
+                        self?.error = error.localizedDescription
+                    }
+                }
+            }
+
+            group.addTask { @MainActor [weak self] in
+                do {
+                    let response = try await APIClient.shared.fetchActivities(
+                        city: city,
+                        language: language
+                    )
+                    self?.activitiesData = response
+                    await CacheManager.shared.set(response, key: activitiesCacheKey)
+                } catch {
+                    if self?.activitiesData == nil && self?.error == nil {
+                        self?.error = error.localizedDescription
+                    }
+                }
+            }
+        }
+
+        isLoading = false
+    }
+}

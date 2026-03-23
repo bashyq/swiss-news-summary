@@ -1,0 +1,303 @@
+import SwiftUI
+import CoreLocation
+
+/// Expandable card for a sunshine destination.
+///
+/// Collapsed state shows name, region, total sunshine hours, drive time badge, optional distance badge,
+/// and a weather icon for the best day. Baseline destinations (Zurich) get a purple accent border.
+/// Tapping expands an accordion with daily forecasts, hourly timeline, destination highlights,
+/// and action buttons for directions and nearby places.
+struct SunshineCard: View {
+    let destination: SunshineDestination
+    let language: AppLanguage
+    let isExpanded: Bool
+    let userLocation: CLLocation?
+    var highlightID: String?
+    let onTap: () -> Void
+    var onPlanHere: (() -> Void)?
+
+    private var isBaseline: Bool {
+        destination.isBaseline == true
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            collapsedContent
+            if isExpanded {
+                Divider()
+                    .padding(.horizontal, AppSpacing.cardPadding)
+                expandedContent
+            }
+        }
+        .background(cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppSpacing.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppSpacing.cardRadius)
+                .stroke(isBaseline ? Color.brand.opacity(0.5) : .clear, lineWidth: isBaseline ? 2 : 0)
+        )
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(isBaseline ? Color.brand : Color.sunshineColor(hours: destination.sunshineHoursTotal))
+                .frame(width: AppSpacing.borderStripWidth)
+                .padding(.vertical, 6)
+        }
+        .shadow(color: AppShadow.card.color, radius: AppShadow.card.radius, x: AppShadow.card.x, y: AppShadow.card.y)
+        .sensoryFeedback(.impact(weight: .light), trigger: isExpanded)
+        .contentShape(Rectangle())
+        .onTapGesture { onTap() }
+    }
+
+    // MARK: - Card Background
+
+    @ViewBuilder
+    private var cardBackground: some View {
+        if isBaseline {
+            LinearGradient(colors: [Color.brand.opacity(0.08), Color.brand.opacity(0.03)],
+                           startPoint: .top, endPoint: .bottom)
+        } else {
+            Color.znSurface
+        }
+    }
+
+    // MARK: - Collapsed Content
+
+    private var collapsedContent: some View {
+        HStack(spacing: 12) {
+            // Weather icon for best day
+            bestDayIcon
+                .frame(width: 36, height: 36)
+
+            // Name and region
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    if isBaseline {
+                        Image(systemName: "house.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.brand)
+                    }
+                    Text(destination.localizedName(language: language))
+                        .font(.cardTitle)
+                        .lineLimit(1)
+                }
+                Text(destination.localizedRegion(language: language))
+                    .font(.caption)
+                    .foregroundStyle(.znMuted)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            // Sunshine hours total
+            sunshineHoursLabel
+
+            // Badges
+            VStack(alignment: .trailing, spacing: 4) {
+                DriveTimeBadge(minutes: destination.driveMinutes)
+                if let distance = distanceMeters {
+                    DistanceBadge(meters: distance)
+                }
+            }
+
+            // Chevron
+            Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                .font(.caption)
+                .foregroundStyle(.znChevron)
+        }
+        .padding(AppSpacing.cardPadding)
+    }
+
+    // MARK: - Sunshine Hours Label
+
+    private var sunshineHoursLabel: some View {
+        VStack(spacing: 1) {
+            Text(String(format: "%.1f", destination.sunshineHoursTotal))
+                .font(.cardHeadline)
+                .foregroundStyle(Color.sunshineColor(hours: destination.sunshineHoursTotal))
+                .contentTransition(.numericText())
+            Text(language == .de ? "Std" : "hrs")
+                .font(.caption2)
+                .foregroundStyle(.znMuted)
+        }
+    }
+
+    // MARK: - Best Day Icon
+
+    private var bestDayIcon: some View {
+        Group {
+            if let bestDay = destination.forecast.max(by: { $0.sunshineHours < $1.sunshineHours }) {
+                Image(systemName: bestDay.sfSymbol)
+                    .font(.system(size: 24))
+                    .foregroundStyle(Color.sunshineColor(hours: destination.sunshineHoursTotal))
+                    .symbolRenderingMode(.multicolor)
+            } else {
+                Image(systemName: "sun.max.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.znMuted)
+            }
+        }
+    }
+
+    // MARK: - Expanded Content
+
+    private var expandedContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Destination photo banner
+            destinationPhoto
+
+            // Daily forecast rows
+            dailyForecastSection
+
+            // Hourly timeline for the best day
+            hourlyTimelineSection
+
+            // Destination highlights + action buttons
+            SunshineHighlightsSection(destination: destination, language: language)
+
+            // "Plan a day here" CTA — only for covered cities
+            if let onPlanHere, PlanningCity.isCovered(destination.id) {
+                Button(action: onPlanHere) {
+                    Label(
+                        language == .de
+                            ? "Tag in \(destination.localizedName(language: language)) planen →"
+                            : "Plan a day in \(destination.localizedName(language: language)) →",
+                        systemImage: "calendar.badge.plus"
+                    )
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Color.znNavy.opacity(0.12))
+                    .foregroundStyle(.znNavy)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(AppSpacing.cardPadding)
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    // MARK: - Destination Photo
+
+    @ViewBuilder
+    private var destinationPhoto: some View {
+        if let photoURL = APIClient.shared.photoURL(for: destination.id) {
+            AsyncImage(url: photoURL) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 140)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                case .failure:
+                    EmptyView()
+                default:
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.znBorder)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 140)
+                        .overlay { ProgressView() }
+                }
+            }
+        }
+    }
+
+    // MARK: - Daily Forecast
+
+    private var dailyForecastSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(language == .de ? "Prognose" : "Forecast")
+                .font(.znEyebrow)
+                .tracking(0.8)
+                .textCase(.uppercase)
+                .foregroundStyle(.znMuted)
+
+            ForEach(destination.forecast) { day in
+                dailyForecastRow(day)
+            }
+        }
+    }
+
+    private func dailyForecastRow(_ day: SunshineDayForecast) -> some View {
+        HStack(spacing: 8) {
+            // Day name
+            Text(dayName(for: day.date))
+                .font(.caption)
+                .fontWeight(.medium)
+                .frame(width: 36, alignment: .leading)
+
+            // Weather icon
+            Image(systemName: day.sfSymbol)
+                .font(.caption)
+                .symbolRenderingMode(.multicolor)
+                .frame(width: 20)
+
+            // Temperature range
+            Text("\(Int(day.tempMin))° / \(Int(day.tempMax))°")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(width: 60, alignment: .leading)
+
+            // Sunshine hours bar
+            GeometryReader { geo in
+                let maxWidth = geo.size.width
+                let barWidth = maxWidth * CGFloat(min(day.sunshineHours, 14)) / 14.0
+
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.znBorder)
+                        .frame(height: 6)
+
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.sunshineColor(hours: day.sunshineHours))
+                        .frame(width: max(barWidth, 0), height: 6)
+                }
+            }
+            .frame(height: 6)
+
+            // Hours label
+            Text(String(format: "%.1fh", day.sunshineHours))
+                .font(.caption2)
+                .fontWeight(.medium)
+                .foregroundStyle(Color.sunshineColor(hours: day.sunshineHours))
+                .frame(width: 32, alignment: .trailing)
+        }
+    }
+
+    // MARK: - Hourly Timeline
+
+    @ViewBuilder
+    private var hourlyTimelineSection: some View {
+        // Show timeline for the day with the most sunshine data
+        if let bestDay = destination.forecast.max(by: { $0.sunshineHours < $1.sunshineHours }),
+           let sunnyHours = bestDay.sunnyHours, !sunnyHours.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 4) {
+                    Text(language == .de ? "Sonnenstunden" : "Sunny Hours")
+                        .font(.znEyebrow)
+                        .tracking(0.8)
+                        .textCase(.uppercase)
+                        .foregroundStyle(.znMuted)
+                    Text("(\(dayName(for: bestDay.date)))")
+                        .font(.caption)
+                        .foregroundStyle(.znMuted)
+                }
+                HourlyTimelineView(sunnyHours: sunnyHours)
+            }
+        }
+    }
+
+    // MARK: - Helpers
+
+    private var distanceMeters: Double? {
+        guard let location = userLocation else { return nil }
+        return destination.distance(from: location)
+    }
+
+    private func dayName(for dateString: String) -> String {
+        guard let date = DateHelpers.parseISO(dateString) else { return dateString }
+        return DateHelpers.shortDayName(date)
+    }
+}

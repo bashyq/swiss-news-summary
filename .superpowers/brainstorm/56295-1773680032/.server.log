@@ -1,0 +1,9 @@
+{"type":"server-started","port":61332,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:61332","screen_dir":"/Users/bq/Documents/Znuni/.superpowers/brainstorm/56295-1773680032"}
+{"type":"screen-added","file":"/Users/bq/Documents/Znuni/.superpowers/brainstorm/56295-1773680032/snow-categories.html"}
+{"type":"screen-updated","file":"/Users/bq/Documents/Znuni/.superpowers/brainstorm/56295-1773680032/snow-categories.html"}
+{"type":"screen-updated","file":"/Users/bq/Documents/Znuni/.superpowers/brainstorm/56295-1773680032/snow-categories.html"}
+{"source":"user-event","type":"click","text":"A\n    \n      Sledding\n      Toboggan runs, sledding hills, rental spots — the #1 toddler snow activity","choice":"sledding","id":null,"timestamp":1773680294160}
+{"source":"user-event","type":"click","text":"B\n    \n      Snow Play / Snow Garden\n      Designated snow play areas, snow gardens (Schneegarten), snowman spots, tubing parks","choice":"snow-play","id":null,"timestamp":1773680294850}
+{"source":"user-event","type":"click","text":"A\n    \n      Sledding\n      Toboggan runs, sledding hills, rental spots — the #1 toddler snow activity","choice":"sledding","id":null,"timestamp":1773680296101}
+{"source":"user-event","type":"click","text":"B\n    \n      Snow Play / Snow Garden\n      Designated snow play areas, snow gardens (Schneegarten), snowman spots, tubing parks","choice":"snow-play","id":null,"timestamp":1773680296932}
+{"type":"server-stopped","reason":"idle timeout"}
