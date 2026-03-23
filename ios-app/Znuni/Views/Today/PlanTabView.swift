@@ -13,6 +13,7 @@ struct PlanTabView: View {
     @State private var replacingSlot: AgendaSlot?
     @State private var visibleSlotCount: Int = 0
     @State private var previousStateWasCalendarPreview = false
+    @State private var debugSlotAction: String?
 
     var body: some View {
         NavigationStack {
@@ -83,6 +84,11 @@ struct PlanTabView: View {
             CustomSlotSheet(replacingSlot: slot) { name, start, end, address in
                 viewModel.replaceWithCustom(slotId: slot.id, name: name, start: start, end: end, address: address)
             }
+        }
+        .alert("Debug: Slot Action", isPresented: Binding(get: { debugSlotAction != nil }, set: { if !$0 { debugSlotAction = nil } })) {
+            Button("OK") { debugSlotAction = nil }
+        } message: {
+            Text(debugSlotAction ?? "")
         }
         .onChange(of: isDealState) { _, isDealt in
             if isDealt {
@@ -223,18 +229,7 @@ struct PlanTabView: View {
                     slot: slot,
                     expandedID: $expandedSlotID,
                     isSaved: isSaved,
-                    onLock: {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        viewModel.lock(slotId: slot.id)
-                    },
-                    onUnlock: {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        viewModel.unlock(slotId: slot.id)
-                    },
-                    onRemove: {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        viewModel.remove(slotId: slot.id)
-                    },
+                    viewModel: viewModel,
                     onReplace: { replacingSlot = slot }
                 )
                 .transition(.move(edge: .bottom).combined(with: .opacity))

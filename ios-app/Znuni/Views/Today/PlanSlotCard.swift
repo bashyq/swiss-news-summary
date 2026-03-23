@@ -15,7 +15,10 @@ struct PlanSlotCard: View {
     /// When true, the card shows a compact saved appearance (muted, no reason/footer).
     var isSaved: Bool = false
 
-    // MARK: - Closures
+    /// ViewModel reference for direct method calls (avoids closure capture issues)
+    var viewModel: PlanViewModel?
+
+    // MARK: - Closures (fallback if viewModel not provided)
 
     var onLock: () -> Void = {}
     var onUnlock: () -> Void = {}
@@ -27,6 +30,16 @@ struct PlanSlotCard: View {
     @Environment(AppState.self) private var appState
 
     private var isExpanded: Bool { expandedID == slot.id }
+
+    private func doLock() {
+        if let vm = viewModel { vm.lock(slotId: slot.id) } else { onLock() }
+    }
+    private func doUnlock() {
+        if let vm = viewModel { vm.unlock(slotId: slot.id) } else { onUnlock() }
+    }
+    private func doRemove() {
+        if let vm = viewModel { vm.remove(slotId: slot.id) } else { onRemove() }
+    }
 
     // MARK: - Body
 
@@ -61,15 +74,15 @@ struct PlanSlotCard: View {
         )
         .contextMenu {
             if slot.isLocked {
-                Button { onUnlock() } label: { Label("Unlock", systemImage: "lock.open") }
+                Button { doUnlock() } label: { Label("Unlock", systemImage: "lock.open") }
             } else {
-                Button { onLock() } label: { Label("Lock this slot", systemImage: "lock") }
+                Button { doLock() } label: { Label("Lock this slot", systemImage: "lock") }
             }
             if slot.source != .calendar {
                 Button { onReplace() } label: { Label("Replace with my own", systemImage: "pencil") }
             }
             Divider()
-            Button(role: .destructive) { onRemove() } label: { Label("Remove", systemImage: "trash") }
+            Button(role: .destructive) { doRemove() } label: { Label("Remove", systemImage: "trash") }
         }
         .sensoryFeedback(.impact(weight: .light), trigger: isExpanded)
     }
@@ -485,41 +498,24 @@ struct PlanSlotCard: View {
     private var contextMenuButton: some View {
         Menu {
             if slot.isLocked {
-                Button {
-                    onUnlock()
-                } label: {
-                    Label("Unlock", systemImage: "lock.open")
-                }
+                Button { doUnlock() } label: { Label("Unlock", systemImage: "lock.open") }
             } else {
-                Button {
-                    onLock()
-                } label: {
-                    Label("Lock this slot", systemImage: "lock")
-                }
+                Button { doLock() } label: { Label("Lock this slot", systemImage: "lock") }
             }
 
             if slot.source != .calendar {
-                Button {
-                    onReplace()
-                } label: {
-                    Label("Replace with my own", systemImage: "pencil")
-                }
+                Button { onReplace() } label: { Label("Replace with my own", systemImage: "pencil") }
             }
 
             Divider()
 
-            Button(role: .destructive) {
-                onRemove()
-            } label: {
-                Label("Remove", systemImage: "trash")
-            }
+            Button(role: .destructive) { doRemove() } label: { Label("Remove", systemImage: "trash") }
         } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 14))
                 .foregroundStyle(.znMuted)
-                .frame(width: 24, height: 24)
-                .background(Color.znCream)
-                .clipShape(Circle())
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
         }
     }
 
