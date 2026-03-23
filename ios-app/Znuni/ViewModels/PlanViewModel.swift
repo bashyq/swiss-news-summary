@@ -34,6 +34,9 @@ final class PlanViewModel {
     var selectedDate: Date
     var planningCity: PlanningCity
 
+    /// Calendar events the user has unlocked in calendarPreview (don't plan around these).
+    var excludedCalendarIds: Set<String> = []
+
     /// Family session — loaded from UserDefaults.
     var session: FamilySession
 
@@ -104,6 +107,7 @@ final class PlanViewModel {
         }
 
         selectedDate = date
+        excludedCalendarIds = []
         let dateISO = isoString(for: date)
 
         // 1. Check store for existing plan
@@ -378,12 +382,20 @@ final class PlanViewModel {
 
     /// Unlock a slot for replacement on redeal.
     func unlock(slotId: String) {
-        // In calendar preview, unlock is a no-op (events are always locked until dealt)
-        if case .calendarPreview = planState { return }
+        // In calendar preview, mark event as excluded (don't plan around it)
+        if case .calendarPreview = planState {
+            excludedCalendarIds.insert(slotId)
+            return
+        }
         guard var agenda = currentAgenda,
               let idx = agenda.slots.firstIndex(where: { $0.id == slotId }) else { return }
         agenda.slots[idx].isLocked = false
         updateAgenda(agenda)
+    }
+
+    /// Re-lock a previously excluded calendar event in preview.
+    func lockCalendarEvent(slotId: String) {
+        excludedCalendarIds.remove(slotId)
     }
 
     /// Remove a slot from the current agenda. If calendar source, discard it.

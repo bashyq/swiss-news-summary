@@ -172,12 +172,16 @@ struct PlanTabView: View {
 
             // Calendar event cards
             ForEach(events) { event in
-                let slot = calendarSlotToAgendaSlot(event)
+                let isExcluded = viewModel.excludedCalendarIds.contains(event.id)
+                var slot = calendarSlotToAgendaSlot(event)
+                let _ = { slot.isLocked = !isExcluded }()
                 PlanSlotCard(
                     slot: slot,
                     expandedID: $expandedSlotID,
-                    viewModel: viewModel
+                    viewModel: viewModel,
+                    onLock: { viewModel.lockCalendarEvent(slotId: event.id) }
                 )
+                .opacity(isExcluded ? 0.5 : 1.0)
             }
 
             // Fill the gaps button
@@ -357,10 +361,11 @@ struct PlanTabView: View {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             Task {
                 if case .calendarPreview(let events) = viewModel.planState {
-                    // Convert calendar events to locked slots for gap filling
-                    let lockedSlots = events.map { event in
-                        calendarSlotToAgendaSlot(event)
-                    }
+                    // Only include non-excluded calendar events as locked slots
+                    let lockedSlots = events
+                        .filter { !viewModel.excludedCalendarIds.contains($0.id) }
+                        .map { calendarSlotToAgendaSlot($0) }
+                    viewModel.excludedCalendarIds = [] // Reset for next time
                     await viewModel.deal(lockedSlots: lockedSlots)
                 } else {
                     await viewModel.deal()
