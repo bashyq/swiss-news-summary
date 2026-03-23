@@ -1,0 +1,308 @@
+# iOS App Sync — Features to Implement
+
+This document tracks PWA features that need to be ported to the SwiftUI iOS app on branch `claude/plan-ios-app-4aOQo` under `ios-app/`.
+
+## API-Side (Already Available — No iOS Work Needed)
+
+These features were added to the Cloudflare Worker and are automatically available to the iOS app via existing API calls:
+
+| Feature | Endpoint | Field | Notes |
+|---------|----------|-------|-------|
+| Daily Pick | `GET /` | `briefing.dailyPick` | Weather+time-aware activity recommendation with `reason`/`reasonDE` text |
+| Lunch Google Ratings | `GET /lunch` | `spots[].rating`, `ratingCount`, `permanentlyClosed` | Google Places star ratings + review counts. Permanently closed restaurants flagged. Cached in R2 for 30 days. |
+| News Expansion | `GET /` | `categories.*` | 8-10 items per category. When `lang=en`, all items (including local/culture/events from German feeds) are translated via Claude. Each item has `detail` field (1 sentence, shown on tap). |
+| Deals API | `GET /deals` | `deals[]` | Deals/free entry data now served from worker endpoint. iOS should fetch from `/deals` instead of hardcoding `DealsData.swift`. Same JSON shape as before. |
+| Sunshine Highlights | `GET /sunshine` | `destinations[].highlights[]` | Each destination now includes `highlights` array with toddler-friendly attractions. iOS can drop `DestinationHighlights.swift` and use API data directly. |
+| Activities Expanded | `GET /activities` | `activities[]` | Now 94 base activities (was 52). 20km radius per city. |
+| Activity Opening Hours | `GET /activities` | `activities[].openNow`, `weekdayText[]`, `permanentlyClosed` | Google Places opening hours enriched per activity. Cached in R2 for 14 days. Progressively warms (10 per request). `openNow` = live open/closed, `weekdayText` = full weekly schedule. |
+| Transport Multi-Station | `GET /` | `transport` | Zürich now fetches from Stadelhofen + Hardbrücke (was HB only). Deduplicated. Other cities unchanged. No model change — same JSON shape. |
+| Venue Photos | `GET /photo/:id` | image bytes | Returns JPEG photo via Google Places. Works for activity IDs, sunshine destination IDs, and snow resort IDs. For lunch spots (dynamic IDs), pass `?name=&lat=&lon=` query params. Cached in R2. 404 if no photo found. Use `AsyncImage` with fallback. |
+
+The iOS `NewsViewModel` and `ActivitiesViewModel` just need to parse these new fields from the existing JSON responses.
+
+---
+
+## ⚠️ PWA Changes — iOS Should NOT Implement
+
+These features were removed or changed in the PWA and the iOS app should match:
+
+| Change | Details |
+|--------|---------|
+| **Weekend Brief removed from News** | The `.weekend-brief` card is no longer rendered on the news page. iOS should NOT build `WeekendBriefCard.swift`. The `weekendBrief` field is still in the API response but the PWA ignores it. |
+| **Age filter removed** | Activity age filters (All ages / 2-3 / 4-5) have been removed from the PWA. iOS should NOT implement age filtering in `ActivitiesViewModel`. |
+| **Hero banners removed** | Pastel gradient hero banners on activity cards have been removed. Cards now use colored left-border + emoji in title only. iOS should NOT build hero gradient headers. |
+| **Featured activities removed** | `featured: true` field removed from all activities. No more featured badge, no featured sorting. "All" filter now shows activities in random order. iOS should NOT implement featured logic. |
+| **Self-rating stars removed** | User self-rating on lunch cards replaced by real Google Places ratings from the API. iOS should NOT implement local star rating — use `rating`/`ratingCount` from API. |
+| **Sunshine/Snow cards accordion** | PWA cards collapse by default, expand on tap (header shows name + region + badges + total). iOS should use native `DisclosureGroup` or expandable card pattern — don't replicate the CSS toggle approach. |
+
+---
+
+## Branding & Theming Changes
+
+| Change | Details |
+|--------|---------|
+| **Rebrand: Znüni** | App renamed from "Today in Switzerland" to **Znüni**. Update `CFBundleDisplayName`, nav titles, about screen. |
+| **Tagline: Was lauft hüt?** | Subtitle/tagline is now **"Was lauft hüt?"** (Swiss German, same in both EN/DE — it's brand, not translatable). Use in onboarding, about screen, App Store description. |
+| **Alpine theme (default)** | New color system: navy bg `#1B2B4D`, blue accent `#4A90E2`, warm accent `#F5A623`, Inter font for headlines. This is the default theme for new users. |
+| **Classic theme (opt-in)** | Original dark theme: black bg `#0a0a0a`, red accent `#e53e3e`, Playfair Display serif headlines. Available via settings toggle. |
+| **Theme switcher** | Users can toggle between Alpine (Playground) and Classic (Klassik) in settings. Persisted in UserDefaults. iOS should implement via `@AppStorage("brand")` with `"alpine"` default. |
+| **Language toggle in header** | EN/DE toggle is now in the header bar next to city selector (not buried in hamburger menu). iOS already has this in settings — no change needed. |
+
+### iOS Theme Implementation
+```swift
+enum AppBrand: String, CaseIterable {
+    case alpine, classic
+}
+
+// Colors per brand
+extension AppBrand {
+    var background: Color { self == .alpine ? Color(hex: "#1B2B4D") : Color(hex: "#0a0a0a") }
+    var accent: Color { self == .alpine ? Color(hex: "#4A90E2") : Color(hex: "#e53e3e") }
+    var accentWarm: Color { self == .alpine ? Color(hex: "#F5A623") : Color(hex: "#e53e3e") }
+    var card: Color { self == .alpine ? Color(hex: "#233660") : Color(hex: "#161616") }
+    var headlineFont: Font { self == .alpine ? .system(.title, design: .default).weight(.bold) : .custom("PlayfairDisplay-Bold", size: 20) }
+}
+```
+
+---
+
+## Features Requiring iOS Implementation
+
+### 1. Daily Pick Card (News View)
+**PWA**: `renderNewsView()` in `app.js` — `.briefing-pick` card
+**iOS target**: `ios-app/SwissPortal/Views/News/BriefingCard.swift`
+
+**What to build:**
+- Parse `briefing.dailyPick` from news API response (add to `NewsResponse.swift` model)
+- Fields: `activityId`, `name`, `nameDE`, `reason`, `reasonDE`, `emoji`, `indoor`, `category`
+- Show card below greeting in BriefingCard with:
+  - Label: "Today's Pick" / "Tipp des Tages"
+  - Emoji + reason text (localized)
+  - Tap → navigate to Activities tab
+- Replace old `briefing.suggestedActivity` handling (field no longer sent)
+
+### 2. News View Layout: Trending Below History
+**PWA**: Trending banner renders in header, right after "This Day in History"
+**iOS target**: `NewsView.swift`
+
+**What to build:**
+- `trending` object from news API: `{ topic, topicDE, url }`
+- Show as compact card right below "This Day in History" (before briefing card)
+- Left-border accent style with subtle gradient background
+- Tap → open URL in Safari
+- Only visible on News view
+
+### 3. Lunch Filter Rework (Multi-Select + Cuisine Dropdown)
+**PWA**: `renderLunchView()` in `app.js` — multi-toggle pills + `<select>` dropdown
+**iOS target**: `LunchView.swift` + `LunchViewModel.swift`
+
+**What to build:**
+- **Toggle pills** (multi-select, combine freely):
+  - Near Me — uses CoreLocation, filters to within 2km
+  - Open — filters `openForLunch === true`
+  - Terrace — filters `outdoorSeating === true`
+  - Saved — filters to saved restaurants
+- **Cuisine picker** (single-select, replaces old Vegi filter):
+  - All cuisines (default)
+  - Italian, Asian, Kebab, Café, Fast Food, International
+  - Filters on `cuisineCategory` field from API
+- Filters stack: e.g. Near Me + Open + Italian = open Italian restaurants within 2km
+- SwiftUI: Use `Toggle`-style buttons or `Chip` pattern for pills, `Picker`/`Menu` for cuisine
+
+### 4. Activity Reminders
+**PWA**: `showReminderModal()`, `checkReminders()` in `app.js`
+**iOS target**: New functionality in `ActivitiesViewModel.swift` + `ActivityCard.swift`
+
+**What to build:**
+- Bell icon button on saved activity cards (next to heart)
+- Tap → date picker sheet to set reminder date
+- Store reminders in UserDefaults: `[{ activityId, name, date }]`
+- Use `UNUserNotificationCenter` for local notifications (much better than PWA's limited Notification API)
+- Schedule notification for reminder date at 9:00 AM
+- On app launch, clean up past reminders
+- Model: `ActivityReminder` struct with `activityId`, `name`, `date`, `notificationId`
+
+### 5. Venue Photos (Activities, Sunshine, Snow, Lunch)
+**PWA**: `/photo/:id` endpoint used across multiple views
+**iOS target**: `ActivityCard.swift`, `SunshineCard.swift`, `SnowCard.swift`, `LunchCard.swift`, surprise modal
+
+**What to build:**
+- **Activity cards**: 64px rounded thumbnail on right side of card using `AsyncImage(url: URL(string: "\(apiBase)/photo/\(activity.id)"))`
+- **Lunch cards**: 56px rounded thumbnail using `AsyncImage(url: URL(string: "\(apiBase)/photo/\(spot.id)?name=\(spot.name)&lat=\(spot.lat)&lon=\(spot.lon)"))` — query params needed because lunch IDs are dynamic (OSM)
+- **Surprise modal**: Full-width photo at top of modal with shimmer loading state
+- **Sunshine cards**: Destination photo banner in expanded card body
+- **Snow cards**: Resort photo banner in expanded card body
+- Skip photo for `stayhome` category and custom activities/restaurants
+- Fall back gracefully on 404 (hide image, show emoji in modal)
+- All photos are lazy loaded; R2-cached after first fetch so subsequent loads are instant
+
+### 6. Lunch Google Ratings
+**PWA**: `renderLunchCard()` in `app.js` — Google star rating display
+**iOS target**: `LunchView.swift` + `LunchViewModel.swift`
+
+**What to build:**
+- Parse `rating` (Float?), `ratingCount` (Int?), `permanentlyClosed` (Bool?) from lunch API response
+- Show Google star rating on restaurant cards: ★★★★☆ 4.2 (127)
+- Dim/flag permanently closed restaurants
+- Remove any local self-rating logic (replaced by real Google data)
+- Ratings populate progressively (10 per request) — some restaurants may not have ratings yet
+
+### 7. Explore View (Map-First Discovery)
+**PWA**: `renderExploreView()`, `initExploreMap()`, `getExploreItems()`
+**iOS target**: New `ExploreView.swift` in `Views/` + `ExploreViewModel.swift`
+
+**What to build:**
+- New tab in ContentView tab bar (🗺️ icon)
+- Full MapKit map at top (~300pt height, ~400pt on iPad)
+- Filter bar: All / Activities / Events / Deals
+- Map annotations colored by type:
+  - Activities: green circles
+  - Events: purple circles (only events within next 7 days)
+  - Deals: blue/amber circles (city-relevant, month-relevant)
+- Events and deals don't have coordinates — place at city center with small random offset
+- Card list below map (compact: emoji + name + description + badges)
+- Tap card → pan map to marker + open annotation popup (stay on Explore view)
+- Tap deal card → open URL in Safari
+- Auto-request location permission, sort by distance
+- User location annotation on map
+- `ExploreViewModel`:
+  - Reuse `ActivitiesViewModel` data (activities + cityEvents)
+  - Fetch deals from `/deals` endpoint
+  - `exploreFilter` published property
+
+### 8. Activity Filter Order
+**PWA**: Filter pills in `renderActivitiesView()`
+**iOS target**: `ActivitiesView.swift`
+
+**What to build:**
+- Filter pill order: All, Near Me, Indoor, Outdoor, Stay Home, Free, Seasonal, Saved
+- **Near Me**: 2km radius (same as lunch), sorted by distance. Requires CoreLocation.
+- No age filter (removed from PWA)
+
+---
+
+## Design System — Color Tokens for iOS
+
+The PWA now uses a centralized color system. iOS should match:
+
+### Map Marker Colors (`MAP_COLORS`)
+```swift
+struct MapColors {
+    static let green = Color(hex: "#22c55e")    // Activities
+    static let purple = Color(hex: "#a855f7")   // Events, Zürich baseline
+    static let amber = Color(hex: "#f59e0b")    // Sunshine, deals
+    static let blue = Color(hex: "#3b82f6")     // Deals
+    static let sky = Color(hex: "#60a5fa")      // Partly sunny, snow moderate
+    static let navy = Color(hex: "#1e40af")     // Snow heavy
+    static let gray = Color(hex: "#6b7280")     // Cloudy, snow light
+    static let slate = Color(hex: "#94a3b8")    // Snow light alt
+}
+```
+
+### Category Border Colors
+```swift
+struct CategoryColors {
+    static let animals = Color(hex: "#f59e0b")   // amber
+    static let museum = Color(hex: "#a855f7")    // purple
+    static let playground = Color(hex: "#22c55e") // green
+    static let outdoor = Color(hex: "#10b981")   // emerald
+    static let nature = Color(hex: "#34d399")    // teal
+    static let indoorPlay = Color(hex: "#f472b6") // pink
+    static let event = Color(hex: "#3b82f6")     // blue
+    static let seasonal = Color(hex: "#ef4444")  // red
+    static let stayhome = Color(hex: "#6b7280")  // gray
+    static let cafe = Color(hex: "#f97316")      // orange
+}
+```
+
+### Badge Colors
+```swift
+// Type badges
+static let badgeFree = Color(hex: "#22c55e")       // green — free entry
+static let badgeDeal = Color(hex: "#3b82f6")       // blue — deals
+static let badgeTip = Color(hex: "#f59e0b")        // amber — tips
+static let badgeNew = Color(hex: "#22c55e")        // green — new (< 30 days)
+static let googleStars = Color(hex: "#f59e0b")     // amber — Google rating stars
+static let badgeSchoolHoliday = Color(hex: "#f59e0b") // amber
+```
+
+---
+
+## Model Changes Summary
+
+### `NewsResponse.swift`
+```swift
+// Add to existing Briefing struct:
+struct DailyPick: Codable {
+    let activityId: String
+    let name: String
+    let nameDE: String
+    let reason: String
+    let reasonDE: String
+    let emoji: String
+    let indoor: Bool
+    let category: String
+}
+
+struct Trending: Codable {
+    let topic: String
+    let topicDE: String?
+    let url: String?
+}
+
+// Add to Briefing:
+let dailyPick: DailyPick?
+// Remove: let suggestedActivity (no longer sent)
+
+// Add to NewsResponse:
+let trending: Trending?
+// Note: weekendBrief field still exists in API but PWA no longer renders it — skip in iOS
+```
+
+### `Activity.swift`
+```swift
+// Add optional fields:
+let addedDate: String?
+let openNow: Bool?              // Google Places — currently open?
+let weekdayText: [String]?      // Google Places — e.g. ["Monday: 9:00 AM – 5:00 PM", ...]
+let permanentlyClosed: Bool?    // Google Places — permanently closed?
+// Note: featured field has been REMOVED — do not add
+// Note: No age filter — minAge/maxAge fields exist but are not used for filtering
+```
+
+### `LunchSpot.swift`
+```swift
+// Add optional fields:
+let rating: Double?       // Google Places star rating (1.0-5.0)
+let ratingCount: Int?     // Number of Google reviews
+let priceLevel: Int?      // Google Places price level (0=Free, 1=$, 2=$$, 3=$$$, 4=$$$$)
+let permanentlyClosed: Bool?  // true if Google says permanently closed
+```
+
+### `NewsItem.swift`
+```swift
+// Add optional field:
+let detail: String?  // 1-sentence expansion, shown on tap
+```
+
+---
+
+## Priority Order
+
+1. **Daily Pick + Trending** (models + 2 cards) — quick wins, data already in API
+2. **Lunch filter rework + Google ratings** — multi-select pills + cuisine dropdown + star ratings
+3. **Venue photos** — AsyncImage with /photo/ endpoint, covers activities + sunshine + snow
+4. **Reminders** — requires UNNotificationCenter, most iOS-specific work
+5. **Explore view** — new tab + MapKit, largest effort
+
+---
+
+## Testing Notes
+
+- Test Daily Pick with different weather conditions (use `?refresh=true` to get fresh data)
+- Lunch ratings: verify `rating`/`ratingCount` fields appear on lunch spots, `permanentlyClosed` flags work
+- Explore view: verify events within 7 days show up, deals filter by city + month
+- Lunch filters: test combining Near Me + Open, verify cuisine filter matches `cuisineCategory` values
+- Activities: 94 base activities now (was 52), verify all render correctly
+- Trending: verify it shows below history and only on news view
+- Local news tab: should be in English when `lang=en` (worker now translates German RSS via Claude)

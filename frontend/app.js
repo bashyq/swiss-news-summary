@@ -1,19 +1,20 @@
 // ═══════════════════════════════════════════════════
-// Today in Switzerland — PWA Frontend
+// Znüni — PWA Frontend
 // ═══════════════════════════════════════════════════
 
 // ═══ CONFIG ═══
-const APP_VERSION = '2.10.0';
+const APP_VERSION = '4.0.3';
 const API = 'https://swiss-news-worker.swissnews.workers.dev';
 const CITIES = { zurich:'Zürich', basel:'Basel', bern:'Bern', geneva:'Geneva', lausanne:'Lausanne', luzern:'Luzern', winterthur:'Winterthur' };
 const WEATHER_ICONS = { 0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',56:'🌧️',57:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',66:'🌧️',67:'🌧️',71:'🌨️',73:'🌨️',75:'🌨️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️' };
 const ACTIVITY_EMOJIS = { animals:'🦁', museum:'🏛️', playground:'🛝', outdoor:'🌳', nature:'🌿', 'indoor-play':'🎪', event:'📅', seasonal:'🎄', stayhome:'🏠', cafe:'☕', other:'📍' };
 const RAINY_CODES = [51,53,55,56,57,61,63,65,66,67,80,81,82,95,96,99];
+const MAP_COLORS = { green:'#22c55e', purple:'#a855f7', amber:'#f59e0b', blue:'#3b82f6', sky:'#60a5fa', navy:'#1e40af', gray:'#6b7280', slate:'#94a3b8', white:'#fff', muted:'#666' };
 
 // ═══ STATE ═══
 let lang = localStorage.getItem('lang') || 'en';
 let city = localStorage.getItem('city') || 'zurich';
-let theme = localStorage.getItem('theme') || 'dark';
+let theme = localStorage.getItem('theme') || 'light';
 let view = localStorage.getItem('view') || 'news';
 if (view === 'whatson') view = 'events'; // merged into events
 let newsData = null;
@@ -24,14 +25,13 @@ let weekendData = null;
 let eventsCalendarData = [];
 let currentTab = 'topStories';
 let activityFilter = 'all';
-let ageFilter = 'all';
 let eventFilter = 'all';
-let lunchFilter = 'all';
+let lunchFilters = { nearMe: false, open: false, terrace: false, saved: false };
+let lunchCuisine = 'all';
 let savedActivities = JSON.parse(localStorage.getItem('savedActivities') || '[]');
 let customActivities = JSON.parse(localStorage.getItem('customActivities') || '[]');
 let savedLunch = JSON.parse(localStorage.getItem('savedLunch') || '[]');
 let customLunch = JSON.parse(localStorage.getItem('customLunch') || '[]');
-let lunchRatings = JSON.parse(localStorage.getItem('lunchRatings') || '{}');
 let sunshineData = null;
 // whatsOnData removed — merged into Events view
 let sunshineSort = 'sunshine';
@@ -42,6 +42,10 @@ let snowSort = 'snowfall';
 let snowFilter = 'all';
 let snowExpanded = false;
 let dealsFilter = 'all';
+let activityReminders = JSON.parse(localStorage.getItem('activityReminders') || '[]');
+let exploreFilter = 'all';
+let exploreMap = null;
+let exploreMarkers = {};
 let snowMap = null;
 let snowMarkers = {};
 let userLat = null, userLon = null;
@@ -77,6 +81,9 @@ const T = {
   language: { en:'Language', de:'Sprache' },
   darkMode: { en:'Dark mode', de:'Dunkelmodus' },
   lightMode: { en:'Light mode', de:'Hellmodus' },
+  brandTheme: { en:'Theme', de:'Design' },
+  brandClassic: { en:'Classic', de:'Klassisch' },
+  brandAlpine: { en:'Alpine', de:'Alpin' },
   holidays: { en:'Upcoming Holidays', de:'Feiertage' },
   share: { en:'Share', de:'Teilen' },
   refresh: { en:'Refresh', de:'Aktualisieren' },
@@ -89,9 +96,6 @@ const T = {
   daysUntil: { en:'days', de:'Tage' },
   addActivity: { en:'Add your own', de:'Eigene hinzufügen' },
   addLunch: { en:'Add restaurant', de:'Restaurant hinzufügen' },
-  allAges: { en:'All ages', de:'Alle Alter' },
-  age23: { en:'2-3 years', de:'2-3 Jahre' },
-  age45: { en:'4-5 years', de:'4-5 Jahre' },
   materials: { en:'Materials', de:'Material' },
   familyActivities: { en: 'Family-friendly activities for ages 2-5', de: 'Familienfreundliche Aktivitäten für 2-5 Jahre' },
   noResults: { en:'No results found', de:'Keine Ergebnisse gefunden' },
@@ -105,8 +109,8 @@ const T = {
   cancel: { en:'Cancel', de:'Abbrechen' },
   name: { en:'Name', de:'Name' },
   description: { en:'Description', de:'Beschreibung' },
-  todayInSwitzerland: { en:'Today in', de:'Heute in der' },
-  switzerland: { en:'Switzerland', de:'Schweiz' },
+  todayInSwitzerland: { en:'Znüni', de:'Znüni' },
+  switzerland: { en:'Was lauft hüt?', de:'Was lauft hüt?' },
   whatToDo: { en:'What to do', de:'Was tun' },
   todayQ: { en:'today?', de:'heute?' },
   whereToEat: { en:'Where to', de:'Wo essen' },
@@ -217,51 +221,28 @@ const T = {
   savingsLabel: { en:'Savings', de:'Ersparnis' },
   emptyDeals: { en:'No deals match this filter', de:'Keine Deals für diesen Filter' },
   emptyDealsHint: { en:'Try "All" to see every deal', de:'Wähle "Alle" um alle Deals zu sehen' },
+  todaysPick: { en:"Today's Pick", de:'Tipp des Tages' },
+  seeActivity: { en:'See activity', de:'Aktivität ansehen' },
+  thisWeekend: { en:'This Weekend', de:'Dieses Wochenende' },
+  noWeekendEvents: { en:'No special events', de:'Keine besonderen Events' },
+  setReminder: { en:'Set reminder', de:'Erinnerung setzen' },
+  reminderSet: { en:'Reminder set!', de:'Erinnerung gesetzt!' },
+  reminderDue: { en:'Reminder: Time to visit', de:'Erinnerung: Zeit für' },
+  reminderDate: { en:'When?', de:'Wann?' },
+  reminderRemove: { en:'Remove reminder', de:'Erinnerung entfernen' },
+  newBadge: { en:'NEW', de:'NEU' },
+  explore: { en:'Explore', de:'Entdecken' },
+  exploreTitle: { en:'near you', de:'in der Nähe' },
+  exploreSubtitle: { en:'Activities, events & deals on the map', de:'Aktivitäten, Events & Deals auf der Karte' },
+  exploreAll: { en:'All', de:'Alle' },
+  exploreActivities: { en:'Activities', de:'Aktivitäten' },
+  exploreEvents: { en:'Events', de:'Events' },
+  exploreDeals: { en:'Deals', de:'Deals' },
 };
 const t = k => T[k]?.[lang] || k;
 
-function getSubcategoryLabel(sub) {
-  const labels = { sensory: { en:'Sensory', de:'Sensorik' }, art: { en:'Art & Crafts', de:'Basteln' }, active: { en:'Active Play', de:'Bewegung' }, pretend: { en:'Pretend Play', de:'Rollenspiel' }, kitchen: { en:'Kitchen Fun', de:'Küchenspass' } };
-  return labels[sub]?.[lang] || sub;
-}
-
-// ═══ DEALS DATA ═══
-const DEALS = [
-  // Museum Free Days
-  { id: 'kunsthaus-free', name: 'Kunsthaus Zürich — Free Wednesdays', nameDE: 'Kunsthaus Zürich — Mittwochs gratis', description: 'Free entry every Wednesday. World-class art collection.', descriptionDE: 'Jeden Mittwoch gratis Eintritt. Weltklasse-Kunstsammlung.', category: 'museum', type: 'free', city: 'zurich', url: 'https://www.kunsthaus.ch', recurring: 'Wednesdays', savings: 'Free' },
-  { id: 'landesmuseum-free', name: 'Swiss National Museum — Kids free', nameDE: 'Landesmuseum — Kinder gratis', description: 'Free for under 16. First Saturday of month free for everyone.', descriptionDE: 'Gratis für unter 16. Erster Samstag im Monat gratis für alle.', category: 'museum', type: 'free', city: 'zurich', url: 'https://www.landesmuseum.ch', recurring: '1st Saturday / Always (kids)', savings: 'Free' },
-  { id: 'zoologisches-museum', name: 'Zoological Museum — Always free', nameDE: 'Zoologisches Museum — Immer gratis', description: 'Free entry always. Dinosaur skeletons, animal exhibits kids love.', descriptionDE: 'Immer gratis. Dinosaurierskelette und Tierausstellungen.', category: 'museum', type: 'free', city: 'zurich', url: 'https://www.zm.uzh.ch', recurring: 'Always', savings: 'Free' },
-  { id: 'botanischer-garten-free', name: 'Botanical Garden Zürich — Always free', nameDE: 'Botanischer Garten Zürich — Immer gratis', description: 'Free tropical greenhouses, turtles, and space to run.', descriptionDE: 'Kostenlose Tropenhäuser, Schildkröten und Platz zum Spielen.', category: 'museum', type: 'free', city: 'zurich', url: 'https://www.bg.uzh.ch', recurring: 'Always', savings: 'Free' },
-  { id: 'fifa-museum-kids', name: 'FIFA Museum — Kids under 6 free', nameDE: 'FIFA Museum — Kinder unter 6 gratis', description: 'Interactive football museum. Free for toddlers.', descriptionDE: 'Interaktives Fussball-Museum. Gratis für Kleinkinder.', category: 'museum', type: 'free', city: 'zurich', url: 'https://www.fifamuseum.com', recurring: 'Always (under 6)', savings: 'Free' },
-  { id: 'rietberg-permanent', name: 'Museum Rietberg — Free permanent collection', nameDE: 'Museum Rietberg — Dauerausstellung gratis', description: 'Free entry to the permanent collection. Beautiful park.', descriptionDE: 'Gratis Eintritt zur Dauerausstellung. Schöner Park.', category: 'museum', type: 'free', city: 'zurich', url: 'https://rietberg.ch', recurring: 'Always', savings: 'Free' },
-  { id: 'basel-zoo-kids', name: 'Zoo Basel — Kids under 6 free', nameDE: 'Zoo Basel — Kinder unter 6 gratis', description: 'One of the oldest zoos in Switzerland. Free for toddlers.', descriptionDE: 'Einer der ältesten Zoos der Schweiz. Gratis für Kleinkinder.', category: 'museum', type: 'free', city: 'basel', url: 'https://www.zoobasel.ch', recurring: 'Always (under 6)', savings: 'Free' },
-  { id: 'basel-lange-erlen-free', name: 'Lange Erlen Animal Park — Always free', nameDE: 'Tierpark Lange Erlen — Immer gratis', description: 'Free animal park with deer, wild boar, birds, and playground.', descriptionDE: 'Gratis Tierpark mit Hirschen, Wildschweinen, Vögeln und Spielplatz.', category: 'museum', type: 'free', city: 'basel', recurring: 'Always', savings: 'Free' },
-  { id: 'bern-barenpark-free', name: 'BärenPark Bern — Always free', nameDE: 'BärenPark Bern — Immer gratis', description: 'See the famous Bern bears for free. Right by the old town.', descriptionDE: 'Die berühmten Berner Bären gratis sehen. Direkt bei der Altstadt.', category: 'museum', type: 'free', city: 'bern', url: 'https://www.baerenpark-bern.ch', recurring: 'Always', savings: 'Free' },
-  { id: 'geneva-natural-history', name: 'Natural History Museum Geneva — Always free', nameDE: 'Naturhistorisches Museum Genf — Immer gratis', description: 'Huge dinosaur and animal collection. Always free entry.', descriptionDE: 'Riesige Dinosaurier- und Tiersammlung. Immer gratis.', category: 'museum', type: 'free', city: 'geneva', url: 'https://www.museum-geneve.ch', recurring: 'Always', savings: 'Free' },
-  // Free Outdoor
-  { id: 'wildnispark-free', name: 'Wildnispark Zürich — Always free', nameDE: 'Wildnispark Zürich — Immer gratis', description: 'Free nature park with native Swiss animals and forest trails.', descriptionDE: 'Gratis Naturpark mit einheimischen Tieren und Waldwegen.', category: 'outdoor', type: 'free', city: 'zurich', url: 'https://www.wildnispark.ch', recurring: 'Always', savings: 'Free' },
-  { id: 'uetliberg-free', name: 'Uetliberg Hiking — Free', nameDE: 'Uetliberg Wandern — Gratis', description: 'Free hiking with amazing views of Zürich and the Alps.', descriptionDE: 'Gratis Wandern mit Aussicht auf Zürich und die Alpen.', category: 'outdoor', type: 'free', city: 'zurich', recurring: 'Always', savings: 'Free' },
-  { id: 'irchelpark-free', name: 'Irchelpark Playground — Free', nameDE: 'Spielplatz Irchelpark — Gratis', description: 'Large natural playground with climbing, sand pit, and water play.', descriptionDE: 'Grosser Naturspielplatz mit Klettergerüsten und Wasserspiel.', category: 'outdoor', type: 'free', city: 'zurich', recurring: 'Always', savings: 'Free' },
-  { id: 'sauvabelin-free', name: 'Sauvabelin Park Lausanne — Free', nameDE: 'Sauvabelin Park Lausanne — Gratis', description: 'Forest park with animals, playground, and wooden observation tower.', descriptionDE: 'Waldpark mit Tieren, Spielplatz und Holzturm.', category: 'outdoor', type: 'free', city: 'lausanne', recurring: 'Always', savings: 'Free' },
-  { id: 'bruderhaus-free', name: 'Wildpark Bruderhaus — Free', nameDE: 'Wildpark Bruderhaus — Gratis', description: 'Free forest animal park with deer, wild boar, and wolves.', descriptionDE: 'Gratis Waldtierpark mit Hirschen, Wildschweinen und Wölfen.', category: 'outdoor', type: 'free', city: 'winterthur', url: 'https://www.wildpark.ch', recurring: 'Always', savings: 'Free' },
-  // Transport Deals
-  { id: 'junior-card', name: 'SBB Junior Card — CHF 30/year', nameDE: 'SBB Junior-Karte — CHF 30/Jahr', description: 'Kids travel free on all Swiss trains when accompanied by a parent. Best deal in Switzerland!', descriptionDE: 'Kinder fahren gratis auf allen Schweizer Zügen in Begleitung eines Elternteils. Bester Deal der Schweiz!', category: 'transport', type: 'deal', city: 'all', url: 'https://www.sbb.ch/en/travelcards-and-tickets/railpasses/junior-card.html', recurring: 'Annual', savings: 'Kids ride free' },
-  { id: 'zvv-9oclock', name: 'ZVV 9 o\'clock Pass', nameDE: 'ZVV 9-Uhr-Pass', description: 'Unlimited travel in Zürich zone after 9am for CHF 28.80/month.', descriptionDE: 'Unbegrenzte Fahrten in der Zone Zürich nach 9 Uhr für CHF 28.80/Monat.', category: 'transport', type: 'deal', city: 'zurich', url: 'https://www.zvv.ch', recurring: 'Monthly', savings: '~50% off' },
-  { id: 'sbb-supersaver', name: 'SBB Supersaver Tickets', nameDE: 'SBB Spartageskarten', description: 'Up to 70% off train tickets when booked in advance online.', descriptionDE: 'Bis zu 70% Rabatt auf Zugtickets bei Online-Vorbuchung.', category: 'transport', type: 'tip', city: 'all', url: 'https://www.sbb.ch/en/travelcards-and-tickets/tickets-for-switzerland/supersaver-tickets.html', recurring: 'Always', savings: 'Up to 70% off' },
-  // Family Passes
-  { id: 'zurich-card', name: 'Zürich Card — Free transport + museums', nameDE: 'Zürich Card — Gratis Transport + Museen', description: 'Free public transport, free or reduced museum entry. CHF 27/24h.', descriptionDE: 'Gratis ÖV, gratis oder reduzierter Museums-Eintritt. CHF 27/24h.', category: 'family', type: 'deal', city: 'zurich', url: 'https://www.zuerich.com/en/zurichcard', recurring: 'Per visit', savings: 'CHF 27/24h' },
-  { id: 'swiss-museum-pass', name: 'Swiss Museum Pass — 500+ museums', nameDE: 'Schweizer Museumspass — 500+ Museen', description: 'Free entry to 500+ Swiss museums for one year. CHF 166/year.', descriptionDE: 'Gratis Eintritt in 500+ Schweizer Museen für ein Jahr. CHF 166/Jahr.', category: 'family', type: 'deal', city: 'all', url: 'https://www.museumspass.ch', recurring: 'Annual', savings: 'CHF 166/year' },
-  { id: 'raiffeisen-member', name: 'Raiffeisen Member Discounts', nameDE: 'Raiffeisen Mitglieder-Rabatte', description: 'Reduced entry to zoos, museums, and attractions with Raiffeisen membership.', descriptionDE: 'Reduzierter Eintritt in Zoos, Museen und Attraktionen mit Raiffeisen-Mitgliedschaft.', category: 'family', type: 'tip', city: 'all', url: 'https://www.raiffeisen.ch/memberplus', recurring: 'Annual', savings: '20-50% off' },
-  { id: 'family-card-sbb', name: 'SBB Family Card — Free', nameDE: 'SBB Family Card — Gratis', description: 'Free card: kids 6-16 travel free with a parent holding a valid ticket.', descriptionDE: 'Gratis Karte: Kinder 6-16 fahren gratis mit einem Elternteil.', category: 'family', type: 'free', city: 'all', url: 'https://www.sbb.ch', recurring: 'Always', savings: 'Free' },
-  // Seasonal
-  { id: 'summer-badi-free', name: 'Free Badi Days', nameDE: 'Gratis Badi-Tage', description: 'Many public pools offer free entry days in summer. Check local listings.', descriptionDE: 'Viele Freibäder bieten im Sommer Gratis-Tage an. Lokale Veranstaltungen prüfen.', category: 'seasonal', type: 'free', city: 'all', recurring: 'Summer', validMonths: [6, 7, 8], savings: 'Free' },
-  { id: 'christmas-markets-free', name: 'Christmas Markets — Free entry', nameDE: 'Weihnachtsmärkte — Gratis Eintritt', description: 'All Swiss Christmas markets are free to enter. Food and drinks for purchase.', descriptionDE: 'Alle Schweizer Weihnachtsmärkte haben freien Eintritt. Essen und Getränke zum Kaufen.', category: 'seasonal', type: 'free', city: 'all', recurring: 'Nov-Dec', validMonths: [11, 12], savings: 'Free' },
-  { id: 'open-air-cinemas', name: 'Open-air Cinemas', nameDE: 'Open-Air Kinos', description: 'Summer outdoor cinemas in most Swiss cities. Family screenings available.', descriptionDE: 'Sommer-Open-Air-Kinos in den meisten Schweizer Städten. Familienvorstellungen verfügbar.', category: 'seasonal', type: 'deal', city: 'all', recurring: 'Jul-Aug', validMonths: [7, 8], savings: 'From CHF 10' },
-  // Tips
-  { id: 'gz-play-free', name: 'GZ Play Afternoons — Free', nameDE: 'GZ Spielnachmittage — Gratis', description: 'Free drop-in play sessions at Zürich community centers (Gemeinschaftszentren).', descriptionDE: 'Kostenlose Spielnachmittage in Zürcher Gemeinschaftszentren.', category: 'outdoor', type: 'free', city: 'zurich', url: 'https://gz-zh.ch', recurring: 'Various days', savings: 'Free' },
-  { id: 'library-story-time', name: 'Library Story Times — Free', nameDE: 'Bibliothek Geschichtenzeit — Gratis', description: 'Free story readings for toddlers at public libraries across Switzerland.', descriptionDE: 'Kostenlose Geschichten für Kleinkinder in öffentlichen Bibliotheken.', category: 'outdoor', type: 'free', city: 'all', recurring: 'Various days', savings: 'Free' },
-  { id: 'migros-kulturprozent', name: 'Migros Kulturprozent — Free events', nameDE: 'Migros Kulturprozent — Gratis Events', description: 'Free family workshops, concerts, and cultural events funded by Migros.', descriptionDE: 'Gratis Familien-Workshops, Konzerte und Kulturveranstaltungen von Migros.', category: 'family', type: 'free', city: 'all', url: 'https://www.migros-kulturprozent.ch', recurring: 'Various', savings: 'Free' },
-];
+// Deals fetched from worker API — cached locally
+let dealsData = [];
 
 const DEAL_CATEGORY_EMOJIS = { museum: '🏛️', outdoor: '🌳', transport: '🚂', family: '👨‍👩‍👧', seasonal: '🎄' };
 
@@ -325,6 +306,13 @@ function formatDist(km) {
   return km < 1 ? `${Math.round(km * 1000)}m` : `${km.toFixed(1)}km`;
 }
 
+function retryPhoto(img) {
+  const attempt = parseInt(img.dataset.retry || '0');
+  if (attempt >= 2) { img.style.display = 'none'; return; }
+  img.dataset.retry = attempt + 1;
+  setTimeout(() => { img.src = img.src; }, 3000 * (attempt + 1));
+}
+
 function mapsUrl(lat, lon, name) {
   const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   return iOS ? `maps://maps.apple.com/?q=${encodeURIComponent(name)}&ll=${lat},${lon}` : `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
@@ -358,21 +346,6 @@ function renderEmptyState(icon, msgKey, hintKey) {
   return `<div class="empty-state"><div class="empty-state-icon">${icon}</div><div class="empty-state-msg">${t(msgKey)}</div><div class="empty-state-hint">${t(hintKey)}</div></div>`;
 }
 
-function isAvailableOnDate(activity, date) {
-  if (activity.recurring) {
-    const r = activity.recurring.toLowerCase();
-    const dow = date.getDay();
-    if (r === 'weekends' || r.includes('weekend')) return dow === 0 || dow === 6;
-    if (r.includes('various')) return true;
-    const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-    if (r.includes(days[dow])) return true;
-    if (days.some(d => r.includes(d))) return false;
-    return false;
-  }
-  if (activity.availableMonths) return activity.availableMonths.includes(date.getMonth() + 1);
-  return true;
-}
-
 let activityMarkers = {};
 let lunchMarkers = {};
 let sunshineMarkers = {};
@@ -399,31 +372,159 @@ function renderHeader() {
   const now = new Date();
   const dateStr = now.toLocaleDateString(lang === 'de' ? 'de-CH' : 'en-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-  $('header').innerHTML = `
-    <div class="header-top">
-      <div class="date-display">${dateStr}</div>
-      <div class="header-controls">
-        <div class="city-selector">
-          <button class="icon-btn" onclick="toggleCityDropdown()">
-            ${CITIES[city]} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="city-dropdown" id="city-dropdown">
-            ${Object.entries(CITIES).map(([id, name]) => `<button class="city-option${id === city ? ' active' : ''}" onclick="setCity('${id}')">${name}</button>`).join('')}
+  const heroViews = { news: true, activities: true, lunch: true, explore: true, events: true, weekend: true, sunshine: true, snow: true, deals: true };
+  if (heroViews[view]) {
+    const eyebrow = dateStr.toUpperCase();
+    const cityName = CITIES[city] || 'Zürich';
+
+    let titleText, heroBottom = '';
+    if (view === 'news') {
+      titleText = lang === 'de' ? `Heute in <em>${cityName}</em>` : `Today in <em>${cityName}</em>`;
+      heroBottom = `<div class="weather-row" id="weather-compact"></div>`;
+    } else if (view === 'activities') {
+      titleText = lang === 'de' ? `Was <em>tun?</em>` : `What to <em>do?</em>`;
+      const filters = [
+        ['all', t('all')], ['near', t('nearMe')], ['indoor', t('indoor')], ['outdoor', t('outdoor')],
+        ['stayhome', t('stayHome')], ['free', t('freeFilter')], ['seasonal', t('seasonal')], ['saved', t('saved')]
+      ];
+      const totalCount = activitiesData.length || '...';
+      heroBottom = `</div><div class="pill-row-hero">${filters.map(([k, v]) => {
+        const active = activityFilter === k;
+        return `<button class="pill ${active ? 'on' : 'off'}" onclick="filterActivities('${k}')">${v}${k === 'all' ? `<span class="pill-cnt">${totalCount}</span>` : ''}</button>`;
+      }).join('')}</div>`;
+    } else if (view === 'lunch') {
+      titleText = 'Lunch';
+      const lunchPills = [
+        ['nearMe', t('nearMe')], ['open', lang === 'de' ? 'Offen' : 'Open'],
+        ['terrace', 'Terrasse'], ['saved', t('saved')]
+      ];
+      const cuisines = [['all', lang === 'de' ? 'Alle' : 'All'], ['italian','🍕'], ['asian','🥢'], ['kebab','🥙'], ['cafe','☕'], ['fastfood','🍔'], ['international','🌍']];
+      heroBottom = `</div><div class="pill-row-hero">${lunchPills.map(([k, v]) => {
+        const active = lunchFilters[k];
+        return `<button class="pill ${active ? 'on' : 'off'}" onclick="toggleLunchFilter('${k}')">${v}</button>`;
+      }).join('')}${cuisines.map(([k, v]) => {
+        const active = lunchCuisine === k;
+        return `<button class="pill ${active ? 'on' : 'off'}" onclick="setLunchCuisine('${k}')">${v}</button>`;
+      }).join('')}</div>`;
+    } else if (view === 'explore') {
+      titleText = lang === 'de' ? `Entdecke <em>${cityName}</em>` : `Explore <em>${cityName}</em>`;
+      const explorePills = [
+        ['all', t('exploreAll')], ['activities', t('exploreActivities')],
+        ['events', t('exploreEvents')], ['deals', t('exploreDeals')]
+      ];
+      heroBottom = `</div><div class="pill-row-hero">${explorePills.map(([k, v]) => {
+        const active = exploreFilter === k;
+        return `<button class="pill ${active ? 'on' : 'off'}" onclick="setExploreFilter('${k}')">${v}</button>`;
+      }).join('')}</div>`;
+    } else if (view === 'events') {
+      titleText = lang === 'de' ? `Was <em>läuft?</em>` : `What's <em>On?</em>`;
+      const eventPills = [['all', t('all')], ['holidays', t('holidaysFilter')], ['schoolHoliday', '🎒'], ['events', t('eventsTab')], ['recurring', '🔄'], ['seasonal', '🌸'], ['festivals', '🎪']];
+      heroBottom = `</div><div class="pill-row-hero">${eventPills.map(([k, v]) => {
+        const active = eventFilter === k;
+        return `<button class="pill ${active ? 'on' : 'off'}" onclick="filterEvents('${k}')">${v}</button>`;
+      }).join('')}</div>`;
+    } else if (view === 'weekend') {
+      titleText = lang === 'de' ? `Wochen<em>ende</em>` : `Week<em>end</em>`;
+    } else if (view === 'sunshine') {
+      titleText = lang === 'de' ? `Wo ist <em>Sonne?</em>` : `Where is <em>Sun?</em>`;
+      const sunPills = [['all', t('all')], ['sunny', '☀️'], ['partly', '⛅'], ['cloudy', '☁️']];
+      const sortPills = [['sunshine', '☀️ ' + t('sortBySun')], ['distance', '📍 ' + t('sortByDist')]];
+      heroBottom = `</div><div class="pill-row-hero">${sunPills.map(([k, v]) => {
+        const active = sunshineFilter === k;
+        return `<button class="pill ${active ? 'on' : 'off'}" onclick="setSunshineFilter('${k}')">${v}</button>`;
+      }).join('')}<span class="pill-sep"></span>${sortPills.map(([k, v]) => {
+        const active = sunshineSort === k;
+        return `<button class="pill ${active ? 'on' : 'off'}" onclick="setSunshineSort('${k}')">${v}</button>`;
+      }).join('')}</div>`;
+    } else if (view === 'snow') {
+      titleText = lang === 'de' ? `Wo ist <em>Schnee?</em>` : `Where is <em>Snow?</em>`;
+      const snowPills = [['all', t('all')], ['heavy', '🏔️'], ['moderate', '❄️'], ['light', '🌨️']];
+      const sortPills = [['snowfall', '❄️ ' + t('sortBySnow')], ['distance', '📍 ' + t('sortByDist')]];
+      heroBottom = `</div><div class="pill-row-hero">${snowPills.map(([k, v]) => {
+        const active = snowFilter === k;
+        return `<button class="pill ${active ? 'on' : 'off'}" onclick="setSnowFilter('${k}')">${v}</button>`;
+      }).join('')}<span class="pill-sep"></span>${sortPills.map(([k, v]) => {
+        const active = snowSort === k;
+        return `<button class="pill ${active ? 'on' : 'off'}" onclick="setSnowSort('${k}')">${v}</button>`;
+      }).join('')}</div>`;
+    } else if (view === 'deals') {
+      titleText = lang === 'de' ? `Beste <em>Deals?</em>` : `Best <em>Deals?</em>`;
+      const dealPills = [['all', t('all')], ['free', '🆓 ' + t('freeEntry')], ['deal', '🏷️ ' + t('deal')], ['tip', '💡 ' + t('tip')]];
+      heroBottom = `</div><div class="pill-row-hero">${dealPills.map(([k, v]) => {
+        const active = dealsFilter === k;
+        return `<button class="pill ${active ? 'on' : 'off'}" onclick="filterDeals('${k}')">${v}</button>`;
+      }).join('')}</div>`;
+    }
+
+    $('header').innerHTML = `
+      <div class="hero">
+        <div class="hero-glow"></div>
+        <div class="hero-top">
+          <div class="hero-controls">
+            <div class="city-selector">
+              <button class="hero-btn" onclick="toggleCityDropdown()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                ${cityName}
+              </button>
+              <div class="city-dropdown" id="city-dropdown">
+                ${Object.entries(CITIES).map(([id, name]) => `<button class="city-option${id === city ? ' active' : ''}" onclick="setCity('${id}')">${name}</button>`).join('')}
+              </div>
+            </div>
+          </div>
+          <div class="hero-controls">
+            <div class="hero-lang">
+              <button class="hero-lang-btn${lang === 'en' ? ' active' : ''}" onclick="setLanguage('en')">EN</button>
+              <button class="hero-lang-btn${lang === 'de' ? ' active' : ''}" onclick="setLanguage('de')">DE</button>
+            </div>
+            <button class="hero-btn" onclick="openMenu()" aria-label="Menu">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+            </button>
           </div>
         </div>
-        <button class="icon-btn" onclick="openMenu()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
-        </button>
+        <div class="hero-body">
+          <div class="hero-eyebrow">${eyebrow}</div>
+          <h1 class="hero-title" style="${view === 'explore' ? 'font-size:26px' : view !== 'news' ? 'font-size:24px' : ''}">${titleText}</h1>
+          ${heroBottom}
+        </div>
       </div>
-    </div>
-    <div class="title-row">
-      <h1 class="page-title" id="page-title">${getPageTitle()}</h1>
-      <div id="weather-compact"></div>
-    </div>
-    <div id="weather-dropdown" class="weather-dropdown"></div>
-    <div id="history-inline" class="history-inline"></div>
-    <div id="transport-widget"></div>
-  `;
+      ${view === 'news' ? `<div id="weather-dropdown" class="weather-dropdown"></div>
+      <div class="history-strip" id="history-inline"></div>
+      <div id="trending-inline" class="trending-banner" style="display:none"></div>
+      <div class="alert-banner" id="transport-widget"></div>` : ''}
+    `;
+  } else {
+    // Legacy header for non-news views
+    $('header').innerHTML = `
+      <div class="header-top">
+        <div class="date-display">${dateStr}</div>
+        <div class="header-controls">
+          <div class="header-lang-toggle">
+            <button class="header-lang-btn${lang === 'en' ? ' active' : ''}" onclick="setLanguage('en')">EN</button>
+            <button class="header-lang-btn${lang === 'de' ? ' active' : ''}" onclick="setLanguage('de')">DE</button>
+          </div>
+          <div class="city-selector">
+            <button class="icon-btn" onclick="toggleCityDropdown()">
+              ${CITIES[city]} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div class="city-dropdown" id="city-dropdown">
+              ${Object.entries(CITIES).map(([id, name]) => `<button class="city-option${id === city ? ' active' : ''}" onclick="setCity('${id}')">${name}</button>`).join('')}
+            </div>
+          </div>
+          <button class="icon-btn" onclick="openMenu()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="title-row">
+        <h1 class="page-title" id="page-title">${getPageTitle()}</h1>
+        <div id="weather-compact" class="weather-compact"></div>
+      </div>
+      <div id="weather-dropdown" class="weather-dropdown"></div>
+      <div id="history-inline" class="history-inline"></div>
+      <div id="trending-inline" class="trending-banner" style="display:none"></div>
+      <div id="transport-widget"></div>
+    `;
+  }
 }
 
 function getPageTitle() {
@@ -435,6 +536,7 @@ function getPageTitle() {
   if (view === 'sunshine') return `${t('whereSun')}<br><span class="accent">${t('sunTitle')}</span>`;
   if (view === 'snow') return `${t('whereSnow')}<br><span class="accent">${t('snowTitle')}</span>`;
   if (view === 'deals') return `${t('bestDeals')}<br><span class="accent">${t('dealsTitle')}</span>`;
+  if (view === 'explore') return `${t('explore')}<br><span class="accent">${t('exploreTitle')}</span>`;
   return '';
 }
 
@@ -442,16 +544,23 @@ function renderNav() {
   if (view !== 'news') { $('nav').innerHTML = ''; return; }
   const cats = ['topStories', 'politics', 'eventsTab', 'culture', 'local'];
   const keys = ['topStories', 'politics', 'events', 'culture', 'local'];
-  $('nav').innerHTML = `<div class="tabs">${cats.map((c, i) => {
-    const count = newsData?.categories?.[keys[i]]?.length || 0;
-    return `<button class="tab-btn${currentTab === keys[i] ? ' active' : ''}" onclick="setTab('${keys[i]}')">${t(c)} <span class="tab-count">${count}</span></button>`;
-  }).join('')}</div>`;
+  const totalCount = keys.reduce((s, k) => s + (newsData?.categories?.[k]?.length || 0), 0);
+  $('nav').innerHTML = `
+    <div class="section-row">
+      <div class="section-heading">${lang === 'de' ? 'Nachrichten' : 'Headlines'}</div>
+      <div class="section-count">${totalCount} ${lang === 'de' ? 'Artikel' : 'articles'}</div>
+    </div>
+    <div class="pill-row">${cats.map((c, i) => {
+      const count = newsData?.categories?.[keys[i]]?.length || 0;
+      const active = currentTab === keys[i];
+      return `<button class="pill ${active ? 'on' : 'off'}" onclick="setTab('${keys[i]}')">${t(c)}<span class="pill-cnt">${count}</span></button>`;
+    }).join('')}</div>`;
 }
 
-const VIEW_RENDERERS = { news: renderNewsView, activities: renderActivitiesView, lunch: renderLunchView, events: renderEventsView, weekend: renderWeekendView, sunshine: renderSunshineView, snow: renderSnowView, deals: renderDealsView };
+const VIEW_RENDERERS = { news: renderNewsView, activities: renderActivitiesView, lunch: renderLunchView, events: renderEventsView, weekend: renderWeekendView, sunshine: renderSunshineView, snow: renderSnowView, deals: renderDealsView, explore: renderExploreView };
 
 function renderMain() {
-  const views = ['news', 'activities', 'lunch', 'events', 'weekend', 'sunshine', 'snow', 'deals'];
+  const views = ['news', 'activities', 'lunch', 'events', 'weekend', 'sunshine', 'snow', 'deals', 'explore'];
   $('main').innerHTML = views.map(v => `<div class="app-view${view === v ? ' active' : ''}" id="view-${v}"></div>`).join('');
   renderCurrentView();
 }
@@ -463,35 +572,32 @@ function renderCurrentView() {
 }
 
 function renderMenu() {
+  const navItems = [
+    ['news', '📰', t('news')], ['activities', '🎈', t('activities')], ['explore', '🗺️', t('explore')],
+    ['sunshine', '☀️', t('sunshine')], ['snow', '❄️', t('snow')], ['lunch', '🍽️', t('lunch')],
+    ['weekend', '🌤️', t('weekend')], ['events', '📅', t('events')], ['deals', '🎁', t('deals')]
+  ];
   $('menu').innerHTML = `
-    <button class="menu-close" onclick="closeMenu()">&times;</button>
-    <div class="menu-title">${t('settings')}</div>
-    <div class="menu-item${view === 'news' ? ' active' : ''}" onclick="switchView('news')"><span class="menu-item-icon">📰</span>${t('news')}</div>
-    <div class="menu-item${view === 'activities' ? ' active' : ''}" onclick="switchView('activities')"><span class="menu-item-icon">🎈</span>${t('activities')}</div>
-    <div class="menu-item${view === 'lunch' ? ' active' : ''}" onclick="switchView('lunch')"><span class="menu-item-icon">🍽️</span>${t('lunch')}</div>
-    <div class="menu-item${view === 'events' ? ' active' : ''}" onclick="switchView('events')"><span class="menu-item-icon">📅</span>${t('events')}</div>
-    <div class="menu-item${view === 'weekend' ? ' active' : ''}" onclick="switchView('weekend')"><span class="menu-item-icon">🌤️</span>${t('weekend')}</div>
-    <div class="menu-item${view === 'sunshine' ? ' active' : ''}" onclick="switchView('sunshine')"><span class="menu-item-icon">☀️</span>${t('sunshine')}</div>
-    <div class="menu-item${view === 'snow' ? ' active' : ''}" onclick="switchView('snow')"><span class="menu-item-icon">❄️</span>${t('snow')}</div>
-    <div class="menu-item${view === 'deals' ? ' active' : ''}" onclick="switchView('deals')"><span class="menu-item-icon">🎁</span>${t('deals')}</div>
-    ${canDonate ? `<div class="menu-item" onclick="openDonateModal()"><span class="menu-item-icon">☕</span>${t('donate')}</div>` : ''}
-    <div class="menu-section">
-      <div class="menu-section-title">${t('language')}</div>
-      <div class="lang-toggle">
-        <button class="lang-btn${lang === 'en' ? ' active' : ''}" onclick="setLanguage('en')">EN</button>
-        <button class="lang-btn${lang === 'de' ? ' active' : ''}" onclick="setLanguage('de')">DE</button>
-      </div>
-      <button class="theme-toggle" onclick="toggleTheme()">${theme === 'dark' ? '☀️ ' + t('lightMode') : '🌙 ' + t('darkMode')}</button>
+    <div class="menu-head">
+      <div class="menu-title">Znüni</div>
+      <button class="menu-close" onclick="closeMenu()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
+    <nav class="menu-nav">
+      ${navItems.map(([v, ico, label]) => `<div class="menu-item${view === v ? ' active' : ''}" onclick="switchView('${v}')"><span class="menu-item-icon">${ico}</span>${label}</div>`).join('')}
+      ${canDonate ? `<div class="menu-item" onclick="openDonateModal()"><span class="menu-item-icon">☕</span>${t('donate')}</div>` : ''}
+    </nav>
+    <div class="menu-divider"></div>
+    <div class="menu-actions">
+      <div class="menu-item" onclick="closeMenu();shareSummary()"><span class="menu-item-icon">📤</span>${t('share')}</div>
+      <div class="menu-item" onclick="closeMenu();refreshCurrentView()"><span class="menu-item-icon">🔄</span>${t('refresh')}</div>
+      <div class="menu-item" onclick="toggleTheme()"><span class="menu-item-icon">${theme === 'dark' ? '☀️' : '🌙'}</span>${theme === 'dark' ? t('lightMode') : t('darkMode')}</div>
+    </div>
+    <div class="menu-divider"></div>
     <div class="menu-section" id="menu-holidays">
       <div class="menu-section-title">${t('holidays')}</div>
       <div id="menu-holidays-list"></div>
     </div>
-    <div class="menu-section" style="margin-top:20px;">
-      <div class="menu-item" onclick="closeMenu();shareSummary()"><span class="menu-item-icon">📤</span>${t('share')}</div>
-      <div class="menu-item" onclick="closeMenu();refreshCurrentView()"><span class="menu-item-icon">🔄</span>${t('refresh')}</div>
-    </div>
-    <div class="menu-section">
+    <div class="menu-footer">
       <div class="menu-section-title" onclick="toggleAbout()" style="cursor:pointer">${t('about')} ▾</div>
       <div id="about-panel" style="display:none"></div>
     </div>
@@ -512,7 +618,7 @@ function renderNewsView() {
 
   let html = '';
 
-  // Briefing
+  // Briefing + Daily Pick
   const briefDismissed = localStorage.getItem('briefingDismissed') === new Date().toDateString();
   if (newsData.briefing && !briefDismissed) {
     const b = newsData.briefing;
@@ -525,81 +631,115 @@ function renderNewsView() {
         <div class="briefing-story-summary">${esc(b.topStory.summary)}</div>
       </div>`;
     }
-    if (b.suggestedActivity) {
-      const a = b.suggestedActivity;
-      html += `<div class="briefing-activity">${lang === 'de' ? '💡 Vorschlag: ' : '💡 Suggestion: '}${esc(lang === 'de' ? (a.nameDE || a.name) : a.name)}</div>`;
+    if (b.dailyPick) {
+      const dp = b.dailyPick;
+      const reason = lang === 'de' ? dp.reasonDE : dp.reason;
+      html += `<div class="briefing-pick" onclick="switchView('activities')">
+        <div class="briefing-pick-label">${dp.emoji} ${t('todaysPick')}</div>
+        <div class="briefing-pick-text">${esc(reason)}</div>
+        <div class="briefing-pick-cta">${t('seeActivity')} &rarr;</div>
+      </div>`;
     }
     html += '</div>';
   }
 
-  // Trending
-  if (newsData.trending) {
-    const tr = newsData.trending;
-    const topic = lang === 'de' ? (tr.topicDE || tr.topic) : tr.topic;
-    html += `<div class="trending-banner" onclick="${safeUrl(tr.url) ? `window.open('${esc(tr.url)}','_blank')` : ''}">
-      <div class="trending-label">🔥 ${lang === 'de' ? 'Trending' : 'Trending'}</div>
-      <div class="trending-topic">${esc(topic)}</div>
-    </div>`;
+  // Weekend brief
+  if (newsData.weekendBrief) {
+    html += renderWeekendBriefCard(newsData.weekendBrief);
   }
 
-  // Category sections
+  // Category sections with ncard layout
   const cats = ['topStories', 'politics', 'events', 'culture', 'local'];
   for (const cat of cats) {
     const items = newsData.categories?.[cat] || [];
-    html += `<div class="section${currentTab === cat ? ' active' : ''}" id="section-${cat}">`;
+    html += `<div class="section${currentTab === cat ? ' active' : ''}" id="section-${cat}">
+      <div class="news-list">`;
     for (let ci = 0; ci < items.length; ci++) {
       const item = items[ci];
-      const cardId = `card-${cat}-${ci}`;
-      html += `<div class="card" onclick="toggleDetail('${cardId}')">
-        <div class="card-headline"><a href="${esc(item.url)}" target="_blank" onclick="event.stopPropagation()">${esc(item.headline)}</a></div>
-        <div class="card-summary">${esc(item.summary)}</div>
-        <div class="card-detail" id="${cardId}">${esc(item.detail || '')}</div>
-        <div class="card-meta">
-          <span class="card-source">${esc(item.source)}</span>
-          <span class="sentiment-badge sentiment-${item.sentiment || 'neutral'}">${item.sentiment || 'neutral'}</span>
-          ${item.publishedAt ? `<span class="freshness">${timeAgo(item.publishedAt)}</span>` : ''}
+      const sentiment = item.sentiment || 'neutral';
+      const sentClass = sentiment === 'positive' ? 'positive' : sentiment === 'negative' ? 'negative' : 'neutral';
+      const sentLabel = sentiment === 'positive' ? (lang === 'de' ? 'Positiv' : 'Positive') : sentiment === 'negative' ? (lang === 'de' ? 'Negativ' : 'Negative') : (lang === 'de' ? 'Neutral' : 'Neutral');
+      const sentPill = sentiment === 'positive' ? 'pos' : sentiment === 'negative' ? 'neg' : 'neu';
+      const timeStr = item.publishedAt ? timeAgo(item.publishedAt) : '';
+      html += `<div class="ncard ${sentClass}" onclick="toggleNews(this, event)">
+        <div class="ncard-core">
+          <div class="ncard-top">
+            <div class="ncard-source-row">
+              <span class="ncard-source">${esc(item.source)}</span>
+              ${timeStr ? `<span class="ncard-dot"></span><span class="ncard-time">${timeStr}</span>` : ''}
+            </div>
+          </div>
+          <div class="ncard-headline"><a href="${esc(item.url)}" target="_blank" onclick="event.stopPropagation()">${esc(item.headline)}</a></div>
+          <div class="ncard-summary">${esc(item.summary)}</div>
+          <div class="ncard-footer">
+            <span class="sentiment ${sentPill}">${sentLabel}</span>
+            <span class="ncard-cta">${lang === 'de' ? 'Mehr' : 'More'} <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></span>
+          </div>
+        </div>
+        <div class="ncard-detail">
+          <div class="ncard-detail-inner">
+            ${item.detail ? `<div class="detail-meta"><div class="detail-meta-item"><div class="detail-meta-label">${lang === 'de' ? 'Details' : 'Details'}</div><div class="detail-meta-value">${esc(item.detail)}</div></div></div>` : ''}
+            <div class="detail-actions">
+              <a class="btn-read" href="${esc(item.url)}" target="_blank" onclick="event.stopPropagation()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                ${lang === 'de' ? 'Artikel lesen' : 'Read full article'}
+              </a>
+              <button class="btn-share" onclick="event.stopPropagation();shareArticle('${esc(item.headline)}','${esc(item.url)}')" aria-label="Share">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              </button>
+            </div>
+          </div>
         </div>
       </div>`;
     }
     if (items.length === 0) html += `<div class="loading-msg">${t('noResults')}</div>`;
-    html += '</div>';
+    html += '</div></div>';
   }
 
   return html;
 }
 
+function renderWeekendBriefCard(wb) {
+  const WI = WEATHER_ICONS;
+  let dayHtml = '';
+  if (wb.saturday) {
+    dayHtml += `<div class="weekend-brief-day"><div class="weekend-brief-day-name">${t('saturday')}</div><div>${WI[wb.saturday.weatherCode] || '🌤️'} ${wb.saturday.tempMax}° / ${wb.saturday.tempMin}°</div></div>`;
+  }
+  if (wb.sunday) {
+    dayHtml += `<div class="weekend-brief-day"><div class="weekend-brief-day-name">${t('sunday')}</div><div>${WI[wb.sunday.weatherCode] || '🌤️'} ${wb.sunday.tempMax}° / ${wb.sunday.tempMin}°</div></div>`;
+  }
+  let eventsHtml = '';
+  if (wb.events?.length) {
+    eventsHtml = wb.events.map(e => {
+      const name = lang === 'de' ? (e.nameDE || e.name) : e.name;
+      return `<div class="weekend-brief-event">${e.toddlerFriendly ? '👶 ' : ''}${esc(name)}${e.free ? ' <span class="badge badge-free">Free</span>' : ''}</div>`;
+    }).join('');
+  } else {
+    eventsHtml = `<div class="weekend-brief-event" style="color:var(--muted)">${t('noWeekendEvents')}</div>`;
+  }
+  return `<div class="weekend-brief" onclick="switchView('events')">
+    <div class="weekend-brief-title">${t('thisWeekend')}</div>
+    <div class="weekend-brief-weather">${dayHtml}</div>
+    <div class="weekend-brief-events">${eventsHtml}</div>
+  </div>`;
+}
+
 // ═══ ACTIVITIES VIEW ═══
 
 function renderActivitiesView() {
-  const cityName = CITIES[city] || 'Switzerland';
-  let html = `<div class="subtitle" id="activities-subtitle">${t('familyActivities')} ${lang === 'de' ? 'in' : 'in'} ${cityName}</div>`;
-
-  // Filters
-  const filters = [
-    ['all', t('all')], ['near', t('nearMe')], ['indoor', t('indoor')], ['outdoor', t('outdoor')],
-    ['free', '🆓 ' + t('freeFilter')], ['saved', t('saved')], ['seasonal', t('seasonal')], ['stayhome', t('stayHome')]
-  ];
-  html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${activityFilter === k ? ' active' : ''}" onclick="filterActivities('${k}')">${v}</button>`).join('')}</div>`;
-
-  // Age filter
-  html += `<div class="age-filter">
-    <button class="age-btn${ageFilter === 'all' ? ' active' : ''}" onclick="setAgeFilter('all')">${t('allAges')}</button>
-    <button class="age-btn${ageFilter === '2-3' ? ' active' : ''}" onclick="setAgeFilter('2-3')">${t('age23')}</button>
-    <button class="age-btn${ageFilter === '4-5' ? ' active' : ''}" onclick="setAgeFilter('4-5')">${t('age45')}</button>
-  </div>`;
-
-  // Surprise + playgrounds buttons
-  html += `<div class="activities-actions">
-    <button class="surprise-btn" onclick="surpriseMe()" id="surprise-btn">🎲 ${t('surpriseMe')}</button>
-    <button class="surprise-btn playground-btn" onclick="openPlaygroundsMap()">🛝 ${t('findPlaygrounds')}</button>
-  </div>`;
+  const filtered = getFilteredActivities();
+  let html = '';
 
   // Map
   html += '<div class="map-container" id="activity-map"></div>';
 
+  // Results count
+  html += `<div class="act-results">
+    <div class="act-results-count">${filtered.length} ${lang === 'de' ? 'Ergebnisse' : 'results'}</div>
+  </div>`;
+
   // Activities list
-  html += '<div id="activities-list">';
-  const filtered = getFilteredActivities();
+  html += '<div class="act-list" id="activities-list">';
   if (filtered.length === 0) {
     if (activitiesData.length === 0) {
       html += renderSkeleton(3);
@@ -612,6 +752,14 @@ function renderActivitiesView() {
     for (const a of filtered) html += renderActivityCard(a);
   }
   html += '</div>';
+
+  // Surprise me button
+  html += `<div style="padding:4px 0 20px">
+    <button class="btn-surprise" onclick="surpriseMe()" id="surprise-btn">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M11 1L13 5H15L11.5 8L12.5 12L10 10.5L7.5 12L8.5 8L5 5H7L9 1H11Z" fill="white" opacity=".85"/><path d="M4 6L5 8H6L4.5 9.5L5 11.5L3.5 10.5L2 11.5L2.5 9.5L1 8H2L3 6H4Z" fill="white" opacity=".5"/></svg>
+      ${t('surpriseMe')}
+    </button>
+  </div>`;
 
   // Add custom
   html += `<button class="btn-add" onclick="showAddForm('activity')">${t('addActivity')}</button>`;
@@ -636,32 +784,67 @@ function renderActivityCard(a) {
   const desc = lang === 'de' ? (a.descriptionDE || a.description) : a.description;
   const isSaved = savedActivities.includes(a.id);
   const dist = (userLat && a.lat) ? haversine(userLat, userLon, a.lat, a.lon) : null;
+  const hasPhoto = a.category !== 'stayhome' && a.id && !a.custom;
+  const catLabel = a.category ? (a.category.charAt(0).toUpperCase() + a.category.slice(1).replace('-', ' ')) : '';
 
-  let badges = '';
-  badges += `<span class="badge ${a.indoor ? 'badge-indoor' : 'badge-outdoor'}">${a.indoor ? 'Indoor' : 'Outdoor'}</span>`;
-  if (a.duration) badges += `<span class="badge badge-duration">${a.duration}</span>`;
-  if (a.price) badges += `<span class="badge badge-price">${a.price}</span>`;
-  if (dist !== null) badges += `<span class="badge badge-distance">${formatDist(dist)}</span>`;
-  if (a.season) badges += `<span class="badge-seasonal badge-${a.season}">${a.season}</span>`;
-  if (a.recurring) badges += `<span class="badge-recurring">${a.recurring}</span>`;
-  if (a.subcategory) badges += `<span class="badge-subcategory">${getSubcategoryLabel(a.subcategory)}</span>`;
+  // Face tags
+  let tags = '';
+  tags += `<span class="act-tag ${a.indoor ? 'indoor' : 'outdoor'}">${a.indoor ? 'Indoor' : 'Outdoor'}</span>`;
+  if (a.duration) tags += `<span class="act-tag time">${a.duration}</span>`;
+  if (a.free || (a.price && /^free|^gratis/i.test(a.price))) tags += `<span class="act-tag free">${lang === 'de' ? 'Gratis' : 'Free'}</span>`;
+  else if (a.price) tags += `<span class="act-tag price">${a.price}</span>`;
+  if (dist !== null) tags += `<span class="act-tag dist">↗ ${formatDist(dist)}</span>`;
 
-  let extra = '';
-  if (a.materials) {
-    const mat = lang === 'de' ? (a.materialsDE || a.materials) : a.materials;
-    extra = `<div class="materials-info">📦 ${t('materials')}: ${esc(mat)}</div>`;
+  // Status info
+  let statusHtml = '';
+  if (a.permanentlyClosed) {
+    statusHtml = `<div class="act-status-strip"><div class="act-status-dot closed"></div><span class="act-status-text closed">${lang === 'de' ? 'Dauerhaft geschlossen' : 'Permanently closed'}</span></div>`;
+  } else if (a.openNow !== undefined && a.openNow !== null) {
+    const weekdays = a.weekdayText ? ` · ${a.weekdayText[0]?.split(':')[0] || ''}` : '';
+    statusHtml = `<div class="act-status-strip">
+      <div class="act-status-dot ${a.openNow ? 'open' : 'closed'}"></div>
+      <span class="act-status-text ${a.openNow ? 'open' : 'closed'}">${a.openNow ? (lang === 'de' ? 'Geöffnet' : 'Open now') : (lang === 'de' ? 'Geschlossen' : 'Closed')}</span>
+      <span class="act-status-hours">${weekdays}</span>
+    </div>`;
   }
 
-  return `<div class="activity-card cat-${a.category || 'other'}" id="activity-${a.id}" data-lat="${a.lat || ''}" data-lon="${a.lon || ''}" onclick="activityCardClick('${a.id}', event)">
-    <button class="activity-save" onclick="event.stopPropagation();toggleSave('${a.id}')">${isSaved ? '❤️' : '🤍'}</button>
-    <div class="activity-name"><span class="activity-emoji">${ACTIVITY_EMOJIS[a.category] || '📍'}</span> ${esc(name)}</div>
-    <div class="activity-desc">${esc(desc)}</div>
-    <div class="activity-badges">${badges}</div>
-    ${extra}
-    <div class="activity-actions">
-      ${a.url ? `<button onclick="event.stopPropagation();window.open('${esc(a.url)}','_blank')">${t('website')}</button>` : ''}
-      ${a.lat ? `<button onclick="event.stopPropagation();window.open('${mapsUrl(a.lat, a.lon, name)}','_blank')">${t('directions')}</button>` : ''}
-      ${a.custom ? `<button onclick="event.stopPropagation();deleteCustomActivity('${a.id}')">🗑️</button>` : ''}
+  // Detail grid cells
+  const distVal = dist !== null ? formatDist(dist) + (lang === 'de' ? ' entfernt' : ' away') : (lang === 'de' ? 'Standort unbekannt' : 'Location unknown');
+  const durationVal = a.duration || '—';
+  const priceVal = a.price || (lang === 'de' ? 'Gratis' : 'Free');
+  const agesVal = a.ageRange || (a.minAge && a.maxAge ? `${a.minAge}–${a.maxAge} ${lang === 'de' ? 'Jahre' : 'years'}` : (lang === 'de' ? 'Alle Alter' : 'All ages'));
+
+  return `<div class="act-card" id="activity-${a.id}" data-lat="${a.lat || ''}" data-lon="${a.lon || ''}" onclick="toggleActCard(this, event)">
+    <div class="act-face">
+      ${hasPhoto ? `<div class="act-photo-wrap"><img src="${API}/photo/${a.id}" alt="" loading="lazy" onerror="this.parentNode.classList.add('no-img')"><div class="act-photo-badge">${catLabel}</div></div>` : ''}
+      <div class="act-face-body">
+        <div class="act-face-name">${esc(name)}</div>
+        <div class="act-face-desc">${esc(desc)}</div>
+        <div class="act-face-tags">${tags}</div>
+      </div>
+      <button class="act-close-btn" onclick="closeActCard(this.closest('.act-card'), event)">
+        <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1 1L9 9M9 1L1 9" stroke="var(--muted)" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="act-detail">
+      ${hasPhoto ? `<div class="act-detail-photo"><img src="${API}/photo/${a.id}" alt="" loading="lazy"><div class="act-detail-photo-fade"></div><div class="act-detail-photo-badges"><span class="act-detail-photo-badge">${catLabel}${a.indoor ? ' · Indoor' : ''}</span></div></div>` : ''}
+      <div class="act-detail-body">
+        <div class="act-detail-title">${esc(name)}</div>
+        <div class="act-detail-desc">${esc(desc)}</div>
+        <div class="act-detail-grid">
+          <div class="act-detail-cell"><div class="act-detail-label">${lang === 'de' ? 'Entfernung' : 'Distance'}</div><div class="act-detail-value">${distVal}</div></div>
+          <div class="act-detail-cell"><div class="act-detail-label">${lang === 'de' ? 'Dauer' : 'Duration'}</div><div class="act-detail-value">${durationVal}</div></div>
+          <div class="act-detail-cell"><div class="act-detail-label">${lang === 'de' ? 'Preis' : 'Price'}</div><div class="act-detail-value">${priceVal}</div></div>
+          <div class="act-detail-cell"><div class="act-detail-label">${lang === 'de' ? 'Alter' : 'Ages'}</div><div class="act-detail-value">${agesVal}</div></div>
+        </div>
+        ${statusHtml}
+        <div class="act-detail-actions">
+          ${a.url ? `<a class="btn-website" href="${esc(a.url)}" target="_blank" onclick="event.stopPropagation()"><svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M7 1V8M4 5L7 1L10 5" stroke="white" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 10V12C2 12.5 2.5 13 3 13H11C11.5 13 12 12.5 12 12V10" stroke="white" stroke-width="1.4" stroke-linecap="round"/></svg>${t('website')}</a>` : ''}
+          <button class="btn-save${isSaved ? ' saved' : ''}" onclick="event.stopPropagation();toggleSave('${a.id}');renderCurrentView();afterRender(initActivityMap)">
+            ${isSaved ? '❤️' : '🤍'}
+          </button>
+        </div>
+      </div>
     </div>
   </div>`;
 }
@@ -669,13 +852,9 @@ function renderActivityCard(a) {
 function getFilteredActivities() {
   let items = [...activitiesData, ...customActivities];
 
-  // Age filter
-  if (ageFilter === '2-3') items = items.filter(a => !a.minAge || a.minAge <= 3);
-  else if (ageFilter === '4-5') items = items.filter(a => !a.maxAge || a.maxAge >= 4);
-
   // Category filter
-  if (activityFilter === 'all') items = items.filter(a => a.category !== 'stayhome');
-  else if (activityFilter === 'near') { items = items.filter(a => a.category !== 'stayhome' && a.lat); if (userLat) items.sort((a, b) => haversine(userLat, userLon, a.lat, a.lon) - haversine(userLat, userLon, b.lat, b.lon)); }
+  if (activityFilter === 'all') { items = items.filter(a => a.category !== 'stayhome'); for (let i = items.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [items[i], items[j]] = [items[j], items[i]]; } }
+  else if (activityFilter === 'near') { items = items.filter(a => a.category !== 'stayhome' && a.lat && (!userLat || haversine(userLat, userLon, a.lat, a.lon) < 2)); if (userLat) items.sort((a, b) => haversine(userLat, userLon, a.lat, a.lon) - haversine(userLat, userLon, b.lat, b.lon)); }
   else if (activityFilter === 'indoor') items = items.filter(a => a.indoor && a.category !== 'stayhome');
   else if (activityFilter === 'outdoor') items = items.filter(a => !a.indoor && a.category !== 'stayhome');
   else if (activityFilter === 'free') items = items.filter(a => a.free === true);
@@ -704,10 +883,8 @@ function renderEventsView() {
   html += renderDayDetail(selectedCalendarDay);
   html += '</div>';
 
-  // Filter bar for events list below
-  const filters = [['all', t('all')], ['holidays', t('holidaysFilter')], ['schoolHoliday', t('schoolHolidaysFilter')], ['events', t('eventsTab')], ['recurring', t('recurringFilter')], ['seasonal', t('seasonal')], ['festivals', t('festivalsFilter')]];
-  html += `<div class="events-list-header" style="margin-top:20px;font-family:var(--serif);font-size:1.05rem;font-weight:600;margin-bottom:8px">${lang === 'de' ? 'Alle Events' : 'All Events'}</div>`;
-  html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${eventFilter === k ? ' active' : ''}" onclick="filterEvents('${k}')">${v}</button>`).join('')}</div>`;
+  // Events list header
+  html += `<div class="section-heading" style="margin-top:20px;margin-bottom:8px">${lang === 'de' ? 'Alle Events' : 'All Events'}</div>`;
 
   // Events list
   html += '<div id="events-list">';
@@ -870,25 +1047,22 @@ function renderWeekendView() {
 // ═══ LUNCH VIEW ═══
 
 function renderLunchView() {
-  let html = `<div class="subtitle">${lang === 'de' ? 'Restaurants in der Nähe von' : 'Restaurants near'} ${CITIES[city]}</div>`;
-
-  // Filters
-  const filters = [['all', t('all')], ['saved', t('saved')], ['open', lang === 'de' ? 'Offen' : 'Open'], ['outdoor', 'Terrasse'], ['veg', 'Vegi']];
-  html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${lunchFilter === k ? ' active' : ''}" onclick="filterLunch('${k}')">${v}</button>`).join('')}</div>`;
-
-  // Surprise
-  html += `<button class="surprise-btn" onclick="surpriseLunch()" id="surprise-lunch-btn">🎲 ${t('surpriseMe')}</button>`;
+  let html = '';
 
   // Map
   html += `<div class="map-container${lunchMapExpanded ? ' expanded' : ' compact'}" id="lunch-map" onclick="toggleLunchMap()"></div>`;
 
-  // List
-  html += '<div id="lunch-list">';
+  // Results bar
   const spots = getFilteredLunchSpots();
+  const totalCount = lunchData.length + customLunch.length;
+  html += `<div class="act-results"><span>${spots.length} of ${totalCount} ${lang === 'de' ? 'Ergebnisse' : 'results'}</span></div>`;
+
+  // List
+  html += '<div class="vcard-list" id="lunch-list">';
   if (spots.length === 0) {
     if (lunchData.length === 0) {
       html += renderSkeleton(3);
-    } else if (lunchFilter === 'saved') {
+    } else if (lunchFilters.saved) {
       html += renderEmptyState('💛', 'emptySavedLunch', 'emptySavedLunchHint');
     } else {
       html += renderEmptyState('🔍', 'emptyFilterLunch', 'emptyFilterHint');
@@ -898,57 +1072,79 @@ function renderLunchView() {
   }
   html += '</div>';
 
-  // Add custom
-  html += `<button class="btn-add" onclick="showAddForm('lunch')">${t('addLunch')}</button>`;
-  html += `<div class="add-form" id="add-lunch-form">
-    <input id="new-lunch-name" placeholder="${t('name')}">
-    <input id="new-lunch-cuisine" placeholder="Cuisine">
-    <div class="form-row" style="margin-top:8px;">
-      <button class="btn-primary" onclick="saveCustomLunch()">${t('save')}</button>
-      <button class="btn-secondary" onclick="hideAddForm('lunch')">${t('cancel')}</button>
-    </div>
-  </div>`;
+  // Surprise me button
+  html += `<button class="btn-surprise" onclick="surpriseLunch()">🎲 ${t('surpriseMe')}</button>`;
 
   return html;
 }
 
 function renderLunchCard(s) {
   const isSaved = savedLunch.includes(s.id);
-  const rating = lunchRatings[s.id] || 0;
   const dist = (userLat && s.lat) ? haversine(userLat, userLon, s.lat, s.lon) : null;
+  const photoUrl = s.lat ? `${API}/photo/${s.id}?name=${encodeURIComponent(s.name)}&lat=${s.lat}&lon=${s.lon}` : '';
 
-  let badges = '';
-  if (s.openForLunch === true) badges += '<span class="badge badge-open">Open</span>';
-  else if (s.openForLunch === false) badges += '<span class="badge badge-closed">Closed</span>';
-  if (s.outdoorSeating) badges += '<span class="badge badge-outdoor-seat">🪑 Terrace</span>';
-  if (s.wheelchair === 'yes') badges += '<span class="badge badge-wheelchair">♿</span>';
-  if (s.takeaway) badges += '<span class="badge badge-takeaway">📦</span>';
-  if (dist !== null) badges += `<span class="badge badge-distance">${formatDist(dist)}</span>`;
+  // Face tags
+  let tags = '';
+  if (s.outdoorSeating) tags += '<span class="vcard-tag terrace">☀️ Terrace</span>';
+  if (s.takeaway) tags += '<span class="vcard-tag">📦 Takeaway</span>';
+  if (s.wheelchair === 'yes') tags += '<span class="vcard-tag">♿</span>';
+  const cuisineLabel = s.cuisine || s.cuisineCategory || s.amenity || '';
+  if (cuisineLabel) tags += `<span class="vcard-tag cuisine">${esc(cuisineLabel)}</span>`;
 
-  const stars = [1, 2, 3, 4, 5].map(n => `<span class="star${n <= rating ? ' filled' : ''}" onclick="rateLunch('${s.id}',${n})">★</span>`).join('');
+  // Rating
+  const starsHtml = s.rating ? `<span class="vcard-stars">★ ${s.rating}</span><span class="vcard-reviews">(${s.ratingCount || 0})</span>` : '';
+  const priceHtml = s.priceLevel != null ? `<span class="vcard-price">${'$'.repeat(s.priceLevel || 1)}</span>` : '';
 
-  return `<div class="lunch-spot" id="lunch-${s.id}" onclick="lunchCardClick('${s.id}', event)">
-    <div>
-      <div class="lunch-name">${esc(s.name)}</div>
-      <div class="lunch-cuisine">${esc(s.cuisine || s.cuisineCategory || s.amenity || '')}</div>
-      <div class="lunch-badges">${badges}</div>
-      <div class="star-rating" style="margin-top:4px;">${stars}</div>
+  // Status
+  let statusHtml = '';
+  if (s.permanentlyClosed) statusHtml = '<span class="status-dot closed"></span><span class="status-txt closed">Permanently closed</span>';
+  else if (s.openForLunch === true) statusHtml = `<span class="status-dot open"></span><span class="status-txt open">${lang === 'de' ? 'Offen zum Mittagessen' : 'Open for lunch'}</span>`;
+  else if (s.openForLunch === false) statusHtml = `<span class="status-dot closed"></span><span class="status-txt closed">${lang === 'de' ? 'Geschlossen' : 'Closed'}</span>`;
+
+  // Detail grid
+  const distText = dist !== null ? formatDist(dist) : '—';
+  const priceText = s.priceLevel != null ? '$'.repeat(s.priceLevel) : '—';
+
+  return `<div class="vcard${s.permanentlyClosed ? ' closed' : ''}" id="lc-${s.id}" onclick="toggleLunchCard(this, event)">
+    <div class="vcard-face">
+      <div class="vcard-photo">${photoUrl ? `<img src="${photoUrl}" alt="" loading="lazy" onerror="retryPhoto(this)">` : `<div class="vcard-photo-empty">🍽️</div>`}</div>
+      <div class="vcard-body">
+        <div class="vcard-name">${esc(s.name)}</div>
+        <div class="vcard-meta">${starsHtml}${priceHtml}${dist !== null ? `<span class="vcard-dist">↗ ${distText}</span>` : ''}</div>
+        <div class="vcard-tags">${tags}</div>
+      </div>
+      <div class="vcard-right"><svg class="vcard-chevron" width="8" height="14" viewBox="0 0 8 14" fill="none"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
     </div>
-    <div class="lunch-actions">
-      <button class="${isSaved ? 'saved' : ''}" onclick="toggleSaveLunch('${s.id}')" style="${isSaved ? 'color:var(--accent);border-color:var(--accent)' : ''}">${isSaved ? '❤️' : '🤍'}</button>
-      ${s.lat ? `<button onclick="window.open('${mapsUrl(s.lat, s.lon, s.name)}','_blank')">📍</button>` : ''}
-      ${s.website ? `<button onclick="window.open('${esc(s.website)}','_blank')">🌐</button>` : ''}
-      ${s.custom ? `<button onclick="deleteCustomLunch('${s.id}')">🗑️</button>` : ''}
+    <button class="act-close-btn" onclick="closeLunchCard(this.closest('.vcard'),event)">✕</button>
+    <div class="vcard-expand">
+      ${photoUrl ? `<div class="act-detail-photo"><img src="${photoUrl}" alt="" loading="lazy"><div class="act-detail-photo-fade"></div></div>` : ''}
+      <div class="vcard-expand-body">
+        <div class="vcard-expand-name">${esc(s.name)}</div>
+        ${statusHtml ? `<div class="vcard-status">${statusHtml}</div>` : ''}
+        <div class="act-detail-grid">
+          <div class="act-detail-cell"><div class="act-detail-label">${lang === 'de' ? 'Entfernung' : 'Distance'}</div><div class="act-detail-val">${distText}</div></div>
+          <div class="act-detail-cell"><div class="act-detail-label">${lang === 'de' ? 'Küche' : 'Cuisine'}</div><div class="act-detail-val">${esc(cuisineLabel) || '—'}</div></div>
+          <div class="act-detail-cell"><div class="act-detail-label">${lang === 'de' ? 'Preis' : 'Price'}</div><div class="act-detail-val">${priceText}</div></div>
+          <div class="act-detail-cell"><div class="act-detail-label">Rating</div><div class="act-detail-val">${s.rating || '—'}</div></div>
+        </div>
+        <div class="vcard-actions">
+          ${s.lat ? `<button class="vcard-act-btn primary" onclick="event.stopPropagation();window.open('${mapsUrl(s.lat, s.lon, s.name)}','_blank')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> ${lang === 'de' ? 'Route' : 'Directions'}</button>` : ''}
+          ${s.website ? `<button class="vcard-act-btn secondary" onclick="event.stopPropagation();window.open('${esc(s.website)}','_blank')">🌐 Website</button>` : ''}
+          <button class="vcard-act-btn icon-only" onclick="event.stopPropagation();toggleSaveLunch('${s.id}')">${isSaved ? '❤️' : '🤍'}</button>
+          ${s.custom ? `<button class="vcard-act-btn icon-only" onclick="event.stopPropagation();deleteCustomLunch('${s.id}')">🗑️</button>` : ''}
+        </div>
+      </div>
     </div>
   </div>`;
 }
 
 function getFilteredLunchSpots() {
   let items = [...lunchData, ...customLunch];
-  if (lunchFilter === 'saved') items = items.filter(s => savedLunch.includes(s.id));
-  else if (lunchFilter === 'open') items = items.filter(s => s.openForLunch === true);
-  else if (lunchFilter === 'outdoor') items = items.filter(s => s.outdoorSeating);
-  else if (lunchFilter === 'veg') items = items.filter(s => s.vegetarian || s.vegan || s.cuisineCategory === 'vegetarian');
+  if (lunchFilters.saved) items = items.filter(s => savedLunch.includes(s.id));
+  if (lunchFilters.open) items = items.filter(s => s.openForLunch === true);
+  if (lunchFilters.terrace) items = items.filter(s => s.outdoorSeating);
+  if (lunchFilters.nearMe && userLat) items = items.filter(s => s.lat && haversine(userLat, userLon, s.lat, s.lon) < 2);
+  if (lunchCuisine !== 'all') items = items.filter(s => s.cuisineCategory === lunchCuisine);
 
   if (userLat) items.sort((a, b) => {
     if (!a.lat) return 1; if (!b.lat) return -1;
@@ -991,6 +1187,7 @@ async function fetchNews(force = false) {
     if (data.holidays) renderHolidays(data.holidays);
     if (data.weather) renderWeather(data.weather);
     if (data.history) renderHistory(data.history);
+    renderTrending(data.trending);
     if (data.transport) renderTransport(data.transport);
   } catch (e) {
     console.error('Fetch news error:', e);
@@ -1113,11 +1310,30 @@ function renderWeather(w) {
   if (!w) return;
   const el = $('weather-compact');
   if (!el) return;
-  el.innerHTML = `<span class="weather-icon">${WEATHER_ICONS[w.weatherCode] || '🌡️'}</span>
-    <span class="weather-temp">${w.temperature}°</span>
-    <span class="weather-wind">${w.windSpeed} km/h</span>`;
-  el.onclick = toggleWeatherDropdown;
-  el.style.cursor = 'pointer';
+
+  if (view === 'news') {
+    // Hero weather row (inside navy hero)
+    const icon = WEATHER_ICONS[w.weatherCode] || '🌡️';
+    const desc = w.description || '';
+    const hi = w.hourly ? Math.max(...w.hourly.map(h => h.temperature)) : w.temperature;
+    const lo = w.hourly ? Math.min(...w.hourly.map(h => h.temperature)) : w.temperature;
+    el.innerHTML = `
+      <span class="weather-temp-lg">${w.temperature}°</span>
+      <span class="weather-meta">
+        <span class="weather-desc">${desc}</span>
+        <span class="weather-range">H:${hi}° L:${lo}°</span>
+      </span>
+      <span class="weather-icon-hero">${icon}</span>`;
+    el.onclick = toggleWeatherDropdown;
+    el.style.cursor = 'pointer';
+  } else {
+    // Legacy compact weather
+    el.innerHTML = `<span class="weather-icon">${WEATHER_ICONS[w.weatherCode] || '🌡️'}</span>
+      <span class="weather-temp">${w.temperature}°</span>
+      <span class="weather-wind">${w.windSpeed} km/h</span>`;
+    el.onclick = toggleWeatherDropdown;
+    el.style.cursor = 'pointer';
+  }
 
   // Hourly dropdown
   const dd = $('weather-dropdown');
@@ -1135,25 +1351,77 @@ function renderHistory(h) {
   const el = $('history-inline');
   if (!el || !h) return;
   const text = lang === 'de' ? h.eventDE : h.event;
-  const title = lang === 'de' ? 'Heute in der Geschichte' : 'This Day in History';
-  el.innerHTML = `<div class="history-title">${title}</div><span class="history-year">${h.year}</span> — ${esc(text)}`;
-  if (view === 'news') el.classList.add('active');
+  const label = lang === 'de' ? 'Heute in der Geschichte' : 'This Day in History';
+
+  if (view === 'news') {
+    // History strip card
+    el.innerHTML = `
+      <svg class="history-strip-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <div>
+        <div class="history-label">${label}</div>
+        <div class="history-text"><span class="history-year">${h.year}</span> — ${esc(text)}</div>
+      </div>`;
+    el.classList.add('active');
+  } else {
+    // Legacy
+    el.innerHTML = `<div class="history-title">${label}</div><span class="history-year">${h.year}</span> — ${esc(text)}`;
+    el.classList.add('active');
+  }
+}
+
+function renderTrending(tr) {
+  const el = $('trending-inline');
+  if (!el) return;
+  if (!tr) { el.style.display = 'none'; return; }
+  const topic = lang === 'de' ? (tr.topicDE || tr.topic) : tr.topic;
+  if (view !== 'news') { el.style.display = 'none'; return; }
+  el.setAttribute('onclick', safeUrl(tr.url) ? `window.open('${esc(tr.url)}','_blank')` : '');
+  el.innerHTML = `
+    <div class="alert-left">
+      <span>🔥</span>
+      <div><div class="trending-label">Trending</div><div class="trending-topic">${esc(topic)}</div></div>
+    </div>`;
+  el.classList.add('active');
 }
 
 function renderTransport(tr) {
   const el = $('transport-widget');
   if (!el) return;
-  if (!tr?.summary) { el.style.display = 'none'; return; }
-  el.style.display = 'block';
-  const status = tr.summary.status;
-  const statusText = status === 'major' ? (lang === 'de' ? 'Grosse Störungen' : 'Major delays') : (lang === 'de' ? 'Leichte Verspätungen' : 'Minor delays');
-  el.innerHTML = `<div class="transport-header" onclick="$('transport-details').classList.toggle('active')">
-    <div class="transport-status ${status}"></div>
-    <span>🚆 ${statusText} (${tr.summary.totalDelayed})</span>
-  </div>
-  <div class="transport-details" id="transport-details">
-    ${tr.delays.map(d => `<div class="delay-item"><span>${esc(d.line)} → ${esc(d.destination)}</span><span class="delay-badge">+${d.delay}min</span></div>`).join('')}
-  </div>`;
+  if (!tr?.summary || tr.summary.status === 'normal') { el.classList.remove('active'); return; }
+
+  if (view === 'news') {
+    // Alert banner style
+    const status = tr.summary.status;
+    const statusText = status === 'major' ? (lang === 'de' ? 'Grosse Störungen' : 'Major delays') : (lang === 'de' ? 'Leichte Verspätungen' : 'Minor delays');
+    el.innerHTML = `
+      <div class="alert-left" onclick="$('transport-details')?.classList.toggle('active')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--terra)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span class="alert-text">🚆 ${statusText} (${tr.summary.totalDelayed})</span>
+      </div>
+      <svg class="alert-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>`;
+    el.classList.add('active');
+    // Insert details div after alert banner
+    let detailEl = $('transport-details');
+    if (!detailEl) {
+      detailEl = document.createElement('div');
+      detailEl.className = 'transport-details';
+      detailEl.id = 'transport-details';
+      el.after(detailEl);
+    }
+    detailEl.innerHTML = tr.delays.map(d => `<div class="delay-item"><span>${esc(d.line)} → ${esc(d.destination)}</span><span class="delay-badge">+${d.delay}min</span></div>`).join('');
+  } else {
+    // Legacy transport widget
+    el.style.display = 'block';
+    const status = tr.summary.status;
+    const statusText = status === 'major' ? (lang === 'de' ? 'Grosse Störungen' : 'Major delays') : (lang === 'de' ? 'Leichte Verspätungen' : 'Minor delays');
+    el.innerHTML = `<div class="transport-header" onclick="$('transport-details')?.classList.toggle('active')">
+      <div class="transport-status ${status}"></div>
+      <span>🚆 ${statusText} (${tr.summary.totalDelayed})</span>
+    </div>
+    <div class="transport-details" id="transport-details">
+      ${tr.delays.map(d => `<div class="delay-item"><span>${esc(d.line)} → ${esc(d.destination)}</span><span class="delay-badge">+${d.delay}min</span></div>`).join('')}
+    </div>`;
+  }
 }
 
 function renderHolidays(holidays) {
@@ -1178,13 +1446,20 @@ function switchView(v) {
   renderNav();
   renderMenu();
   closeMenu();
+  if (newsData) {
+    if (newsData.history) renderHistory(newsData.history);
+    renderTrending(newsData.trending);
+    if (newsData.weather) renderWeather(newsData.weather);
+    if (newsData.transport) renderTransport(newsData.transport);
+  }
   if (v === 'activities') loadActivities();
   else if (v === 'lunch') loadLunchSpots();
   else if (v === 'events') loadEventsCalendar();
   else if (v === 'weekend') loadWeekendPlanner();
   else if (v === 'sunshine') loadSunshine();
   else if (v === 'snow') loadSnow();
-  // deals view uses static data — no async load needed
+  else if (v === 'explore') loadExplore();
+  else if (v === 'deals') loadDeals();
 }
 
 function setTab(tab) {
@@ -1206,6 +1481,7 @@ function setCity(id) {
   else if (view === 'weekend') loadWeekendPlanner();
   else if (view === 'sunshine') loadSunshine();
   else if (view === 'snow') loadSnow();
+  else if (view === 'explore') loadExplore();
 }
 
 function setLanguage(l) {
@@ -1218,7 +1494,14 @@ function toggleTheme() {
   theme = theme === 'dark' ? 'light' : 'dark';
   localStorage.setItem('theme', theme);
   document.documentElement.setAttribute('data-theme', theme);
+  updateThemeColor();
   renderMenu();
+}
+
+function updateThemeColor() {
+  const meta = document.getElementById('meta-theme-color');
+  if (!meta) return;
+  meta.content = theme === 'dark' ? '#1A3050' : '#1A3A5C';
 }
 
 function toggleCityDropdown() {
@@ -1255,17 +1538,80 @@ function toggleAbout() {
 
 function toggleDetail(id) { $(id)?.classList.toggle('active'); }
 
+function scrollToCard(el) {
+  setTimeout(() => {
+    const y = el.getBoundingClientRect().top + window.scrollY - 12;
+    window.scrollTo({ top: y, behavior: 'smooth' });
+  }, 250);
+}
+
+function toggleActCard(card, e) {
+  if (e && (e.target.closest('a') || e.target.closest('.btn-save') || e.target.closest('.act-close-btn'))) return;
+  const wasExpanded = card.classList.contains('act-expanded');
+  document.querySelectorAll('.act-card.act-expanded').forEach(c => c.classList.remove('act-expanded'));
+  if (!wasExpanded) {
+    card.classList.add('act-expanded');
+    scrollToCard(card);
+  }
+}
+
+function closeActCard(card, e) {
+  if (e) e.stopPropagation();
+  card.classList.remove('act-expanded');
+}
+
+function toggleNews(card, e) {
+  if (e && (e.target.closest('a') || e.target.closest('.btn-share'))) return;
+  const wasExpanded = card.classList.contains('expanded');
+  document.querySelectorAll('.ncard.expanded').forEach(c => c.classList.remove('expanded'));
+  if (!wasExpanded) {
+    card.classList.add('expanded');
+    scrollToCard(card);
+  }
+}
+
+function toggleLunchCard(card, e) {
+  if (e && (e.target.closest('a') || e.target.closest('.vcard-act-btn') || e.target.closest('.act-close-btn'))) return;
+  const wasOpen = card.classList.contains('vcard-open');
+  document.querySelectorAll('.vcard.vcard-open').forEach(c => c.classList.remove('vcard-open'));
+  if (!wasOpen) {
+    card.classList.add('vcard-open');
+    scrollToCard(card);
+  }
+}
+
+function closeLunchCard(card, e) {
+  if (e) e.stopPropagation();
+  card.classList.remove('vcard-open');
+}
+
+function shareArticle(headline, url) {
+  if (navigator.share) {
+    navigator.share({ title: headline, url: url }).catch(() => {});
+  } else {
+    navigator.clipboard?.writeText(url).then(() => showToast('toastShared'));
+  }
+}
+
 function filterActivities(f) {
   activityFilter = f;
   if (f === 'near' && !userLat) { requestLocation(); return; }
+  renderHeader();
   renderCurrentView();
   afterRender(initActivityMap);
 }
 
-function setAgeFilter(f) { ageFilter = f; renderCurrentView(); afterRender(initActivityMap); }
-function filterEvents(f) { eventFilter = f; renderCurrentView(); }
-function filterLunch(f) {
-  lunchFilter = f;
+function filterEvents(f) { eventFilter = f; renderHeader(); renderCurrentView(); }
+function toggleLunchFilter(f) {
+  lunchFilters[f] = !lunchFilters[f];
+  if (f === 'nearMe' && lunchFilters.nearMe && !userLat) { requestLocation().then(() => { renderHeader(); renderCurrentView(); afterRender(initLunchMap); }); return; }
+  renderHeader();
+  renderCurrentView();
+  afterRender(initLunchMap);
+}
+function setLunchCuisine(c) {
+  lunchCuisine = c;
+  renderHeader();
   renderCurrentView();
   afterRender(initLunchMap);
 }
@@ -1280,6 +1626,84 @@ function toggleSave(id) {
   afterRender(initActivityMap);
 }
 
+// ═══ REMINDERS ═══
+
+function showReminderModal(activityId) {
+  const allActs = [...activitiesData, ...customActivities];
+  const act = allActs.find(a => a.id === activityId);
+  if (!act) return;
+  const name = lang === 'de' ? (act.nameDE || act.name) : act.name;
+  const existing = activityReminders.find(r => r.activityId === activityId);
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const minDate = tomorrow.toISOString().split('T')[0];
+
+  const modal = $('modal');
+  modal.innerHTML = `<div class="modal-content">
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <div class="modal-emoji">🔔</div>
+    <div class="modal-title">${t('setReminder')}</div>
+    <div class="modal-desc">${esc(name)}</div>
+    ${existing ? `<div style="margin:8px 0;font-size:.8rem;color:var(--accent)">${t('reminderDate')}: ${existing.date}</div>` : ''}
+    <input type="date" id="reminder-date-input" min="${minDate}" value="${existing?.date || minDate}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;margin:12px 0;font-size:1rem;background:var(--bg);color:var(--text)">
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="confirmReminder('${activityId}')">${t('save')}</button>
+      ${existing ? `<button class="btn-secondary" onclick="removeReminder('${activityId}');closeModal()">${t('reminderRemove')}</button>` : ''}
+      <button class="btn-secondary" onclick="closeModal()">${t('cancel')}</button>
+    </div>
+  </div>`;
+  modal.classList.add('active');
+}
+
+function confirmReminder(activityId) {
+  const dateStr = $('reminder-date-input')?.value;
+  if (!dateStr) return;
+  const allActs = [...activitiesData, ...customActivities];
+  const act = allActs.find(a => a.id === activityId);
+  const name = act ? (lang === 'de' ? (act.nameDE || act.name) : act.name) : activityId;
+
+  // Remove existing reminder for this activity
+  activityReminders = activityReminders.filter(r => r.activityId !== activityId);
+  activityReminders.push({ activityId, name, date: dateStr, createdAt: new Date().toISOString() });
+  localStorage.setItem('activityReminders', JSON.stringify(activityReminders));
+
+  // Request notification permission
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+
+  closeModal();
+  showToast('reminderSet', 'success');
+  renderCurrentView();
+  afterRender(initActivityMap);
+}
+
+function removeReminder(activityId) {
+  activityReminders = activityReminders.filter(r => r.activityId !== activityId);
+  localStorage.setItem('activityReminders', JSON.stringify(activityReminders));
+  showToast('toastRemoved', 'info');
+  renderCurrentView();
+  afterRender(initActivityMap);
+}
+
+function checkReminders() {
+  const today = new Date().toISOString().split('T')[0];
+  const due = activityReminders.filter(r => r.date <= today);
+  if (!due.length) return;
+
+  for (const r of due) {
+    const msg = `${t('reminderDue')} ${r.name}`;
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try { new Notification('Znüni', { body: msg, icon: '/icon.svg' }); } catch {}
+    }
+    showToast('reminderDue', 'info');
+  }
+
+  // Remove due reminders
+  activityReminders = activityReminders.filter(r => r.date > today);
+  localStorage.setItem('activityReminders', JSON.stringify(activityReminders));
+}
+
 function toggleSaveLunch(id) {
   const idx = savedLunch.indexOf(id);
   const removing = idx >= 0;
@@ -1290,12 +1714,6 @@ function toggleSaveLunch(id) {
   afterRender(initLunchMap);
 }
 
-function rateLunch(id, stars) {
-  lunchRatings[id] = stars;
-  localStorage.setItem('lunchRatings', JSON.stringify(lunchRatings));
-  renderCurrentView();
-  afterRender(initLunchMap);
-}
 
 function showAddForm(type) { $(`add-${type}-form`)?.classList.add('active'); }
 function hideAddForm(type) { $(`add-${type}-form`)?.classList.remove('active'); }
@@ -1377,12 +1795,13 @@ function refreshCurrentView() {
   else if (view === 'weekend') loadWeekendPlanner(true);
   else if (view === 'sunshine') loadSunshine(true);
   else if (view === 'snow') loadSnow(true);
+  else if (view === 'explore') loadExplore(true);
 }
 
 async function shareSummary() {
   if (!navigator.share) return;
   try {
-    await navigator.share({ title: 'Today in Switzerland', text: `Today in ${CITIES[city]}`, url: window.location.href });
+    await navigator.share({ title: 'Znüni', text: `Znüni — ${CITIES[city]}`, url: window.location.href });
     showToast('toastShared', 'success');
   } catch {}
 }
@@ -1423,17 +1842,60 @@ function showSurpriseModal(item, type) {
   const name = lang === 'de' ? (item.nameDE || item.name) : item.name;
   const desc = lang === 'de' ? (item.descriptionDE || item.description) : item.description;
   const emoji = type === 'lunch' ? '🍽️' : (ACTIVITY_EMOJIS[item.category] || '🎉');
+  const isSaved = savedActivities.includes(item.id);
 
-  let badges = '';
   if (type === 'activity') {
-    badges += `<span class="badge ${item.indoor ? 'badge-indoor' : 'badge-outdoor'}">${item.indoor ? 'Indoor' : 'Outdoor'}</span>`;
-    if (item.duration) badges += `<span class="badge badge-duration">${item.duration}</span>`;
-    if (item.price) badges += `<span class="badge badge-price">${item.price}</span>`;
-  } else {
-    if (item.cuisine) badges += `<span class="badge badge-price">${esc(item.cuisine)}</span>`;
-    if (item.openForLunch === true) badges += '<span class="badge badge-open">Open</span>';
+    // Bottom sheet for activities
+    const hasPhoto = item.id && item.category !== 'stayhome';
+    let tags = `<span class="act-tag ${item.indoor ? 'indoor' : 'outdoor'}">${item.indoor ? 'Indoor' : 'Outdoor'}</span>`;
+    if (item.duration) tags += `<span class="act-tag time">${item.duration}</span>`;
+    if (item.free || (item.price && /^free|^gratis/i.test(item.price))) tags += `<span class="act-tag free">${lang === 'de' ? 'Gratis' : 'Free'}</span>`;
+    if (item.ageRange) tags += `<span class="act-tag ages">${item.ageRange}</span>`;
+
+    // Create sheet elements if not exists
+    let scrim = document.querySelector('.surprise-sheet-scrim');
+    let sheet = document.querySelector('.surprise-sheet');
+    if (!scrim) {
+      scrim = document.createElement('div');
+      scrim.className = 'surprise-sheet-scrim';
+      scrim.onclick = closeSurpriseSheet;
+      document.body.appendChild(scrim);
+    }
+    if (!sheet) {
+      sheet = document.createElement('div');
+      sheet.className = 'surprise-sheet';
+      document.body.appendChild(sheet);
+    }
+    sheet.innerHTML = `
+      <div class="surprise-sheet-handle"><div class="surprise-sheet-bar"></div></div>
+      <button class="surprise-sheet-close" onclick="closeSurpriseSheet()">
+        <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><path d="M1 1L9 9M9 1L1 9" stroke="var(--muted)" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <div class="surprise-sheet-body">
+        ${hasPhoto ? `<div class="surprise-sheet-photo"><img src="${API}/photo/${item.id}" alt="" onerror="this.parentNode.innerHTML='<div style=\\'font-size:3rem;padding:30px\\'>${emoji}</div>'"></div>` : `<div style="font-size:3rem;margin-bottom:16px">${emoji}</div>`}
+        <div class="surprise-sheet-name">${esc(name)}</div>
+        <div class="surprise-sheet-desc">${esc(desc || '')}</div>
+        <div class="surprise-sheet-tags">${tags}</div>
+        <div class="surprise-sheet-links">
+          ${item.url ? `<button class="surprise-sheet-link" onclick="window.open('${esc(item.url)}','_blank')"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="var(--navy)" stroke-width="1.4"/><path d="M8 2C8 2 6 5 6 8C6 11 8 14 8 14M8 2C8 2 10 5 10 8C10 11 8 14 8 14M2 8H14" stroke="var(--navy)" stroke-width="1.4" stroke-linecap="round"/></svg>${t('website')}</button>` : ''}
+          <button class="surprise-sheet-link" onclick="event.stopPropagation();toggleSave('${item.id}');this.innerHTML=savedActivities.includes('${item.id}')?'❤️ Saved':'🤍 Save'">
+            ${isSaved ? '❤️ Saved' : '🤍 Save'}
+          </button>
+        </div>
+        <button class="btn-surprise" onclick="surpriseMe()" style="margin-top:0">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 8C2 4.7 4.7 2 8 2C10 2 11.8 3 13 4.5M14 8C14 11.3 11.3 14 8 14C6 14 4.2 13 3 11.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/><path d="M13 1.5V5H9.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 14.5V11H6.5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          ${t('another')}
+        </button>
+      </div>`;
+    scrim.classList.add('active');
+    requestAnimationFrame(() => sheet.classList.add('active'));
+    return;
   }
 
+  // Fallback modal for lunch
+  let badges = '';
+  if (item.cuisine) badges += `<span class="badge badge-price">${esc(item.cuisine)}</span>`;
+  if (item.openForLunch === true) badges += '<span class="badge badge-open">Open</span>';
   const modal = $('modal');
   modal.innerHTML = `<div class="modal-content">
     <button class="modal-close" onclick="closeModal()">&times;</button>
@@ -1442,13 +1904,18 @@ function showSurpriseModal(item, type) {
     <div class="modal-desc">${esc(desc || '')}</div>
     <div class="modal-badges">${badges}</div>
     <div class="modal-actions">
-      <button class="btn-primary" onclick="${type === 'activity' ? 'surpriseMe()' : 'surpriseLunch()'}">${t('another')}</button>
+      <button class="btn-primary" onclick="surpriseLunch()">${t('another')}</button>
       ${item.lat ? `<button class="btn-secondary" onclick="window.open('${mapsUrl(item.lat, item.lon, name)}','_blank')">${t('directions')}</button>` : ''}
       ${item.url || item.website ? `<button class="btn-secondary" onclick="window.open('${esc(item.url || item.website)}','_blank')">${t('website')}</button>` : ''}
       <button class="btn-secondary" onclick="closeModal()">${t('close')}</button>
     </div>
   </div>`;
   modal.classList.add('active');
+}
+
+function closeSurpriseSheet() {
+  document.querySelector('.surprise-sheet')?.classList.remove('active');
+  document.querySelector('.surprise-sheet-scrim')?.classList.remove('active');
 }
 
 function closeModal() { $('modal').classList.remove('active'); }
@@ -1526,7 +1993,7 @@ async function mountApplePayButton(amount) {
   const stripe = await getStripe();
   const pr = stripe.paymentRequest({
     country: 'CH', currency: 'chf',
-    total: { label: 'Today in Switzerland', amount },
+    total: { label: 'Znüni', amount },
     requestPayerName: false, requestPayerEmail: false,
   });
 
@@ -1620,7 +2087,7 @@ async function initLunchMap() {
   lunchMarkers = {};
   const spots = getFilteredLunchSpots().filter(s => s.lat);
   for (const s of spots.slice(0, 100)) {
-    const marker = L.circleMarker([s.lat, s.lon], { radius: 5, fillColor: s.openForLunch ? '#22c55e' : '#666', fillOpacity: .8, weight: 1, color: '#fff' }).addTo(lunchMap).bindPopup(`<b>${esc(s.name)}</b><br>${s.cuisine || ''}`);
+    const marker = L.circleMarker([s.lat, s.lon], { radius: 5, fillColor: s.openForLunch ? MAP_COLORS.green : MAP_COLORS.muted, fillOpacity: .8, weight: 1, color: MAP_COLORS.white }).addTo(lunchMap).bindPopup(`<b>${esc(s.name)}</b><br>${s.cuisine || ''}`);
     marker.on('click', () => highlightCard(`lunch-${s.id}`));
     lunchMarkers[s.id] = marker;
   }
@@ -1668,22 +2135,7 @@ function renderSunshineView() {
   if (allDests.length === 0) return `<div class="loading-msg">${t('noSunshineData')}</div>`;
 
   const wd = sunshineData.weekendDates || {};
-  let html = `<div class="subtitle">${t('sunSubtitle')}</div>`;
-
-  // Filter bar
-  const filters = [
-    ['all', t('all')],
-    ['sunny', '☀️ ' + t('sunnyLabel')],
-    ['partly', '⛅ ' + t('partlyLabel')],
-    ['cloudy', '☁️ ' + t('cloudyLabel')],
-  ];
-  html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${sunshineFilter === k ? ' active' : ''}" onclick="setSunshineFilter('${k}')">${v}</button>`).join('')}</div>`;
-
-  // Sort toggle
-  html += `<div class="sunshine-sort">
-    <button class="sort-btn${sunshineSort === 'sunshine' ? ' active' : ''}" onclick="setSunshineSort('sunshine')">☀️ ${t('sortBySun')}</button>
-    <button class="sort-btn${sunshineSort === 'distance' ? ' active' : ''}" onclick="setSunshineSort('distance')">📍 ${t('sortByDist')}</button>
-  </div>`;
+  let html = '';
 
   // Map
   html += '<div class="map-container" id="sunshine-map" style="height:350px;"></div>';
@@ -1793,12 +2245,17 @@ function renderSunshineCard(d, rank) {
 
   const rankHtml = isBaseline ? '<div class="sunshine-rank sunshine-rank-baseline">📍</div>' : `<div class="sunshine-rank">${rank}</div>`;
 
+  const summaryBadges = isBaseline
+    ? `<span class="sunshine-badge-inline">📍 ${t('yourCity')}</span>`
+    : `<span class="sunshine-badge-inline">🚗 ${driveLabel}</span>`;
+  const distBadge = dist !== null && !isBaseline ? `<span class="sunshine-badge-inline">📍 ${formatDist(dist)}</span>` : '';
+
   return `<div class="sunshine-card sunshine-${cls}" id="sunshine-${d.id}" onclick="sunshineCardClick('${d.id}')" data-id="${d.id}">
     <div class="sunshine-card-header">
       ${rankHtml}
       <div class="sunshine-card-info">
         <div class="sunshine-card-name">${emoji} ${esc(name)}</div>
-        <div class="sunshine-card-region">${esc(region)}</div>
+        <div class="sunshine-card-region">${esc(region)} ${summaryBadges}${distBadge}</div>
       </div>
       <div class="sunshine-card-total">
         <div class="sunshine-total-num">${d.sunshineHoursTotal}</div>
@@ -1806,6 +2263,7 @@ function renderSunshineCard(d, rank) {
       </div>
     </div>
     <div class="sunshine-card-body">
+      <div class="dest-photo"><img src="${API}/photo/${d.id}" alt="${esc(name)}" loading="lazy" onerror="this.parentNode.style.display='none'"></div>
       <div class="sunshine-badges">${badges}</div>
       ${forecastHtml}
     </div>
@@ -1845,121 +2303,7 @@ const SUNSHINE_DESTS = [
   { id:'rapperswil',name:'Rapperswil',nameDE:'Rapperswil',lat:47.2267,lon:8.8184,region:'Lake Zurich',regionDE:'Zürichsee',driveMinutes:25 },
 ];
 
-const DEST_HIGHLIGHTS = {
-  lugano: [
-    { name:'Parco Ciani', nameDE:'Parco Ciani', desc:'Lakeside park with large playground and duck pond', descDE:'Park am See mit grossem Spielplatz und Ententeich', indoor:false, cat:'playground', lat:46.0053, lon:8.9580 },
-    { name:'Swissminiatur', nameDE:'Swissminiatur', desc:'Miniature Switzerland park with 120+ scale models', descDE:'Miniatur-Schweiz-Park mit über 120 Modellen', indoor:false, cat:'outdoor', lat:45.9553, lon:8.9468 },
-    { name:'Lido di Lugano', nameDE:'Lido di Lugano', desc:'Sandy beach with kids pool and playground', descDE:'Sandstrand mit Kinderplanschbecken und Spielplatz', indoor:false, cat:'outdoor', lat:46.0005, lon:8.9625 },
-  ],
-  locarno: [
-    { name:'Lido Locarno', nameDE:'Lido Locarno', desc:'Family pool complex with slides and sandy beach', descDE:'Familien-Schwimmbad mit Rutschen und Sandstrand', indoor:false, cat:'outdoor', lat:46.1660, lon:8.7935 },
-    { name:'Cardada Playground', nameDE:'Spielplatz Cardada', desc:'Mountain playground at 1340m with cable car ride', descDE:'Bergspielplatz auf 1340m mit Seilbahnfahrt', indoor:false, cat:'playground', lat:46.1835, lon:8.7640 },
-  ],
-  bellinzona: [
-    { name:'Castelgrande', nameDE:'Castelgrande', desc:'UNESCO castle with grassy courtyards, lift access', descDE:'UNESCO-Burg mit Grünflächen und Liftanschluss', indoor:false, cat:'outdoor', lat:46.1944, lon:9.0168 },
-    { name:'Castello Montebello', nameDE:'Castello Montebello', desc:'Medieval castle with playground and picnic area', descDE:'Mittelalterliche Burg mit Spielplatz und Picknick', indoor:false, cat:'playground', lat:46.1943, lon:9.0244 },
-  ],
-  ascona: [
-    { name:'Lakefront Playground', nameDE:'Spielplatz Seepromenade', desc:'Lakefront playground with trampolines and swings', descDE:'Spielplatz am See mit Trampolinen und Schaukeln', indoor:false, cat:'playground', lat:46.1570, lon:8.7730 },
-    { name:'Brissago Islands', nameDE:'Brissago-Inseln', desc:'Botanical island with treasure hunt, boat ride over', descDE:'Botanische Insel mit Schatzsuche, per Boot erreichbar', indoor:false, cat:'nature', lat:46.1317, lon:8.7344 },
-  ],
-  chur: [
-    { name:'Brambrüesch Playground', nameDE:'Spielplatz Brambrüesch', desc:'Mountain playground with cable car and theme trail', descDE:'Bergspielplatz mit Seilbahn und Themenweg', indoor:false, cat:'playground', lat:46.8670, lon:9.5025 },
-    { name:'Bündner Naturmuseum', nameDE:'Bündner Naturmuseum', desc:'Interactive alpine animal exhibits for kids', descDE:'Interaktive Ausstellung alpiner Tiere für Kinder', indoor:true, cat:'museum', lat:46.8494, lon:9.5362 },
-  ],
-  davos: [
-    { name:'Schatzalp Alpine Garden', nameDE:'Alpengarten Schatzalp', desc:'Alpine garden at 1864m with funicular ride up', descDE:'Alpengarten auf 1864m mit Standseilbahn', indoor:false, cat:'nature', lat:46.7927, lon:9.8204 },
-    { name:'Rinerhorn Petting Zoo', nameDE:'Rinerhorn Streichelzoo', desc:'Free alpine petting zoo with goats and alpacas', descDE:'Gratis Streichelzoo mit Ziegen und Alpakas', indoor:false, cat:'animals', lat:46.7560, lon:9.8630 },
-  ],
-  stmoritz: [
-    { name:'Muottas Muragl Playground', nameDE:'Spielplatz Muottas Muragl', desc:'Mountain playground at 2456m with epic Engadin view', descDE:'Bergspielplatz auf 2456m mit Engadin-Panorama', indoor:false, cat:'playground', lat:46.5237, lon:9.9092 },
-    { name:'Lake St. Moritz Promenade', nameDE:'St. Moritzer See Promenade', desc:'Flat lakeside walk with playground and duck feeding', descDE:'Flacher Seeweg mit Spielplatz und Enten füttern', indoor:false, cat:'outdoor', lat:46.4935, lon:9.8410 },
-  ],
-  flims: [
-    { name:'Caumasee', nameDE:'Caumasee', desc:'Turquoise alpine lake with playground and paddleboats', descDE:'Türkiser Bergsee mit Spielplatz und Tretbooten', indoor:false, cat:'outdoor', lat:46.8188, lon:9.2908 },
-    { name:'Spielplatz Prau la Selva', nameDE:'Spielplatz Prau la Selva', desc:'Large forest playground with water play features', descDE:'Grosser Waldspielplatz mit Wasserspiel', indoor:false, cat:'playground', lat:46.8340, lon:9.2810 },
-  ],
-  sion: [
-    { name:'Domaine des Îles', nameDE:'Domaine des Îles', desc:'Huge park with playground, mini-golf and mini train', descDE:'Grosser Park mit Spielplatz, Minigolf und Bähnli', indoor:false, cat:'playground', lat:46.2131, lon:7.3332 },
-    { name:'Musée de la Nature', nameDE:'Naturmuseum Wallis', desc:'Interactive alpine exhibits, free first Sunday', descDE:'Interaktive Alpen-Ausstellung, 1. Sonntag gratis', indoor:true, cat:'museum', lat:46.2330, lon:7.3601 },
-  ],
-  brig: [
-    { name:'Stockalperschloss Garden', nameDE:'Stockalperschloss Garten', desc:'Castle garden with playground, free courtyard access', descDE:'Schlossgarten mit Spielplatz, Hof frei zugänglich', indoor:false, cat:'playground', lat:46.3150, lon:7.9873 },
-    { name:'Brigerbad Thermal Baths', nameDE:'Thermalbad Brigerbad', desc:'Thermal pools with toddler area and water slides', descDE:'Therme mit Kleinkinderbereich und Wasserrutschen', indoor:false, cat:'indoor-play', lat:46.3025, lon:7.9240 },
-  ],
-  zermatt: [
-    { name:'Wolli Park Sunnegga', nameDE:'Wolli Park Sunnegga', desc:'Mountain playground with lake beach, by funicular', descDE:'Bergspielplatz mit Seestrand, per Standseilbahn', indoor:false, cat:'playground', lat:46.0300, lon:7.7701 },
-    { name:'Obere Matten Playground', nameDE:'Spielplatz Obere Matten', desc:'Village playground near shops and restaurants', descDE:'Spielplatz im Dorf nahe Läden und Restaurants', indoor:false, cat:'playground', lat:46.0207, lon:7.7480 },
-  ],
-  luzern: [
-    { name:'Verkehrshaus', nameDE:'Verkehrshaus der Schweiz', desc:'Transport museum with hands-on exhibits and playground', descDE:'Verkehrsmuseum mit Mitmach-Stationen und Spielplatz', indoor:true, cat:'museum', lat:47.0531, lon:8.3356 },
-    { name:'Vögeligärtli Park', nameDE:'Vögeligärtli', desc:'Central playground near train station with sandbox', descDE:'Zentraler Spielplatz beim Bahnhof mit Sandkasten', indoor:false, cat:'playground', lat:47.0485, lon:8.3068 },
-  ],
-  interlaken: [
-    { name:'Harder Kulm Playground', nameDE:'Spielplatz Harder Kulm', desc:'Alpine playground at 1322m with Jungfrau panorama', descDE:'Bergspielplatz auf 1322m mit Jungfrau-Panorama', indoor:false, cat:'playground', lat:46.6974, lon:7.8519 },
-    { name:'Höhematte Park', nameDE:'Spielplatz Höhematte', desc:'Free central park playground with mountain views', descDE:'Gratis Spielplatz im Zentrum mit Bergpanorama', indoor:false, cat:'playground', lat:46.6859, lon:7.8598 },
-  ],
-  engelberg: [
-    { name:'Globi Playground Ristis', nameDE:'Globi Spielplatz Ristis', desc:'Alpine playground with rope park and bouncy castle', descDE:'Bergspielplatz mit Seilpark und Hüpfburg', indoor:false, cat:'playground', lat:46.8130, lon:8.3820 },
-    { name:'Trübsee Playground', nameDE:'Spielplatz Trübsee', desc:'Smuggler-themed playground by mountain lake', descDE:'Schmuggler-Spielplatz am Bergsee', indoor:false, cat:'playground', lat:46.7890, lon:8.3920 },
-  ],
-  schwyz: [
-    { name:'Swiss Knife Valley Center', nameDE:'Swiss Knife Valley Besucherzentrum', desc:'Victorinox museum where kids can build a knife', descDE:'Victorinox-Museum, Kinder bauen ein Messer', indoor:true, cat:'museum', lat:46.9944, lon:8.6054 },
-    { name:'Swiss Holiday Park', nameDE:'Swiss Holiday Park', desc:'Indoor waterpark with slides and toddler pool', descDE:'Erlebnisbad mit Rutschen und Kleinkinderbecken', indoor:true, cat:'indoor-play', lat:46.9830, lon:8.6160 },
-  ],
-  altdorf: [
-    { name:'Tell Monument Square', nameDE:'Telldenkmal', desc:'Iconic William Tell statue with playground nearby', descDE:'Ikonisches Telldenkmal mit Spielplatz in der Nähe', indoor:false, cat:'outdoor', lat:46.8802, lon:8.6393 },
-    { name:'Schwimmbad Altdorf', nameDE:'Schwimmbad Altdorf', desc:'Indoor/outdoor pool with slides and paddling pool', descDE:'Hallen-/Freibad mit Rutschen und Planschbecken', indoor:false, cat:'indoor-play', lat:46.8760, lon:8.6500 },
-  ],
-  lausanne: [
-    { name:'Olympic Museum', nameDE:'Olympisches Museum', desc:'Interactive sports museum with lakeside park', descDE:'Interaktives Sportmuseum mit Seeuferpark', indoor:true, cat:'museum', lat:46.5088, lon:6.6340 },
-    { name:'Ouchy Playground', nameDE:'Spielplatz Ouchy', desc:'Lakefront playground with paddleboats and ducks', descDE:'Spielplatz am See mit Tretbooten und Enten', indoor:false, cat:'playground', lat:46.5075, lon:6.6282 },
-  ],
-  montreux: [
-    { name:'Château de Chillon', nameDE:'Schloss Chillon', desc:'Fairy-tale lakeside castle with kids activity booklet', descDE:'Märchenschloss am See mit Kinder-Aktivheft', indoor:true, cat:'museum', lat:46.4142, lon:6.9276 },
-    { name:'Lakefront Playground', nameDE:'Spielplatz Seepromenade', desc:'Flower-lined lakefront promenade with playground', descDE:'Blumengesäumte Seepromenade mit Spielplatz', indoor:false, cat:'playground', lat:46.4340, lon:6.9120 },
-  ],
-  vevey: [
-    { name:'Alimentarium', nameDE:'Alimentarium', desc:'Interactive food museum with hands-on kids exhibits', descDE:'Interaktives Ernährungsmuseum mit Kinderstationen', indoor:true, cat:'museum', lat:46.4583, lon:6.8464 },
-    { name:'Lakefront Playground', nameDE:'Spielplatz am See', desc:'Large jungle gym by lake with swing sets', descDE:'Grosses Klettergerüst am See mit Schaukeln', indoor:false, cat:'playground', lat:46.4610, lon:6.8430 },
-  ],
-  basel: [
-    { name:'Zoo Basel (Zolli)', nameDE:'Zoo Basel (Zolli)', desc:'Historic zoo with petting area and kids playground', descDE:'Historischer Zoo mit Streichelzoo und Spielplatz', indoor:false, cat:'animals', lat:47.5472, lon:7.5789 },
-    { name:'Tierpark Lange Erlen', nameDE:'Tierpark Lange Erlen', desc:'Free animal park with deer, ponies and playground', descDE:'Gratis Tierpark mit Hirschen, Ponys und Spielplatz', indoor:false, cat:'animals', lat:47.5760, lon:7.6230 },
-  ],
-  solothurn: [
-    { name:'Naturmuseum Solothurn', nameDE:'Naturmuseum Solothurn', desc:'Regional nature exhibits for families', descDE:'Regionale Naturausstellung für Familien', indoor:true, cat:'museum', lat:47.2078, lon:7.5372 },
-    { name:'Verenaschlucht', nameDE:'Verenaschlucht', desc:'Atmospheric gorge walk to hermitage, stroller-friendly', descDE:'Stimmungsvolle Schluchtwanderung, kinderwagentauglich', indoor:false, cat:'nature', lat:47.2200, lon:7.5415 },
-  ],
-  delemont: [
-    { name:'Préhisto-Parc', nameDE:'Préhisto-Parc', desc:'Dinosaur park with 45 life-size models in forest', descDE:'Dinosaurierpark mit 45 lebensgrossen Modellen', indoor:false, cat:'outdoor', lat:47.3013, lon:7.0532 },
-    { name:'Parc du Château', nameDE:'Parc du Château', desc:'Castle park with playground and shaded picnic area', descDE:'Schlosspark mit Spielplatz und schattigem Picknick', indoor:false, cat:'playground', lat:47.3650, lon:7.3450 },
-  ],
-  konstanz: [
-    { name:'SEA LIFE Konstanz', nameDE:'SEA LIFE Konstanz', desc:'Aquarium with underwater tunnel and touch pools', descDE:'Aquarium mit Unterwassertunnel und Streichelbecken', indoor:true, cat:'museum', lat:47.6605, lon:9.1770 },
-    { name:'Stadtgarten Playground', nameDE:'Spielplatz Stadtgarten', desc:'Large lakeside playground with water play area', descDE:'Grosser Seespielplatz mit Wasserspielbereich', indoor:false, cat:'playground', lat:47.6615, lon:9.1790 },
-  ],
-  lindau: [
-    { name:'Harbour Playground', nameDE:'Spielplatz am Hafen', desc:'Harbour playground with slides and lake views', descDE:'Hafenspielplatz mit Rutschen und Seeblick', indoor:false, cat:'playground', lat:47.5450, lon:9.6840 },
-    { name:'Lindenhofpark', nameDE:'Lindenhofpark', desc:'Lakeside park with paddleboats and shaded playground', descDE:'Seepark mit Tretbooten und schattigem Spielplatz', indoor:false, cat:'outdoor', lat:47.5510, lon:9.6920 },
-  ],
-  como: [
-    { name:'Villa Olmo Park', nameDE:'Park Villa Olmo', desc:'Grand lakefront park with playground, free entry', descDE:'Grosser Seeuferpark mit Spielplatz, Eintritt frei', indoor:false, cat:'outdoor', lat:45.8180, lon:9.0598 },
-    { name:'Harbour Playground', nameDE:'Spielplatz am Hafen', desc:'Modern playground by boat dock with lake views', descDE:'Moderner Spielplatz beim Anleger mit Seeblick', indoor:false, cat:'playground', lat:45.8110, lon:9.0720 },
-  ],
-  schaffhausen: [
-    { name:'Rhine Falls', nameDE:'Rheinfall', desc:'Europe\'s largest waterfall with playground and boat rides', descDE:'Grösster Wasserfall Europas mit Spielplatz und Boot', indoor:false, cat:'nature', lat:47.6778, lon:8.6152 },
-    { name:'Munot Fortress', nameDE:'Munot Festung', desc:'Circular fortress with playground and deer park', descDE:'Runde Festung mit Spielplatz und Hirschgehege', indoor:false, cat:'outdoor', lat:47.6965, lon:8.6390 },
-  ],
-  frauenfeld: [
-    { name:'Plättli Zoo', nameDE:'Plättli Zoo', desc:'Small zoo with petting area and pony rides', descDE:'Kleiner Zoo mit Streichelzoo und Ponyreiten', indoor:false, cat:'animals', lat:47.5605, lon:8.9157 },
-    { name:'Schloss Frauenfeld', nameDE:'Schloss Frauenfeld', desc:'Historic castle with nature museum and park', descDE:'Historisches Schloss mit Naturmuseum und Park', indoor:true, cat:'museum', lat:47.5565, lon:8.8980 },
-  ],
-  rapperswil: [
-    { name:'Knies Kinderzoo', nameDE:'Knies Kinderzoo', desc:'Children\'s zoo with camel rides and adventure playground', descDE:'Kinderzoo mit Kamelreiten und Abenteuerspielplatz', indoor:false, cat:'animals', lat:47.2290, lon:8.8210 },
-    { name:'Castle Playground', nameDE:'Spielplatz Lindenhof', desc:'Lakefront playground below castle with climbing tower', descDE:'Seespielplatz unter dem Schloss mit Kletterturm', indoor:false, cat:'playground', lat:47.2267, lon:8.8180 },
-  ],
-};
+// Highlights now come from sunshine API response (d.highlights array per destination)
 
 // Mirrors getWeekendDates() in worker/src/sunshine.js — keep in sync
 function getSunshineWeekendDates() {
@@ -2092,14 +2436,14 @@ async function initSunshineMap() {
     if (d.isBaseline) {
       marker = L.circleMarker([d.lat, d.lon], {
         radius: 12,
-        fillColor: '#a855f7',
+        fillColor: MAP_COLORS.purple,
         fillOpacity: 0.9,
         weight: 3,
-        color: '#fff',
+        color: MAP_COLORS.white,
       }).addTo(sunshineMap).bindPopup(`<b>${esc(name)}</b> (${t('yourCity')})<br>${d.sunshineHoursTotal}${t('sunshineHours')}<br>${getSunshineEmoji(d.sunshineHoursTotal)}`);
     } else {
       const cls = getSunshineClass(d.sunshineHoursTotal);
-      const color = cls === 'sunny' ? '#f59e0b' : cls === 'partly' ? '#60a5fa' : '#6b7280';
+      const color = cls === 'sunny' ? MAP_COLORS.amber : cls === 'partly' ? MAP_COLORS.sky : MAP_COLORS.gray;
       const radius = Math.max(8, Math.min(18, 8 + d.sunshineHoursTotal));
 
       marker = L.circleMarker([d.lat, d.lon], {
@@ -2107,7 +2451,7 @@ async function initSunshineMap() {
         fillColor: color,
         fillOpacity: 0.85,
         weight: 2,
-        color: '#fff',
+        color: MAP_COLORS.white,
       }).addTo(sunshineMap).bindPopup(`<b>${esc(name)}</b><br>${d.sunshineHoursTotal}${t('sunshineHours')}<br>${getSunshineEmoji(d.sunshineHoursTotal)}`);
     }
     marker.on('click', () => highlightCard(`sunshine-${d.id}`));
@@ -2117,7 +2461,7 @@ async function initSunshineMap() {
 
 function renderSunshineHighlights(d) {
   if (d.isBaseline) return '';
-  const highlights = DEST_HIGHLIGHTS[d.id] || [];
+  const highlights = d.highlights || [];
   const isActivityCity = ['basel', 'lausanne', 'luzern'].includes(d.id);
   if (!highlights.length && !isActivityCity) return '';
   const name = lang === 'de' ? (d.nameDE || d.name) : d.name;
@@ -2150,30 +2494,22 @@ function renderHighlightItem(h) {
 }
 
 function sunshineCardClick(id) {
-  // Accordion: collapse other expanded cards
   document.querySelectorAll('.sunshine-card.expanded').forEach(c => {
     if (c.dataset.id !== id) c.classList.remove('expanded');
   });
   const card = document.getElementById(`sunshine-${id}`);
-  if (card) card.classList.toggle('expanded');
+  if (card) {
+    const wasExpanded = card.classList.contains('expanded');
+    card.classList.toggle('expanded');
+    if (!wasExpanded) scrollToCard(card);
+  }
   if (sunshineMap) panToMarker(sunshineMarkers, id, sunshineMap, 10);
-}
-
-function activityCardClick(id, event) {
-  if (event.target.closest('.activity-actions') || event.target.closest('.activity-save')) return;
-  panToMarker(activityMarkers, id, activityMap, 15);
-  $('activity-map')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
-function lunchCardClick(id, event) {
-  if (event.target.closest('.lunch-actions') || event.target.closest('.star-rating')) return;
-  panToMarker(lunchMarkers, id, lunchMap, 16);
-  $('lunch-map')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function setSunshineFilter(f) {
   sunshineFilter = f;
   sunshineExpanded = false;
+  renderHeader();
   renderCurrentView();
   afterRender(initSunshineMap);
 }
@@ -2184,12 +2520,14 @@ function setSunshineSort(s) {
       userLat = pos.coords.latitude;
       userLon = pos.coords.longitude;
       sunshineSort = 'distance';
+      renderHeader();
       renderCurrentView();
       afterRender(initSunshineMap);
     }, () => {}, { enableHighAccuracy: true });
     return;
   }
   sunshineSort = s;
+  renderHeader();
   renderCurrentView();
   afterRender(initSunshineMap);
 }
@@ -2259,22 +2597,7 @@ function renderSnowView() {
   if (allDests.length === 0) return `<div class="loading-msg">${t('noSnowData')}</div>`;
 
   const wd = snowData.weekDates || {};
-  let html = `<div class="subtitle">${t('snowSubtitle')}</div>`;
-
-  // Filter bar
-  const filters = [
-    ['all', t('all')],
-    ['heavy', '🏔️ ' + t('heavySnow')],
-    ['moderate', '❄️ ' + t('moderateSnow')],
-    ['light', '🌨️ ' + t('lightSnow')],
-  ];
-  html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${snowFilter === k ? ' active' : ''}" onclick="setSnowFilter('${k}')">${v}</button>`).join('')}</div>`;
-
-  // Sort toggle
-  html += `<div class="snow-sort">
-    <button class="sort-btn${snowSort === 'snowfall' ? ' active' : ''}" onclick="setSnowSort('snowfall')">❄️ ${t('sortBySnow')}</button>
-    <button class="sort-btn${snowSort === 'distance' ? ' active' : ''}" onclick="setSnowSort('distance')">📍 ${t('sortByDist')}</button>
-  </div>`;
+  let html = '';
 
   // Map
   html += '<div class="map-container" id="snow-map" style="height:350px;"></div>';
@@ -2365,12 +2688,15 @@ function renderSnowCard(d, rank) {
   if (d.snowDepthCm > 0) badges += `<span class="snow-depth-badge">📏 ${d.snowDepthCm}cm ${t('snowDepth')}</span>`;
   if (dist !== null) badges += `<span class="snow-dist-badge">📍 ${formatDist(dist)}</span>`;
 
+  const summarySnowBadges = `<span class="sunshine-badge-inline">🚗 ${driveLabel}</span><span class="sunshine-badge-inline">⛰️ ${d.altitude}m</span>`;
+  const distSnowBadge = dist !== null ? `<span class="sunshine-badge-inline">📍 ${formatDist(dist)}</span>` : '';
+
   return `<div class="snow-card snow-${cls}" id="snow-${d.id}" onclick="snowCardClick('${d.id}')" data-id="${d.id}">
     <div class="snow-card-header">
       <div class="snow-rank">${rank}</div>
       <div class="snow-card-info">
         <div class="snow-card-name">${emoji} ${esc(name)}</div>
-        <div class="snow-card-region">${esc(region)}</div>
+        <div class="snow-card-region">${esc(region)} ${summarySnowBadges}${distSnowBadge}</div>
       </div>
       <div class="snow-card-total">
         <div class="snow-total-num">${d.snowfallWeekTotal}</div>
@@ -2378,6 +2704,7 @@ function renderSnowCard(d, rank) {
       </div>
     </div>
     <div class="snow-card-body">
+      <div class="dest-photo"><img src="${API}/photo/${d.id}" alt="${esc(name)}" loading="lazy" onerror="this.parentNode.style.display='none'"></div>
       <div class="snow-badges">${badges}</div>
       ${forecastHtml}
     </div>
@@ -2389,13 +2716,18 @@ function snowCardClick(id) {
     if (c.dataset.id !== id) c.classList.remove('expanded');
   });
   const card = document.getElementById(`snow-${id}`);
-  if (card) card.classList.toggle('expanded');
+  if (card) {
+    const wasExpanded = card.classList.contains('expanded');
+    card.classList.toggle('expanded');
+    if (!wasExpanded) scrollToCard(card);
+  }
   if (snowMap) panToMarker(snowMarkers, id, snowMap, 10);
 }
 
 function setSnowFilter(f) {
   snowFilter = f;
   snowExpanded = false;
+  renderHeader();
   renderCurrentView();
   afterRender(initSnowMap);
 }
@@ -2406,12 +2738,14 @@ function setSnowSort(s) {
       userLat = pos.coords.latitude;
       userLon = pos.coords.longitude;
       snowSort = 'distance';
+      renderHeader();
       renderCurrentView();
       afterRender(initSnowMap);
     }, () => {}, { enableHighAccuracy: true });
     return;
   }
   snowSort = s;
+  renderHeader();
   renderCurrentView();
   afterRender(initSnowMap);
 }
@@ -2527,7 +2861,7 @@ async function initSnowMap() {
   for (const d of snowData.destinations) {
     const name = lang === 'de' ? (d.nameDE || d.name) : d.name;
     const cls = getSnowClass(d.snowfallWeekTotal);
-    const color = cls === 'heavy' ? '#1e40af' : cls === 'moderate' ? '#60a5fa' : '#94a3b8';
+    const color = cls === 'heavy' ? MAP_COLORS.navy : cls === 'moderate' ? MAP_COLORS.sky : MAP_COLORS.slate;
     const radius = Math.max(8, Math.min(25, 8 + d.snowfallWeekTotal / 2));
 
     const marker = L.circleMarker([d.lat, d.lon], {
@@ -2535,7 +2869,7 @@ async function initSnowMap() {
       fillColor: color,
       fillOpacity: 0.8,
       weight: 2,
-      color: '#fff',
+      color: MAP_COLORS.white,
     }).addTo(snowMap).bindPopup(`<b>${esc(name)}</b><br>${d.snowfallWeekTotal}${t('snowfallCm')}<br>${getSnowEmoji(d.snowfallWeekTotal)}`);
     marker.on('click', () => highlightCard(`snow-${d.id}`));
     snowMarkers[d.id] = marker;
@@ -2544,18 +2878,32 @@ async function initSnowMap() {
 
 // ═══ DEALS VIEW ═══
 
+async function loadDeals() {
+  if (dealsData.length > 0) return;
+  try {
+    const cached = localStorage.getItem('dealsCache');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed.deals?.length) { dealsData = parsed.deals; renderCurrentView(); }
+    }
+    const res = await fetch(`${API}/deals`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.deals?.length) {
+        dealsData = data.deals;
+        localStorage.setItem('dealsCache', JSON.stringify(data));
+        renderCurrentView();
+      }
+    }
+  } catch {}
+}
+
 function renderDealsView() {
   const currentMonth = new Date().getMonth() + 1;
-  let html = `<div class="subtitle">${t('dealsSubtitle')}</div>`;
-
-  // Filter bar
-  const filters = [
-    ['all', t('all')], ['free', '🆓 ' + t('freeEntry')], ['deal', '🏷️ ' + t('deal')], ['tip', '💡 ' + t('tip')]
-  ];
-  html += `<div class="filter-bar">${filters.map(([k, v]) => `<button class="filter-btn${dealsFilter === k ? ' active' : ''}" onclick="filterDeals('${k}')">${v}</button>`).join('')}</div>`;
+  let html = '';
 
   // Filter deals
-  let items = DEALS.filter(d => {
+  let items = dealsData.filter(d => {
     // Filter by valid months
     if (d.validMonths && !d.validMonths.includes(currentMonth)) return false;
     // Filter by city
@@ -2599,7 +2947,7 @@ function renderDealCard(d) {
   </div>`;
 }
 
-function filterDeals(f) { dealsFilter = f; renderCurrentView(); }
+function filterDeals(f) { dealsFilter = f; renderHeader(); renderCurrentView(); }
 
 // ═══ DAY DETAIL (integrated into Events view) ═══
 
@@ -2768,6 +3116,261 @@ function renderDayDetail(dateStr) {
   return html;
 }
 
+// ═══ EXPLORE VIEW ═══
+
+function renderExploreView() {
+  let html = '';
+
+  // Mini map
+  html += `<div class="explore-map-wrap"><div class="explore-map-container" id="explore-map"></div><div class="explore-map-hint" onclick="expandExploreMap()">🗺️ ${lang === 'de' ? 'Karte vergrössern' : 'Expand map'}</div></div>`;
+
+  // Near You horizontal scroll
+  const items = getExploreItems();
+  const nearItems = items.slice(0, 10);
+  if (nearItems.length) {
+    html += `<div class="near-section"><div class="near-section-row"><span class="section-heading">${lang === 'de' ? 'In der Nähe' : 'Near You'}</span><span class="section-count">${items.length} ${lang === 'de' ? 'Orte' : 'places'}</span></div>`;
+    html += '<div class="near-scroll">';
+    for (const item of nearItems) {
+      const dist = userLat ? formatDist(haversine(userLat, userLon, item.lat, item.lon)) : '';
+      html += `<div class="near-chip" onclick="exploreCardClick('${esc(item.id)}')">
+        <div class="near-chip-icon" style="background:${item.color}15"><span>${item.emoji}</span></div>
+        <div class="near-chip-info"><div class="near-chip-name">${esc(item.name)}</div>${dist ? `<div class="near-chip-dist">↗ ${dist}</div>` : `<div class="near-chip-dist">${item.type}</div>`}</div>
+      </div>`;
+    }
+    html += '</div></div>';
+  }
+
+  // Browse by Type — category grid
+  const categories = [
+    { key: 'museum', emoji: '🏛️', label: lang === 'de' ? 'Museen' : 'Museums', color: '#a855f7' },
+    { key: 'playground', emoji: '🛝', label: lang === 'de' ? 'Spielplätze' : 'Playgrounds', color: '#22c55e' },
+    { key: 'outdoor', emoji: '🌳', label: lang === 'de' ? 'Draussen' : 'Outdoors', color: '#059669' },
+    { key: 'animals', emoji: '🦁', label: lang === 'de' ? 'Tiere' : 'Animals', color: '#f59e0b' },
+    { key: 'indoor-play', emoji: '🎪', label: 'Indoor', color: '#ec4899' },
+    { key: 'cafe', emoji: '☕', label: 'Cafés', color: '#C4623A' }
+  ];
+  const actCounts = {};
+  for (const a of activitiesData) { actCounts[a.category] = (actCounts[a.category] || 0) + 1; }
+
+  html += `<div class="explore-section"><div class="section-heading" style="margin-bottom:12px">${lang === 'de' ? 'Nach Typ entdecken' : 'Browse by Type'}</div>`;
+  html += '<div class="explore-grid">';
+  for (const cat of categories) {
+    const count = actCounts[cat.key] || 0;
+    html += `<div class="explore-cat-card" style="--cat-color:${cat.color}" onclick="filterActivities('all');switchView('activities')">
+      <div class="explore-cat-icon">${cat.emoji}</div>
+      <div class="explore-cat-label">${cat.label}</div>
+      <div class="explore-cat-count">${count} ${lang === 'de' ? 'Orte' : 'places'}</div>
+    </div>`;
+  }
+  html += '</div></div>';
+
+  // Full list
+  html += '<div id="explore-list" class="explore-list"></div>';
+
+  return html;
+}
+
+function setExploreFilter(f) {
+  exploreFilter = f;
+  renderHeader();
+  renderCurrentView();
+  afterRender(() => initExploreMap());
+}
+
+function expandExploreMap() {
+  const el = $('explore-map');
+  if (!el) return;
+  el.closest('.explore-map-wrap')?.classList.toggle('expanded');
+  if (exploreMap) setTimeout(() => exploreMap.invalidateSize(), 300);
+}
+
+function getExploreItems() {
+  const items = [];
+  const today = new Date().toISOString().split('T')[0];
+  const currentMonth = new Date().getMonth() + 1;
+
+  // Activities (with coordinates)
+  if (exploreFilter === 'all' || exploreFilter === 'activities') {
+    const acts = [...activitiesData, ...customActivities].filter(a => a.lat && a.category !== 'stayhome');
+    for (const a of acts) {
+      items.push({
+        type: 'activity', id: a.id, name: lang === 'de' ? (a.nameDE || a.name) : a.name,
+        desc: lang === 'de' ? (a.descriptionDE || a.description) : a.description,
+        lat: a.lat, lon: a.lon, indoor: a.indoor, category: a.category,
+        emoji: ACTIVITY_EMOJIS[a.category] || '📍', color: MAP_COLORS.green,
+        price: a.price
+      });
+    }
+  }
+
+  // City events (with dates overlapping today or upcoming 7 days)
+  if (exploreFilter === 'all' || exploreFilter === 'events') {
+    const weekFromNow = new Date();
+    weekFromNow.setDate(weekFromNow.getDate() + 7);
+    const weekStr = weekFromNow.toISOString().split('T')[0];
+    for (const e of cityEventsData) {
+      if (!e.startDate) continue;
+      const end = e.endDate || e.startDate;
+      if (end < today || e.startDate > weekStr) continue;
+      // Events don't have coordinates in the data — use city center
+      const coords = CITY_COORDS[e.city || city] || CITY_COORDS[city];
+      if (!coords) continue;
+      items.push({
+        type: 'event', id: e.id, name: lang === 'de' ? (e.nameDE || e.name) : e.name,
+        desc: lang === 'de' ? (e.descriptionDE || e.description) : e.description,
+        lat: coords[0] + (Math.random() - 0.5) * 0.01, lon: coords[1] + (Math.random() - 0.5) * 0.01,
+        emoji: '📅', color: MAP_COLORS.purple,
+        toddlerFriendly: e.toddlerFriendly, free: e.free,
+        startDate: e.startDate, endDate: e.endDate
+      });
+    }
+  }
+
+  // Deals (city-relevant, no coordinates — use city center with offset)
+  if (exploreFilter === 'all' || exploreFilter === 'deals') {
+    const coords = CITY_COORDS[city] || CITY_COORDS.zurich;
+    const relevant = dealsData.filter(d => {
+      if (d.city !== 'all' && d.city !== city) return false;
+      if (d.validMonths && !d.validMonths.includes(currentMonth)) return false;
+      return true;
+    });
+    for (let i = 0; i < relevant.length; i++) {
+      const d = relevant[i];
+      // Spread deals in a circle around city center
+      const angle = (i / relevant.length) * Math.PI * 2;
+      const r = 0.005 + Math.random() * 0.008;
+      items.push({
+        type: 'deal', id: d.id, name: lang === 'de' ? (d.nameDE || d.name) : d.name,
+        desc: lang === 'de' ? (d.descriptionDE || d.description) : d.description,
+        lat: coords[0] + Math.sin(angle) * r, lon: coords[1] + Math.cos(angle) * r,
+        emoji: DEAL_CATEGORY_EMOJIS[d.category] || '🎁',
+        color: d.type === 'free' ? MAP_COLORS.green : d.type === 'deal' ? MAP_COLORS.blue : MAP_COLORS.amber,
+        dealType: d.type, savings: d.savings, url: d.url
+      });
+    }
+  }
+
+  // Sort by distance if location available
+  if (userLat) {
+    items.sort((a, b) => haversine(userLat, userLon, a.lat, a.lon) - haversine(userLat, userLon, b.lat, b.lon));
+  }
+
+  return items;
+}
+
+async function initExploreMap() {
+  const el = $('explore-map');
+  if (!el || !el.offsetParent) return;
+  await loadLeaflet();
+  if (!window.L) return;
+
+  const center = userLat ? [userLat, userLon] : (CITY_COORDS[city] || CITY_COORDS.zurich);
+
+  if (exploreMap) exploreMap.remove();
+  exploreMarkers = {};
+  exploreMap = L.map(el).setView(center, 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(exploreMap);
+
+  const items = getExploreItems();
+  const listEl = $('explore-list');
+  let listHtml = '';
+
+  for (const item of items) {
+    // Map marker
+    const marker = L.circleMarker([item.lat, item.lon], {
+      radius: 7,
+      fillColor: item.color,
+      fillOpacity: .85,
+      weight: 1,
+      color: '#fff'
+    }).addTo(exploreMap);
+
+    const popupContent = `<b>${item.emoji} ${esc(item.name)}</b><br><span style="font-size:.85em;color:#666">${esc(item.desc?.substring(0, 80) || '')}${item.desc?.length > 80 ? '...' : ''}</span>`;
+    marker.bindPopup(popupContent);
+    marker.on('click', () => highlightCard(`explore-${item.id}`));
+    exploreMarkers[item.id] = marker;
+
+    // List card
+    const dist = userLat ? haversine(userLat, userLon, item.lat, item.lon) : null;
+    let tags = `<span class="vcard-tag" style="background:${item.color}15;color:${item.color}">${item.type === 'activity' ? (item.indoor ? 'Indoor' : 'Outdoor') : item.type === 'event' ? 'Event' : item.dealType || 'Deal'}</span>`;
+    if (item.free) tags += '<span class="vcard-tag" style="background:rgba(58,125,92,.1);color:var(--clr-green)">Free</span>';
+    if (item.savings) tags += `<span class="vcard-tag">${item.savings}</span>`;
+
+    listHtml += `<div class="explore-item" id="explore-${item.id}" onclick="exploreCardClick('${esc(item.id)}')">
+      <div class="explore-item-icon" style="background:${item.color}15"><span>${item.emoji}</span></div>
+      <div class="explore-item-body">
+        <div class="vcard-name">${esc(item.name)}</div>
+        <div class="vcard-desc">${esc(item.desc?.substring(0, 80) || '')}${item.desc?.length > 80 ? '...' : ''}</div>
+        <div class="vcard-tags">${tags}</div>
+      </div>
+      ${dist !== null ? `<div class="vcard-dist">↗ ${formatDist(dist)}</div>` : ''}
+    </div>`;
+  }
+
+  if (!items.length) {
+    listHtml = renderEmptyState('🗺️', 'noResults', 'emptyFilterHint');
+  }
+  if (listEl) listEl.innerHTML = listHtml;
+
+  // User location marker
+  if (userLat) {
+    L.marker([userLat, userLon], { icon: L.divIcon({ html: '📍', className: '', iconSize: [20, 20] }) }).addTo(exploreMap);
+  }
+}
+
+function exploreCardClick(id) {
+  if (exploreMap && exploreMarkers[id]) {
+    const marker = exploreMarkers[id];
+    exploreMap.setView(marker.getLatLng(), 15, { animate: true });
+    marker.openPopup();
+    $('explore-map')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  highlightCard(`explore-${id}`);
+}
+
+async function loadExplore(force = false) {
+  // Need activities data for the map
+  if (!activitiesData.length || force) {
+    const cacheKey = `activitiesCache-${city}`;
+    if (!force) {
+      const cached = cache.get(cacheKey);
+      if (cached) {
+        activitiesData = cached.activities || [];
+        cityEventsData = cached.cityEvents || [];
+      }
+    }
+    if (!activitiesData.length) {
+      showLoading();
+      try {
+        const res = await fetch(`${API}/activities?city=${city}&lang=${lang}`);
+        const data = await res.json();
+        activitiesData = data.activities || [];
+        cityEventsData = data.cityEvents || [];
+        cache.set(cacheKey, data);
+      } catch (e) {
+        console.error('Explore load error:', e);
+      } finally {
+        hideLoading();
+      }
+    }
+  }
+
+  // Ensure deals are loaded for explore map
+  if (!dealsData.length) loadDeals();
+
+  // Request location for distance sorting
+  if (!userLat && navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      userLat = pos.coords.latitude;
+      userLon = pos.coords.longitude;
+      if (view === 'explore') afterRender(() => initExploreMap());
+    }, () => {}, { enableHighAccuracy: true });
+  }
+
+  renderCurrentView();
+  afterRender(() => initExploreMap());
+}
+
 // ═══ SWIPE NAVIGATION ═══
 
 function setupSwipe() {
@@ -2820,6 +3423,7 @@ function updateFreshnessTimes() {
 document.addEventListener('DOMContentLoaded', () => {
   // Theme
   document.documentElement.setAttribute('data-theme', theme);
+  updateThemeColor();
 
   // Render
   renderAll();
@@ -2841,7 +3445,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Check URL params (override persisted view if present)
   const params = new URLSearchParams(window.location.search);
   const viewParam = params.get('view');
-  if (viewParam && ['activities', 'lunch', 'events', 'weekend', 'sunshine', 'snow', 'deals'].includes(viewParam)) {
+  if (viewParam && ['activities', 'lunch', 'events', 'weekend', 'sunshine', 'snow', 'deals', 'explore'].includes(viewParam)) {
     switchView(viewParam);
   } else if (view === 'news') {
     fetchNews();
@@ -2854,6 +3458,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
   }
+
+  // Check reminders
+  checkReminders();
 
   // Check Apple Pay donate availability
   checkDonateAvailability();

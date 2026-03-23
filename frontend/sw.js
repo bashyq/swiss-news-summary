@@ -1,4 +1,4 @@
-const CACHE_NAME = 'today-switzerland-v40';
+const CACHE_NAME = 'znuni-v20';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -6,7 +6,14 @@ const STATIC_ASSETS = [
   '/app.js',
   '/widget.html',
   '/manifest.json',
-  '/icon.svg'
+  '/icon.svg',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/icon-180.png',
+  '/icon-navy.svg',
+  '/icon-navy-192.png',
+  '/icon-navy-512.png',
+  '/icon-navy-180.png'
 ];
 
 // Install - cache static assets
@@ -141,7 +148,7 @@ async function staleWhileRevalidate(request) {
 
 // Push notification handler
 self.addEventListener('push', (event) => {
-  let data = { title: 'Today in Switzerland', body: 'Your daily briefing is ready!' };
+  let data = { title: 'Znüni', body: 'Your daily briefing is ready!' };
 
   if (event.data) {
     try {
@@ -153,8 +160,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: '/icon.svg',
-    badge: '/icon.svg',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
     tag: 'daily-briefing',
     renotify: true,
     data: {
