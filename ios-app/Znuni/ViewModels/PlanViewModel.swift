@@ -2,6 +2,9 @@ import SwiftUI
 import EventKit
 import CoreLocation
 import MapKit
+import os.log
+
+private let planLog = Logger(subsystem: "Bashar.Znuni", category: "PlanViewModel")
 
 // MARK: - Plan State
 
@@ -398,6 +401,12 @@ final class PlanViewModel {
 
     /// Unlock a slot for replacement on redeal.
     func unlock(slotId: String) {
+        planLog.notice("UNLOCK called: slotId=\(slotId)")
+        if let agenda = currentAgenda {
+            planLog.notice("  agenda has \(agenda.slots.count) slots: \(agenda.slots.map { "\($0.id)[\($0.isLocked)]" }.joined(separator: ", "))")
+        } else {
+            planLog.notice("  currentAgenda is nil")
+        }
         // Handle calendar preview state
         if case .calendarPreview(var events) = planState {
             events.removeAll { $0.id == slotId }
@@ -418,6 +427,12 @@ final class PlanViewModel {
 
     /// Remove a slot from the current agenda. If calendar source, discard it.
     func remove(slotId: String) {
+        planLog.notice("REMOVE called: slotId=\(slotId)")
+        if let agenda = currentAgenda {
+            planLog.notice("  agenda has \(agenda.slots.count) slots: \(agenda.slots.map { $0.id }.joined(separator: ", "))")
+        } else {
+            planLog.notice("  currentAgenda is nil")
+        }
         // Handle calendar preview state
         if case .calendarPreview(var events) = planState {
             calendarBridge.discardEvent(id: slotId)
