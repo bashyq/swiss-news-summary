@@ -264,7 +264,7 @@ struct ActivityCard: View {
                             image
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
-                                .frame(height: 200)
+                                .frame(height: 140)
                                 .clipped()
                         default:
                             // Placeholder gradient while loading
@@ -272,7 +272,7 @@ struct ActivityCard: View {
                                 colors: [accentBarColor.opacity(0.3), Color.znSurface],
                                 startPoint: .top, endPoint: .bottom
                             )
-                            .frame(height: 200)
+                            .frame(height: 140)
                         }
                     }
 
@@ -326,74 +326,12 @@ struct ActivityCard: View {
 
     private var expandedContent: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Top row: title + action buttons
-            HStack(alignment: .top, spacing: 8) {
-                // Title
-                Text(activity.localizedName(language: language))
-                    .font(.expandedCardTitle)
-                    .foregroundStyle(Color.znInk)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Spacer()
-
-                // Action buttons row
-                HStack(spacing: 0) {
-                    // Delete button for custom activities
-                    if activity.id.hasPrefix("custom-") {
-                        Button {
-                            showDeleteConfirmation = true
-                        } label: {
-                            Image(systemName: "trash")
-                                .font(.caption)
-                                .foregroundStyle(.znNegative.opacity(0.7))
-                                .frame(width: 44, height: 44)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    // Bell button (reminder — only on saved activities)
-                    if isSaved {
-                        Button {
-                            if reminderManager.hasReminder(for: activity.id) {
-                                reminderManager.removeReminder(for: activity.id)
-                                toastManager.show(
-                                    appState.localized(en: "Reminder removed", de: "Erinnerung entfernt"),
-                                    type: .success
-                                )
-                            } else {
-                                showReminderSheet = true
-                            }
-                        } label: {
-                            Image(systemName: reminderManager.hasReminder(for: activity.id) ? "bell.fill" : "bell")
-                                .font(.caption)
-                                .foregroundStyle(reminderManager.hasReminder(for: activity.id) ? .znTerracotta : .znMuted)
-                                .frame(width: 44, height: 44)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    // Heart button
-                    Button {
-                        appState.toggleSavedActivity(activity.id)
-                        let wasSaved = appState.savedActivityIDs.contains(activity.id)
-                        toastManager.show(
-                            appState.localized(en: wasSaved ? "Saved" : "Removed", de: wasSaved ? "Gespeichert" : "Entfernt"),
-                            type: .success
-                        )
-                    } label: {
-                        Image(systemName: isSaved ? "heart.fill" : "heart")
-                            .font(.callout)
-                            .foregroundStyle(isSaved ? .znNegative : Color.znBorder)
-                            .frame(width: 44, height: 44)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .sensoryFeedback(.impact(weight: .light), trigger: isSaved)
-                }
-            }
-            .padding(.bottom, 5)
+            // Title
+            Text(activity.localizedName(language: language))
+                .font(.expandedCardTitle)
+                .foregroundStyle(Color.znInk)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.bottom, 5)
 
             // Description — full when expanded
             Text(activity.localizedDescription(language: language))
@@ -469,9 +407,6 @@ struct ActivityCard: View {
                 tagPill(text: price, icon: nil, bg: Color.znNeutralTagBg, fg: Color.znNeutralTagText)
             }
 
-            // Age range tag
-            tagPill(text: activity.ageRange, icon: nil, bg: Color.znNeutralTagBg, fg: Color.znNeutralTagText)
-
             // Seasonal tag
             if let season = activity.season {
                 tagPill(
@@ -537,85 +472,99 @@ struct ActivityCard: View {
                         .padding(.bottom, 10)
                 }
 
-                // 2×2 metadata grid
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                    detailCell(
-                        label: appState.localized(en: "Distance", de: "Entfernung"),
-                        value: distanceMeters.map { CLLocation.formattedDistance($0) + " " + appState.localized(en: "away", de: "entfernt") }
-                            ?? appState.localized(en: "Unknown", de: "Unbekannt")
-                    )
-                    detailCell(
-                        label: appState.localized(en: "Duration", de: "Dauer"),
-                        value: activity.duration
-                    )
-                    detailCell(
-                        label: appState.localized(en: "Price", de: "Preis"),
-                        value: activity.localizedPrice(language: language)
-                            ?? appState.localized(en: "Not specified", de: "Nicht angegeben")
-                    )
-                    detailCell(
-                        label: appState.localized(en: "Ages", de: "Alter"),
-                        value: activity.ageRange
-                    )
-                }
-                .padding(.bottom, 12)
-
-                // Action buttons
+                // Action buttons row: [Directions] [Plan →] [🌐] [♡]
                 HStack(spacing: 8) {
-                    // "Get directions" button
+                    // Directions button (primary)
                     if let coordinate = activity.coordinate {
                         Button {
                             openDirections(coordinate: coordinate, name: activity.name)
                         } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "mappin.and.ellipse")
-                                    .font(.system(size: 13))
-                                Text(appState.localized(en: "Get directions", de: "Route"))
-                                    .font(.system(size: 13, weight: .medium))
+                            HStack(spacing: 5) {
+                                Image(systemName: "location.fill")
+                                    .font(.system(size: 12))
+                                Text(appState.localized(en: "Directions", de: "Route"))
+                                    .font(.system(size: 13, weight: .semibold))
                             }
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color.znTerracotta)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 42)
-                            .background(Color.znTerracotta)
-                            .clipShape(Capsule())
+                            .frame(height: 40)
+                            .background(Color.znTerracotta.opacity(0.12))
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
                         }
                         .buttonStyle(.plain)
                     }
 
-                    // Website button
+                    // Plan → button (secondary)
+                    Button {
+                        showAnchorForm = true
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "calendar.badge.plus")
+                                .font(.system(size: 12))
+                            Text(appState.localized(en: "Plan →", de: "Planen →"))
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        .foregroundStyle(Color.znNavy)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 40)
+                        .background(Color.znNavy.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    .buttonStyle(.plain)
+
+                    // Website icon button
                     if activity.url != nil {
                         Button {
                             openURL()
                         } label: {
-                            Image(systemName: "safari")
+                            Image(systemName: "globe")
                                 .font(.system(size: 15))
-                                .foregroundStyle(Color.znBody)
-                                .frame(width: 42, height: 42)
-                                .background(Color.znBorder)
-                                .clipShape(Circle())
+                                .foregroundStyle(Color.znNavy)
+                                .frame(width: 40, height: 40)
+                                .background(Color.znNavy.opacity(0.06))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                         .buttonStyle(.plain)
                     }
+
+                    // Heart / save icon button
+                    Button {
+                        appState.toggleSavedActivity(activity.id)
+                        let wasSaved = appState.savedActivityIDs.contains(activity.id)
+                        toastManager.show(
+                            appState.localized(en: wasSaved ? "Saved" : "Removed", de: wasSaved ? "Gespeichert" : "Entfernt"),
+                            type: .success
+                        )
+                    } label: {
+                        Image(systemName: isSaved ? "heart.fill" : "heart")
+                            .font(.system(size: 15))
+                            .foregroundStyle(isSaved ? Color.znTerracotta : Color.znNavy)
+                            .frame(width: 40, height: 40)
+                            .background(isSaved ? Color.znTerracotta.opacity(0.12) : Color.znNavy.opacity(0.06))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+                    .sensoryFeedback(.impact(weight: .light), trigger: isSaved)
                 }
 
-                // Plan around this
-                Button {
-                    showAnchorForm = true
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "calendar.badge.plus")
-                            .font(.system(size: 13))
-                        Text(appState.localized(en: "Plan around this →", de: "Hiermit planen →"))
-                            .font(.system(size: 13, weight: .medium))
+                // Delete button for custom activities
+                if activity.id.hasPrefix("custom-") {
+                    Button {
+                        showDeleteConfirmation = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 12))
+                            Text(appState.localized(en: "Delete", de: "Löschen"))
+                                .font(.system(size: 12, weight: .medium))
+                        }
+                        .foregroundStyle(Color.znNegative.opacity(0.7))
+                        .padding(.vertical, 8)
+                        .contentShape(Rectangle())
                     }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 42)
-                    .background(Color.znNavy)
-                    .clipShape(Capsule())
+                    .buttonStyle(.plain)
+                    .padding(.top, 4)
                 }
-                .buttonStyle(.plain)
-                .padding(.top, 4)
 
                 // Mark as visited
                 Button {
@@ -636,32 +585,17 @@ struct ActivityCard: View {
                             .font(.system(size: 12, weight: .medium))
                     }
                     .foregroundStyle(markedAsVisited ? Color.znPositive : Color.znMuted)
+                    .padding(.vertical, 8)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .disabled(markedAsVisited)
-                .padding(.top, 8)
+                .padding(.top, 4)
             }
             .padding(.horizontal, 18)
             .padding(.bottom, 18)
             .transition(.opacity.combined(with: .move(edge: .bottom)))
         }
-    }
-
-    private func detailCell(label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(label.uppercased())
-                .font(.system(size: 9, weight: .medium))
-                .tracking(1)
-                .foregroundStyle(Color.znMuted)
-            Text(value)
-                .font(.system(size: 13))
-                .foregroundStyle(Color.znInk)
-                .lineLimit(2)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(10)
-        .background(Color.znCream)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: - Helpers
