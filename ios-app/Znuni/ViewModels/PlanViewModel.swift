@@ -37,16 +37,9 @@ final class PlanViewModel {
     /// Family session — loaded from UserDefaults.
     var session: FamilySession
 
-    // MARK: - In-Memory Plan Cache (survives date switches)
+    // MARK: - Plan Store
 
-    /// Stores dealt/saved agendas per "cityId-dateISO" key so switching dates/cities doesn't lose work.
-    private var inMemoryPlans: [String: DayAgenda] = [:]
-
-    private func planKey(city: String? = nil, date: Date? = nil) -> String {
-        let c = city ?? planningCity.id
-        let d = isoString(for: date ?? selectedDate)
-        return "\(c)-\(d)"
-    }
+    let store: PlanStoreProvider = LocalPlanStore.shared
 
     // MARK: - Cached Data Pools
 
@@ -64,7 +57,7 @@ final class PlanViewModel {
 
     /// Last successfully dealt agenda for the current date — used as fallback in error state.
     var lastDealtAgenda: DayAgenda? {
-        inMemoryPlans[planKey()]
+        store.loadPlan(city: planningCity.id, date: isoString(for: selectedDate))
     }
 
     // MARK: - Date Strip
@@ -80,7 +73,6 @@ final class PlanViewModel {
 
     private let calendarBridge = CalendarBridge()
     private let anchorStore = AnchorStore.shared
-    private let agendaCache = AgendaCache.shared
     private let recentlyShownStore = RecentlyShownStore.shared
     private let visitStore = VenueVisitStore.shared
     private let templateEngine = TemplateEngine()
@@ -105,35 +97,17 @@ final class PlanViewModel {
     /// Select a date and load cached plan or calendar events.
     @MainActor
     func selectDate(_ date: Date, previousDate: Date? = nil) async {
-        // 0. Save current agenda in memory under the OLD date before switching
+        // 0. Save current agenda to store before switching (write-through — may be no-op if already saved)
         let oldDate = previousDate ?? selectedDate
-        if !Calendar.current.isDate(oldDate, inSameDayAs: date) {
-            let oldKey = planKey(date: oldDate)
-            if let current = currentAgenda {
-                inMemoryPlans[oldKey] = current
-            }
+        if !Calendar.current.isDate(oldDate, inSameDayAs: date), let current = currentAgenda {
+            store.savePlan(current, city: planningCity.id, date: isoString(for: oldDate))
         }
 
         selectedDate = date
         let dateISO = isoString(for: date)
 
-        // 1. Check in-memory cache first (fastest, preserves lock state)
-        if let memoryCached = inMemoryPlans[planKey(date: date)] {
-            let allLocked = memoryCached.slots.allSatisfy { $0.isLocked }
-            planState = allLocked ? .saved(memoryCached) : .dealt(memoryCached)
-            return
-        }
-
-        // 2. Check AgendaCache for existing plan
-        let anchorsHash = AgendaCache.hash(anchors: anchorStore.anchors(for: date))
-        if let cachedData = await agendaCache.get(
-            date: dateISO,
-            city: planningCity.id,
-            sessionHash: session.sessionHash,
-            anchorsHash: anchorsHash
-        ),
-           let cached = try? JSONDecoder().decode(DayAgenda.self, from: cachedData) {
-            // Determine if this was a saved plan (all slots locked) or dealt
+        // 1. Check store for existing plan
+        if let cached = store.loadPlan(city: planningCity.id, date: dateISO) {
             let allLocked = cached.slots.allSatisfy { $0.isLocked }
             planState = allLocked ? .saved(cached) : .dealt(cached)
             return
@@ -168,11 +142,8 @@ final class PlanViewModel {
 
         guard let activities = activitiesData?.activities,
               let spots = lunchData?.spots else {
-            // Try cache fallback
-            if let cachedData = await agendaCache.get(
-                date: dateISO, city: city.id, sessionHash: session.sessionHash
-            ),
-               let cached = try? JSONDecoder().decode(DayAgenda.self, from: cachedData) {
+            // Try store fallback
+            if let cached = store.loadPlan(city: city.id, date: dateISO) {
                 planState = .dealt(cached)
             } else {
                 planState = .error("No data available — check your connection")
@@ -217,7 +188,7 @@ final class PlanViewModel {
                 homeActivities: nil
             )
             planState = .dealt(agenda)
-            await cacheAgenda(agenda, dateISO: dateISO, anchors: anchors)
+            store.savePlan(agenda, city: planningCity.id, date: dateISO)
             return
         }
 
@@ -283,7 +254,7 @@ final class PlanViewModel {
                     source: "api", city: city.id,
                     slotCount: agenda.slots.count, badWeather: badWeather
                 )
-                await cacheAgenda(agenda, dateISO: dateISO, anchors: anchors)
+                store.savePlan(agenda, city: planningCity.id, date: dateISO)
                 recordShownVenues(agenda)
                 return
             } catch {
@@ -349,7 +320,7 @@ final class PlanViewModel {
             source: "template", city: city.id,
             slotCount: result.slots.count, badWeather: result.badWeatherMode
         )
-        await cacheAgenda(result, dateISO: dateISO, anchors: anchors)
+        store.savePlan(result, city: planningCity.id, date: dateISO)
         recordShownVenues(result)
     }
 
@@ -361,7 +332,7 @@ final class PlanViewModel {
         guard let current = currentAgenda else { return }
         let locked = current.slots.filter { $0.isLocked }
         ZnuniEvent.planRebuilt()
-        await agendaCache.invalidate()
+        store.deletePlan(city: planningCity.id, date: isoString(for: selectedDate))
         recentlyShownStore.clear()
         await deal(lockedSlots: locked)
     }
@@ -373,12 +344,13 @@ final class PlanViewModel {
     func changeCity(to newCity: PlanningCity) {
         // Save current plan before switching
         if let current = currentAgenda {
-            inMemoryPlans[planKey()] = current
+            store.savePlan(current, city: planningCity.id, date: isoString(for: selectedDate))
         }
         planningCity = newCity
         invalidateDataPools()
         // Check if we have a cached plan for this city+date
-        if let cached = inMemoryPlans[planKey()] {
+        let dateISO = isoString(for: selectedDate)
+        if let cached = store.loadPlan(city: newCity.id, date: dateISO) {
             let allLocked = cached.slots.allSatisfy { $0.isLocked }
             planState = allLocked ? .saved(cached) : .dealt(cached)
         } else {
@@ -514,7 +486,7 @@ final class PlanViewModel {
 
     /// Clear the entire plan for the current date and return to empty state.
     func clearPlan() {
-        inMemoryPlans.removeValue(forKey: planKey())
+        store.deletePlan(city: planningCity.id, date: isoString(for: selectedDate))
         planState = .empty
     }
 
@@ -618,7 +590,7 @@ final class PlanViewModel {
         // Cache and transition to saved
         let dateISO = isoString(for: selectedDate)
         let anchors = anchorStore.anchors(for: selectedDate)
-        await cacheAgenda(agenda, dateISO: dateISO, anchors: anchors)
+        store.savePlan(agenda, city: planningCity.id, date: dateISO)
         planState = .saved(agenda)
     }
 
@@ -929,9 +901,9 @@ private extension PlanViewModel {
 
     // MARK: - State Mutation
 
-    /// Update the agenda in the current state and keep in-memory cache in sync.
+    /// Update the agenda in the current state and persist to store.
     func updateAgenda(_ agenda: DayAgenda) {
-        inMemoryPlans[planKey()] = agenda
+        store.savePlan(agenda, city: planningCity.id, date: isoString(for: selectedDate))
         switch planState {
         case .dealt:
             planState = .dealt(agenda)
@@ -941,20 +913,6 @@ private extension PlanViewModel {
         default:
             break
         }
-    }
-
-    // MARK: - Cache
-
-    func cacheAgenda(_ agenda: DayAgenda, dateISO: String, anchors: [AnchorEvent]) async {
-        guard let encoded = try? JSONEncoder().encode(agenda) else { return }
-        let anchorsHash = AgendaCache.hash(anchors: anchors)
-        await agendaCache.store(
-            encoded,
-            date: dateISO,
-            city: planningCity.id,
-            sessionHash: session.sessionHash,
-            anchorsHash: anchorsHash
-        )
     }
 
     func recordShownVenues(_ agenda: DayAgenda) {
