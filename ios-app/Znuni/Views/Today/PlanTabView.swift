@@ -254,6 +254,11 @@ struct PlanTabView: View {
 
     private func dealtState(_ agenda: DayAgenda, isSaved: Bool) -> some View {
         VStack(spacing: 0) {
+            // Day is over — no slots to show
+            if agenda.slots.isEmpty && viewModel.isSelectedDateToday {
+                DayCompleteView()
+            }
+
             // Timeline of slots — staggered appearance via visibleSlotCount
             ForEach(Array(agenda.slots.prefix(visibleSlotCount).enumerated()), id: \.element.id) { index, slot in
                 PlanSlotCard(
