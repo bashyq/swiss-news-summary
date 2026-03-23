@@ -59,11 +59,6 @@ struct PlanSlotCard: View {
             x: 0,
             y: isExpanded ? AppShadow.cardExpanded.y : (isSaved ? AppShadow.subtle.y : AppShadow.card.y)
         )
-        .onTapGesture {
-            withAnimation(AppAnimation.spring) {
-                expandedID = isExpanded ? nil : slot.id
-            }
-        }
         .contextMenu {
             if slot.isLocked {
                 Button { onUnlock() } label: { Label("Unlock", systemImage: "lock.open") }
@@ -83,47 +78,56 @@ struct PlanSlotCard: View {
 
     private var collapsedBody: some View {
         HStack(spacing: 12) {
-            // Photo thumbnail 76x76
-            photoThumbnail
-                .frame(width: 76, height: 76)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .overlay(alignment: .bottomLeading) {
-                    categoryBadge
-                }
+            // Tappable area for expand/collapse
+            HStack(spacing: 12) {
+                // Photo thumbnail 76x76
+                photoThumbnail
+                    .frame(width: 76, height: 76)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .overlay(alignment: .bottomLeading) {
+                        categoryBadge
+                    }
 
-            // Text content
-            VStack(alignment: .leading, spacing: 4) {
-                // Badges (locked / custom)
-                if slot.isLocked || slot.source == .userCustom {
-                    badgesRow
-                }
+                // Text content
+                VStack(alignment: .leading, spacing: 4) {
+                    // Badges (locked / custom)
+                    if slot.isLocked || slot.source == .userCustom {
+                        badgesRow
+                    }
 
-                // Eyebrow row: time + type + weather
-                eyebrowRow
+                    // Eyebrow row: time + type + weather
+                    eyebrowRow
 
-                // Venue name
-                Text(slot.venueName)
-                    .font(.custom("Playfair", size: 15).weight(.semibold))
-                    .foregroundStyle(.znInk)
-                    .lineLimit(2)
-
-                // Reason (2-line clamp) — hidden in saved state
-                if !isSaved && !slot.reason.isEmpty {
-                    Text(slot.reason)
-                        .font(.system(size: 12, weight: .light))
-                        .foregroundStyle(.znBody)
+                    // Venue name
+                    Text(slot.venueName)
+                        .font(.custom("Playfair", size: 15).weight(.semibold))
+                        .foregroundStyle(.znInk)
                         .lineLimit(2)
+
+                    // Reason (2-line clamp) — hidden in saved state
+                    if !isSaved && !slot.reason.isEmpty {
+                        Text(slot.reason)
+                            .font(.system(size: 12, weight: .light))
+                            .foregroundStyle(.znBody)
+                            .lineLimit(2)
+                    }
+
+                    // Tags — hidden in saved state
+                    if !isSaved && !slot.tags.isEmpty {
+                        tagsRow(slot.tags)
+                    }
                 }
 
-                // Tags — hidden in saved state
-                if !isSaved && !slot.tags.isEmpty {
-                    tagsRow(slot.tags)
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                withAnimation(AppAnimation.spring) {
+                    expandedID = isExpanded ? nil : slot.id
                 }
             }
 
-            Spacer(minLength: 0)
-
-            // Right side: context menu + chevron — simplified in saved state
+            // Right side: context menu + chevron — NOT part of tap area
             VStack(spacing: 8) {
                 if !isSaved {
                     contextMenuButton

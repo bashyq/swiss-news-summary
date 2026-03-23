@@ -398,45 +398,26 @@ final class PlanViewModel {
 
     /// Unlock a slot for replacement on redeal.
     func unlock(slotId: String) {
-        #if DEBUG
-        print("🔓 unlock called for slotId: \(slotId)")
-        print("   planState: \(String(describing: planState))")
-        if let agenda = currentAgenda {
-            print("   agenda slot IDs: \(agenda.slots.map { $0.id })")
-        }
-        #endif
-
-        // Handle calendar preview state — remove the event from preview
+        // Handle calendar preview state
         if case .calendarPreview(var events) = planState {
             events.removeAll { $0.id == slotId }
             calendarBridge.discardEvent(id: slotId)
             planState = events.isEmpty ? .empty : .calendarPreview(events)
             return
         }
-        guard var agenda = currentAgenda,
-              let idx = agenda.slots.firstIndex(where: { $0.id == slotId }) else {
-            #if DEBUG
-            print("   ❌ slot not found in agenda!")
-            #endif
-            return
+        guard var agenda = currentAgenda else { return }
+        // Try exact ID match first, then match by venueId (calendar slots may have transformed IDs)
+        if let idx = agenda.slots.firstIndex(where: { $0.id == slotId }) {
+            agenda.slots[idx].isLocked = false
+            updateAgenda(agenda)
+        } else if let idx = agenda.slots.firstIndex(where: { $0.venueId == slotId || "cal-\($0.venueId ?? "")" == slotId }) {
+            agenda.slots[idx].isLocked = false
+            updateAgenda(agenda)
         }
-        agenda.slots[idx].isLocked = false
-        updateAgenda(agenda)
-        #if DEBUG
-        print("   ✅ unlocked successfully")
-        #endif
     }
 
     /// Remove a slot from the current agenda. If calendar source, discard it.
     func remove(slotId: String) {
-        #if DEBUG
-        print("🗑️ remove called for slotId: \(slotId)")
-        print("   planState: \(String(describing: planState))")
-        if let agenda = currentAgenda {
-            print("   agenda slot IDs: \(agenda.slots.map { $0.id })")
-        }
-        #endif
-
         // Handle calendar preview state
         if case .calendarPreview(var events) = planState {
             calendarBridge.discardEvent(id: slotId)
@@ -444,21 +425,24 @@ final class PlanViewModel {
             planState = events.isEmpty ? .empty : .calendarPreview(events)
             return
         }
-        guard var agenda = currentAgenda else {
-            #if DEBUG
-            print("   ❌ no current agenda!")
-            #endif
-            return
+        guard var agenda = currentAgenda else { return }
+
+        // Find the slot — try exact ID, then fuzzy match for calendar slots
+        let matchIndex = agenda.slots.firstIndex(where: { $0.id == slotId })
+            ?? agenda.slots.firstIndex(where: { $0.venueId == slotId || "cal-\($0.venueId ?? "")" == slotId })
+            ?? agenda.slots.firstIndex(where: { $0.venueName == slotId })
+
+        if let idx = matchIndex {
+            let slot = agenda.slots[idx]
+            if slot.source == .calendar {
+                calendarBridge.discardEvent(id: slot.venueId ?? slotId)
+            }
+            agenda.slots.remove(at: idx)
+        } else {
+            // Last resort: just remove by exact ID
+            agenda.slots.removeAll { $0.id == slotId }
         }
-        if let slot = agenda.slots.first(where: { $0.id == slotId }),
-           slot.source == .calendar {
-            calendarBridge.discardEvent(id: slotId)
-        }
-        let before = agenda.slots.count
-        agenda.slots.removeAll { $0.id == slotId }
-        #if DEBUG
-        print("   removed \(before - agenda.slots.count) slots")
-        #endif
+
         populateTravelEstimates(in: &agenda.slots)
         updateAgenda(agenda)
     }
