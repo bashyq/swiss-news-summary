@@ -555,7 +555,7 @@ struct PlanTabView: View {
             // Clear plan
             Button {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                viewModel.clearPlan()
+                Task { await viewModel.clearPlan() }
             } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 13, weight: .semibold))

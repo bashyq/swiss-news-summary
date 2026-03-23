@@ -374,6 +374,11 @@ final class PlanViewModel {
 
     /// Lock a slot so it survives redeals.
     func lock(slotId: String) {
+        // In calendar preview, re-include a previously excluded event
+        if case .calendarPreview = planState {
+            excludedCalendarIds.remove(slotId)
+            return
+        }
         guard var agenda = currentAgenda,
               let idx = agenda.slots.firstIndex(where: { $0.id == slotId }) else { return }
         agenda.slots[idx].isLocked = true
@@ -467,9 +472,17 @@ final class PlanViewModel {
     }
 
     /// Clear the entire plan for the current date and return to empty state.
-    func clearPlan() {
+    @MainActor
+    func clearPlan() async {
         store.deletePlan(city: planningCity.id, date: isoString(for: selectedDate))
-        planState = .empty
+        excludedCalendarIds = []
+        // Re-check for calendar events so they reappear
+        let calendarSlots = calendarBridge.fetchEvents(for: selectedDate)
+        if !calendarSlots.isEmpty {
+            planState = .calendarPreview(calendarSlots)
+        } else {
+            planState = .empty
+        }
     }
 
     // MARK: - Weather Pre-fetch
