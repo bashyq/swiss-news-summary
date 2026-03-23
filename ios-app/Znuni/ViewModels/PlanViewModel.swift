@@ -378,60 +378,30 @@ final class PlanViewModel {
 
     /// Unlock a slot for replacement on redeal.
     func unlock(slotId: String) {
-        planLog.notice("UNLOCK called: slotId=\(slotId)")
-        if let agenda = currentAgenda {
-            planLog.notice("  agenda has \(agenda.slots.count) slots: \(agenda.slots.map { "\($0.id)[\($0.isLocked)]" }.joined(separator: ", "))")
-        } else {
-            planLog.notice("  currentAgenda is nil")
-        }
         // In calendar preview, unlock is a no-op (events are always locked until dealt)
-        if case .calendarPreview = planState {
-            planLog.notice("  unlock ignored in calendarPreview state")
-            return
-        }
-        guard var agenda = currentAgenda else {
-            planLog.notice("  currentAgenda is nil — cannot unlock")
-            return
-        }
-        if let idx = agenda.slots.firstIndex(where: { $0.id == slotId }) {
-            agenda.slots[idx].isLocked = false
-            updateAgenda(agenda)
-        } else if let idx = agenda.slots.firstIndex(where: { "cal-\($0.venueId ?? "")" == slotId || $0.venueId == slotId }) {
-            agenda.slots[idx].isLocked = false
-            updateAgenda(agenda)
-        }
+        if case .calendarPreview = planState { return }
+        guard var agenda = currentAgenda,
+              let idx = agenda.slots.firstIndex(where: { $0.id == slotId }) else { return }
+        agenda.slots[idx].isLocked = false
+        updateAgenda(agenda)
     }
 
     /// Remove a slot from the current agenda. If calendar source, discard it.
     func remove(slotId: String) {
-        planLog.notice("REMOVE called: slotId=\(slotId)")
-        // Handle calendar preview state — slotId has "cal-" prefix, CalendarSlot.id does not
+        // Handle calendar preview state
         if case .calendarPreview(var events) = planState {
-            let rawId = slotId.hasPrefix("cal-") ? String(slotId.dropFirst(4)) : slotId
-            calendarBridge.discardEvent(id: rawId)
-            events.removeAll { $0.id == rawId || "cal-\($0.id)" == slotId }
-            planLog.notice("  remove in calendarPreview: rawId=\(rawId), \(events.count) events remain")
+            store.discard(eventId: slotId)
+            events.removeAll { $0.id == slotId }
             planState = events.isEmpty ? .empty : .calendarPreview(events)
             return
         }
-        guard var agenda = currentAgenda else { return }
-
-        // Find the slot — try exact ID, then fuzzy match for calendar slots
-        let matchIndex = agenda.slots.firstIndex(where: { $0.id == slotId })
-            ?? agenda.slots.firstIndex(where: { $0.venueId == slotId || "cal-\($0.venueId ?? "")" == slotId })
-            ?? agenda.slots.firstIndex(where: { $0.venueName == slotId })
-
-        if let idx = matchIndex {
-            let slot = agenda.slots[idx]
-            if slot.source == .calendar {
-                calendarBridge.discardEvent(id: slot.venueId ?? slotId)
-            }
-            agenda.slots.remove(at: idx)
-        } else {
-            // Last resort: just remove by exact ID
-            agenda.slots.removeAll { $0.id == slotId }
+        guard var agenda = currentAgenda,
+              let idx = agenda.slots.firstIndex(where: { $0.id == slotId }) else { return }
+        let slot = agenda.slots[idx]
+        if slot.source == .calendar {
+            store.discard(eventId: slotId)
         }
-
+        agenda.slots.remove(at: idx)
         populateTravelEstimates(in: &agenda.slots)
         updateAgenda(agenda)
     }
@@ -733,7 +703,7 @@ private extension PlanViewModel {
         let endTimeString = endFormatter.string(from: anchor.endTime)
 
         return AgendaSlot(
-            id: "anchor-\(anchor.id.uuidString.prefix(8))",
+            id: anchor.originalSlotId ?? "anchor-\(anchor.id.uuidString.prefix(8))",
             time: anchor.timeString,
             type: slotType,
             venueName: anchor.title,
@@ -776,7 +746,8 @@ private extension PlanViewModel {
             durationMinutes: duration,
             source: slot.source == .calendar ? .calendar : .manual,
             lat: slot.lat,
-            lon: slot.lon
+            lon: slot.lon,
+            originalSlotId: slot.id
         )
     }
 

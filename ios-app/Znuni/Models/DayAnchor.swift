@@ -71,6 +71,8 @@ struct AnchorEvent: Codable, Identifiable, Equatable {
     var address: String?
     var lat: Double?
     var lon: Double?
+    /// The original AgendaSlot ID, preserved so anchorToSlot can recreate with the same ID.
+    var originalSlotId: String?
 
     /// Whether this anchor has a resolved geographic location.
     var hasLocation: Bool { lat != nil && lon != nil }
@@ -79,7 +81,7 @@ struct AnchorEvent: Codable, Identifiable, Equatable {
         case id, title, category, startTime, durationMinutes
         case neighbourhood, kreis, sourceEventId
         case source, calendarEventId, createdDate
-        case address, lat, lon
+        case address, lat, lon, originalSlotId
     }
 
     init(from decoder: Decoder) throws {
@@ -98,6 +100,7 @@ struct AnchorEvent: Codable, Identifiable, Equatable {
         address = try container.decodeIfPresent(String.self, forKey: .address)
         lat = try container.decodeIfPresent(Double.self, forKey: .lat)
         lon = try container.decodeIfPresent(Double.self, forKey: .lon)
+        originalSlotId = try container.decodeIfPresent(String.self, forKey: .originalSlotId)
     }
 
     init(
@@ -114,7 +117,8 @@ struct AnchorEvent: Codable, Identifiable, Equatable {
         createdDate: Date = Date(),
         address: String? = nil,
         lat: Double? = nil,
-        lon: Double? = nil
+        lon: Double? = nil,
+        originalSlotId: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -130,6 +134,7 @@ struct AnchorEvent: Codable, Identifiable, Equatable {
         self.address = address
         self.lat = lat
         self.lon = lon
+        self.originalSlotId = originalSlotId
     }
 
     var endTime: Date {

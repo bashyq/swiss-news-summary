@@ -691,7 +691,7 @@ struct PlanTabView: View {
         let duration = Int(event.endDate.timeIntervalSince(event.startDate) / 60)
 
         return AgendaSlot(
-            id: "cal-\(event.id)",
+            id: event.id,
             time: timeString,
             type: .activity,
             venueName: event.title,
