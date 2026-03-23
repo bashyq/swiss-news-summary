@@ -89,6 +89,12 @@ struct PlanSlotCard: View {
             Button(role: .destructive) { doRemove() } label: { Label("Remove", systemImage: "trash") }
         }
         .sensoryFeedback(.impact(weight: .light), trigger: isExpanded)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(AppAnimation.spring) {
+                expandedID = isExpanded ? nil : slot.id
+            }
+        }
     }
 
     // MARK: - Collapsed Body
@@ -137,13 +143,6 @@ struct PlanSlotCard: View {
 
                 Spacer(minLength: 0)
             }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                withAnimation(AppAnimation.spring) {
-                    expandedID = isExpanded ? nil : slot.id
-                }
-            }
-
             // Right side: context menu + chevron — NOT part of tap area
             VStack(spacing: 8) {
                 if !isSaved {
@@ -476,9 +475,9 @@ struct PlanSlotCard: View {
                 .buttonStyle(.plain)
             }
 
-            if slot.venueId != nil {
+            if let urlString = slot.venueUrl, let url = URL(string: urlString) {
                 Button {
-                    // Website would be looked up from activity data
+                    UIApplication.shared.open(url)
                 } label: {
                     HStack(spacing: 5) {
                         Image(systemName: "globe")

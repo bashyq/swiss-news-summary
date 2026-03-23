@@ -14,6 +14,7 @@ struct PlanTabView: View {
     @State private var visibleSlotCount: Int = 0
     @State private var previousStateWasCalendarPreview = false
     @State private var debugSlotAction: String?
+    @State private var showWeatherDetail = false
 
     var body: some View {
         NavigationStack {
@@ -24,6 +25,7 @@ struct PlanTabView: View {
                         planState: viewModel.planState,
                         weather: viewModel.weather,
                         planningCity: viewModel.planningCity,
+                        onWeatherTap: { showWeatherDetail = true },
                         onCityChange: { newCity in
                             guard newCity != viewModel.planningCity else { return }
                             viewModel.changeCity(to: newCity)
@@ -53,6 +55,7 @@ struct PlanTabView: View {
             .background(Color.znCream)
         }
         .toolbar(.hidden, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
         .onChange(of: viewModel.selectedDate) { oldValue, newValue in
             Task {
                 await viewModel.selectDate(newValue, previousDate: oldValue)
@@ -79,6 +82,12 @@ struct PlanTabView: View {
                 .onChange(of: datePickerPlanDay) {
                     viewModel.selectedDate = datePickerPlanDay.date()
                 }
+        }
+        .sheet(isPresented: $showWeatherDetail) {
+            if let weather = viewModel.weather {
+                WeatherDetailSheet(weather: weather)
+                    .presentationDetents([.medium, .large])
+            }
         }
         .sheet(item: $replacingSlot) { slot in
             CustomSlotSheet(replacingSlot: slot) { name, start, end, address in

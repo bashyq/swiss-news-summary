@@ -11,6 +11,7 @@ struct PlanHeroBanner: View {
     let planState: PlanState
     let weather: Weather?
     let planningCity: PlanningCity
+    var onWeatherTap: (() -> Void)?
     var onCityChange: ((PlanningCity) -> Void)?
 
     var body: some View {
@@ -33,9 +34,12 @@ struct PlanHeroBanner: View {
             titleText
                 .padding(.bottom, 18)
 
-            // Weather row (only when available)
+            // Weather row (only when available) — tap to show hourly detail
             if let weather {
-                weatherRow(weather)
+                Button { onWeatherTap?() } label: {
+                    weatherRow(weather)
+                }
+                .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 24)

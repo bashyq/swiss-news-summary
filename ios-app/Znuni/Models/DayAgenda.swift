@@ -271,6 +271,7 @@ struct AgendaSlot: Codable, Identifiable {
     let tags: [String]                  // ["Outdoor", "Free", "Ages 2-5"]
     var lat: Double?                    // Venue latitude for travel estimates
     var lon: Double?                    // Venue longitude for travel estimates
+    var venueUrl: String?               // Website URL for the venue
     var travelToNext: TravelEstimate?   // Travel estimate to the next slot
     var weatherAtSlot: SlotWeather?     // Forecasted weather at this slot's time
 
@@ -359,7 +360,7 @@ struct AgendaSlot: Codable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case id, time, type, venueName, venueId, reason, durationDisplay
-        case travelNote, tags, lat, lon, travelToNext, weatherAtSlot
+        case travelNote, tags, lat, lon, venueUrl, travelToNext, weatherAtSlot
         case durationMinutes, checkOutTime, wasAutoCheckedIn
         case source, isLocked, customVenueName, customNeighbourhood, isStale
         case anchorEndTime, slotDate
@@ -378,6 +379,7 @@ struct AgendaSlot: Codable, Identifiable {
         tags = try container.decode([String].self, forKey: .tags)
         lat = try container.decodeIfPresent(Double.self, forKey: .lat)
         lon = try container.decodeIfPresent(Double.self, forKey: .lon)
+        venueUrl = try container.decodeIfPresent(String.self, forKey: .venueUrl)
         travelToNext = try container.decodeIfPresent(TravelEstimate.self, forKey: .travelToNext)
         weatherAtSlot = try container.decodeIfPresent(SlotWeather.self, forKey: .weatherAtSlot)
         durationMinutes = try container.decodeIfPresent(Int.self, forKey: .durationMinutes)
@@ -403,7 +405,7 @@ struct AgendaSlot: Codable, Identifiable {
         id: String, time: String, type: SlotType, venueName: String, venueId: String?,
         reason: String, durationDisplay: String? = nil, travelNote: String? = nil,
         tags: [String], lat: Double? = nil, lon: Double? = nil,
-        travelToNext: TravelEstimate? = nil,
+        venueUrl: String? = nil, travelToNext: TravelEstimate? = nil,
         weatherAtSlot: SlotWeather? = nil,
         durationMinutes: Int? = nil,
         checkOutTime: Date? = nil, wasAutoCheckedIn: Bool = false,
@@ -424,6 +426,7 @@ struct AgendaSlot: Codable, Identifiable {
         self.tags = tags
         self.lat = lat
         self.lon = lon
+        self.venueUrl = venueUrl
         self.travelToNext = travelToNext
         self.weatherAtSlot = weatherAtSlot
         self.durationMinutes = durationMinutes

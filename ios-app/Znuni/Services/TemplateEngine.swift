@@ -535,6 +535,7 @@ private enum Archetype {
             venueName: name, venueId: activity.id,
             reason: reason, durationDisplay: activity.duration,
             travelNote: travelNote, tags: tags,
+            venueUrl: activity.url,
             durationMinutes: 100,
             slotDate: AgendaSlot.resolveSlotDate(time: time, planDate: planDate)
         )
@@ -586,6 +587,7 @@ private enum Archetype {
                 : "\(cuisine)-Restaurant, \(price). Gut für Familien.",
             durationDisplay: nil, travelNote: travelNote,
             tags: tags,
+            venueUrl: spot.website,
             durationMinutes: 90,
             slotDate: AgendaSlot.resolveSlotDate(time: time, planDate: planDate)
         )
@@ -607,6 +609,7 @@ private enum Archetype {
                 : "\(cuisine), \(price). Früher Tisch passt gut mit Kindern.",
             durationDisplay: nil, travelNote: travelNote,
             tags: ["🏠 Indoor", "~CHF \(spot.priceTier * 20)–\(spot.priceTier * 35)"],
+            venueUrl: spot.website,
             durationMinutes: 120,
             slotDate: AgendaSlot.resolveSlotDate(time: time, planDate: planDate)
         )
