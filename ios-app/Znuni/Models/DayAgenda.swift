@@ -1,6 +1,26 @@
 import Foundation
 import CoreLocation
 
+// MARK: - Daily Forecast (for per-day weather in Plan hero)
+
+/// Lightweight daily weather forecast fetched from Open-Meteo.
+/// Used by PlanViewModel to show date-specific weather in the hero banner.
+struct DailyForecast: Sendable {
+    let date: String          // ISO date "yyyy-MM-dd"
+    let weatherCode: Int
+    let highTemp: Double
+    let lowTemp: Double
+    let description: String
+
+    /// Average temperature (midpoint of high/low).
+    var averageTemp: Double { (highTemp + lowTemp) / 2 }
+
+    /// WMO weather code -> SF Symbol name (reuses Weather logic).
+    var sfSymbol: String {
+        Weather(temperature: averageTemp, description: description, weatherCode: weatherCode, windSpeed: 0, hourly: nil).sfSymbol
+    }
+}
+
 // MARK: - Plan Day
 
 /// Which day the user is planning for.

@@ -10,6 +10,8 @@ struct PlanHeroBanner: View {
     let selectedDate: Date
     let planState: PlanState
     let weather: Weather?
+    let forecast: DailyForecast?
+    let isToday: Bool
     let planningCity: PlanningCity
     var onWeatherTap: (() -> Void)?
     var onCityChange: ((PlanningCity) -> Void)?
@@ -34,8 +36,16 @@ struct PlanHeroBanner: View {
             titleText
                 .padding(.bottom, 18)
 
-            // Weather row (only when available) — tap to show hourly detail
-            if let weather {
+            // Weather row — for today show live weather; for future dates show forecast
+            if isToday, let weather {
+                Button { onWeatherTap?() } label: {
+                    weatherRow(weather)
+                }
+                .buttonStyle(.plain)
+            } else if let forecast {
+                forecastRow(forecast)
+            } else if let weather {
+                // Fallback: show today's weather even for future dates if no forecast loaded yet
                 Button { onWeatherTap?() } label: {
                     weatherRow(weather)
                 }
@@ -133,6 +143,33 @@ struct PlanHeroBanner: View {
             Spacer()
 
             Image(systemName: weather.sfSymbol)
+                .symbolRenderingMode(.multicolor)
+                .foregroundStyle(.yellow)
+                .font(.system(size: 36))
+        }
+    }
+
+    // MARK: - Forecast Row (future dates)
+
+    private func forecastRow(_ forecast: DailyForecast) -> some View {
+        HStack(alignment: .center, spacing: 14) {
+            Text("\(Int(forecast.highTemp))\u{00B0}")
+                .font(.system(size: 40, weight: .ultraLight))
+                .foregroundStyle(.white)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(forecast.description)
+                    .font(.system(size: 14))
+                    .foregroundStyle(.white.opacity(0.7))
+
+                Text("H: \(Int(forecast.highTemp))\u{00B0}  \u{00B7}  L: \(Int(forecast.lowTemp))\u{00B0}")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.white.opacity(0.42))
+            }
+
+            Spacer()
+
+            Image(systemName: forecast.sfSymbol)
                 .symbolRenderingMode(.multicolor)
                 .foregroundStyle(.yellow)
                 .font(.system(size: 36))

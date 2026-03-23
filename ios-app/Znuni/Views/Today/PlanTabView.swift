@@ -12,6 +12,7 @@ struct PlanTabView: View {
     @State private var expandedSlotID: String?
     @State private var replacingSlot: AgendaSlot?
     @State private var visibleSlotCount: Int = 0
+    @State private var isAnimatingDeal = false
     @State private var previousStateWasCalendarPreview = false
     @State private var debugSlotAction: String?
     @State private var showWeatherDetail = false
@@ -24,6 +25,8 @@ struct PlanTabView: View {
                     selectedDate: viewModel.selectedDate,
                     planState: viewModel.planState,
                     weather: viewModel.weather,
+                    forecast: viewModel.isSelectedDateToday ? nil : viewModel.forecastForSelectedDate,
+                    isToday: viewModel.isSelectedDateToday,
                     planningCity: viewModel.planningCity,
                     onWeatherTap: { showWeatherDetail = true },
                     onCityChange: { newCity in
@@ -75,6 +78,8 @@ struct PlanTabView: View {
             await viewModel.selectDate(viewModel.selectedDate)
             // Pre-fetch weather so it shows before user taps "Plan my day"
             await viewModel.loadWeatherIfNeeded()
+            // Load 7-day forecast for per-day weather display
+            await viewModel.loadDailyForecastsIfNeeded()
             // If a cached plan was loaded, show all cards immediately
             if let agenda = viewModel.currentAgenda {
                 visibleSlotCount = agenda.slots.count
@@ -94,7 +99,9 @@ struct PlanTabView: View {
         }
         .sheet(item: $replacingSlot) { slot in
             CustomSlotSheet(replacingSlot: slot) { name, start, end, address in
-                viewModel.replaceWithCustom(slotId: slot.id, name: name, start: start, end: end, address: address)
+                Task {
+                    await viewModel.replaceWithCustom(slotId: slot.id, name: name, start: start, end: end, address: address)
+                }
             }
         }
         .alert("Debug: Slot Action", isPresented: Binding(get: { debugSlotAction != nil }, set: { if !$0 { debugSlotAction = nil } })) {
@@ -248,9 +255,9 @@ struct PlanTabView: View {
             }
         }
         .onAppear {
-            // If returning to a dealt state (e.g. date switch with cached plan),
-            // show all cards immediately
-            if visibleSlotCount == 0 {
+            // If returning to a dealt state (e.g. date switch with cached plan)
+            // and no deal animation is in progress, show all cards immediately
+            if visibleSlotCount == 0 && !isAnimatingDeal {
                 visibleSlotCount = agenda.slots.count
             }
         }
@@ -581,37 +588,45 @@ struct PlanTabView: View {
     private func animateDealIn() {
         guard let agenda = viewModel.currentAgenda else { return }
         let slots = agenda.slots
+        guard !slots.isEmpty else { return }
         let cameFromCalendar = previousStateWasCalendarPreview
         previousStateWasCalendarPreview = false
 
+        // Mark animation in progress so onAppear doesn't override
+        isAnimatingDeal = true
+        visibleSlotCount = 0
+
         if cameFromCalendar {
-            // Two-beat: calendar-sourced slots appear immediately, then others stagger in
-            // Find the last calendar slot index — show up to that point instantly
             let lastCalendarIndex = slots.lastIndex(where: { $0.source == .calendar }) ?? -1
             let immediateCount = lastCalendarIndex + 1
 
-            // Show all calendar slots at once
             withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
                 visibleSlotCount = max(immediateCount, 0)
             }
-            // Then stagger non-calendar slots after a brief pause
             let baseDelay: Double = 0.3
             for i in immediateCount..<slots.count {
                 let staggerIndex = i - immediateCount
+                let isLast = i == slots.count - 1
                 DispatchQueue.main.asyncAfter(deadline: .now() + baseDelay + Double(staggerIndex) * 0.12) {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                         visibleSlotCount = i + 1
                     }
+                    if isLast { isAnimatingDeal = false }
                 }
+            }
+            // If all slots are calendar slots, finish immediately
+            if immediateCount >= slots.count {
+                isAnimatingDeal = false
             }
         } else {
             // Standard stagger: all cards deal in one by one
-            visibleSlotCount = 0
             for i in 0..<slots.count {
-                DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.12) {
+                let isLast = i == slots.count - 1
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08 + Double(i) * 0.12) {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                         visibleSlotCount = i + 1
                     }
+                    if isLast { isAnimatingDeal = false }
                 }
             }
         }

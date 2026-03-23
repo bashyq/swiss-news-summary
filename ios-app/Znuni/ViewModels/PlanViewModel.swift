@@ -55,6 +55,10 @@ final class PlanViewModel {
     private(set) var lunchData: LunchResponse?
     private(set) var weather: Weather?
 
+    /// 7-day forecast keyed by ISO date string (e.g. "2026-03-23").
+    /// Fetched once from Open-Meteo, used to show per-day weather in the hero banner.
+    private(set) var dailyForecasts: [String: DailyForecast] = [:]
+
     /// Whether data pools are currently loading.
     var isLoadingData = false
 
@@ -387,6 +391,7 @@ final class PlanViewModel {
         activitiesData = nil
         lunchData = nil
         weather = nil
+        dailyForecasts = [:]
     }
 
     // MARK: - Slot Actions
@@ -460,7 +465,9 @@ final class PlanViewModel {
     }
 
     /// Replace a slot with a user-custom entry.
-    func replaceWithCustom(slotId: String, name: String, start: Date, end: Date, address: String?) {
+    /// If an address is provided, geocodes it to get coordinates for travel estimates.
+    @MainActor
+    func replaceWithCustom(slotId: String, name: String, start: Date, end: Date, address: String?) async {
         guard var agenda = currentAgenda,
               let idx = agenda.slots.firstIndex(where: { $0.id == slotId }) else { return }
 
@@ -468,6 +475,19 @@ final class PlanViewModel {
         let timeFormatter = DateFormatter()
         timeFormatter.dateFormat = "HH:mm"
         timeFormatter.timeZone = TimeZone(identifier: "Europe/Zurich")
+
+        var lat: Double? = nil
+        var lon: Double? = nil
+
+        // Geocode address if provided
+        if let address, !address.isEmpty {
+            let geocoder = CLGeocoder()
+            if let placemarks = try? await geocoder.geocodeAddressString(address + ", Switzerland"),
+               let location = placemarks.first?.location {
+                lat = location.coordinate.latitude
+                lon = location.coordinate.longitude
+            }
+        }
 
         agenda.slots[idx] = AgendaSlot(
             id: slotId,
@@ -477,6 +497,8 @@ final class PlanViewModel {
             venueId: nil,
             reason: address ?? "",
             tags: [],
+            lat: lat,
+            lon: lon,
             durationMinutes: durationMin,
             source: .userCustom,
             isLocked: true,
@@ -508,6 +530,65 @@ final class PlanViewModel {
             let news = try await APIClient.shared.fetchNews(city: city, language: language)
             self.weather = news.weather
         } catch {}
+    }
+
+    /// Load 7-day daily forecast from Open-Meteo for the planning city.
+    /// Called once on first appear; cached across date switches.
+    @MainActor
+    func loadDailyForecastsIfNeeded() async {
+        guard dailyForecasts.isEmpty else { return }
+        let coord = planningCity.city.coordinate
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        guard let endDate = cal.date(byAdding: .day, value: 13, to: today) else { return }
+
+        let isoFormatter = DateFormatter()
+        isoFormatter.dateFormat = "yyyy-MM-dd"
+        isoFormatter.timeZone = TimeZone(identifier: "Europe/Zurich")
+        let startStr = isoFormatter.string(from: today)
+        let endStr = isoFormatter.string(from: endDate)
+
+        let urlString = "https://api.open-meteo.com/v1/forecast?"
+            + "latitude=\(coord.latitude)&longitude=\(coord.longitude)"
+            + "&daily=weather_code,temperature_2m_max,temperature_2m_min"
+            + "&timezone=Europe/Zurich"
+            + "&start_date=\(startStr)&end_date=\(endStr)"
+
+        guard let url = URL(string: urlString) else { return }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let daily = json["daily"] as? [String: Any],
+                  let dates = daily["time"] as? [String],
+                  let codes = daily["weather_code"] as? [Int],
+                  let highs = daily["temperature_2m_max"] as? [Double],
+                  let lows = daily["temperature_2m_min"] as? [Double] else { return }
+
+            var forecasts: [String: DailyForecast] = [:]
+            for i in 0..<dates.count {
+                forecasts[dates[i]] = DailyForecast(
+                    date: dates[i],
+                    weatherCode: codes[i],
+                    highTemp: highs[i],
+                    lowTemp: lows[i],
+                    description: APIClient.weatherDescription(for: codes[i])
+                )
+            }
+            self.dailyForecasts = forecasts
+        } catch {
+            planLog.warning("Failed to load daily forecasts: \(error.localizedDescription)")
+        }
+    }
+
+    /// Daily forecast for the currently selected date, if available.
+    var forecastForSelectedDate: DailyForecast? {
+        let dateKey = isoString(for: selectedDate)
+        return dailyForecasts[dateKey]
+    }
+
+    /// Whether the selected date is today (use live weather) or a future date (use forecast).
+    var isSelectedDateToday: Bool {
+        Calendar.current.isDateInToday(selectedDate)
     }
 
     // MARK: - Save to Calendar
