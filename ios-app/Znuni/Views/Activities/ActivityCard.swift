@@ -486,13 +486,13 @@ struct ActivityCard: View {
                                 Image(systemName: "location.fill")
                                     .font(.system(size: 12))
                                 Text(appState.localized(en: "Directions", de: "Route"))
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.system(size: 13, weight: .medium))
                             }
                             .foregroundStyle(Color.znTerracotta)
                             .frame(maxWidth: .infinity)
                             .frame(height: 40)
-                            .background(Color.znTerracotta.opacity(0.12))
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .background(Color.znTerracotta.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                         .buttonStyle(.plain)
                     }
@@ -505,13 +505,13 @@ struct ActivityCard: View {
                             Image(systemName: "calendar.badge.plus")
                                 .font(.system(size: 12))
                             Text(appState.localized(en: "Plan →", de: "Planen →"))
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.system(size: 13, weight: .medium))
                         }
                         .foregroundStyle(Color.znNavy)
                         .frame(maxWidth: .infinity)
                         .frame(height: 40)
-                        .background(Color.znNavy.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .background(Color.znNavy.opacity(0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                     .buttonStyle(.plain)
 
