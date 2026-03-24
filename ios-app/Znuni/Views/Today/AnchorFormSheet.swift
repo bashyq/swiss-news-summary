@@ -35,6 +35,7 @@ struct AnchorFormSheet: View {
 
     @State private var label: String
     @State private var selectedCategory: AnchorCategory?
+    @State private var selectedDate: Date
     @State private var selectedTime: Date
     @State private var selectedDuration: DurationOption
     @State private var customDurationMinutes: Int
@@ -92,6 +93,7 @@ struct AnchorFormSheet: View {
         self.sourceEvent = nil
         _label = State(initialValue: existingAnchor?.title ?? "")
         _selectedCategory = State(initialValue: existingAnchor?.category)
+        _selectedDate = State(initialValue: existingAnchor?.startTime ?? Date())
         _selectedTime = State(initialValue: existingAnchor?.startTime ?? Self.nearestHalfHour())
         _selectedNeighbourhood = State(initialValue: existingAnchor?.neighbourhood)
         _addressText = State(initialValue: existingAnchor?.address ?? "")
@@ -123,6 +125,7 @@ struct AnchorFormSheet: View {
         self.sourceEvent = event
         _label = State(initialValue: event.localizedName(language: language))
         _selectedCategory = State(initialValue: event.defaultAnchorCategory)
+        _selectedDate = State(initialValue: Date())
         _selectedTime = State(initialValue: Self.nearestHalfHour())
         _selectedNeighbourhood = State(initialValue: nil)
         _selectedDuration = State(initialValue: .preset(120))
@@ -144,6 +147,7 @@ struct AnchorFormSheet: View {
         self.sourceEvent = nil
         _label = State(initialValue: prefill.title)
         _selectedCategory = State(initialValue: prefill.category)
+        _selectedDate = State(initialValue: prefill.date ?? Date())
         _selectedTime = State(initialValue: Self.nearestHalfHour())
         _selectedNeighbourhood = State(initialValue: nil)
         let closestPreset = Self.closestPreset(to: prefill.durationMinutes)
@@ -222,7 +226,7 @@ struct AnchorFormSheet: View {
                 VStack(alignment: .leading, spacing: 24) {
                     // Header
                     Text(existingAnchor == nil
-                        ? appState.localized(en: "Add plans for today", de: "Pläne für heute hinzufügen")
+                        ? appState.localized(en: "Plan an activity", de: "Aktivität planen")
                         : appState.localized(en: "Edit plans", de: "Pläne bearbeiten"))
                     .font(.custom("Playfair", size: 20, relativeTo: .title3))
                     .foregroundStyle(.znInk)
@@ -339,6 +343,43 @@ struct AnchorFormSheet: View {
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.znInk)
 
+            // Date picker — today + next 7 days
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(0..<8, id: \.self) { offset in
+                        let date = Calendar.current.date(byAdding: .day, value: offset, to: Calendar.current.startOfDay(for: Date()))!
+                        let isSelected = Calendar.current.isDate(selectedDate, inSameDayAs: date)
+                        Button {
+                            withAnimation(.spring(duration: 0.2)) {
+                                selectedDate = date
+                            }
+                        } label: {
+                            VStack(spacing: 2) {
+                                Text(offset == 0
+                                    ? appState.localized(en: "Today", de: "Heute")
+                                    : offset == 1
+                                    ? appState.localized(en: "Tomorrow", de: "Morgen")
+                                    : date.formatted(.dateTime.weekday(.abbreviated)))
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundStyle(isSelected ? .white : .znMuted)
+                                Text(date.formatted(.dateTime.day()))
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(isSelected ? .white : .znInk)
+                            }
+                            .frame(width: 52, height: 52)
+                            .background(isSelected ? Color.znNavy : Color.znCream)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(isSelected ? Color.clear : Color.znBorder, lineWidth: 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            // Time picker
             DatePicker(
                 "",
                 selection: $selectedTime,
@@ -463,6 +504,38 @@ struct AnchorFormSheet: View {
 
     // MARK: - Save Button
 
+    /// Combine selectedDate (day) + selectedTime (hour/minute) into a single Date.
+    private var combinedDateTime: Date {
+        let calendar = Calendar.current
+        let dateComponents = calendar.dateComponents([.year, .month, .day], from: selectedDate)
+        let timeComponents = calendar.dateComponents([.hour, .minute], from: selectedTime)
+        var combined = DateComponents()
+        combined.year = dateComponents.year
+        combined.month = dateComponents.month
+        combined.day = dateComponents.day
+        combined.hour = timeComponents.hour
+        combined.minute = timeComponents.minute
+        return calendar.date(from: combined) ?? selectedTime
+    }
+
+    private var isToday: Bool {
+        Calendar.current.isDateInToday(selectedDate)
+    }
+
+    private var saveButtonLabel: String {
+        if existingAnchor != nil {
+            return appState.localized(en: "Update", de: "Aktualisieren")
+        }
+        if isToday {
+            return appState.localized(en: "Add to today", de: "Heute hinzufügen")
+        }
+        let dayName = selectedDate.formatted(.dateTime.weekday(.wide))
+        return appState.localized(
+            en: "Add to \(dayName)",
+            de: "Für \(dayName) hinzufügen"
+        )
+    }
+
     private var saveButton: some View {
         Button {
             guard canSave, let category = selectedCategory else { return }
@@ -471,7 +544,7 @@ struct AnchorFormSheet: View {
                 id: existingAnchor?.id ?? UUID(),
                 title: label.trimmingCharacters(in: .whitespaces),
                 category: category,
-                startTime: selectedTime,
+                startTime: combinedDateTime,
                 durationMinutes: effectiveDuration,
                 neighbourhood: selectedNeighbourhood,
                 sourceEventId: existingAnchor?.sourceEventId ?? sourceEvent?.id,
@@ -483,9 +556,7 @@ struct AnchorFormSheet: View {
             onSave(anchor)
             dismiss()
         } label: {
-            Text(existingAnchor == nil
-                ? appState.localized(en: "Add to today", de: "Heute hinzufügen")
-                : appState.localized(en: "Update", de: "Aktualisieren"))
+            Text(saveButtonLabel)
             .font(.system(size: 16, weight: .semibold))
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)

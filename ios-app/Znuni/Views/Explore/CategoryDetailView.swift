@@ -368,83 +368,15 @@ struct CategoryDetailView: View {
     private func venueCard(_ item: ExploreItem, proxy: ScrollViewProxy) -> some View {
         let isExpanded = expandedItemID == item.id
 
-        return VStack(spacing: 0) {
-            // FACE: always visible
-            HStack(spacing: 0) {
-                // Photo thumbnail (94×94) with inset
-                vcardPhoto(item)
-                    .padding(10)
-
-                // Body
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(item.localizedName(language: appState.language))
-                        .font(.newsCardHeadline)
-                        .foregroundStyle(.znInk)
-                        .lineLimit(1)
-
-                    if let subtitle = subtitleText(item) {
-                        Text(subtitle)
-                            .font(.system(size: 11.5, weight: .light))
-                            .foregroundStyle(.znBody)
-                            .lineLimit(2)
-                            .lineSpacing(2)
-                    }
-
-                    // Meta row
-                    HStack(spacing: 6) {
-                        // Price tag
-                        if let price = shortPrice(item) {
-                            let isFree = price == appState.localized(en: "Free", de: "Gratis")
-                            Text(price)
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(isFree ? .znPositive : .znNavy)
-                                .lineLimit(1)
-                                .padding(.horizontal, 9)
-                                .padding(.vertical, 2)
-                                .background(isFree ? Color.znPositive.opacity(0.1) : Color.znNavy.opacity(0.08))
-                                .clipShape(Capsule())
-                        }
-
-                        // Kids badge
-                        if isKidsFriendly(item) {
-                            Text("👶")
-                                .font(.system(size: 10))
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 2)
-                                .background(Color.znTerracotta.opacity(0.1))
-                                .clipShape(Capsule())
-                        }
-
-                        Spacer(minLength: 0)
-
-                        // Distance
-                        if let dist = distanceString(to: item) {
-                            Text("↗ \(dist)")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.znMuted)
-                        }
-                    }
-                    .padding(.top, 2)
-                }
-                .padding(.leading, 4)
-                .padding(.trailing, 4)
-                .padding(.vertical, 13)
-
-                // Chevron
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.znChevron)
-                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
-                    .frame(width: 34)
-            }
-
-            // EXPAND PANEL
+        return VStack(alignment: .leading, spacing: 0) {
             if isExpanded {
-                Divider()
-                    .foregroundStyle(.znInnerDivider)
-
-                expandPanel(item)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                // Expanded: photo panel + content + buttons (matches ActivityCard)
+                venueExpandedPhoto(item)
+                venueExpandedContent(item)
+                venueDetailPanel(item)
+            } else {
+                // Collapsed: compact face
+                venueCompactFace(item)
             }
         }
         .background(Color.znSurface)
@@ -461,21 +393,186 @@ struct CategoryDetailView: View {
         .sensoryFeedback(.impact(weight: .light), trigger: expandedItemID)
         .onTapGesture {
             withAnimation(AppAnimation.spring) {
-                if expandedItemID == item.id {
-                    expandedItemID = nil
-                } else {
-                    expandedItemID = item.id
-                }
+                expandedItemID = expandedItemID == item.id ? nil : item.id
             }
-            // Scroll into view after expand
             if expandedItemID == item.id {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    withAnimation {
-                        proxy.scrollTo(item.id, anchor: .top)
-                    }
+                    withAnimation { proxy.scrollTo(item.id, anchor: .top) }
                 }
             }
         }
+    }
+
+    // MARK: - Venue Compact Face (collapsed)
+
+    private func venueCompactFace(_ item: ExploreItem) -> some View {
+        HStack(spacing: 0) {
+            vcardPhoto(item)
+                .padding(10)
+
+            VStack(alignment: .leading, spacing: 4) {
+                // Title + prominent open/closed badge
+                HStack(spacing: 8) {
+                    Text(item.localizedName(language: appState.language))
+                        .font(.custom("PlayfairDisplay-SemiBold", size: 16))
+                        .foregroundStyle(.znNavy)
+                        .lineLimit(1)
+
+                    if case .activity(let a) = item, a.openingHours != nil {
+                        VenueStatusBadge(openingHours: a.openingHours, prominent: true)
+                    }
+                }
+
+                if let subtitle = subtitleText(item) {
+                    Text(subtitle)
+                        .font(.system(size: 11.5, weight: .light))
+                        .foregroundStyle(.znBody)
+                        .lineLimit(2)
+                        .lineSpacing(2)
+                }
+
+                // Meta row: indoor/outdoor + distance
+                HStack(spacing: 6) {
+                    if case .activity(let a) = item {
+                        Text(a.indoor
+                            ? appState.localized(en: "Indoor", de: "Indoor")
+                            : appState.localized(en: "Outdoor", de: "Outdoor"))
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.znNavy)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 2)
+                            .background(Color.znNavy.opacity(0.08))
+                            .clipShape(Capsule())
+                    }
+
+                    Spacer(minLength: 0)
+
+                    if let dist = distanceString(to: item) {
+                        Text("↗ \(dist)")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.znMuted)
+                    }
+                }
+                .padding(.top, 2)
+            }
+            .padding(.leading, 4)
+            .padding(.trailing, 4)
+            .padding(.vertical, 13)
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(Color.znChevron)
+                .frame(width: 34)
+        }
+    }
+
+    // MARK: - Venue Expanded Photo
+
+    @ViewBuilder
+    private func venueExpandedPhoto(_ item: ExploreItem) -> some View {
+        ZStack(alignment: .bottomLeading) {
+            if let photoURL = photoURL(for: item) {
+                AsyncImage(url: photoURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(height: 150)
+                            .clipped()
+                    default:
+                        LinearGradient(
+                            colors: [typeColor(item).opacity(0.3), Color.znSurface],
+                            startPoint: .top, endPoint: .bottom
+                        )
+                        .frame(height: 150)
+                    }
+                }
+            } else {
+                ZStack {
+                    LinearGradient(
+                        colors: [typeColor(item).opacity(0.3), Color.znSurface],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                    Image(systemName: categorySymbol(item))
+                        .font(.system(size: 36))
+                        .foregroundStyle(typeColor(item).opacity(0.5))
+                }
+                .frame(height: 150)
+            }
+
+            LinearGradient(
+                colors: [.clear, Color.znSurface],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: 80)
+
+            Text(vcardBadgeLabel(item).uppercased())
+                .font(.znEyebrow)
+                .tracking(0.8)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(Color.znNavy.opacity(0.82))
+                .clipShape(Capsule())
+                .padding(.leading, 14)
+                .padding(.bottom, 62)
+        }
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    // MARK: - Venue Expanded Content
+
+    private func venueExpandedContent(_ item: ExploreItem) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Title + prominent status
+            HStack(spacing: 8) {
+                Text(item.localizedName(language: appState.language))
+                    .font(.custom("PlayfairDisplay-SemiBold", size: 17))
+                    .foregroundStyle(Color.znNavy)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if case .activity(let a) = item, a.openingHours != nil {
+                    VenueStatusBadge(openingHours: a.openingHours, prominent: true)
+                }
+            }
+            .padding(.bottom, 6)
+
+            if let desc = subtitleText(item) {
+                Text(desc)
+                    .font(.system(size: 13, weight: .light))
+                    .foregroundStyle(Color.znBody)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.bottom, 12)
+            }
+
+            // Quick Info row
+            venueQuickInfo(item)
+        }
+        .padding(.top, 15)
+        .padding(.horizontal, 18)
+        .padding(.bottom, 13)
+    }
+
+    private func venueQuickInfo(_ item: ExploreItem) -> some View {
+        VenueQuickInfoRow(items: {
+            var items: [VenueQuickInfoRow.Item] = []
+            if let duration = durationText(item) {
+                items.append(.init(icon: "clock", label: appState.localized(en: "Duration", de: "Dauer"), value: duration))
+            }
+            if let dist = distanceString(to: item) {
+                items.append(.init(icon: "location.fill", label: appState.localized(en: "Distance", de: "Entfernung"), value: dist))
+            }
+            if let price = priceText(item) {
+                items.append(.init(icon: "banknote", label: appState.localized(en: "Price", de: "Preis"), value: price))
+            }
+            if case .activity(let a) = item,
+               let todayHours = OpeningHoursParser.todayHours(from: a.openingHours) {
+                items.append(.init(icon: "clock.badge", label: appState.localized(en: "Hours", de: "Zeiten"), value: todayHours))
+            }
+            return items
+        }())
     }
 
     // MARK: - Vcard Photo
@@ -489,7 +586,7 @@ struct CategoryDetailView: View {
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                            .frame(width: 94, height: 94)
+                            .frame(width: 76, height: 76)
                             .clipped()
                     case .failure:
                         vcardPhotoFallback(item)
@@ -504,19 +601,19 @@ struct CategoryDetailView: View {
             }
 
             // Category badge
-            Text(vcardBadgeLabel(item))
-                .font(.system(size: 9, weight: .medium))
-                .tracking(0.3)
+            Text(vcardBadgeLabel(item).uppercased())
+                .font(.system(size: 7, weight: .bold))
+                .tracking(0.5)
                 .foregroundStyle(.white)
-                .padding(.horizontal, 8)
+                .padding(.horizontal, 5)
                 .padding(.vertical, 2)
-                .background(vcardBadgeColor(item).opacity(0.75))
+                .background(Color.znNavy.opacity(0.82))
                 .clipShape(Capsule())
-                .padding(7)
+                .padding(4)
         }
-        .frame(width: 94, height: 94)
+        .frame(width: 76, height: 76)
         .clipped()
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     private func vcardPhotoFallback(_ item: ExploreItem) -> some View {
@@ -570,175 +667,81 @@ struct CategoryDetailView: View {
 
     // MARK: - Expand Panel
 
-    private func expandPanel(_ item: ExploreItem) -> some View {
-        VStack(alignment: .leading, spacing: 11) {
-            // Extended description
-            if let desc = subtitleText(item) {
-                Text(desc)
-                    .font(.system(size: 12, weight: .light))
-                    .foregroundStyle(.znBody)
-                    .lineSpacing(4)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+    // MARK: - Venue Detail Panel (action buttons)
 
-            // 2×2 detail grid
-            detailGrid(item)
-
-            // Action buttons
-            actionButtons(item)
-        }
-        .padding(.horizontal, AppSpacing.cardPadding)
-        .padding(.vertical, 13)
-    }
-
-    // MARK: - Detail Grid
-
-    private func detailGrid(_ item: ExploreItem) -> some View {
-        LazyVGrid(columns: [
-            GridItem(.flexible(), spacing: 7),
-            GridItem(.flexible(), spacing: 7)
-        ], spacing: 7) {
-            // Price
-            if let price = priceText(item) {
-                gridCell(
-                    label: appState.localized(en: "Price", de: "Preis"),
-                    value: price
-                )
-            }
-
-            // Ages
-            if let ages = agesText(item) {
-                gridCell(
-                    label: appState.localized(en: "Ages", de: "Alter"),
-                    value: ages
-                )
-            }
-
-            // Distance
-            if let dist = distanceString(to: item) {
-                gridCell(
-                    label: appState.localized(en: "Distance", de: "Entfernung"),
-                    value: dist
-                )
-            }
-
-            // Duration
-            if let duration = durationText(item) {
-                gridCell(
-                    label: appState.localized(en: "Duration", de: "Dauer"),
-                    value: duration
-                )
-            }
-        }
-    }
-
-    private func gridCell(label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(label)
-                .font(.system(size: 9, weight: .medium))
-                .tracking(0.9)
-                .textCase(.uppercase)
-                .foregroundStyle(.znMuted)
-
-            Text(value)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.znInk)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(Color.znCream)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-
-    // MARK: - Action Buttons
-
-    private func actionButtons(_ item: ExploreItem) -> some View {
-        HStack(spacing: 7) {
-            // Directions (primary)
-            Button {
-                openDirections(to: item)
-            } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: "arrow.triangle.turn.up.right.diamond")
-                        .font(.system(size: 11))
-                    Text(appState.localized(en: "Directions", de: "Route"))
-                        .font(.system(size: 11.5, weight: .medium))
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(Color.znTerracotta)
-                .foregroundStyle(.white)
-                .clipShape(Capsule())
-            }
-
-            // Website (secondary)
-            if let url = itemURL(item) {
+    @ViewBuilder
+    private func venueDetailPanel(_ item: ExploreItem) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 8) {
+                // Directions — tinted (matches PlanSlotCard)
                 Button {
-                    UIApplication.shared.open(url)
+                    openDirections(to: item)
                 } label: {
                     HStack(spacing: 5) {
-                        Image(systemName: "globe")
-                            .font(.system(size: 11))
-                        Text(appState.localized(en: "Website", de: "Website"))
-                            .font(.system(size: 11.5, weight: .medium))
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 12))
+                        Text(appState.localized(en: "Directions", de: "Route"))
+                            .font(.system(size: 13, weight: .medium))
                     }
+                    .foregroundStyle(Color.znTerracotta)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .foregroundStyle(.znNavy)
-                    .background(Color.znCream)
-                    .clipShape(Capsule())
-                    .overlay(Capsule().stroke(Color.znBorder, lineWidth: 1))
+                    .frame(height: 40)
+                    .background(Color.znTerracotta.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
-            }
+                .buttonStyle(.plain)
 
-            // Book (secondary) — only for activities with a URL
-            if case .activity = item, itemURL(item) != nil {
+                // Plan → — tinted
                 Button {
-                    if let url = itemURL(item) {
+                    // TODO: anchor form for explore items
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "calendar.badge.plus")
+                            .font(.system(size: 12))
+                        Text(appState.localized(en: "Plan →", de: "Planen →"))
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .foregroundStyle(Color.znNavy)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 40)
+                    .background(Color.znNavy.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+
+                // Website — tinted icon
+                if let url = itemURL(item) {
+                    Button {
                         UIApplication.shared.open(url)
+                    } label: {
+                        Image(systemName: "globe")
+                            .font(.system(size: 15))
+                            .foregroundStyle(Color.znNavy)
+                            .frame(width: 40, height: 40)
+                            .background(Color.znNavy.opacity(0.06))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "ticket")
-                            .font(.system(size: 11))
-                        Text(appState.localized(en: "Book", de: "Buchen"))
-                            .font(.system(size: 11.5, weight: .medium))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .foregroundStyle(.znNavy)
-                    .background(Color.znCream)
-                    .clipShape(Capsule())
-                    .overlay(Capsule().stroke(Color.znBorder, lineWidth: 1))
+                    .buttonStyle(.plain)
                 }
-            }
 
-            // Save (icon-only)
-            Button {
-                toggleSave(item)
-            } label: {
-                Image(systemName: isSaved(item) ? "heart.fill" : "heart")
-                    .font(.system(size: 13))
-                    .foregroundStyle(isSaved(item) ? .znTerracotta : .znNavy)
-                    .frame(width: 38, height: 38)
-                    .background(Color.znCream)
-                    .clipShape(Circle())
-                    .overlay(Circle().stroke(Color.znBorder, lineWidth: 1))
-            }
-            .sensoryFeedback(.impact(weight: .light), trigger: isSaved(item))
-
-            // Share (icon-only)
-            ShareLink(item: shareURL(item)) {
-                Image(systemName: "square.and.arrow.up")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.znNavy)
-                    .frame(width: 38, height: 38)
-                    .background(Color.znCream)
-                    .clipShape(Circle())
-                    .overlay(Circle().stroke(Color.znBorder, lineWidth: 1))
+                // Heart — tinted icon
+                Button {
+                    toggleSave(item)
+                } label: {
+                    Image(systemName: isSaved(item) ? "heart.fill" : "heart")
+                        .font(.system(size: 15))
+                        .foregroundStyle(isSaved(item) ? Color.znTerracotta : Color.znNavy)
+                        .frame(width: 40, height: 40)
+                        .background(isSaved(item) ? Color.znTerracotta.opacity(0.12) : Color.znNavy.opacity(0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+                .sensoryFeedback(.impact(weight: .light), trigger: isSaved(item))
             }
         }
+        .padding(.horizontal, 18)
+        .padding(.bottom, 18)
+        .transition(.opacity.combined(with: .move(edge: .bottom)))
     }
 
     // MARK: - Category Map

@@ -57,6 +57,39 @@ struct LunchSpot: Codable, Identifiable, Sendable {
         }
     }
 
+    /// Generated short description from metadata
+    func generatedDescription(language: AppLanguage) -> String {
+        let cuisine = cuisineDisplay
+        let type: String
+        switch amenity.lowercased() {
+        case "cafe":
+            type = language == .de ? "Café" : "Café"
+        case "fast_food":
+            type = language == .de ? "Schnellrestaurant" : "Fast food spot"
+        default:
+            type = language == .de ? "Restaurant" : "Restaurant"
+        }
+
+        var parts: [String] = []
+        parts.append("\(cuisine) \(type)")
+
+        if outdoorSeating == true {
+            parts.append(language == .de ? "mit Terrasse" : "with terrace")
+        }
+        if takeaway == true {
+            parts.append(language == .de ? "Takeaway verfügbar" : "takeaway available")
+        }
+        if kidFriendly == true {
+            parts.append(language == .de ? "kinderfreundlich" : "kid-friendly")
+        }
+
+        // Join: "Italian Restaurant with terrace, kid-friendly"
+        if parts.count == 1 { return parts[0] }
+        let first = parts[0]
+        let rest = parts.dropFirst().joined(separator: ", ")
+        return "\(first), \(rest)"
+    }
+
     /// SF Symbol for cuisine category
     var cuisineSFSymbol: String {
         switch cuisineCategory?.lowercased() {

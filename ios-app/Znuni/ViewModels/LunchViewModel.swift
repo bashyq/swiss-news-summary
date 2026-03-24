@@ -66,7 +66,9 @@ final class LunchViewModel {
             spots = spots.filter { $0.distance(from: location) <= 2000 }
         }
         if activeToggles.contains(.open) {
-            spots = spots.filter { $0.openForLunch == true }
+            spots = spots.filter {
+                OpeningHoursParser.status(from: $0.openingHours) == .open
+            }
         }
         if activeToggles.contains(.terrace) {
             spots = spots.filter { $0.outdoorSeating == true }

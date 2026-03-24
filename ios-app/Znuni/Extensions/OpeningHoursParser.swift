@@ -101,6 +101,55 @@ struct OpeningHoursParser {
         return foundTodayRule ? (isOpen ? .open : .closed) : .unknown
     }
 
+    /// Returns today's opening hours as a display string, e.g. "9:00–17:00" or "11:30–14:00, 18:00–22:00".
+    /// Returns nil if no hours apply today or the string is unparseable.
+    static func todayHours(from openingHours: String?, at date: Date = Date()) -> String? {
+        guard let hours = openingHours?.trimmingCharacters(in: .whitespaces),
+              !hours.isEmpty else { return nil }
+
+        if hours == "24/7" { return "24/7" }
+
+        let calendar = Calendar.current
+        let weekday = calendar.component(.weekday, from: date)
+        let osmDayIndex = weekday == 1 ? 6 : weekday - 2
+
+        let rules = hours
+            .components(separatedBy: ";")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+
+        var todayRanges: [(start: Int, end: Int)] = []
+
+        for rule in rules {
+            let lower = rule.lowercased()
+            if lower.contains("off") || lower.contains("closed") {
+                if dayApplies(rule: rule, todayIndex: osmDayIndex) { return nil }
+                continue
+            }
+            if dayApplies(rule: rule, todayIndex: osmDayIndex) {
+                todayRanges.append(contentsOf: extractTimeRanges(from: rule))
+            }
+        }
+
+        // Fallback: time-only rules
+        if todayRanges.isEmpty {
+            for rule in rules {
+                let trimmed = rule.trimmingCharacters(in: .whitespaces)
+                if isTimeOnlyRule(trimmed) {
+                    todayRanges.append(contentsOf: extractTimeRanges(from: trimmed))
+                }
+            }
+        }
+
+        guard !todayRanges.isEmpty else { return nil }
+
+        return todayRanges.map { range in
+            let sh = range.start / 60, sm = range.start % 60
+            let eh = range.end / 60, em = range.end % 60
+            return String(format: "%d:%02d–%d:%02d", sh, sm, eh, em)
+        }.joined(separator: ", ")
+    }
+
     // MARK: - Private Helpers
 
     private static let osmDays = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]

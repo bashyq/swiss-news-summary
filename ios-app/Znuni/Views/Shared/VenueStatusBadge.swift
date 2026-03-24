@@ -15,6 +15,9 @@ struct VenueStatusBadge: View {
     /// When true, renders with a leading "·" separator for embedding in an HStack row.
     var inline: Bool = false
 
+    /// When true, renders as a high-contrast pill badge (for title-row placement).
+    var prominent: Bool = false
+
     private var status: VenueStatus {
         // Prefer client-side parsing when openingHours string exists
         let parsed = OpeningHoursParser.status(from: openingHours)
@@ -44,6 +47,16 @@ struct VenueStatusBadge: View {
     }
 
     private func badge(color: Color, text: String) -> some View {
+        Group {
+            if prominent {
+                prominentBadge(color: color, text: text)
+            } else {
+                dotBadge(color: color, text: text)
+            }
+        }
+    }
+
+    private func dotBadge(color: Color, text: String) -> some View {
         HStack(spacing: 4) {
             if inline {
                 Text("·")
@@ -56,5 +69,15 @@ struct VenueStatusBadge: View {
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(color)
         }
+    }
+
+    private func prominentBadge(color: Color, text: String) -> some View {
+        Text(text)
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(color.opacity(0.12))
+            .clipShape(Capsule())
     }
 }

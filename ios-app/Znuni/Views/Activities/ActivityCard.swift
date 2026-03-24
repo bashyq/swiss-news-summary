@@ -121,10 +121,17 @@ struct ActivityCard: View {
 
             // Body
             VStack(alignment: .leading, spacing: 4) {
-                Text(activity.localizedName(language: language))
-                    .font(.custom("Playfair", size: 15))
-                    .foregroundStyle(.znInk)
-                    .lineLimit(1)
+                // Title + prominent open/closed badge
+                HStack(spacing: 8) {
+                    Text(activity.localizedName(language: language))
+                        .font(.custom("PlayfairDisplay-SemiBold", size: 16))
+                        .foregroundStyle(.znNavy)
+                        .lineLimit(1)
+
+                    if activity.openingHours != nil {
+                        VenueStatusBadge(openingHours: activity.openingHours, prominent: true)
+                    }
+                }
 
                 Text(activity.localizedDescription(language: language))
                     .font(.system(size: 11.5, weight: .light))
@@ -132,18 +139,8 @@ struct ActivityCard: View {
                     .lineLimit(2)
                     .lineSpacing(2)
 
-                // Meta row: price + indoor/outdoor + distance
+                // Meta row: indoor/outdoor + distance
                 HStack(spacing: 6) {
-                    if activity.isFree {
-                        Text(appState.localized(en: "Free", de: "Gratis"))
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(.znPositive)
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 2)
-                            .background(Color.znPositive.opacity(0.1))
-                            .clipShape(Capsule())
-                    }
-
                     Text(activity.indoor
                         ? appState.localized(en: "Indoor", de: "Indoor")
                         : appState.localized(en: "Outdoor", de: "Outdoor"))
@@ -155,10 +152,6 @@ struct ActivityCard: View {
                         .clipShape(Capsule())
 
                     Spacer(minLength: 0)
-
-                    if activity.openingHours != nil {
-                        VenueStatusBadge(openingHours: activity.openingHours)
-                    }
 
                     if let dist = distanceBadgeText {
                         Text("↗ \(dist)")
@@ -259,68 +252,43 @@ struct ActivityCard: View {
            !activity.id.hasPrefix("custom-"),
            activity.category.lowercased() != "stayhome",
            let photoURL = APIClient.shared.photoURL(for: activity.id) {
-            ZStack(alignment: .topTrailing) {
-                ZStack(alignment: .bottomLeading) {
-                    // Photo image — tap anywhere on photo to collapse
-                    AsyncImage(url: photoURL) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(height: 140)
-                                .clipped()
-                        default:
-                            // Placeholder gradient while loading
-                            LinearGradient(
-                                colors: [accentBarColor.opacity(0.3), Color.znSurface],
-                                startPoint: .top, endPoint: .bottom
-                            )
-                            .frame(height: 140)
-                        }
+            ZStack(alignment: .bottomLeading) {
+                // Photo image
+                AsyncImage(url: photoURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(height: 150)
+                            .clipped()
+                    default:
+                        LinearGradient(
+                            colors: [accentBarColor.opacity(0.3), Color.znSurface],
+                            startPoint: .top, endPoint: .bottom
+                        )
+                        .frame(height: 150)
                     }
-
-                    // Gradient fade into card body
-                    LinearGradient(
-                        colors: [.clear, Color.znSurface],
-                        startPoint: .top, endPoint: .bottom
-                    )
-                    .frame(height: 80)
-
-                    // Category badge on photo
-                    Text(categoryLabel.uppercased())
-                        .font(.znEyebrow)
-                        .tracking(0.8)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(Color.znNavy.opacity(0.82))
-                        .clipShape(Capsule())
-                        .padding(.leading, 14)
-                        .padding(.bottom, 62)
                 }
 
-                // Close button
-                Button {
-                    withAnimation(AppAnimation.spring) {
-                        expandedID = nil
-                    }
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 28, height: 28)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .padding(10)
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                withAnimation(AppAnimation.spring) {
-                    expandedID = nil
-                }
+                // Gradient fade into card body
+                LinearGradient(
+                    colors: [.clear, Color.znSurface],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .frame(height: 80)
+
+                // Category badge on photo
+                Text(categoryLabel.uppercased())
+                    .font(.znEyebrow)
+                    .tracking(0.8)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.znNavy.opacity(0.82))
+                    .clipShape(Capsule())
+                    .padding(.leading, 14)
+                    .padding(.bottom, 62)
             }
             .transition(.opacity.combined(with: .move(edge: .top)))
         }
@@ -330,143 +298,72 @@ struct ActivityCard: View {
 
     private var expandedContent: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Title
-            Text(activity.localizedName(language: language))
-                .font(.expandedCardTitle)
-                .foregroundStyle(Color.znInk)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.bottom, 5)
+            // Title + prominent status
+            HStack(spacing: 8) {
+                Text(activity.localizedName(language: language))
+                    .font(.custom("PlayfairDisplay-SemiBold", size: 17))
+                    .foregroundStyle(Color.znNavy)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if activity.openingHours != nil {
+                    VenueStatusBadge(openingHours: activity.openingHours, prominent: true)
+                }
+            }
+            .padding(.bottom, 6)
 
             // Description — full when expanded
             Text(activity.localizedDescription(language: language))
-                .font(.system(size: 12.5, weight: .light))
+                .font(.system(size: 13, weight: .light))
                 .foregroundStyle(Color.znBody)
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.bottom, 10)
+                .padding(.bottom, 12)
 
-            // Tag pills
-            tagsRow
-                .padding(.bottom, 10)
-
-            // Footer divider + distance
-            footerRow
+            // Quick Info row
+            activityQuickInfo
         }
         .padding(.top, 15)
         .padding(.horizontal, 18)
         .padding(.bottom, 13)
     }
 
-    // MARK: - Tags Row
-
-    private var tagsRow: some View {
-        FlowLayout(spacing: 5) {
-            // NEW badge
-            if activity.isNew {
-                tagPill(
-                    text: appState.localized(en: "NEW", de: "NEU"),
-                    icon: "sparkle",
-                    bg: Color.znPositive.opacity(0.1),
-                    fg: Color.znPositive
-                )
+    private var activityQuickInfo: some View {
+        VenueQuickInfoRow(items: {
+            var items: [VenueQuickInfoRow.Item] = []
+            items.append(.init(
+                icon: "clock",
+                label: appState.localized(en: "Duration", de: "Dauer"),
+                value: activity.duration
+            ))
+            if let meters = distanceMeters {
+                items.append(.init(
+                    icon: "location.fill",
+                    label: appState.localized(en: "Distance", de: "Entfernung"),
+                    value: CLLocation.formattedDistance(meters)
+                ))
             }
-
-            // Indoor/Outdoor tag
-            if activity.indoor {
-                tagPill(
-                    text: appState.localized(en: "Indoor", de: "Indoor"),
-                    icon: "house.fill",
-                    bg: Color.znNavy.opacity(0.1),
-                    fg: Color.znNavy
-                )
-            } else {
-                tagPill(
-                    text: appState.localized(en: "Outdoor", de: "Outdoor"),
-                    icon: "sun.max.fill",
-                    bg: Color.znTerracotta.opacity(0.1),
-                    fg: Color.znTerracotta
-                )
-            }
-
-            // Free tag
-            if activity.isFree {
-                tagPill(
-                    text: appState.localized(en: "Free", de: "Gratis"),
-                    icon: "gift",
-                    bg: Color.znPositive.opacity(0.1),
-                    fg: Color.znPositive
-                )
-            }
-
-            // Duration tag
-            tagPill(text: activity.duration, icon: "clock", bg: Color.znNeutralTagBg, fg: Color.znNeutralTagText)
-
-            // Opening hours tag
-            if let hours = activity.localizedOpeningHours(language: appState.language) {
-                tagPill(text: hours, icon: "door.left.hand.open", bg: Color.znNeutralTagBg, fg: Color.znNeutralTagText)
-            }
-
-            // Price tag
             if let price = activity.localizedPrice(language: language), !activity.isFree {
-                tagPill(text: price, icon: nil, bg: Color.znNeutralTagBg, fg: Color.znNeutralTagText)
+                items.append(.init(
+                    icon: "banknote",
+                    label: appState.localized(en: "Price", de: "Preis"),
+                    value: price
+                ))
+            } else if activity.isFree {
+                items.append(.init(
+                    icon: "gift",
+                    label: appState.localized(en: "Price", de: "Preis"),
+                    value: appState.localized(en: "Free", de: "Gratis")
+                ))
             }
-
-            // Seasonal tag
-            if let season = activity.season {
-                tagPill(
-                    text: season.capitalized,
-                    icon: seasonIcon(for: season),
-                    bg: Color.znNeutralTagBg,
-                    fg: Color.znNeutralTagText
-                )
+            if let todayHours = OpeningHoursParser.todayHours(from: activity.openingHours) {
+                items.append(.init(
+                    icon: "clock.badge",
+                    label: appState.localized(en: "Hours", de: "Zeiten"),
+                    value: todayHours
+                ))
             }
-        }
-    }
-
-    private func tagPill(text: String, icon: String? = nil, bg: Color, fg: Color) -> some View {
-        HStack(spacing: 4) {
-            if let icon {
-                Image(systemName: icon)
-                    .font(.system(size: 9))
-            }
-            Text(text)
-                .font(.system(size: 11, weight: .medium))
-        }
-        .foregroundStyle(fg)
-        .padding(.horizontal, 10)
-        .frame(height: 24)
-        .background(bg)
-        .clipShape(Capsule())
-    }
-
-    // MARK: - Footer Row
-
-    private var footerRow: some View {
-        VStack(spacing: 0) {
-            Divider()
-                .overlay(Color.znInnerDivider)
-                .padding(.bottom, 10)
-
-            HStack(spacing: 10) {
-                // Open/Closed status
-                if activity.openingHours != nil {
-                    VenueStatusBadge(openingHours: activity.openingHours)
-                }
-
-                // Distance
-                if let meters = distanceMeters {
-                    HStack(spacing: 4) {
-                        Image(systemName: "location.fill")
-                            .font(.system(size: 10))
-                        Text(CLLocation.formattedDistance(meters))
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                    .foregroundStyle(Color.znNavy)
-                }
-
-                Spacer()
-            }
-        }
+            return items
+        }())
     }
 
     // MARK: - Detail Panel (slides in from bottom)
@@ -475,9 +372,9 @@ struct ActivityCard: View {
     private var detailPanel: some View {
         if isExpanded {
             VStack(alignment: .leading, spacing: 0) {
-                // Action buttons row: [Directions] [Plan →] [🌐] [♡]
+                // Action buttons row
                 HStack(spacing: 8) {
-                    // Directions button (primary)
+                    // Directions — tinted (matches PlanSlotCard)
                     if let coordinate = activity.coordinate {
                         Button {
                             openDirections(coordinate: coordinate, name: activity.name)
@@ -497,7 +394,7 @@ struct ActivityCard: View {
                         .buttonStyle(.plain)
                     }
 
-                    // Plan → button (secondary)
+                    // Plan → — tinted (matches PlanSlotCard)
                     Button {
                         showAnchorForm = true
                     } label: {
@@ -515,7 +412,7 @@ struct ActivityCard: View {
                     }
                     .buttonStyle(.plain)
 
-                    // Website icon button
+                    // Website — tinted icon
                     if activity.url != nil {
                         Button {
                             openURL()
@@ -525,12 +422,12 @@ struct ActivityCard: View {
                                 .foregroundStyle(Color.znNavy)
                                 .frame(width: 40, height: 40)
                                 .background(Color.znNavy.opacity(0.06))
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                         .buttonStyle(.plain)
                     }
 
-                    // Heart / save icon button
+                    // Heart — tinted icon
                     Button {
                         appState.toggleSavedActivity(activity.id)
                         let wasSaved = appState.savedActivityIDs.contains(activity.id)
@@ -544,7 +441,7 @@ struct ActivityCard: View {
                             .foregroundStyle(isSaved ? Color.znTerracotta : Color.znNavy)
                             .frame(width: 40, height: 40)
                             .background(isSaved ? Color.znTerracotta.opacity(0.12) : Color.znNavy.opacity(0.06))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                     .buttonStyle(.plain)
                     .sensoryFeedback(.impact(weight: .light), trigger: isSaved)

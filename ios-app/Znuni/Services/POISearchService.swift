@@ -36,6 +36,10 @@ struct POIResult: Identifiable, Codable, Equatable {
     let longitude: Double
     let url: String?
     let phoneNumber: String?
+    // Rich metadata from MapKit
+    let rating: Double?
+    let ratingCount: Int?
+    let openingHours: String?
 
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
@@ -114,7 +118,10 @@ actor POISearchService {
                     latitude: lat,
                     longitude: lon,
                     url: item.url?.absoluteString,
-                    phoneNumber: item.phoneNumber
+                    phoneNumber: item.phoneNumber,
+                    rating: nil, // MapKit doesn't expose ratings directly
+                    ratingCount: nil,
+                    openingHours: nil
                 )
             }
         } catch {

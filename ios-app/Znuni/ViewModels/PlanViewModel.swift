@@ -365,14 +365,23 @@ final class PlanViewModel {
     // MARK: - Redeal
 
     /// Recompose unlocked slots while preserving locked ones.
+    /// In trip mode, re-deals against the trip destination instead of the planning city.
     @MainActor
     func redeal() async {
-        guard let current = currentAgenda else { return }
-        let locked = current.slots.filter { $0.isLocked }
+        guard currentAgenda != nil else { return }
         ZnuniEvent.planRebuilt()
-        store.deletePlan(city: planningCity.id, date: isoString(for: selectedDate))
         recentlyShownStore.clear()
-        await deal(lockedSlots: locked)
+
+        if let trip = detectedTrip {
+            // Trip mode: re-deal for the trip destination
+            let tripCityKey = "trip-\(trip.locality.lowercased())"
+            store.deletePlan(city: tripCityKey, date: isoString(for: selectedDate))
+            await dealTrip(trip)
+        } else {
+            let locked = currentAgenda?.slots.filter { $0.isLocked } ?? []
+            store.deletePlan(city: planningCity.id, date: isoString(for: selectedDate))
+            await deal(lockedSlots: locked)
+        }
     }
 
     // MARK: - Trip Planning
@@ -1140,17 +1149,38 @@ private extension PlanViewModel {
                 used.insert(poi.id)
                 let timeStr = formatter.string(from: gap.effectiveStart)
 
+                let reason: String
+                switch poi.category {
+                case .museum: reason = "A museum worth visiting nearby"
+                case .park: reason = "A park to explore and unwind"
+                case .playground: reason = "Playground for the kids"
+                case .lake: reason = "Lake or beach spot to enjoy"
+                case .bakery: reason = "Local bakery for a treat"
+                case .restaurant: reason = "Restaurant for a meal"
+                case .cafe: reason = "Café for a break"
+                }
+
+                var tags: [String] = [poi.category.rawValue.capitalized]
+                if poi.category == .playground || poi.category == .park || poi.category == .lake {
+                    tags.append("Free")
+                    tags.append("Outdoor")
+                } else if poi.category == .museum {
+                    tags.append("Indoor")
+                }
+
                 slots.append(AgendaSlot(
                     id: gap.suggestedType?.rawValue ?? "quick",
                     time: timeStr,
                     type: slotType,
                     venueName: poi.name,
                     venueId: poi.id,
-                    reason: "Nearby \(poi.category.rawValue)",
-                    tags: [poi.category.rawValue.capitalized],
+                    reason: reason,
+                    tags: tags,
                     lat: poi.latitude,
                     lon: poi.longitude,
                     venueUrl: poi.url,
+                    rating: poi.rating,
+                    ratingCount: poi.ratingCount,
                     durationMinutes: slotType == .activity ? 100 : 90,
                     source: .aiGenerated,
                     isLocked: false,

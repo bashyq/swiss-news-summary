@@ -24,15 +24,14 @@ struct LunchCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Collapsed face — always visible
-            cardFace
-
-            // Expand panel — slides in when expanded
             if isExpanded {
-                Divider()
-                    .foregroundStyle(Color.znInnerDivider)
-                expandPanel
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                // Expanded: photo panel + content + detail panel (matches ActivityCard)
+                photoPanel
+                expandedContent
+                detailPanel
+            } else {
+                // Collapsed: compact face
+                cardFace
             }
         }
         .background(Color.znSurface)
@@ -48,6 +47,13 @@ struct LunchCard: View {
             y: isExpanded ? AppShadow.cardExpanded.y : AppShadow.card.y
         )
         .opacity(spot.permanentlyClosed == true ? 0.5 : 1.0)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(AppAnimation.spring) {
+                expandedID = isExpanded ? nil : spot.id
+            }
+        }
+        .sensoryFeedback(.impact(weight: .light), trigger: isExpanded)
         .confirmationDialog(
             appState.localized(en: "Delete Restaurant", de: "Restaurant löschen"),
             isPresented: $showDeleteConfirmation,
@@ -89,55 +95,101 @@ struct LunchCard: View {
 
     private var cardFace: some View {
         HStack(spacing: 0) {
-            // Photo thumbnail (94px)
+            // Photo thumbnail (76×76) — matches ActivityCard
             photoThumbnail
+                .frame(width: 76, height: 76)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .padding(10)
 
             // Body
             VStack(alignment: .leading, spacing: 4) {
-                // Name
-                Text(spot.name)
-                    .font(.newsCardHeadline)
-                    .foregroundStyle(.znInk)
-                    .lineLimit(2)
+                // Title + prominent open/closed badge
+                HStack(spacing: 8) {
+                    Text(spot.name)
+                        .font(.custom("PlayfairDisplay-SemiBold", size: 16))
+                        .foregroundStyle(.znNavy)
+                        .lineLimit(1)
 
-                // Star rating + open/closed status inline
-                HStack(spacing: 6) {
-                    starRating
-                    lunchStatus
+                    if spot.permanentlyClosed != true {
+                        VenueStatusBadge(
+                            openingHours: spot.openingHours,
+                            serverOpenForLunch: spot.openForLunch,
+                            prominent: true
+                        )
+                    }
                 }
 
-                // Tags + distance
-                tagsRow
-            }
-            .padding(.horizontal, AppSpacing.cardPadding)
-            .padding(.vertical, 13)
+                // Description (generated)
+                Text(spot.generatedDescription(language: language))
+                    .font(.system(size: 11.5, weight: .light))
+                    .foregroundStyle(.znBody)
+                    .lineLimit(2)
+                    .lineSpacing(2)
 
-            Spacer(minLength: 0)
+                // Meta row: rating + tags + distance
+                HStack(spacing: 6) {
+                    // Star rating inline
+                    if let rating = spot.rating {
+                        HStack(spacing: 3) {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.znTerracotta)
+                            Text(String(format: "%.1f", rating))
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(.znInk)
+                        }
+                    }
+
+                    if spot.outdoorSeating == true {
+                        Text(appState.localized(en: "Terrace", de: "Terrasse"))
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.znNeutralTagText)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 2)
+                            .background(Color.znNeutralTagBg)
+                            .clipShape(Capsule())
+                    }
+
+                    if spot.takeaway == true {
+                        Text(appState.localized(en: "Takeaway", de: "Takeaway"))
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.znNeutralTagText)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 2)
+                            .background(Color.znNeutralTagBg)
+                            .clipShape(Capsule())
+                    }
+
+                    Spacer(minLength: 0)
+
+                    if let meters = distanceMeters {
+                        Text("↗ \(formattedDistance(meters))")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.znMuted)
+                    }
+                }
+                .padding(.top, 2)
+            }
+            .padding(.leading, 4)
+            .padding(.trailing, 4)
+            .padding(.vertical, 13)
 
             // Chevron
             Image(systemName: "chevron.right")
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.znChevron)
-                .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                .foregroundStyle(Color.znChevron)
                 .frame(width: 34)
         }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            withAnimation(AppAnimation.spring) {
-                expandedID = isExpanded ? nil : spot.id
-            }
-        }
-        .sensoryFeedback(.impact(weight: .light), trigger: expandedID)
     }
 
     // MARK: - Photo Thumbnail
 
+    @ViewBuilder
     private var photoThumbnail: some View {
         ZStack(alignment: .bottomLeading) {
             if spot.id.hasPrefix("custom-"),
                let customSpot = CustomLunchSpot.find(spot.id),
                let photo = customSpot.photo {
-                // User-added photo for custom restaurants
                 Image(uiImage: photo)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
@@ -166,18 +218,16 @@ struct LunchCard: View {
             }
 
             // Cuisine badge overlay
-            Text(spot.cuisineDisplay)
-                .font(.system(size: 9, weight: .medium))
-                .tracking(0.04 * 9)
+            Text(spot.cuisineDisplay.uppercased())
+                .font(.system(size: 7, weight: .bold))
+                .tracking(0.5)
                 .foregroundStyle(.white)
-                .padding(.horizontal, 8)
+                .padding(.horizontal, 5)
                 .padding(.vertical, 2)
-                .background(.znNavy.opacity(0.75))
+                .background(Color.znNavy.opacity(0.82))
                 .clipShape(Capsule())
-                .padding(7)
+                .padding(4)
         }
-        .frame(width: 76, height: 76)
-        .clipped()
     }
 
     private var cuisineGradientFallback: some View {
@@ -191,6 +241,113 @@ struct LunchCard: View {
                 .font(.system(size: 24))
                 .foregroundStyle(cuisineCategoryColor.opacity(0.4))
         }
+    }
+
+    // MARK: - Photo Panel (expanded, matches ActivityCard)
+
+    @ViewBuilder
+    private var photoPanel: some View {
+        ZStack(alignment: .bottomLeading) {
+            if spot.id.hasPrefix("custom-"),
+               let customSpot = CustomLunchSpot.find(spot.id),
+               let photo = customSpot.photo {
+                Image(uiImage: photo)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(height: 150)
+                    .clipped()
+            } else if !spot.id.hasPrefix("custom-"),
+                      let photoURL = APIClient.shared.photoURL(for: spot.id) {
+                AsyncImage(url: photoURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(height: 150)
+                            .clipped()
+                    default:
+                        LinearGradient(
+                            colors: [cuisineCategoryColor.opacity(0.3), Color.znSurface],
+                            startPoint: .top, endPoint: .bottom
+                        )
+                        .frame(height: 150)
+                    }
+                }
+            } else {
+                ZStack {
+                    LinearGradient(
+                        colors: [cuisineCategoryColor.opacity(0.3), Color.znSurface],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                    Image(systemName: spot.cuisineSFSymbol)
+                        .font(.system(size: 36))
+                        .foregroundStyle(cuisineCategoryColor.opacity(0.5))
+                }
+                .frame(height: 150)
+            }
+
+            // Gradient fade into card body
+            LinearGradient(
+                colors: [.clear, Color.znSurface],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: 80)
+
+            // Cuisine badge on photo
+            Text(spot.cuisineDisplay.uppercased())
+                .font(.znEyebrow)
+                .tracking(0.8)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(Color.znNavy.opacity(0.82))
+                .clipShape(Capsule())
+                .padding(.leading, 14)
+                .padding(.bottom, 62)
+        }
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    // MARK: - Expanded Content (title, rating, quick info)
+
+    private var expandedContent: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Title + prominent status
+            HStack(spacing: 8) {
+                Text(spot.name)
+                    .font(.custom("PlayfairDisplay-SemiBold", size: 17))
+                    .foregroundStyle(Color.znNavy)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if spot.permanentlyClosed != true {
+                    VenueStatusBadge(
+                        openingHours: spot.openingHours,
+                        serverOpenForLunch: spot.openForLunch,
+                        prominent: true
+                    )
+                }
+            }
+            .padding(.bottom, 6)
+
+            // Generated description
+            Text(spot.generatedDescription(language: language))
+                .font(.system(size: 13, weight: .light))
+                .foregroundStyle(Color.znBody)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.bottom, 6)
+
+            // Star rating
+            starRating
+                .padding(.bottom, 12)
+
+            // Quick Info row
+            restaurantQuickInfo
+        }
+        .padding(.top, 15)
+        .padding(.horizontal, 18)
+        .padding(.bottom, 13)
     }
 
     // MARK: - Star Rating
@@ -225,117 +382,112 @@ struct LunchCard: View {
         }
     }
 
-    // MARK: - Lunch Status
+
+    // MARK: - Detail Panel (slides in from bottom)
 
     @ViewBuilder
-    private var lunchStatus: some View {
-        if spot.permanentlyClosed == true {
-            HStack(spacing: 4) {
-                Circle().fill(Color.znNegative).frame(width: 6, height: 6)
-                Text(appState.localized(en: "Permanently closed", de: "Dauerhaft geschlossen"))
-                    .font(.system(size: 10))
-                    .foregroundStyle(.znNegative)
-            }
-        } else {
-            VenueStatusBadge(
-                openingHours: spot.openingHours,
-                serverOpenForLunch: spot.openForLunch
-            )
-        }
-    }
-
-    // MARK: - Tags Row
-
-    private var tagsRow: some View {
-        HStack(spacing: 6) {
-            // Price tier
-            Text(String(repeating: "$", count: spot.priceTier))
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.znBody)
-            + Text(String(repeating: "$", count: 3 - spot.priceTier))
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.znMuted.opacity(0.4))
-
-            // Feature tags
-            if spot.outdoorSeating == true {
-                vcardTag(
-                    text: "☀️ \(appState.localized(en: "Terrace", de: "Terrasse"))",
-                    bgColor: .znNeutralTagBg,
-                    textColor: .znNeutralTagText
-                )
-            }
-            if spot.takeaway == true {
-                vcardTag(
-                    text: appState.localized(en: "Takeaway", de: "Takeaway"),
-                    bgColor: .znNeutralTagBg,
-                    textColor: .znNeutralTagText
-                )
-            }
-
-            Spacer(minLength: 0)
-
-            // Distance
-            if let meters = distanceMeters {
-                Text("↗ \(formattedDistance(meters))")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.znMuted)
-            }
-        }
-        .padding(.top, 2)
-    }
-
-    private func vcardTag(text: String, bgColor: Color, textColor: Color) -> some View {
-        Text(text)
-            .font(.system(size: 10, weight: .medium))
-            .foregroundStyle(textColor)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 2)
-            .background(bgColor)
-            .clipShape(Capsule())
-    }
-
-    // MARK: - Expand Panel
-
-    private var expandPanel: some View {
-        VStack(alignment: .leading, spacing: 11) {
-            // Opening hours pill
-            if let hours = spot.openingHours {
-                openingHoursPill(hours: hours)
-            }
-
-            // 2×2 Metadata grid
-            metadataGrid
-
+    private var detailPanel: some View {
+        if isExpanded {
+        VStack(alignment: .leading, spacing: 0) {
             // Action buttons
-            actionButtons
-
-            // Plan around this
-            Button {
-                showAnchorForm = true
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "calendar.badge.plus")
-                        .font(.system(size: 13))
-                    Text(appState.localized(en: "Plan around this →", de: "Hiermit planen →"))
-                        .font(.system(size: 13, weight: .medium))
+            HStack(spacing: 8) {
+                // Directions — tinted (matches PlanSlotCard)
+                Button {
+                    let urlString = "https://maps.apple.com/directions?destination=\(spot.lat),\(spot.lon)&mode=walking"
+                    if let url = URL(string: urlString) {
+                        UIApplication.shared.open(url)
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 12))
+                        Text(appState.localized(en: "Directions", de: "Route"))
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .foregroundStyle(Color.znTerracotta)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 40)
+                    .background(Color.znTerracotta.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 42)
-                .background(Color.znNavy)
-                .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
+                .buttonStyle(.plain)
 
-            // Mark as visited
+                // Plan → — tinted (matches PlanSlotCard)
+                Button {
+                    showAnchorForm = true
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "calendar.badge.plus")
+                            .font(.system(size: 12))
+                        Text(appState.localized(en: "Plan →", de: "Planen →"))
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .foregroundStyle(Color.znNavy)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 40)
+                    .background(Color.znNavy.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+
+                // Website — tinted icon
+                if let website = spot.website, let url = URL(string: website) {
+                    Link(destination: url) {
+                        Image(systemName: "globe")
+                            .font(.system(size: 15))
+                            .foregroundStyle(Color.znNavy)
+                            .frame(width: 40, height: 40)
+                            .background(Color.znNavy.opacity(0.06))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                }
+
+                // Heart — tinted icon
+                Button {
+                    appState.toggleSavedLunch(spot.id)
+                    let wasSaved = appState.savedLunchIDs.contains(spot.id)
+                    toastManager.show(
+                        appState.localized(en: wasSaved ? "Saved" : "Removed", de: wasSaved ? "Gespeichert" : "Entfernt"),
+                        type: .success
+                    )
+                } label: {
+                    Image(systemName: isSaved ? "heart.fill" : "heart")
+                        .font(.system(size: 15))
+                        .foregroundStyle(isSaved ? Color.znTerracotta : Color.znNavy)
+                        .frame(width: 40, height: 40)
+                        .background(isSaved ? Color.znTerracotta.opacity(0.12) : Color.znNavy.opacity(0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+                .sensoryFeedback(.impact(flexibility: .soft), trigger: isSaved)
+
+                // Delete for custom spots
+                if spot.id.hasPrefix("custom-") {
+                    Button {
+                        showDeleteConfirmation = true
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.znNegative)
+                            .frame(width: 40, height: 40)
+                            .background(Color.znNegative.opacity(0.06))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            // Mark as visited (toggleable)
             Button {
-                markedAsVisited = true
-                VenueVisitStore.shared.recordVisit(
-                    venueId: spot.id,
-                    venueName: spot.name,
-                    venueType: .restaurant,
-                    source: .manualMark
-                )
+                markedAsVisited.toggle()
+                if markedAsVisited {
+                    VenueVisitStore.shared.recordVisit(
+                        venueId: spot.id,
+                        venueName: spot.name,
+                        venueType: .restaurant,
+                        source: .manualMark
+                    )
+                }
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: markedAsVisited ? "checkmark.circle.fill" : "checkmark.circle")
@@ -346,179 +498,43 @@ struct LunchCard: View {
                         .font(.system(size: 12, weight: .medium))
                 }
                 .foregroundStyle(markedAsVisited ? Color.znPositive : Color.znMuted)
-            }
-            .buttonStyle(.plain)
-            .disabled(markedAsVisited)
-        }
-        .padding(.horizontal, AppSpacing.cardPadding)
-        .padding(.vertical, 13)
-    }
-
-    private func openingHoursPill(hours: String) -> some View {
-        let lines = Self.splitOpeningHours(hours)
-
-        return VStack(alignment: .leading, spacing: 6) {
-            // Status header — real-time open/closed via client-side parser
-            HStack(spacing: 6) {
-                let venueStatus = OpeningHoursParser.status(from: hours)
-                switch venueStatus {
-                case .open:
-                    Circle().fill(Color.znPositive).frame(width: 7, height: 7)
-                    Text(appState.localized(en: "Open now", de: "Jetzt geöffnet"))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.znPositive)
-                case .closed:
-                    Circle().fill(Color.znNegative).frame(width: 7, height: 7)
-                    Text(appState.localized(en: "Closed", de: "Geschlossen"))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.znNegative)
-                case .unknown:
-                    Circle().fill(Color.znMuted).frame(width: 7, height: 7)
-                    Text(appState.localized(en: "Opening hours", de: "Öffnungszeiten"))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.znMuted)
-                }
-            }
-
-            // Hours listed per day
-            VStack(alignment: .leading, spacing: 3) {
-                ForEach(lines, id: \.self) { line in
-                    Text(line)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.znBody)
-                }
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.znCream)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-
-    // MARK: - Metadata Grid
-
-    private var metadataGrid: some View {
-        let columns = [GridItem(.flexible()), GridItem(.flexible())]
-
-        return LazyVGrid(columns: columns, spacing: 7) {
-            metadataCell(
-                label: appState.localized(en: "Cuisine", de: "Küche"),
-                value: spot.cuisineDisplay
-            )
-            if let meters = distanceMeters {
-                metadataCell(
-                    label: appState.localized(en: "Distance", de: "Entfernung"),
-                    value: formattedDistance(meters)
-                )
-            }
-            if spot.wheelchair == "yes" {
-                metadataCell(
-                    label: appState.localized(en: "Access", de: "Zugang"),
-                    value: appState.localized(en: "Wheelchair accessible", de: "Rollstuhlgängig")
-                )
-            }
-        }
-    }
-
-    private func metadataCell(label: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(label)
-                .font(.system(size: 9, weight: .medium))
-                .tracking(0.1 * 9)
-                .textCase(.uppercase)
-                .foregroundStyle(.znMuted)
-            Text(value)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.znInk)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(Color.znCream)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-
-    // MARK: - Action Buttons
-
-    private var actionButtons: some View {
-        HStack(spacing: 7) {
-            // Directions (primary)
-            Button {
-                let urlString = "https://maps.apple.com/directions?destination=\(spot.lat),\(spot.lon)&mode=walking"
-                if let url = URL(string: urlString) {
-                    UIApplication.shared.open(url)
-                }
-            } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: "arrow.triangle.turn.up.right.diamond")
-                        .font(.system(size: 12))
-                    Text(appState.localized(en: "Directions", de: "Route"))
-                        .font(.system(size: 11.5, weight: .medium))
-                }
-                .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
-                .background(Color.znTerracotta)
-                .foregroundStyle(.white)
-                .clipShape(Capsule())
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-
-            // Website (secondary)
-            if let website = spot.website, let url = URL(string: website) {
-                Link(destination: url) {
-                    HStack(spacing: 5) {
-                        Image(systemName: "globe")
-                            .font(.system(size: 12))
-                        Text(appState.localized(en: "Website", de: "Webseite"))
-                            .font(.system(size: 11.5, weight: .medium))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .foregroundStyle(.znNavy)
-                    .background(Color.znCream)
-                    .clipShape(Capsule())
-                    .overlay(Capsule().stroke(Color.znBorder, lineWidth: 1))
-                }
-            }
-
-            // Heart (icon-only)
-            Button {
-                appState.toggleSavedLunch(spot.id)
-                let wasSaved = appState.savedLunchIDs.contains(spot.id)
-                toastManager.show(
-                    appState.localized(en: wasSaved ? "Saved" : "Removed", de: wasSaved ? "Gespeichert" : "Entfernt"),
-                    type: .success
-                )
-            } label: {
-                Image(systemName: isSaved ? "heart.fill" : "heart")
-                    .font(.system(size: 14))
-                    .foregroundStyle(isSaved ? .znNegative : .znNavy)
-                    .frame(width: 38, height: 38)
-                    .background(Color.znCream)
-                    .clipShape(Circle())
-                    .overlay(Circle().stroke(Color.znBorder, lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-            .sensoryFeedback(.impact(flexibility: .soft), trigger: isSaved)
-
-            // Delete for custom spots
-            if spot.id.hasPrefix("custom-") {
-                Button {
-                    showDeleteConfirmation = true
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.znNegative)
-                        .frame(width: 38, height: 38)
-                        .background(Color.znCream)
-                        .clipShape(Circle())
-                        .overlay(Circle().stroke(Color.znBorder, lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-            }
         }
+        .padding(.horizontal, 18)
+        .padding(.bottom, 18)
+        .transition(.opacity.combined(with: .move(edge: .bottom)))
+        }
+    }
+
+    private var restaurantQuickInfo: some View {
+        VenueQuickInfoRow(items: {
+            var items: [VenueQuickInfoRow.Item] = []
+            if let rating = spot.rating {
+                let value = spot.ratingCount.map { "\(String(format: "%.1f", rating)) (\($0))" }
+                    ?? String(format: "%.1f", rating)
+                items.append(.init(icon: "star.fill", label: appState.localized(en: "Rating", de: "Bewertung"), value: value))
+            }
+            if let meters = distanceMeters {
+                items.append(.init(icon: "location.fill", label: appState.localized(en: "Distance", de: "Entfernung"), value: formattedDistance(meters)))
+            }
+            items.append(.init(
+                icon: "banknote",
+                label: appState.localized(en: "Price", de: "Preis"),
+                value: String(repeating: "$", count: spot.priceTier)
+            ))
+            if let todayHours = OpeningHoursParser.todayHours(from: spot.openingHours) {
+                items.append(.init(
+                    icon: "clock.badge",
+                    label: appState.localized(en: "Hours", de: "Zeiten"),
+                    value: todayHours
+                ))
+            }
+            return items
+        }())
     }
 
     // MARK: - Helpers

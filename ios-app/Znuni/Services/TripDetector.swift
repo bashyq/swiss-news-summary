@@ -30,7 +30,6 @@ struct DetectedTrip: Equatable, Identifiable {
 actor TripDetector {
     static let shared = TripDetector()
 
-    private let geocoder = CLGeocoder()
     private var geocodeCache: [String: String] = [:]
 
     func detectTrips(
@@ -95,19 +94,25 @@ actor TripDetector {
             return cached
         }
 
-        try? await Task.sleep(for: .seconds(1))
-
-        let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
-        do {
-            let placemarks = try await geocoder.reverseGeocodeLocation(location)
-            let locality = placemarks.first?.locality
-            if let locality {
-                geocodeCache[cacheKey] = locality
+        // Retry up to 3 times with short delays (CLGeocoder can be flaky)
+        for attempt in 0..<3 {
+            if attempt > 0 {
+                try? await Task.sleep(for: .milliseconds(500))
             }
-            return locality
-        } catch {
-            return nil
+
+            let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+            do {
+                let geocoder = CLGeocoder() // fresh instance per attempt
+                let placemarks = try await geocoder.reverseGeocodeLocation(location)
+                if let locality = placemarks.first?.locality {
+                    geocodeCache[cacheKey] = locality
+                    return locality
+                }
+            } catch {
+                continue
+            }
         }
+        return nil
     }
 
     func prefetchTrips(

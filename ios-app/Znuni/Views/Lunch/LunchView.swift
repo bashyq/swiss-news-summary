@@ -67,7 +67,7 @@ struct LunchView: View {
             Text(appState.localized(en: "Find ", de: "Finde "))
                 .font(.bannerTitle)
                 .foregroundStyle(.white)
-            + Text(appState.localized(en: "restaurants", de: "Restaurants"))
+            + Text(appState.localized(en: "Restaurants", de: "Restaurants"))
                 .font(.custom("Playfair", size: 28).italic())
                 .foregroundStyle(.white.opacity(0.65))
         )
